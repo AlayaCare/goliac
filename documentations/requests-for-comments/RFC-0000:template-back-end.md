@@ -13,7 +13,7 @@
 
 ## Load & performance testing
 
-## Multi data-center concerns
+## Github vs Github enterprise
 
 ## Security considerations
 
