@@ -17,3 +17,6 @@ cmd/
 
 .idea
 
+/cover.html
+/coverage.txt
+
