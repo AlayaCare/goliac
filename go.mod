@@ -1,4 +1,4 @@
-module github.com/Alayacare/ghost
+module github.com/Alayacare/goliac
 
 go 1.20
 
