@@ -1,6 +1,5 @@
 [//]: # (based on https://blog.pragmaticengineer.com/scaling-engineering-teams-via-writing-things-down-rfcs/)
-## List of approvers
-[//]: # (List github users that you want to review the work)
+# Title
 
 ## Abstract (what is the project about?)
 [//]: # (write down all the details that will help one to understand the context around the discussion)
