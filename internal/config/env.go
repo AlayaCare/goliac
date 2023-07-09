@@ -21,4 +21,6 @@ var Config = struct {
 
 	// goliacGitRepository string `env:"GOLIAC_GIT_REPOSITORY" envDefault:""`
 	// goliacGitBranch     string `env:"GOLIAC_GIT_BRANCH" envDefault:"main"`
+
+	GithubConcurrentThreads int `env:"GOLIAC_GITHUB_CONCURENT_THREADS" envDefault:"4"`
 }{}
