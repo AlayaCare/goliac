@@ -4,25 +4,28 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/sirupsen/logrus"
 )
 
 type GitHubClient interface {
-	QueryGraphQLAPI(query string, variables map[string]interface{}) (string, error)
-	CallRestAPIWithBody(endpoint, method string, body map[string]interface{}) (string, error)
-	CallRestAPI(endpoint string) (string, error)
+	QueryGraphQLAPI(query string, variables map[string]interface{}) ([]byte, error)
+	CallRestAPI(endpoint, method string, body map[string]interface{}) ([]byte, error)
 	GetAccessToken() (string, error)
 }
 
 type GitHubClientImpl struct {
 	gitHubServer    string
 	appID           string
-	installationID  string
+	installationID  int
 	privateKey      []byte
 	accessToken     string
 	httpClient      *http.Client
@@ -108,7 +111,7 @@ func NewGitHubClientImpl(githubServer, organizationName, appID, privateKeyFile s
 		}
 	}
 
-	if client.installationID == "" {
+	if client.installationID == 0 {
 		return nil, fmt.Errorf("installation not found for organization: %s", organizationName)
 	}
 
@@ -121,6 +124,32 @@ func NewGitHubClientImpl(githubServer, organizationName, appID, privateKeyFile s
 	client.httpClient = httpClient
 
 	return client, nil
+}
+
+// waitRateLimit helps dealing with rate limits
+// cf https://docs.github.com/en/rest/guides/best-practices-for-integrators?apiVersion=2022-11-28#dealing-with-rate-limits
+func waitRateLimit(resetTimeStr string) error {
+	if resetTimeStr == "" {
+		return fmt.Errorf("X-RateLimit-Reset header not found")
+	}
+
+	logrus.Infof("Rate limit exceeded, waiting for %s", resetTimeStr)
+
+	// Parse the reset time.
+	resetTimeUnix, err := strconv.ParseInt(resetTimeStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse X-RateLimit-Reset header: %w", err)
+	}
+
+	resetTime := time.Unix(resetTimeUnix, 0)
+
+	// Calculate how long we need to wait.
+	waitDuration := time.Until(resetTime)
+
+	// Wait until the reset time.
+	time.Sleep(waitDuration)
+
+	return nil
 }
 
 type GraphQLRequest struct {
@@ -149,65 +178,44 @@ type GraphQLRequest struct {
  * }
  * responseBody, err := client.QueryGraphQLAPI(query, variables)
  */
-func (client *GitHubClientImpl) QueryGraphQLAPI(query string, variables map[string]interface{}) (string, error) {
+func (client *GitHubClientImpl) QueryGraphQLAPI(query string, variables map[string]interface{}) ([]byte, error) {
 	body, err := json.Marshal(GraphQLRequest{
 		Query:     query,
 		Variables: variables,
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req, err := http.NewRequest("POST", client.gitHubServer+"/graphql", bytes.NewBuffer(body))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
+	if resp.StatusCode == http.StatusTooManyRequests {
+		// We're being rate limited. Get the reset time from the headers.
+		if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
+			return nil, err
+		}
+
+		// Retry the request.
+		return client.QueryGraphQLAPI(query, variables)
+	} else {
+		responseBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		return responseBody, nil
 	}
-
-	return string(responseBody), nil
-}
-
-/*
- * CallRestAPI
- * @param {string} endpoint
- *
- * Example:
- * responseBody, err := client.CallRestAPI("repos/my-org/my-repo")
- */
-func (client *GitHubClientImpl) CallRestAPI(endpoint string) (string, error) {
-	req, err := http.NewRequest("GET", client.gitHubServer+"/"+endpoint, nil)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := client.httpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status: %s", resp.Status)
-	}
-
-	responseBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(responseBody), nil
 }
 
 /*
@@ -223,34 +231,52 @@ func (client *GitHubClientImpl) CallRestAPI(endpoint string) (string, error) {
  * }
  * responseBody, err := client.CallRestAPIWithBody("orgs/my-org/repos", "POST", body)
  */
-func (client *GitHubClientImpl) CallRestAPIWithBody(endpoint, method string, body map[string]interface{}) (string, error) {
-	jsonBody, err := json.Marshal(body)
-	if err != nil {
-		return "", err
+func (client *GitHubClientImpl) CallRestAPI(endpoint, method string, body map[string]interface{}) ([]byte, error) {
+	var bodyReader io.Reader
+	if body != nil {
+		jsonBody, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		bodyReader = bytes.NewBuffer(jsonBody)
 	}
-
-	req, err := http.NewRequest(method, client.gitHubServer+"/"+endpoint, bytes.NewBuffer(jsonBody))
+	urlpath, err := url.JoinPath(client.gitHubServer, endpoint)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-
+	req, err := http.NewRequest(method, urlpath, bodyReader)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	//	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("unexpected status: %s", resp.Status)
-	}
+	if resp.StatusCode == http.StatusTooManyRequests {
+		// We're being rate limited. Get the reset time from the headers.
+		if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
+			return nil, err
+		}
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
+		// Retry the request.
+		return client.CallRestAPI(endpoint, method, body)
+	} else {
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return nil, fmt.Errorf("unexpected status: %s", resp.Status)
+		}
 
-	return string(responseBody), nil
+		responseBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		return responseBody, nil
+	}
 }
 
 func (client *GitHubClientImpl) createJWT() (string, error) {
@@ -280,7 +306,7 @@ type AccessTokenResponse struct {
 }
 
 func (client *GitHubClientImpl) getAccessTokenForInstallation(jwt string) (string, time.Time, error) {
-	req, err := http.NewRequest("POST", client.gitHubServer+"/app/installations/"+client.installationID+"/access_tokens", nil)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/app/installations/%d/access_tokens", client.gitHubServer, client.installationID), nil)
 	if err != nil {
 		return "", time.Now(), err
 	}
