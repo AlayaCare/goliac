@@ -51,14 +51,18 @@ func NewGoliacImpl() (Goliac, error) {
 
 func (g *GoliacImpl) LoadAndValidateGoliacOrganization(repositoryUrl, branch string) error {
 	errs := []error{}
-	warns := []error{}
+	warns := []entity.Warning{}
 	if strings.HasPrefix(repositoryUrl, "https://") {
 		accessToken, err := g.githubClient.GetAccessToken()
 		if err != nil {
 			return err
 		}
 
-		errs, warns = g.local.LoadAndValidate(accessToken, repositoryUrl, branch)
+		err = g.local.Clone(accessToken, repositoryUrl, branch)
+		if err != nil {
+			return fmt.Errorf("unable to clone: %v", err)
+		}
+		errs, warns = g.local.LoadAndValidate()
 	} else {
 		// Local
 		fs := afero.NewOsFs()
