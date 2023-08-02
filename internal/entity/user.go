@@ -3,6 +3,7 @@ package entity
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
@@ -40,9 +41,9 @@ func NewUser(fs afero.Fs, filename string) (*User, error) {
  * - a slice of errors that must stop the vlidation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadUserDirectory(fs afero.Fs, dirname string) (map[string]*User, []error, []error) {
+func ReadUserDirectory(fs afero.Fs, dirname string) (map[string]*User, []error, []Warning) {
 	errors := []error{}
-	warning := []error{}
+	warning := []Warning{}
 	users := make(map[string]*User)
 
 	exist, err := afero.Exists(fs, dirname)
@@ -62,19 +63,24 @@ func ReadUserDirectory(fs afero.Fs, dirname string) (map[string]*User, []error, 
 	}
 
 	for _, e := range entries {
-		if !e.IsDir() {
-			user, err := NewUser(fs, filepath.Join(dirname, e.Name()))
+		if e.IsDir() {
+			continue
+		}
+		if !strings.HasSuffix(e.Name(), ".yaml") {
+			continue
+		}
+		user, err := NewUser(fs, filepath.Join(dirname, e.Name()))
+		if err != nil {
+			errors = append(errors, err)
+		} else {
+			err = user.Validate(filepath.Join(dirname, e.Name()))
 			if err != nil {
 				errors = append(errors, err)
 			} else {
-				err = user.Validate(filepath.Join(dirname, e.Name()))
-				if err != nil {
-					errors = append(errors, err)
-				} else {
-					users[user.Metadata.Name] = user
-				}
+				users[user.Metadata.Name] = user
 			}
 		}
+
 	}
 	return users, errors, warning
 }
@@ -103,4 +109,21 @@ func (u *User) Validate(filename string) error {
 	}
 
 	return nil
+}
+
+func (u *User) Equals(a *User) bool {
+	if u.ApiVersion != a.ApiVersion {
+		return false
+	}
+	if u.Kind != a.Kind {
+		return false
+	}
+	if u.Metadata.Name != a.Metadata.Name {
+		return false
+	}
+	if u.Data.GithubID != a.Data.GithubID {
+		return false
+	}
+
+	return true
 }

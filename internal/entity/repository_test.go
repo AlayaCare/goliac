@@ -69,7 +69,7 @@ metadata:
 		assert.Equal(t, len(warns), 0)
 		assert.NotNil(t, teams)
 
-		repos, errs, warns := ReadRepositories(fs, "teams", teams, map[string]*User{})
+		repos, errs, warns := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
 		assert.Equal(t, len(errs), 0)
 		assert.Equal(t, len(warns), 0)
 		assert.NotNil(t, repos)
@@ -97,7 +97,7 @@ metadata:
 		assert.Equal(t, len(warns), 0)
 		assert.NotNil(t, teams)
 
-		_, errs, warns = ReadRepositories(fs, "teams", teams, map[string]*User{})
+		_, errs, warns = ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
 		assert.Equal(t, len(errs), 1)
 		assert.Equal(t, len(warns), 0)
 	})
@@ -127,7 +127,7 @@ data:
 		assert.Equal(t, len(warns), 0)
 		assert.NotNil(t, teams)
 
-		_, errs, warns = ReadRepositories(fs, "teams", teams, map[string]*User{})
+		_, errs, warns = ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
 		assert.Equal(t, len(errs), 1)
 		assert.Equal(t, len(warns), 0)
 	})
@@ -157,8 +157,70 @@ data:
 		assert.Equal(t, len(warns), 0)
 		assert.NotNil(t, teams)
 
-		_, errs, warns = ReadRepositories(fs, "teams", teams, map[string]*User{})
+		_, errs, warns = ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
 		assert.Equal(t, len(errs), 1)
 		assert.Equal(t, len(warns), 0)
+	})
+
+	t.Run("happy path: archived repo in the wrong place", func(t *testing.T) {
+		// create a new user
+		fs := afero.NewMemMapFs()
+		fixtureCreateUserTeam(t, fs)
+
+		err := afero.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+metadata:
+  name: repo1
+data:
+  archived: true
+`), 0644)
+		assert.Nil(t, err)
+		users, errs, warns := ReadUserDirectory(fs, "users")
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, users)
+
+		teams, errs, warns := ReadTeamDirectory(fs, "teams", users)
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, teams)
+
+		repos, errs, warns := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
+		assert.Equal(t, len(errs), 1)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, repos)
+		assert.Equal(t, len(repos), 0)
+	})
+
+	t.Run("happy path: archived repo", func(t *testing.T) {
+		// create a new user
+		fs := afero.NewMemMapFs()
+		fixtureCreateUserTeam(t, fs)
+
+		err := afero.WriteFile(fs, "archived/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+metadata:
+  name: repo1
+data:
+  archived: true
+`), 0644)
+		assert.Nil(t, err)
+		users, errs, warns := ReadUserDirectory(fs, "users")
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, users)
+
+		teams, errs, warns := ReadTeamDirectory(fs, "teams", users)
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, teams)
+
+		repos, errs, warns := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, repos)
+		assert.Equal(t, len(repos), 1)
 	})
 }
