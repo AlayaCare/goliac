@@ -171,6 +171,9 @@ func (m *MockGithubClient) reposEdges(first, after string, args ast.ArgumentList
 			if c, _ := hasChild("name", nodeField.SelectionSet); c {
 				node["name"] = fmt.Sprintf("repo_%d", index)
 			}
+			if c, _ := hasChild("id", nodeField.SelectionSet); c {
+				node["id"] = fmt.Sprintf("id_%d", index)
+			}
 			block["node"] = node
 		}
 		index++
@@ -352,6 +355,10 @@ func (m *MockGithubClient) organization(args ast.ArgumentList, children ast.Sele
 	return data
 }
 
+func (m *MockGithubClient) GetAppSlug() string {
+	return "mock-github-client"
+}
+
 func (m *MockGithubClient) QueryGraphQLAPI(query string, variables map[string]interface{}) ([]byte, error) {
 
 	doc, err := parser.ParseQuery(&ast.Source{Input: query})
@@ -394,7 +401,6 @@ func TestRemoteRepository(t *testing.T) {
 	// happy path
 	t.Run("happy path: load remote repositories", func(t *testing.T) {
 		// MockGithubClient doesn't support concurrent access
-		config.Config.GithubConcurrentThreads = 1
 		client := MockGithubClient{}
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
@@ -409,7 +415,6 @@ func TestRemoteRepository(t *testing.T) {
 	})
 	t.Run("happy path: load remote teams", func(t *testing.T) {
 		// MockGithubClient doesn't support concurrent access
-		config.Config.GithubConcurrentThreads = 1
 		client := MockGithubClient{}
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
@@ -422,7 +427,6 @@ func TestRemoteRepository(t *testing.T) {
 
 	t.Run("happy path: load remote team's repos", func(t *testing.T) {
 		// MockGithubClient doesn't support concurrent access
-		config.Config.GithubConcurrentThreads = 1
 		client := MockGithubClient{}
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
@@ -435,12 +439,14 @@ func TestRemoteRepository(t *testing.T) {
 
 	t.Run("happy path: load remote teams and team's repos", func(t *testing.T) {
 		// MockGithubClient doesn't support concurrent access
-		config.Config.GithubConcurrentThreads = 1
 		client := MockGithubClient{}
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
 
-		err := remoteImpl.Load()
+		repoconfig := config.RepositoryConfig{
+			GithubConcurrentThreads: 1,
+		}
+		err := remoteImpl.Load(&repoconfig)
 		assert.Nil(t, err)
 		assert.Equal(t, 122, len(remoteImpl.teams))
 		assert.Equal(t, 2, len(remoteImpl.teamRepos["slug-1"]))

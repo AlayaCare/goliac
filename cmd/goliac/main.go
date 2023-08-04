@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
+	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/Alayacare/goliac/internal"
 	"github.com/sirupsen/logrus"
@@ -28,6 +32,7 @@ https://github.com/...`,
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
 			err = goliac.LoadAndValidateGoliacOrganization(repo, branch)
+			defer goliac.Close()
 			if err != nil {
 				logrus.Fatalf("failed to verify: %s", err)
 			}
@@ -52,10 +57,17 @@ https://github.com/...`,
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
 			err = goliac.LoadAndValidateGoliacOrganization(repo, branch)
+			defer goliac.Close()
 			if err != nil {
 				logrus.Fatalf("failed to load and validate: %s", err)
 			}
-			err = goliac.ApplyToGithub(false)
+			u, err := url.Parse(repo)
+			if err != nil {
+				logrus.Fatalf("failed to parse %s: %v", repo, err)
+			}
+			teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
+
+			err = goliac.ApplyToGithub(true, teamsreponame, branch)
 			if err != nil {
 				logrus.Fatalf("failed to plan on branch %s: %s", branch, err)
 			}
@@ -79,12 +91,41 @@ https://github.com/...`,
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
 			err = goliac.LoadAndValidateGoliacOrganization(repo, branch)
+			defer goliac.Close()
 			if err != nil {
 				logrus.Fatalf("failed to load and validate: %s", err)
 			}
-			err = goliac.ApplyToGithub(true)
+			u, err := url.Parse(repo)
+			if err != nil {
+				logrus.Fatalf("failed to parse %s: %v", repo, err)
+			}
+			teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
+
+			err = goliac.ApplyToGithub(false, teamsreponame, branch)
 			if err != nil {
 				logrus.Fatalf("failed to apply on branch %s: %s", branch, err)
+			}
+		},
+	}
+
+	postSyncUsersCmd := &cobra.Command{
+		Use:   "syncusers [repository] [branch]",
+		Short: "Update and commit users and teams definition",
+		Long:  `This command will use a user sync plugin to adjust users and team yaml definition, and commit them`,
+		Run: func(cmd *cobra.Command, args []string) {
+			repo := args[0]
+			branch := ""
+			if len(args) > 1 {
+				branch = args[1]
+			}
+			goliac, err := internal.NewGoliacImpl()
+			if err != nil {
+				logrus.Fatalf("failed to create goliac: %s", err)
+			}
+			err = goliac.UsersUpdate(repo, branch)
+			defer goliac.Close()
+			if err != nil {
+				logrus.Fatalf("failed to update and commit teams: %s", err)
 			}
 		},
 	}
@@ -100,6 +141,7 @@ Either local directory, or remote git repository`,
 	rootCmd.AddCommand(verifyCmd)
 	rootCmd.AddCommand(planCmd)
 	rootCmd.AddCommand(applyCmd)
+	rootCmd.AddCommand(postSyncUsersCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
