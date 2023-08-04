@@ -13,6 +13,7 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/slugify"
+	"github.com/Alayacare/goliac/internal/usersync"
 	"github.com/go-git/go-git/v5"
 	goconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -21,6 +22,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
+	"gopkg.in/yaml.v3"
 )
 
 /*
@@ -30,19 +32,25 @@ import (
  */
 type GoliacLocal interface {
 	Clone(accesstoken, repositoryUrl, branch string) error
+
+	LoadRepoConfig() (error, *config.RepositoryConfig)
+
 	// Load and Validate from a github repository
 	LoadAndValidate() ([]error, []entity.Warning)
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
-	UpdateAndCommitCodeOwners(dryrun bool, accesstoken string, branch string) error
+	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string) error
+	// whenever the users list is changing, reload users and teams, and commit them
+	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin usersync.UserSyncPlugin, dryrun bool) error
 	Close()
 
 	// Load and Validate from a local directory
 	LoadAndValidateLocal(fs afero.Fs, path string) ([]error, []entity.Warning)
 
-	Teams() map[string]*entity.Team              // slugname, team definition
+	Teams() map[string]*entity.Team              // teamname, team definition
 	Repositories() map[string]*entity.Repository // reponame, repo definition
 	Users() map[string]*entity.User              // github username, user definition
 	ExternalUsers() map[string]*entity.User
+	RuleSets() map[string]*entity.RuleSet
 }
 
 type GoliacLocalImpl struct {
@@ -50,6 +58,7 @@ type GoliacLocalImpl struct {
 	repositories  map[string]*entity.Repository
 	users         map[string]*entity.User
 	externalUsers map[string]*entity.User
+	rulesets      map[string]*entity.RuleSet
 	repo          *git.Repository
 }
 
@@ -59,6 +68,7 @@ func NewGoliacLocalImpl() GoliacLocal {
 		repositories:  map[string]*entity.Repository{},
 		users:         map[string]*entity.User{},
 		externalUsers: map[string]*entity.User{},
+		rulesets:      map[string]*entity.RuleSet{},
 		repo:          nil,
 	}
 }
@@ -77,6 +87,10 @@ func (g *GoliacLocalImpl) Users() map[string]*entity.User {
 
 func (g *GoliacLocalImpl) ExternalUsers() map[string]*entity.User {
 	return g.externalUsers
+}
+
+func (g *GoliacLocalImpl) RuleSets() map[string]*entity.RuleSet {
+	return g.rulesets
 }
 
 func (g *GoliacLocalImpl) Clone(accesstoken, repositoryUrl, branch string) error {
@@ -133,8 +147,34 @@ func (g *GoliacLocalImpl) Close() {
 	g.repo = nil
 }
 
-func (g *GoliacLocalImpl) codeowners_regenerate() string {
+func (g *GoliacLocalImpl) LoadRepoConfig() (error, *config.RepositoryConfig) {
+	if g.repo == nil {
+		return fmt.Errorf("git repository not cloned"), nil
+	}
+	w, err := g.repo.Worktree()
+	if err != nil {
+		return err, nil
+	}
+
+	var repoconfig config.RepositoryConfig
+	file, err := os.Open(path.Join(w.Filesystem.Root(), "goliac.yaml"))
+	defer file.Close()
+
+	content, err := ioutil.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("not able to find the /goliac.yaml configuration file: %v", err), nil
+	}
+	err = yaml.Unmarshal(content, &repoconfig)
+	if err != nil {
+		return fmt.Errorf("not able to unmarshall the /goliac.yaml configuration file: %v", err), nil
+	}
+
+	return nil, &repoconfig
+}
+
+func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string) string {
 	codeowners := "# DO NOT MODIFY THIS FILE MANUALLY\n"
+	codeowners += fmt.Sprintf("* @%s/%s\n", config.Config.GithubAppOrganization, slugify.Make(adminteam))
 
 	teamsnames := make([]string, 0)
 	for _, t := range g.teams {
@@ -143,7 +183,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate() string {
 	sort.Sort(sort.StringSlice(teamsnames))
 
 	for _, t := range teamsnames {
-		codeowners += fmt.Sprintf("/org/%s @%s/%s\n", t, config.Config.GithubAppOrganization, slugify.Make(t))
+		codeowners += fmt.Sprintf("/teams/%s/* @%s/%s-owners @%s/%s\n", t, config.Config.GithubAppOrganization, slugify.Make(t), config.Config.GithubAppOrganization, slugify.Make(adminteam))
 	}
 
 	return codeowners
@@ -153,7 +193,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate() string {
  * UpdateAndCommitCodeOwners will collects all teams definition to update the .github/CODEOWNERS file
  * cf https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
  */
-func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(dryrun bool, accesstoken string, branch string) error {
+func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string) error {
 	if g.repo == nil {
 		return fmt.Errorf("git repository not cloned")
 	}
@@ -183,7 +223,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(dryrun bool, accesstoken str
 		content = []byte("")
 	}
 
-	newContent := g.codeowners_regenerate()
+	newContent := g.codeowners_regenerate(repoconfig.AdminTeam)
 
 	if string(content) != newContent {
 		logrus.Info(".github/CODEOWNERS needs to be regenerated")
@@ -231,13 +271,156 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(dryrun bool, accesstoken str
 	return nil
 }
 
+/**
+ * syncusers will
+ * - list the current users list
+ * - call the external user sync plugin
+ * - collect the difference
+ * - returns deleted users, and add/updated users
+ */
+func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, userplugin usersync.UserSyncPlugin, rootDir string) ([]string, []string, error) {
+	orgUsers, errs, _ := entity.ReadUserDirectory(fs, filepath.Join(rootDir, "users", "org"))
+	if len(errs) > 0 {
+		return nil, nil, fmt.Errorf("cannot load org users (for example: %v)", errs[0])
+	}
+
+	// use usersync to update the users
+	newOrgUsers, err := userplugin.UpdateUsers(repoconfig, filepath.Join(rootDir, "users", "org"))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// write back to disk
+	deletedusers := []string{}
+	updatedusers := []string{}
+	for username, user := range orgUsers {
+		if newuser, ok := newOrgUsers[username]; !ok {
+			// deleted user
+			deletedusers = append(deletedusers, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
+			fs.Remove(filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
+		} else {
+			// check if user changed
+			if !newuser.Equals(user) {
+				// changed user
+				newContent, err := yaml.Marshal(newuser)
+				if err != nil {
+					return nil, nil, err
+				}
+				afero.WriteFile(fs, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)), newContent, 0644)
+				updatedusers = append(updatedusers, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
+			}
+
+			delete(newOrgUsers, username)
+		}
+	}
+	for username, user := range newOrgUsers {
+		// new user
+		newContent, err := yaml.Marshal(user)
+		if err != nil {
+			return nil, nil, err
+		}
+		afero.WriteFile(fs, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)), newContent, 0644)
+		updatedusers = append(updatedusers, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
+	}
+	return deletedusers, updatedusers, nil
+}
+
+func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin usersync.UserSyncPlugin, dryrun bool) error {
+	if g.repo == nil {
+		return fmt.Errorf("git repository not cloned")
+	}
+	w, err := g.repo.Worktree()
+	if err != nil {
+		return err
+	}
+
+	// read the organization files
+	rootDir := w.Filesystem.Root()
+
+	//
+	// let's update org users
+	//
+
+	// Parse all the users in the <orgDirectory>/org-users directory
+	fs := afero.NewOsFs()
+	deletedusers, addedusers, err := syncUsersViaUserPlugin(repoconfig, fs, userplugin, rootDir)
+	if err != nil {
+		return err
+	}
+
+	//
+	// let's update teams
+	//
+
+	errors, _ := g.loadUsers(fs, rootDir)
+	if len(errors) > 0 {
+		return fmt.Errorf("cannot read users (for example: %v)", errors[0])
+	}
+
+	teamschanged, err := entity.ReadAndAdjustTeamDirectory(fs, filepath.Join(rootDir, "teams"), g.users)
+	if err != nil {
+		return err
+	}
+
+	//
+	// let's commit
+	//
+	if len(teamschanged) > 0 || len(deletedusers) > 0 || len(addedusers) > 0 {
+
+		logrus.Info("some users and/or teams must be commited")
+		if dryrun {
+			return nil
+		}
+
+		for _, u := range deletedusers {
+			_, err = w.Remove(u)
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, u := range addedusers {
+			_, err = w.Add(u)
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, t := range teamschanged {
+			_, err = w.Add(t)
+			if err != nil {
+				return err
+			}
+		}
+
+		commit, err := w.Commit("update teams and users", &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "Goliac",
+				Email: config.Config.GoliacEmail,
+				When:  time.Now(),
+			},
+		})
+
+		if err != nil {
+			return err
+		}
+
+		_, err = g.repo.CommitObject(commit)
+		if err != nil {
+			return err
+		}
+
+		err = g.repo.Push(&git.PushOptions{})
+
+		return err
+	}
+	return nil
+}
+
 /*
  * Load the goliac organization from Github (after the repository has been cloned)
  * - read the organization files
  * - validate the organization
- * Parameters:
- * - repositoryUrl: the URL of the repository to clone
- * - branch: the branch to checkout
  */
 func (g *GoliacLocalImpl) LoadAndValidate() ([]error, []entity.Warning) {
 	if g.repo == nil {
@@ -287,6 +470,11 @@ func (g *GoliacLocalImpl) loadUsers(fs afero.Fs, orgDirectory string) ([]error, 
 	warnings = append(warnings, warns...)
 	g.externalUsers = externalUsers
 
+	rulesets, errs, warns := entity.ReadRuleSetDirectory(fs, filepath.Join(orgDirectory, "rulesets"))
+	errors = append(errors, errs...)
+	warnings = append(warnings, warns...)
+	g.rulesets = rulesets
+
 	return errors, warnings
 }
 
@@ -313,6 +501,11 @@ func (g *GoliacLocalImpl) LoadAndValidateLocal(fs afero.Fs, orgDirectory string)
 	errors = append(errors, errs...)
 	warnings = append(warnings, warns...)
 	g.repositories = repos
+
+	rulesets, errs, warns := entity.ReadRuleSetDirectory(fs, filepath.Join(orgDirectory, "rulesets"))
+	errors = append(errors, errs...)
+	warnings = append(warnings, warns...)
+	g.rulesets = rulesets
 
 	logrus.Infof("Nb local users: %d", len(g.users))
 	logrus.Infof("Nb local external users: %d", len(g.externalUsers))

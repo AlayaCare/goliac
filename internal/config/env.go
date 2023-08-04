@@ -16,12 +16,10 @@ var Config = struct {
 
 	GithubServer            string `env:"GOLIAC_GITHUB_SERVER" envDefault:"https://api.github.com"`
 	GithubAppOrganization   string `env:"GOLIAC_GITHUB_APP_ORGANIZATION" envDefault:""`
-	GithubAppID             string `env:"GOLIAC_GITHUB_APP_ID" envDefault:""`
+	GithubAppID             int    `env:"GOLIAC_GITHUB_APP_ID"`
 	GithubAppPrivateKeyFile string `env:"GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE" envDefault:"github-app-private-key.pem"`
 	GoliacEmail             string `env:"GOLIAC_EMAIL" envDefault:"goliac@alayacare.com"`
 
 	// goliacGitRepository string `env:"GOLIAC_GIT_REPOSITORY" envDefault:""`
 	// goliacGitBranch     string `env:"GOLIAC_GIT_BRANCH" envDefault:"main"`
-
-	GithubConcurrentThreads int `env:"GOLIAC_GITHUB_CONCURENT_THREADS" envDefault:"4"`
 }{}

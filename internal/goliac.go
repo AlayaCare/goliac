@@ -7,6 +7,7 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
+	"github.com/Alayacare/goliac/internal/usersync"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
@@ -20,15 +21,20 @@ type Goliac interface {
 	LoadAndValidateGoliacOrganization(repositoryUrl, branch string) error
 
 	// You need to call LoadAndValidategoliacOrganization before calling this function
-	ApplyToGithub(dryrun bool) error
+	ApplyToGithub(dryrun bool, teamreponame string, branch string) error
 
-	// List Repsotiories that are managed by goliac
-	ListManagedRepositories() ([]*entity.Repository, error)
+	// You dont need to call LoadAndValidategoliacOrganization before calling this function
+	UsersUpdate(repositoryUrl, branch string) error
+
+	// to close the clone git repository (if you called LoadAndValidateGoliacOrganization)
+	Close()
 }
 
 type GoliacImpl struct {
 	local        GoliacLocal
+	remote       GoliacRemoteExecutor
 	githubClient github.GitHubClient
+	repoconfig   *config.RepositoryConfig
 }
 
 func NewGoliacImpl() (Goliac, error) {
@@ -43,16 +49,20 @@ func NewGoliacImpl() (Goliac, error) {
 		return nil, err
 	}
 
+	remote := NewGoliacRemoteImpl(githubClient)
+
 	return &GoliacImpl{
 		local:        NewGoliacLocalImpl(),
 		githubClient: githubClient,
+		remote:       remote,
+		repoconfig:   &config.RepositoryConfig{},
 	}, nil
 }
 
 func (g *GoliacImpl) LoadAndValidateGoliacOrganization(repositoryUrl, branch string) error {
 	errs := []error{}
 	warns := []entity.Warning{}
-	if strings.HasPrefix(repositoryUrl, "https://") {
+	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") {
 		accessToken, err := g.githubClient.GetAccessToken()
 		if err != nil {
 			return err
@@ -62,11 +72,17 @@ func (g *GoliacImpl) LoadAndValidateGoliacOrganization(repositoryUrl, branch str
 		if err != nil {
 			return fmt.Errorf("unable to clone: %v", err)
 		}
+		err, repoconfig := g.local.LoadRepoConfig()
+		if err != nil {
+			return fmt.Errorf("unable to read goliac.yaml config file: %v", err)
+		}
+		g.repoconfig = repoconfig
+
 		errs, warns = g.local.LoadAndValidate()
 	} else {
 		// Local
 		fs := afero.NewOsFs()
-		g.local.LoadAndValidateLocal(fs, repositoryUrl)
+		errs, warns = g.local.LoadAndValidateLocal(fs, repositoryUrl)
 	}
 
 	for _, warn := range warns {
@@ -82,11 +98,55 @@ func (g *GoliacImpl) LoadAndValidateGoliacOrganization(repositoryUrl, branch str
 	return nil
 }
 
-func (g *GoliacImpl) ApplyToGithub(dryrun bool) error {
+func (g *GoliacImpl) ApplyToGithub(dryrun bool, teamreponame string, branch string) error {
+	err := g.remote.Load(g.repoconfig)
+	if err != nil {
+		return fmt.Errorf("Error when fetching data from Github: %v", err)
+	}
+
+	ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
+	reconciliator := NewGoliacReconciliatorImpl(ga, g.repoconfig)
+
+	err = reconciliator.Reconciliate(g.local, g.remote, teamreponame, dryrun)
+	if err != nil {
+		return fmt.Errorf("Error when reconciliating: %v", err)
+	}
+	accessToken, err := g.githubClient.GetAccessToken()
+	if err != nil {
+		return err
+	}
+	err = g.local.UpdateAndCommitCodeOwners(g.repoconfig, dryrun, accessToken, branch)
+	if err != nil {
+		return fmt.Errorf("Error when updating and commiting: %v", err)
+	}
 	return nil
 }
 
-// List Repsotiories that are managed by goliac
-func (g *GoliacImpl) ListManagedRepositories() ([]*entity.Repository, error) {
-	return nil, nil
+func (g *GoliacImpl) UsersUpdate(repositoryUrl, branch string) error {
+	accessToken, err := g.githubClient.GetAccessToken()
+	if err != nil {
+		return err
+	}
+
+	err = g.local.Clone(accessToken, repositoryUrl, branch)
+	if err != nil {
+		return err
+	}
+
+	err, repoconfig := g.local.LoadRepoConfig()
+	if err != nil {
+		return fmt.Errorf("unable to read goliac.yaml config file: %v", err)
+	}
+
+	userplugin, found := usersync.GetUserSyncPlugin(g.repoconfig.UserSync.Plugin)
+	if found == false {
+		return fmt.Errorf("User Sync Plugin %s not found", g.repoconfig.UserSync.Plugin)
+	}
+
+	err = g.local.SyncUsersAndTeams(repoconfig, userplugin, false)
+	return err
+}
+
+func (g *GoliacImpl) Close() {
+	g.local.Close()
 }
