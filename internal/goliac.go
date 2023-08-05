@@ -12,6 +12,10 @@ import (
 	"github.com/spf13/afero"
 )
 
+const (
+	GOLIAC_GIT_TAG = "goliac"
+)
+
 /*
  * Goliac is the main interface of the application.
  * It is used to load and validate a goliac repository and apply it to github.
@@ -104,18 +108,42 @@ func (g *GoliacImpl) ApplyToGithub(dryrun bool, teamreponame string, branch stri
 		return fmt.Errorf("Error when fetching data from Github: %v", err)
 	}
 
-	ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
-	reconciliator := NewGoliacReconciliatorImpl(ga, g.repoconfig)
-
-	err = reconciliator.Reconciliate(g.local, g.remote, teamreponame, dryrun)
+	commits, err := g.local.ListCommitsFromTag(GOLIAC_GIT_TAG)
 	if err != nil {
-		return fmt.Errorf("Error when reconciliating: %v", err)
+		ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
+		reconciliator := NewGoliacReconciliatorImpl(ga, g.repoconfig)
+
+		err = reconciliator.Reconciliate(g.local, g.remote, teamreponame, dryrun)
+		if err != nil {
+			return fmt.Errorf("Error when reconciliating: %v", err)
+		}
+	} else {
+		for _, commit := range commits {
+			if err := g.local.CheckoutCommit(commit); err == nil {
+				ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
+				reconciliator := NewGoliacReconciliatorImpl(ga, g.repoconfig)
+
+				err = reconciliator.Reconciliate(g.local, g.remote, teamreponame, dryrun)
+				if err != nil {
+					return fmt.Errorf("Error when reconciliating: %v", err)
+				}
+				if !dryrun {
+					accessToken, err := g.githubClient.GetAccessToken()
+					if err != nil {
+						return err
+					}
+					g.local.PushTag(GOLIAC_GIT_TAG, commit.Hash, accessToken)
+				}
+			} else {
+				logrus.Errorf("Not able to checkout commit %s", commit.Hash.String())
+			}
+		}
 	}
 	accessToken, err := g.githubClient.GetAccessToken()
 	if err != nil {
 		return err
 	}
-	err = g.local.UpdateAndCommitCodeOwners(g.repoconfig, dryrun, accessToken, branch)
+	err = g.local.UpdateAndCommitCodeOwners(g.repoconfig, dryrun, accessToken, branch, GOLIAC_GIT_TAG)
 	if err != nil {
 		return fmt.Errorf("Error when updating and commiting: %v", err)
 	}

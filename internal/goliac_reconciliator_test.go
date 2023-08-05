@@ -1,12 +1,15 @@
 package internal
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/slugify"
 	"github.com/Alayacare/goliac/internal/usersync"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,6 +24,16 @@ type GoliacLocalMock struct {
 func (m *GoliacLocalMock) Clone(accesstoken, repositoryUrl, branch string) error {
 	return nil
 }
+func (m *GoliacLocalMock) ListCommitsFromTag(tagname string) ([]*object.Commit, error) {
+	return nil, fmt.Errorf("not tag %s found", tagname)
+}
+func (m *GoliacLocalMock) CheckoutCommit(commit *object.Commit) error {
+	return nil
+}
+func (m *GoliacLocalMock) PushTag(tagname string, hash plumbing.Hash, accesstoken string) error {
+	return nil
+}
+
 func (m *GoliacLocalMock) LoadRepoConfig() (error, *config.RepositoryConfig) {
 	return nil, &config.RepositoryConfig{}
 }
@@ -45,7 +58,7 @@ func (m *GoliacLocalMock) ExternalUsers() map[string]*entity.User {
 func (m *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 	return m.rulesets
 }
-func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string) error {
+func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string) error {
 	return nil
 }
 func (m *GoliacLocalMock) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin usersync.UserSyncPlugin, dryrun bool) error {
