@@ -163,6 +163,11 @@ func (g *GoliacLocalImpl) PushTag(tagname string, hash plumbing.Hash, accesstoke
 		RefSpecs: []goconfig.RefSpec{goconfig.RefSpec(pushRefSpec)},
 		Auth:     auth,
 	})
+
+	if err.Error() == "already up-to-date" {
+		return nil
+	}
+
 	return err
 }
 
