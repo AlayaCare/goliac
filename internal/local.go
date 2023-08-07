@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -33,12 +34,17 @@ import (
 type GoliacLocal interface {
 	Clone(accesstoken, repositoryUrl, branch string) error
 
+	// Return commits from tagname to HEAD
+	ListCommitsFromTag(tagname string) ([]*object.Commit, error)
+	CheckoutCommit(commit *object.Commit) error
+	PushTag(tagname string, hash plumbing.Hash, accesstoken string) error
+
 	LoadRepoConfig() (error, *config.RepositoryConfig)
 
 	// Load and Validate from a github repository
 	LoadAndValidate() ([]error, []entity.Warning)
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
-	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string) error
+	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string) error
 	// whenever the users list is changing, reload users and teams, and commit them
 	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin usersync.UserSyncPlugin, dryrun bool) error
 	Close()
@@ -137,6 +143,101 @@ func (g *GoliacLocalImpl) Clone(accesstoken, repositoryUrl, branch string) error
 	return err
 }
 
+func (g *GoliacLocalImpl) PushTag(tagname string, hash plumbing.Hash, accesstoken string) error {
+	// Create or move the tag to the commit
+	tagRefName := plumbing.ReferenceName("refs/tags/" + tagname)
+	tagRef := plumbing.NewHashReference(tagRefName, hash)
+	if err := g.repo.Storer.SetReference(tagRef); err != nil {
+		return err
+	}
+
+	// Now push the tag to the remote repository
+	auth := &http.BasicAuth{
+		Username: "x-access-token", // This can be anything except an empty string
+		Password: accesstoken,
+	}
+
+	// Force push with '+refs/tags/your_tag_name_here:refs/tags/your_tag_name_here'
+	pushRefSpec := fmt.Sprintf("+%s:%s", tagRefName, tagRefName)
+	err := g.repo.Push(&git.PushOptions{
+		RefSpecs: []goconfig.RefSpec{goconfig.RefSpec(pushRefSpec)},
+		Auth:     auth,
+	})
+
+	if err.Error() == "already up-to-date" {
+		return nil
+	}
+
+	return err
+}
+
+func (g *GoliacLocalImpl) CheckoutCommit(commit *object.Commit) error {
+	// checkout the branch
+	w, err := g.repo.Worktree()
+	if err != nil {
+		return err
+	}
+	err = w.Checkout(&git.CheckoutOptions{
+		Hash: commit.Hash,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (g *GoliacLocalImpl) ListCommitsFromTag(tagname string) ([]*object.Commit, error) {
+
+	commits := make([]*object.Commit, 0)
+
+	// Get reference to the HEAD
+	refHead, err := g.repo.Head()
+	if err != nil {
+		return nil, err
+	}
+
+	headCommit, err := g.repo.CommitObject(refHead.Hash())
+	if err != nil {
+		return nil, err
+	}
+
+	// Get reference to the specific tag
+	refTag, err := g.repo.Tag(tagname)
+	if err != nil {
+		// we can't? stop it and returns the head
+		return []*object.Commit{headCommit}, nil
+	}
+
+	// Get the commits between HEAD and the specific tag
+	commitLog, err := g.repo.Log(&git.LogOptions{
+		From:  refHead.Hash(),
+		Order: git.LogOrderCommitterTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	err = commitLog.ForEach(func(c *object.Commit) error {
+		commits = append(commits, c)
+		if c.Hash == refTag.Hash() {
+			return errors.New("stop iteration") // This is used to stop the iteration
+		}
+
+		return nil
+	})
+	if err != nil && err.Error() != "stop iteration" {
+		return commits, err
+	}
+
+	// let's invert the order of the commits (from tag to HEAD)
+	length := len(commits)
+	for i := 0; i < length/2; i++ {
+		commits[i], commits[length-1-i] = commits[length-1-i], commits[i]
+	}
+
+	return commits, nil
+}
+
 func (g *GoliacLocalImpl) Close() {
 	if g.repo != nil {
 		w, err := g.repo.Worktree()
@@ -193,7 +294,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string) string {
  * UpdateAndCommitCodeOwners will collects all teams definition to update the .github/CODEOWNERS file
  * cf https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
  */
-func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string) error {
+func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string) error {
 	if g.repo == nil {
 		return fmt.Errorf("git repository not cloned")
 	}
@@ -268,6 +369,18 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 			return fmt.Errorf("Error pushing to remote: %v", err)
 		}
 	}
+
+	// push the tagname
+	if !dryrun {
+		// Get the HEAD reference
+		headRef, err := g.repo.Head()
+		if err != nil {
+			return err
+		}
+
+		return g.PushTag(tagname, headRef.Hash(), accesstoken)
+	}
+
 	return nil
 }
 
