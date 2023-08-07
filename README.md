@@ -163,3 +163,44 @@ data:
   archived: true
 ```
 
+### Global configuration
+
+to make Goliac working you can configure the `/goliac.yaml` file
+
+```
+admin_team: admin # the name of the team (in the `/teams` directory ) that can admin this repository 
+
+enable_rulesets: true # can only be true if you have Github Enterprise
+rulesets:
+  - pattern: .*
+    ruleset: default
+
+max_changesets: 50 # protection measure: how many changes Goliac can do at once before considering that suspicious 
+github_concurrent_threads: 4 # how many github API call to do in parallel
+
+destructive_operations:
+  repositories: false # can Goliac remove repositories not listed in this repository 
+  teams: false        # can Goliac remove teams not listed in this repository
+  users: false        # can Goliac remove users not listed in this repository
+  rulesets: false     # can Goliac remove rulesets not listed in this repository
+```
+
+and you can configure different ruleset in the `/rulesets` directory like
+```
+apiVersion: v1
+kind: Ruleset
+metadata:
+  name: default
+enforcement: evaluate # can be disable, active or evaluate 
+bypassapps:
+  - appname: goliac-project-app
+    mode: always # always or pull_request
+on:
+  include: 
+    - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
+
+rules:
+  - ruletype: pull_request # currently supported: pull_request, required_signatures, required_status_checks
+    parameters:
+      requiredApprovingReviewCount: 1
+```
