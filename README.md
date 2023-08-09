@@ -176,7 +176,6 @@ rulesets:
     ruleset: default
 
 max_changesets: 50 # protection measure: how many changes Goliac can do at once before considering that suspicious 
-github_concurrent_threads: 4 # how many github API call to do in parallel
 
 destructive_operations:
   repositories: false # can Goliac remove repositories not listed in this repository 

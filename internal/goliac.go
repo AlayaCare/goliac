@@ -104,7 +104,7 @@ func (g *GoliacImpl) LoadAndValidateGoliacOrganization(repositoryUrl, branch str
 }
 
 func (g *GoliacImpl) ApplyToGithub(dryrun bool, teamreponame string, branch string) error {
-	err := g.remote.Load(g.repoconfig)
+	err := g.remote.Load()
 	if err != nil {
 		return fmt.Errorf("Error when fetching data from Github: %v", err)
 	}

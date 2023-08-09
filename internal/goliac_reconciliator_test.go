@@ -78,7 +78,7 @@ type GoliacRemoteMock struct {
 	appids     map[string]int
 }
 
-func (m *GoliacRemoteMock) Load(repoconfig *config.RepositoryConfig) error {
+func (m *GoliacRemoteMock) Load() error {
 	return nil
 }
 func (m *GoliacRemoteMock) RuleSets() map[string]*GithubRuleSet {
