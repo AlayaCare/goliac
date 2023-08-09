@@ -81,6 +81,9 @@ type GoliacRemoteMock struct {
 func (m *GoliacRemoteMock) Load() error {
 	return nil
 }
+func (m *GoliacRemoteMock) FlushCache() {
+
+}
 func (m *GoliacRemoteMock) RuleSets() map[string]*GithubRuleSet {
 	return m.rulesets
 }
