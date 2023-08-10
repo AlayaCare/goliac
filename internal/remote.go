@@ -23,6 +23,7 @@ const FORLOOP_STOP = 100
 type GoliacRemote interface {
 	// Load from a github repository
 	Load() error
+	FlushCache()
 
 	Users() map[string]string
 	TeamSlugByName() map[string]string
@@ -93,6 +94,15 @@ func NewGoliacRemoteImpl(client github.GitHubClient) *GoliacRemoteImpl {
 		ttlExpireRulesets:     time.Now(),
 		ttlExpireAppIds:       time.Now(),
 	}
+}
+
+func (g *GoliacRemoteImpl) FlushCache() {
+	g.ttlExpireUsers = time.Now()
+	g.ttlExpireRepositories = time.Now()
+	g.ttlExpireTeams = time.Now()
+	g.ttlExpireTeamsRepos = time.Now()
+	g.ttlExpireRulesets = time.Now()
+	g.ttlExpireAppIds = time.Now()
 }
 
 func (g *GoliacRemoteImpl) RuleSets() map[string]*GithubRuleSet {
