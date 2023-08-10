@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/Alayacare/goliac/internal/config"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/vektah/gqlparser/v2/ast"
@@ -405,13 +404,13 @@ func TestRemoteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
 
-		err := remoteImpl.loadRepositories()
+		repositories, _, err := remoteImpl.loadRepositories()
 		assert.Nil(t, err)
-		assert.Equal(t, 133, len(remoteImpl.repositories))
-		assert.Equal(t, false, remoteImpl.repositories["repo_1"].IsArchived)
-		assert.Equal(t, true, remoteImpl.repositories["repo_3"].IsArchived)
-		assert.Equal(t, false, remoteImpl.repositories["repo_1"].IsPrivate)
-		assert.Equal(t, true, remoteImpl.repositories["repo_10"].IsPrivate)
+		assert.Equal(t, 133, len(repositories))
+		assert.Equal(t, false, repositories["repo_1"].IsArchived)
+		assert.Equal(t, true, repositories["repo_3"].IsArchived)
+		assert.Equal(t, false, repositories["repo_1"].IsPrivate)
+		assert.Equal(t, true, repositories["repo_10"].IsPrivate)
 	})
 	t.Run("happy path: load remote teams", func(t *testing.T) {
 		// MockGithubClient doesn't support concurrent access
@@ -419,10 +418,10 @@ func TestRemoteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
 
-		err := remoteImpl.loadTeams()
+		teams, _, err := remoteImpl.loadTeams()
 		assert.Nil(t, err)
-		assert.Equal(t, 122, len(remoteImpl.teams))
-		assert.Equal(t, "team_1", remoteImpl.teams["slug-1"].Name)
+		assert.Equal(t, 122, len(teams))
+		assert.Equal(t, "team_1", teams["slug-1"].Name)
 	})
 
 	t.Run("happy path: load remote team's repos", func(t *testing.T) {
@@ -443,10 +442,7 @@ func TestRemoteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
 
-		repoconfig := config.RepositoryConfig{
-			GithubConcurrentThreads: 1,
-		}
-		err := remoteImpl.Load(&repoconfig)
+		err := remoteImpl.Load()
 		assert.Nil(t, err)
 		assert.Equal(t, 122, len(remoteImpl.teams))
 		assert.Equal(t, 2, len(remoteImpl.teamRepos["slug-1"]))
