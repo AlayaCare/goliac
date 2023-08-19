@@ -5,6 +5,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/sync"
 	"github.com/spf13/afero"
 )
 
@@ -12,7 +13,7 @@ type UserSyncPluginNoop struct {
 	Fs afero.Fs
 }
 
-func NewUserSyncPluginNoop() UserSyncPlugin {
+func NewUserSyncPluginNoop() sync.UserSyncPlugin {
 	return &UserSyncPluginNoop{
 		Fs: afero.NewOsFs(),
 	}

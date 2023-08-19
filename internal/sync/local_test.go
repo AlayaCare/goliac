@@ -1,4 +1,4 @@
-package internal
+package sync
 
 import (
 	"fmt"
@@ -10,7 +10,6 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/usersync"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/spf13/afero"
@@ -178,12 +177,32 @@ func (p *ErroreUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, orguse
 	return nil, fmt.Errorf("unknown error")
 }
 
+type UserSyncPluginNoop struct {
+	Fs afero.Fs
+}
+
+func NewUserSyncPluginNoop() UserSyncPlugin {
+	return &UserSyncPluginNoop{
+		Fs: afero.NewOsFs(),
+	}
+}
+
+func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, orguserdirrectorypath string) (map[string]*entity.User, error) {
+	users, errs, _ := entity.ReadUserDirectory(p.Fs, orguserdirrectorypath)
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("cannot load org users (for example: %v)", errs[0])
+	}
+
+	return users, nil
+}
+
 func TestSyncUsersViaUserPlugin(t *testing.T) {
+
 	t.Run("happy path: noop", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		createBasicStructure(fs, "/tmp/goliac")
 
-		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &usersync.UserSyncPluginNoop{
+		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &UserSyncPluginNoop{
 			Fs: fs,
 		}, "/tmp/goliac")
 
@@ -191,6 +210,7 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		assert.Equal(t, 0, len(removed))
 		assert.Equal(t, 0, len(added))
 	})
+
 	t.Run("happy path: replcae with foobar", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		createBasicStructure(fs, "/tmp/goliac")

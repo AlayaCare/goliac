@@ -1,4 +1,4 @@
-package internal
+package sync
 
 import (
 	"encoding/json"

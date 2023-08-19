@@ -1,4 +1,4 @@
-package internal
+package sync
 
 type Comparable interface {
 	*GithubTeam | *GithubRepoComparable | *GithubRuleSet
