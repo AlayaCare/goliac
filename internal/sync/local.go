@@ -1,4 +1,4 @@
-package internal
+package sync
 
 import (
 	"errors"
@@ -14,7 +14,6 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/slugify"
-	"github.com/Alayacare/goliac/internal/usersync"
 	"github.com/go-git/go-git/v5"
 	goconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -46,7 +45,7 @@ type GoliacLocal interface {
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
 	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string) error
 	// whenever the users list is changing, reload users and teams, and commit them
-	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin usersync.UserSyncPlugin, dryrun bool) error
+	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, dryrun bool) error
 	Close()
 
 	// Load and Validate from a local directory
@@ -391,7 +390,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
  * - collect the difference
  * - returns deleted users, and add/updated users
  */
-func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, userplugin usersync.UserSyncPlugin, rootDir string) ([]string, []string, error) {
+func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, userplugin UserSyncPlugin, rootDir string) ([]string, []string, error) {
 	orgUsers, errs, _ := entity.ReadUserDirectory(fs, filepath.Join(rootDir, "users", "org"))
 	if len(errs) > 0 {
 		return nil, nil, fmt.Errorf("cannot load org users (for example: %v)", errs[0])
@@ -438,7 +437,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, us
 	return deletedusers, updatedusers, nil
 }
 
-func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin usersync.UserSyncPlugin, dryrun bool) error {
+func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, dryrun bool) error {
 	if g.repo == nil {
 		return fmt.Errorf("git repository not cloned")
 	}
@@ -486,6 +485,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		}
 
 		for _, u := range deletedusers {
+			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "remove_user_from_repository"}).Infof("user: %s", u)
 			_, err = w.Remove(u)
 			if err != nil {
 				return err
@@ -493,6 +493,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		}
 
 		for _, u := range addedusers {
+			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "add_user_to_repository"}).Infof("user: %s", u)
 			_, err = w.Add(u)
 			if err != nil {
 				return err
@@ -500,6 +501,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		}
 
 		for _, t := range teamschanged {
+			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "update_team_to_repository"}).Infof("team: %s", t)
 			_, err = w.Add(t)
 			if err != nil {
 				return err
