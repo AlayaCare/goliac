@@ -128,6 +128,19 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		}
 	}
 
+	// adding the "everyone" team
+	if r.repoconfig.EveryoneTeamEnabled {
+		everyone := GithubTeam{
+			Name:    "everyone",
+			Slug:    "everyone",
+			Members: []string{},
+		}
+		for u, _ := range local.Users() {
+			everyone.Members = append(everyone.Members, u)
+		}
+		slugTeams["everyone"] = &everyone
+	}
+
 	// now we compare local (slugTeams) and remote (rTeams)
 
 	compareTeam := func(lTeam *GithubTeam, rTeam *GithubTeam) bool {
@@ -233,6 +246,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			for teamname := range local.Teams() {
 				writers = append(writers, slugify.Make(teamname)+"-owners")
 			}
+		}
+
+		// adding the "everyone" team to each repository
+		if r.repoconfig.EveryoneTeamEnabled {
+			readers = append(readers, "everyone")
 		}
 
 		lRepos[reponame] = &GithubRepoComparable{
