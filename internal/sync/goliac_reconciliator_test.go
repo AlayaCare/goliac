@@ -423,6 +423,53 @@ func TestReconciliation(t *testing.T) {
 		assert.Equal(t, 1, len(recorder.TeamMemberAdded["exist-ing"]))
 	})
 
+	t.Run("happy path: new team + adding everyone team", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{
+			EveryoneTeamEnabled: true,
+		}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+		newTeam := &entity.Team{}
+		newTeam.Metadata.Name = "new"
+		newTeam.Data.Owners = []string{"new.owner"}
+		newTeam.Data.Members = []string{"new.member"}
+		local.teams["new"] = newTeam
+
+		newOwner := entity.User{}
+		newOwner.Metadata.Name = "new.owner"
+		newOwner.Data.GithubID = "new_owner"
+		local.users["new.owner"] = &newOwner
+		newMember := entity.User{}
+		newMember.Metadata.Name = "new.member"
+		newMember.Data.GithubID = "new_member"
+		local.users["new.member"] = &newMember
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false)
+
+		// 2 members created
+		assert.Equal(t, 2, len(recorder.TeamsCreated["new"]))
+		assert.Equal(t, 1, len(recorder.TeamsCreated["new-owners"]))
+		// and the everyone team
+		assert.Equal(t, 2, len(recorder.TeamsCreated["everyone"]))
+	})
+
 	t.Run("happy path: removed team without destructive operation", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
@@ -616,7 +663,7 @@ func TestReconciliation(t *testing.T) {
 		remote.teamsrepos["existing"] = make(map[string]*GithubTeamRepo)
 		remote.teamsrepos["existing"]["myrepo"] = &GithubTeamRepo{
 			Name:       "myrepo",
-			Permission: "pull",
+			Permission: "READ",
 		}
 
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false)
@@ -625,6 +672,70 @@ func TestReconciliation(t *testing.T) {
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 1, len(recorder.RepositoryTeamRemoved))
+		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
+	})
+
+	t.Run("happy path: existing repo without new owner but with everyone team", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{
+			EveryoneTeamEnabled: true,
+		}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+		lRepo := &entity.Repository{}
+		lRepo.Metadata.Name = "myrepo"
+		lRepo.Data.Readers = []string{}
+		lRepo.Data.Writers = []string{}
+		lowner := "existing"
+		lRepo.Owner = &lowner
+		local.repos["myrepo"] = lRepo
+
+		existingTeam := &entity.Team{}
+		existingTeam.Metadata.Name = "existing"
+		existingTeam.Data.Owners = []string{"existing_owner"}
+		existingTeam.Data.Members = []string{"existing_member"}
+		local.teams["existing"] = existingTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+		existing := &GithubTeam{
+			Name:    "existing",
+			Slug:    "existing",
+			Members: []string{"existing_owner", "existing_member"},
+		}
+		remote.teams["existing"] = existing
+		rRepo := GithubRepository{
+			Name: "myrepo",
+		}
+		remote.repos["myrepo"] = &rRepo
+
+		remote.teamsrepos["existing"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["existing"]["myrepo"] = &GithubTeamRepo{
+			Name:       "myrepo",
+			Permission: "WRITE",
+		}
+
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false)
+
+		// 1 team updated
+		assert.Equal(t, 0, len(recorder.RepositoryCreated))
+		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
+		// we have a new "everyone" team for the repository
 		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 	})

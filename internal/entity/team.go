@@ -99,6 +99,10 @@ func (t *Team) Validate(dirname string, users map[string]*User) (error, []Warnin
 		return fmt.Errorf("metadata.name is empty for team filename %s", dirname), warnings
 	}
 
+	if t.Metadata.Name == "everyone" {
+		return fmt.Errorf("team name 'everyone' is reserved"), warnings
+	}
+
 	if strings.HasSuffix(t.Metadata.Name, "-owners") {
 		return fmt.Errorf("metadata.name cannot finish with '-owners' for team filename %s. It is a reserved suffix", dirname), warnings
 	}
