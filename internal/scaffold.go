@@ -14,9 +14,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type LoadGithubSamlUsers func() (map[string]*entity.User, error)
+
 type Scaffold struct {
-	client github.GitHubClient
-	remote sync.GoliacRemote
+	remote                     sync.GoliacRemote
+	loadUsersFromGithubOrgSaml LoadGithubSamlUsers
 }
 
 func NewScaffold() (*Scaffold, error) {
@@ -34,8 +36,10 @@ func NewScaffold() (*Scaffold, error) {
 	remote := sync.NewGoliacRemoteImpl(githubClient)
 
 	return &Scaffold{
-		client: githubClient,
 		remote: remote,
+		loadUsersFromGithubOrgSaml: func() (map[string]*entity.User, error) {
+			return sync.LoadUsersFromGithubOrgSaml(githubClient)
+		},
 	}, nil
 }
 
@@ -221,7 +225,7 @@ func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]stri
 
 	usermap := make(map[string]string)
 	// test SAML integration
-	users, err := sync.LoadUsersFromGithubOrgSaml(s.client)
+	users, err := s.loadUsersFromGithubOrgSaml()
 
 	if len(users) > 0 && err == nil {
 		for username, user := range users {
