@@ -12,8 +12,8 @@ import (
 type Team struct {
 	Entity `yaml:",inline"`
 	Data   struct {
-		Owners  []string `yaml:"owners"`
-		Members []string `yaml:"members"`
+		Owners  []string `yaml:"owners,omitempty"`
+		Members []string `yaml:"members,omitempty"`
 	} `yaml:"data"`
 }
 

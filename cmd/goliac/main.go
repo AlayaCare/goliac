@@ -130,6 +130,29 @@ https://github.com/...`,
 		},
 	}
 
+	scaffoldcmd := &cobra.Command{
+		Use:   "scaffold [directory] [adminteam]",
+		Short: "Will create a base directory based on your current Github organization",
+		Long: `Base on your Github organization, this command will try to scaffold a
+goliac directory to let you start with something.
+The adminteam is your current team that contains Github administrator`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) < 2 {
+				logrus.Fatalf("missing arguments")
+			}
+			directory := args[0]
+			adminteam := args[1]
+			scaffold, err := internal.NewScaffold()
+			if err != nil {
+				logrus.Fatalf("failed to create scaffold: %s", err)
+			}
+			err = scaffold.Generate(directory, adminteam)
+			if err != nil {
+				logrus.Fatalf("failed to create scaffold direcrory: %s", err)
+			}
+		},
+	}
+
 	rootCmd := &cobra.Command{
 		Use:   "goliac",
 		Short: "A CLI for the goliac organization",
@@ -142,6 +165,7 @@ Either local directory, or remote git repository`,
 	rootCmd.AddCommand(planCmd)
 	rootCmd.AddCommand(applyCmd)
 	rootCmd.AddCommand(postSyncUsersCmd)
+	rootCmd.AddCommand(scaffoldcmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
