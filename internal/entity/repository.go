@@ -12,14 +12,14 @@ import (
 type Repository struct {
 	Entity `yaml:",inline"`
 	Data   struct {
-		Writers             []string `yaml:"writers"`
-		Readers             []string `yaml:"readers"`
-		ExternalUserReaders []string `yaml:"externalUserReaders"`
-		ExternalUserWriters []string `yaml:"externalUserWriters"`
-		IsPublic            bool     `yaml:"public"`
-		IsArchived          bool     `yaml:"archived"`
-	} `yaml:"data"`
-	Owner *string // implicit. team name owning the repo (if any)
+		Writers             []string `yaml:"writers,omitempty"`
+		Readers             []string `yaml:"readers,omitempty"`
+		ExternalUserReaders []string `yaml:"externalUserReaders,omitempty"`
+		ExternalUserWriters []string `yaml:"externalUserWriters,omitempty"`
+		IsPublic            bool     `yaml:"public,omitempty"`
+		IsArchived          bool     `yaml:"archived,omitempty"`
+	} `yaml:"data,omitempty"`
+	Owner *string `yaml:"owner,omitempty"` // implicit. team name owning the repo (if any)
 }
 
 /*
