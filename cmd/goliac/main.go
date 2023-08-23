@@ -153,6 +153,21 @@ The adminteam is your current team that contains Github administrator`,
 		},
 	}
 
+	servecmd := &cobra.Command{
+		Use:   "serve",
+		Short: "This will start the application in server mode",
+		Long: `This will start the application in server mode, which will
+apply periodically (env:GOLIAC_SERVER_APPLY_INTERVAL)
+any changes from the teams Git repository to Github.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			goliac, err := internal.NewGoliacImpl()
+			if err != nil {
+				logrus.Fatalf("failed to create goliac: %s", err)
+			}
+			goliac.Serve()
+		},
+	}
+
 	rootCmd := &cobra.Command{
 		Use:   "goliac",
 		Short: "A CLI for the goliac organization",
@@ -166,6 +181,7 @@ Either local directory, or remote git repository`,
 	rootCmd.AddCommand(applyCmd)
 	rootCmd.AddCommand(postSyncUsersCmd)
 	rootCmd.AddCommand(scaffoldcmd)
+	rootCmd.AddCommand(servecmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

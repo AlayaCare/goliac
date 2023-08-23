@@ -163,7 +163,7 @@ func (g *GoliacLocalImpl) PushTag(tagname string, hash plumbing.Hash, accesstoke
 		Auth:     auth,
 	})
 
-	if err.Error() == "already up-to-date" {
+	if err != nil && err.Error() == "already up-to-date" {
 		return nil
 	}
 
@@ -217,10 +217,10 @@ func (g *GoliacLocalImpl) ListCommitsFromTag(tagname string) ([]*object.Commit, 
 	}
 
 	err = commitLog.ForEach(func(c *object.Commit) error {
-		commits = append(commits, c)
 		if c.Hash == refTag.Hash() {
 			return errors.New("stop iteration") // This is used to stop the iteration
 		}
+		commits = append(commits, c)
 
 		return nil
 	})
