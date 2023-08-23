@@ -3,7 +3,15 @@ package internal
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"os"
+	"os/signal"
+	"path"
+	"path/filepath"
 	"strings"
+	gosync "sync"
+	"syscall"
+	"time"
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
@@ -31,6 +39,9 @@ type Goliac interface {
 
 	// You dont need to call LoadAndValidategoliacOrganization before calling this function
 	UsersUpdate(repositoryUrl, branch string) error
+
+	// this go routine will run periodically to sync from the teams repo to Github
+	Serve()
 
 	// to close the clone git repository (if you called LoadAndValidateGoliacOrganization)
 	Close()
@@ -183,4 +194,64 @@ func (g *GoliacImpl) UsersUpdate(repositoryUrl, branch string) error {
 
 func (g *GoliacImpl) Close() {
 	g.local.Close()
+}
+
+func (g *GoliacImpl) Serve() {
+	var wg gosync.WaitGroup
+	stopCh := make(chan struct{})
+
+	logrus.Info("Server started")
+	// Start the goroutine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		interval := 0
+		for {
+			select {
+			case <-stopCh:
+				return
+			default:
+				interval--
+				time.Sleep(1 * time.Second)
+				if interval <= 0 {
+					// Do some work here
+					err := g.serveApply()
+					if err != nil {
+						logrus.Error(err)
+					}
+					interval = config.Config.ServerApplyInterval
+				}
+			}
+		}
+	}()
+
+	// Handle OS signals
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
+	<-signalCh
+	fmt.Println("Received OS signal, stopping Goliac...")
+
+	close(stopCh)
+	wg.Wait()
+}
+
+func (g *GoliacImpl) serveApply() error {
+	repo := config.Config.ServerGitRepository
+	branch := config.Config.ServerGitBranch
+	err := g.LoadAndValidateGoliacOrganization(repo, branch)
+	defer g.Close()
+	if err != nil {
+		return fmt.Errorf("failed to load and validate: %s", err)
+	}
+	u, err := url.Parse(repo)
+	if err != nil {
+		return fmt.Errorf("failed to parse %s: %v", repo, err)
+	}
+	teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
+
+	err = g.ApplyToGithub(false, teamsreponame, branch)
+	if err != nil {
+		return fmt.Errorf("failed to apply on branch %s: %s", branch, err)
+	}
+	return nil
 }

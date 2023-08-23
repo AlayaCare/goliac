@@ -23,6 +23,7 @@ var Config = struct {
 	GithubConcurrentThreads int `env:"GOLIAC_GITHUB_CONCURRENT_THREADS" envDefault:"1"`
 	GithubCacheTTL          int `env:"GOLIAC_GITHUB_CACHE_TTL" envDefault:"86400"`
 
-	// goliacGitRepository string `env:"GOLIAC_GIT_REPOSITORY" envDefault:""`
-	// goliacGitBranch     string `env:"GOLIAC_GIT_BRANCH" envDefault:"main"`
+	ServerApplyInterval int    `env:"GOLIAC_SERVER_APPLY_INTERVAL" envDefault:"600"`
+	ServerGitRepository string `env:"GOLIAC_SERVER_GIT_REPOSITORY" envDefault:""`
+	ServerGitBranch     string `env:"GOLIAC_SERVER_GIT_BRANCH" envDefault:"main"`
 }{}
