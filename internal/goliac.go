@@ -52,6 +52,7 @@ type GoliacImpl struct {
 	remote       sync.GoliacRemoteExecutor
 	githubClient github.GitHubClient
 	repoconfig   *config.RepositoryConfig
+	applyMutex   gosync.Mutex
 }
 
 func NewGoliacImpl() (Goliac, error) {
@@ -75,6 +76,7 @@ func NewGoliacImpl() (Goliac, error) {
 		githubClient: githubClient,
 		remote:       remote,
 		repoconfig:   &config.RepositoryConfig{},
+		applyMutex:   gosync.Mutex{},
 	}, nil
 }
 
@@ -236,6 +238,11 @@ func (g *GoliacImpl) Serve() {
 }
 
 func (g *GoliacImpl) serveApply() error {
+	if !g.applyMutex.TryLock() {
+		// already locked: we are already appyling
+		return nil
+	}
+	defer g.applyMutex.Unlock()
 	repo := config.Config.ServerGitRepository
 	branch := config.Config.ServerGitBranch
 	err := g.LoadAndValidateGoliacOrganization(repo, branch)
