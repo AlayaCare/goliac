@@ -164,7 +164,8 @@ any changes from the teams Git repository to Github.`,
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			goliac.Serve()
+			server := internal.NewGoliacServer(goliac)
+			server.Serve()
 		},
 	}
 

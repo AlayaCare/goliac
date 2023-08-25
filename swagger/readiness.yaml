@@ -1,0 +1,14 @@
+get:
+  tags:
+    - health
+  operationId: getReadiness
+  description: Check if Goliac is ready to serve
+  responses:
+    200:
+      description: status of health check
+      schema:
+        $ref: "#/definitions/health"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

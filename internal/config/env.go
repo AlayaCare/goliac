@@ -26,4 +26,16 @@ var Config = struct {
 	ServerApplyInterval int    `env:"GOLIAC_SERVER_APPLY_INTERVAL" envDefault:"600"`
 	ServerGitRepository string `env:"GOLIAC_SERVER_GIT_REPOSITORY" envDefault:""`
 	ServerGitBranch     string `env:"GOLIAC_SERVER_GIT_BRANCH" envDefault:"main"`
+
+	// Host - golang-skeleton server host
+	SwaggerHost string `env:"GOLIAC_RESTSERVER_HOST" envDefault:"localhost"`
+	// Port - golang-skeleton server port
+	SwaggerPort int `env:"GOLIAC_RESTSERVER_PORT" envDefault:"18000"`
+
+	// MiddlewareVerboseLoggerEnabled - to enable the negroni-logrus logger for all the endpoints useful for debugging
+	MiddlewareVerboseLoggerEnabled bool `env:"GOLIAC_MIDDLEWARE_VERBOSE_LOGGER_ENABLED" envDefault:"true"`
+	// MiddlewareVerboseLoggerExcludeURLs - to exclude urls from the verbose logger via comma separated list
+	MiddlewareVerboseLoggerExcludeURLs []string `env:"GOLIAC_MIDDLEWARE_VERBOSE_LOGGER_EXCLUDE_URLS" envDefault:"" envSeparator:","`
+	// MiddlewareGzipEnabled - to enable gzip middleware
+	MiddlewareGzipEnabled bool `env:"GOLIAC_MIDDLEWARE_GZIP_ENABLED" envDefault:"true"`
 }{}
