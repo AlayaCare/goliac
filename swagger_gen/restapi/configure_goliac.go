@@ -11,7 +11,7 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Alayacare/goliac/internal/swagger_gen/restapi/operations"
+	"github.com/Alayacare/goliac/swagger_gen/restapi/operations"
 )
 
 //go:generate swagger generate server --target ../../swagger_gen --name Goliac --spec ../../../docs/api_docs/bundle.yaml --principal interface{}

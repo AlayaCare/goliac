@@ -2,7 +2,6 @@ package sync
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,6 +24,9 @@ func createBasicStructure(fs afero.Fs, path string) error {
 
 	err = afero.WriteFile(fs, filepath.Join(path, "goliac.yaml"), []byte(`
 `), 0644)
+	if err != nil {
+		return err
+	}
 	// Create users
 	err = fs.MkdirAll(filepath.Join(path, "users/org"), 0755)
 	if err != nil {
@@ -102,7 +104,7 @@ func TestRepository(t *testing.T) {
 	})
 
 	t.Run("happy path: local repository", func(t *testing.T) {
-		tmpDirectory, err := ioutil.TempDir("", "goliac")
+		tmpDirectory, err := os.MkdirTemp("", "goliac")
 		assert.Nil(t, err)
 		defer os.RemoveAll(tmpDirectory)
 

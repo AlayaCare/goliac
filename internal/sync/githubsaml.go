@@ -87,6 +87,9 @@ func LoadUsersFromGithubOrgSaml(client github.GitHubClient) (map[string]*entity.
 	count := 0
 	for hasNextPage {
 		data, err := client.QueryGraphQLAPI(listUsersFromGithubOrgSaml, variables)
+		if err != nil {
+			return users, err
+		}
 		var gResult GraplQLUsersFromGithubOrgSaml
 
 		// parse first page

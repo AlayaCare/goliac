@@ -108,10 +108,12 @@ func (g *GoliacRemoteImpl) FlushCache() {
 func (g *GoliacRemoteImpl) RuleSets() map[string]*GithubRuleSet {
 	if time.Now().After(g.ttlExpireRulesets) {
 		err := g.Load()
-		rulesets, err := g.loadRulesets()
 		if err == nil {
-			g.rulesets = rulesets
-			g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+			rulesets, err := g.loadRulesets()
+			if err == nil {
+				g.rulesets = rulesets
+				g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+			}
 		}
 	}
 	return g.rulesets
@@ -239,6 +241,9 @@ func (g *GoliacRemoteImpl) loadOrgUsers() (map[string]string, error) {
 	count := 0
 	for hasNextPage {
 		data, err := g.client.QueryGraphQLAPI(listAllOrgMembers, variables)
+		if err != nil {
+			return users, err
+		}
 		var gResult GraplQLUsers
 
 		// parse first page
@@ -331,6 +336,9 @@ func (g *GoliacRemoteImpl) loadRepositories() (map[string]*GithubRepository, map
 	count := 0
 	for hasNextPage {
 		data, err := g.client.QueryGraphQLAPI(listAllReposInOrg, variables)
+		if err != nil {
+			return repositories, repositoriesByRefId, err
+		}
 		var gResult GraplQLRepositories
 
 		// parse first page
@@ -645,6 +653,9 @@ func (g *GoliacRemoteImpl) loadTeamRepos(teamSlug string) (map[string]*GithubTea
 	count := 0
 	for hasNextPage {
 		data, err := g.client.QueryGraphQLAPI(listAllTeamsReposInOrg, variables)
+		if err != nil {
+			return nil, err
+		}
 		var gResult GraplQLTeamsRepos
 
 		// parse first page
@@ -739,6 +750,9 @@ func (g *GoliacRemoteImpl) loadTeams() (map[string]*GithubTeam, map[string]strin
 	count := 0
 	for hasNextPage {
 		data, err := g.client.QueryGraphQLAPI(listAllTeamsInOrg, variables)
+		if err != nil {
+			return teams, teamSlugByName, err
+		}
 		var gResult GraplQLTeams
 
 		// parse first page
@@ -778,6 +792,9 @@ func (g *GoliacRemoteImpl) loadTeams() (map[string]*GithubTeam, map[string]strin
 		count := 0
 		for hasNextPage {
 			data, err := g.client.QueryGraphQLAPI(listAllTeamMembersInOrg, variables)
+			if err != nil {
+				return teams, teamSlugByName, err
+			}
 			var gResult GraplQLTeamMembers
 
 			// parse first page
@@ -1009,6 +1026,9 @@ func (g *GoliacRemoteImpl) loadRulesets() (map[string]*GithubRuleSet, error) {
 	count := 0
 	for hasNextPage {
 		data, err := g.client.QueryGraphQLAPI(listRulesets, variables)
+		if err != nil {
+			return rulesets, err
+		}
 		var gResult GraplQLRuleSets
 
 		// parse first page
@@ -1083,7 +1103,6 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 			rules = append(rules, map[string]interface{}{
 				"type": "required_signatures",
 			})
-			break
 		case "pull_request":
 			rules = append(rules, map[string]interface{}{
 				"type": "pull_request",
@@ -1095,7 +1114,6 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 					"require_last_push_approval":        rule.RequireLastPushApproval,
 				},
 			})
-			break
 		}
 	}
 
@@ -1260,7 +1278,7 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(teamslug string, username string,
 				found = true
 			}
 		}
-		if found == false {
+		if !found {
 			members = append(members, username)
 			g.teams[teamslug].Members = members
 		}
@@ -1287,7 +1305,7 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(teamslug string, username stri
 				members = append(members[:i], members[i+1:]...)
 			}
 		}
-		if found == true {
+		if found {
 			g.teams[teamslug].Members = members
 		}
 	}

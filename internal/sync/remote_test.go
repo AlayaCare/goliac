@@ -3,7 +3,7 @@ package sync
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -21,7 +21,7 @@ func GetGithubGraphqlSchema() (string, error) {
 		return "", err
 	} else {
 		defer response.Body.Close()
-		content, err := ioutil.ReadAll(response.Body)
+		content, err := io.ReadAll(response.Body)
 		return string(content), err
 	}
 }

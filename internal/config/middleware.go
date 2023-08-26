@@ -23,7 +23,7 @@ func SetupGlobalMiddleware(handler http.Handler) http.Handler {
 	}
 
 	if Config.MiddlewareVerboseLoggerEnabled {
-		middleware := negronilogrus.NewMiddlewareFromLogger(logrus.StandardLogger(), "google-skeleton")
+		middleware := negronilogrus.NewMiddlewareFromLogger(logrus.StandardLogger(), "goliac")
 
 		for _, u := range Config.MiddlewareVerboseLoggerExcludeURLs {
 			middleware.ExcludeURL(u)

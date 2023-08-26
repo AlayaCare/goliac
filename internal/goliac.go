@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	gosync "sync"
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
@@ -42,7 +41,6 @@ type GoliacImpl struct {
 	remote       sync.GoliacRemoteExecutor
 	githubClient github.GitHubClient
 	repoconfig   *config.RepositoryConfig
-	applyMutex   gosync.Mutex
 }
 
 func NewGoliacImpl() (Goliac, error) {
@@ -70,8 +68,8 @@ func NewGoliacImpl() (Goliac, error) {
 }
 
 func (g *GoliacImpl) LoadAndValidateGoliacOrganization(repositoryUrl, branch string) error {
-	errs := []error{}
-	warns := []entity.Warning{}
+	var errs []error
+	var warns []entity.Warning
 	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") {
 		accessToken, err := g.githubClient.GetAccessToken()
 		if err != nil {
@@ -98,7 +96,7 @@ func (g *GoliacImpl) LoadAndValidateGoliacOrganization(repositoryUrl, branch str
 	for _, warn := range warns {
 		logrus.Warn(warn)
 	}
-	if errs != nil && len(errs) != 0 {
+	if len(errs) != 0 {
 		for _, err := range errs {
 			logrus.Error(err)
 		}
@@ -130,7 +128,7 @@ func (g *GoliacImpl) ApplyToGithub(dryrun bool, teamreponame string, branch stri
 				ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
 				reconciliator := sync.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
-				ctx := context.WithValue(context.TODO(), "author", commit.Author.Email)
+				ctx := context.WithValue(context.TODO(), sync.KeyAuthor, commit.Author.Email)
 				err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun)
 				if err != nil {
 					return fmt.Errorf("Error when reconciliating: %v", err)
@@ -175,7 +173,7 @@ func (g *GoliacImpl) UsersUpdate(repositoryUrl, branch string) error {
 	}
 
 	userplugin, found := sync.GetUserSyncPlugin(g.repoconfig.UserSync.Plugin)
-	if found == false {
+	if !found {
 		return fmt.Errorf("User Sync Plugin %s not found", g.repoconfig.UserSync.Plugin)
 	}
 

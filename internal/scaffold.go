@@ -241,7 +241,7 @@ func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]stri
 		}
 	} else {
 		// fail back on github id
-		for githubid, _ := range s.remote.Users() {
+		for githubid := range s.remote.Users() {
 			usermap[githubid] = githubid
 			user := entity.User{}
 			user.ApiVersion = "v1"
