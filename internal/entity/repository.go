@@ -59,7 +59,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 		errors = append(errors, err)
 		return repos, errors, warning
 	}
-	if exist == true {
+	if exist {
 		entries, err := afero.ReadDir(fs, archivedDirname)
 		if err != nil {
 			errors = append(errors, err)
@@ -91,7 +91,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 		errors = append(errors, err)
 		return repos, errors, warning
 	}
-	if exist == false {
+	if !exist {
 		return repos, errors, warning
 	}
 
@@ -174,7 +174,7 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 	}
 
 	if archived != r.Data.IsArchived {
-		if archived == true {
+		if archived {
 			return fmt.Errorf("invalid archived: %s is in the archived directory without the `archived` boolean", filename)
 		} else {
 			return fmt.Errorf("invalid archived: %s has `archived` set to true, but isn't in the archived directory", filename)

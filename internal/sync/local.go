@@ -3,7 +3,7 @@ package sync
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -103,7 +103,7 @@ func (g *GoliacLocalImpl) Clone(accesstoken, repositoryUrl, branch string) error
 		g.Close()
 	}
 	// create a temp directory
-	tmpDir, err := ioutil.TempDir("", "goliac")
+	tmpDir, err := os.MkdirTemp("", "goliac")
 	if err != nil {
 		return err
 	}
@@ -258,9 +258,12 @@ func (g *GoliacLocalImpl) LoadRepoConfig() (error, *config.RepositoryConfig) {
 
 	var repoconfig config.RepositoryConfig
 	file, err := os.Open(path.Join(w.Filesystem.Root(), "goliac.yaml"))
+	if err != nil {
+		return fmt.Errorf("not able to open the /goliac.yaml configuration file: %v", err), nil
+	}
 	defer file.Close()
 
-	content, err := ioutil.ReadAll(file)
+	content, err := io.ReadAll(file)
 	if err != nil {
 		return fmt.Errorf("not able to find the /goliac.yaml configuration file: %v", err), nil
 	}
@@ -280,7 +283,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string) string {
 	for _, t := range g.teams {
 		teamsnames = append(teamsnames, t.Metadata.Name)
 	}
-	sort.Sort(sort.StringSlice(teamsnames))
+	sort.Strings(teamsnames)
 
 	for _, t := range teamsnames {
 		codeowners += fmt.Sprintf("/teams/%s/* @%s/%s-owners @%s/%s\n", t, config.Config.GithubAppOrganization, slugify.Make(t), config.Config.GithubAppOrganization, slugify.Make(adminteam))
@@ -313,9 +316,12 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 	info, err := os.Stat(codeownerpath)
 	if err == nil && !info.IsDir() {
 		file, err := os.Open(codeownerpath)
+		if err != nil {
+			return fmt.Errorf("not able to open .github/CODEOWNERS file: %v", err)
+		}
 		defer file.Close()
 
-		content, err = ioutil.ReadAll(file)
+		content, err = io.ReadAll(file)
 		if err != nil {
 			return fmt.Errorf("Not able to open .github/CODEOWNERS file: %v", err)
 		}
@@ -333,8 +339,11 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 
 		// Get the HEAD reference
 		headRef, err := g.repo.Head()
+		if err != nil {
+			return err
+		}
 
-		ioutil.WriteFile(path.Join(w.Filesystem.Root(), ".github", "CODEOWNERS"), []byte(newContent), 0644)
+		os.WriteFile(path.Join(w.Filesystem.Root(), ".github", "CODEOWNERS"), []byte(newContent), 0644)
 
 		_, err = w.Add(path.Join(".github", "CODEOWNERS"))
 		if err != nil {

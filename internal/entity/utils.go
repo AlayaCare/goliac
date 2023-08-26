@@ -26,13 +26,13 @@ func StringArrayEquivalent(a, b []string) (bool, []string, []string) {
 		result = false
 	}
 
-	for r, _ := range rights {
+	for r := range rights {
 		if _, ok := lefts[r]; !ok {
 			leftOnly = append(leftOnly, r)
 			result = false
 		}
 	}
-	for l, _ := range lefts {
+	for l := range lefts {
 		if _, ok := rights[l]; !ok {
 			rightOnly = append(rightOnly, l)
 			result = false

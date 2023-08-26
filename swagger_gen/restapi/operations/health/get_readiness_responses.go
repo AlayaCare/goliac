@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"github.com/Alayacare/goliac/internal/swagger_gen/models"
+	"github.com/Alayacare/goliac/swagger_gen/models"
 )
 
 // GetReadinessOKCode is the HTTP code returned for type GetReadinessOK

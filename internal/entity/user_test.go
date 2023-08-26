@@ -44,7 +44,7 @@ metadata:
   name: user1
 data:
   githubID: github1
-`), 644)
+`), 0644)
 		assert.Nil(t, err)
 		users, errs, warns := ReadUserDirectory(fs, "users")
 		assert.Equal(t, len(errs), 0)
@@ -73,7 +73,7 @@ apiVersion: v1
 kind: User
 data:
   githubID: github1
-`), 644)
+`), 0644)
 		assert.Nil(t, err)
 		_, errs, warns := ReadUserDirectory(fs, "users")
 		assert.Equal(t, len(errs), 1)

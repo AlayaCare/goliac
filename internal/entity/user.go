@@ -51,7 +51,7 @@ func ReadUserDirectory(fs afero.Fs, dirname string) (map[string]*User, []error, 
 		errors = append(errors, err)
 		return users, errors, warning
 	}
-	if exist == false {
+	if !exist {
 		return users, errors, warning
 	}
 

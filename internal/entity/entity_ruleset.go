@@ -43,7 +43,7 @@ func CompareRulesetParameters(ruletype string, left RuleSetParameters, right Rul
 		}
 		return true
 	case "required_status_checks":
-		if res, _, _ := StringArrayEquivalent(left.RequiredStatusChecks, right.RequiredStatusChecks); res == false {
+		if res, _, _ := StringArrayEquivalent(left.RequiredStatusChecks, right.RequiredStatusChecks); !res {
 			return false
 		}
 		if left.StrictRequiredStatusChecksPolicy != right.StrictRequiredStatusChecksPolicy {
@@ -111,7 +111,7 @@ func ReadRuleSetDirectory(fs afero.Fs, dirname string) (map[string]*RuleSet, []e
 		errors = append(errors, err)
 		return rulesets, errors, warning
 	}
-	if exist == false {
+	if !exist {
 		return rulesets, errors, warning
 	}
 

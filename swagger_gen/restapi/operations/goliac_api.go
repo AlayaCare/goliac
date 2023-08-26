@@ -19,7 +19,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
-	"github.com/Alayacare/goliac/internal/swagger_gen/restapi/operations/health"
+	"github.com/Alayacare/goliac/swagger_gen/restapi/operations/health"
 )
 
 // NewGoliacAPI creates a new Goliac instance

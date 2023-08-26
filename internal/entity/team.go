@@ -52,7 +52,7 @@ func ReadTeamDirectory(fs afero.Fs, dirname string, users map[string]*User) (map
 		errors = append(errors, err)
 		return teams, errors, warning
 	}
-	if exist == false {
+	if !exist {
 		return teams, errors, warning
 	}
 
@@ -146,7 +146,7 @@ func ReadAndAdjustTeamDirectory(fs afero.Fs, dirname string, users map[string]*U
 	if err != nil {
 		return teamschanged, err
 	}
-	if exist == false {
+	if !exist {
 		return teamschanged, nil
 	}
 

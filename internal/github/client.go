@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -82,7 +82,7 @@ func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, erro
  * )
  */
 func NewGitHubClientImpl(githubServer, organizationName string, appID int, privateKeyFile string) (GitHubClient, error) {
-	privateKey, err := ioutil.ReadFile(privateKeyFile)
+	privateKey, err := os.ReadFile(privateKeyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(query string, variables map[stri
 		// Retry the request.
 		return client.QueryGraphQLAPI(query, variables)
 	} else {
-		responseBody, err := ioutil.ReadAll(resp.Body)
+		responseBody, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -269,7 +269,7 @@ func (client *GitHubClientImpl) CallRestAPI(endpoint, method string, body map[st
 		// Retry the request.
 		return client.CallRestAPI(endpoint, method, body)
 	} else {
-		responseBody, err := ioutil.ReadAll(resp.Body)
+		responseBody, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
