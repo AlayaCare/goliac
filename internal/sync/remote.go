@@ -107,13 +107,10 @@ func (g *GoliacRemoteImpl) FlushCache() {
 
 func (g *GoliacRemoteImpl) RuleSets() map[string]*GithubRuleSet {
 	if time.Now().After(g.ttlExpireRulesets) {
-		err := g.Load()
+		rulesets, err := g.loadRulesets()
 		if err == nil {
-			rulesets, err := g.loadRulesets()
-			if err == nil {
-				g.rulesets = rulesets
-				g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
-			}
+			g.rulesets = rulesets
+			g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
 		}
 	}
 	return g.rulesets
@@ -164,6 +161,7 @@ func (g *GoliacRemoteImpl) Teams() map[string]*GithubTeam {
 	}
 	return g.teams
 }
+
 func (g *GoliacRemoteImpl) Repositories() map[string]*GithubRepository {
 	if time.Now().After(g.ttlExpireRepositories) {
 		repositories, repositoriesByRefIds, err := g.loadRepositories()
@@ -175,12 +173,21 @@ func (g *GoliacRemoteImpl) Repositories() map[string]*GithubRepository {
 	}
 	return g.repositories
 }
+
 func (g *GoliacRemoteImpl) TeamRepositories() map[string]map[string]*GithubTeamRepo {
 	if time.Now().After(g.ttlExpireTeamsRepos) {
-		teamsRepos, err := g.loadTeamReposConcurrently(config.Config.GithubConcurrentThreads)
-		if err == nil {
-			g.teamRepos = teamsRepos
-			g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+		if config.Config.GithubConcurrentThreads <= 1 {
+			teamsrepos, err := g.loadTeamReposNonConcurrently()
+			if err == nil {
+				g.teamRepos = teamsrepos
+				g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+			}
+		} else {
+			teamsrepos, err := g.loadTeamReposConcurrently(config.Config.GithubConcurrentThreads)
+			if err == nil {
+				g.teamRepos = teamsrepos
+				g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+			}
 		}
 	}
 	return g.teamRepos
@@ -509,57 +516,69 @@ func (g *GoliacRemoteImpl) loadAppIds() (map[string]int, error) {
 }
 
 func (g *GoliacRemoteImpl) Load() error {
-	users, err := g.loadOrgUsers()
-	if err != nil {
-		return err
-	}
-	g.users = users
-	g.ttlExpireUsers = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
-
-	repositories, repositoriesByRefId, err := g.loadRepositories()
-	if err != nil {
-		return err
-	}
-	g.repositories = repositories
-	g.repositoriesByRefId = repositoriesByRefId
-	g.ttlExpireRepositories = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
-
-	teams, teamSlugByName, err := g.loadTeams()
-	if err != nil {
-		return err
-	}
-	g.teams = teams
-	g.teamSlugByName = teamSlugByName
-	g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
-
-	appIds, err := g.loadAppIds()
-	if err != nil {
-		return err
-	}
-	g.appIds = appIds
-	g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
-
-	rulesets, err := g.loadRulesets()
-	if err != nil {
-		return err
-	}
-	g.rulesets = rulesets
-	g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
-
-	if config.Config.GithubConcurrentThreads <= 1 {
-		teamsrepos, err := g.loadTeamReposNonConcurrently()
+	if time.Now().After(g.ttlExpireUsers) {
+		users, err := g.loadOrgUsers()
 		if err != nil {
 			return err
 		}
-		g.teamRepos = teamsrepos
-	} else {
-		teamsrepos, err := g.loadTeamReposConcurrently(config.Config.GithubConcurrentThreads)
+		g.users = users
+		g.ttlExpireUsers = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+	}
+
+	if time.Now().After(g.ttlExpireRepositories) {
+		repositories, repositoriesByRefId, err := g.loadRepositories()
 		if err != nil {
 			return err
 		}
-		g.teamRepos = teamsrepos
+		g.repositories = repositories
+		g.repositoriesByRefId = repositoriesByRefId
+		g.ttlExpireRepositories = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
 	}
-	g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+
+	if time.Now().After(g.ttlExpireTeams) {
+		teams, teamSlugByName, err := g.loadTeams()
+		if err != nil {
+			return err
+		}
+		g.teams = teams
+		g.teamSlugByName = teamSlugByName
+		g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+	}
+
+	if time.Now().After(g.ttlExpireAppIds) {
+		appIds, err := g.loadAppIds()
+		if err != nil {
+			return err
+		}
+		g.appIds = appIds
+		g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+	}
+
+	if time.Now().After(g.ttlExpireRulesets) {
+		rulesets, err := g.loadRulesets()
+		if err != nil {
+			return err
+		}
+		g.rulesets = rulesets
+		g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+	}
+
+	if time.Now().After(g.ttlExpireTeamsRepos) {
+		if config.Config.GithubConcurrentThreads <= 1 {
+			teamsrepos, err := g.loadTeamReposNonConcurrently()
+			if err != nil {
+				return err
+			}
+			g.teamRepos = teamsrepos
+		} else {
+			teamsrepos, err := g.loadTeamReposConcurrently(config.Config.GithubConcurrentThreads)
+			if err != nil {
+				return err
+			}
+			g.teamRepos = teamsrepos
+		}
+		g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+	}
 
 	logrus.Infof("Nb remote users: %d", len(g.users))
 	logrus.Infof("Nb remote teams: %d", len(g.teams))

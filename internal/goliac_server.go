@@ -16,6 +16,7 @@ import (
 	"github.com/Alayacare/goliac/swagger_gen/models"
 	"github.com/Alayacare/goliac/swagger_gen/restapi"
 	"github.com/Alayacare/goliac/swagger_gen/restapi/operations"
+	"github.com/Alayacare/goliac/swagger_gen/restapi/operations/app"
 	"github.com/Alayacare/goliac/swagger_gen/restapi/operations/health"
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/runtime/middleware"
@@ -26,16 +27,20 @@ type GoliacServer interface {
 	Serve()
 	GetLiveness(health.GetLivenessParams) middleware.Responder
 	GetReadiness(health.GetReadinessParams) middleware.Responder
+	GetFlushCache(app.GetFlushCacheParams) middleware.Responder
 }
 
 type GoliacServerImpl struct {
 	goliac     Goliac
 	applyMutex gosync.Mutex
+	// when the server has finished to load the local configuration
+	ready bool
 }
 
 func NewGoliacServer(goliac Goliac) GoliacServer {
 	return &GoliacServerImpl{
 		goliac: goliac,
+		ready:  false,
 	}
 }
 
@@ -44,7 +49,17 @@ func (c *GoliacServerImpl) GetLiveness(params health.GetLivenessParams) middlewa
 }
 
 func (c *GoliacServerImpl) GetReadiness(params health.GetReadinessParams) middleware.Responder {
-	return health.NewGetLivenessOK().WithPayload(&models.Health{Status: "OK"})
+	if c.ready {
+		return health.NewGetLivenessOK().WithPayload(&models.Health{Status: "OK"})
+	} else {
+		message := "Not yet ready, loading local state"
+		return health.NewGetLivenessDefault(503).WithPayload(&models.Error{Message: &message})
+	}
+}
+
+func (c *GoliacServerImpl) GetFlushCache(app.GetFlushCacheParams) middleware.Responder {
+	c.goliac.FlushCache()
+	return app.NewGetFlushCacheOK()
 }
 
 func (g *GoliacServerImpl) Serve() {
@@ -137,6 +152,10 @@ func (g *GoliacServerImpl) serveApply() error {
 	if err != nil {
 		return fmt.Errorf("failed to load and validate: %s", err)
 	}
+
+	// we are ready (to give local state, and to sync with remote)
+	g.ready = true
+
 	u, err := url.Parse(repo)
 	if err != nil {
 		return fmt.Errorf("failed to parse %s: %v", repo, err)

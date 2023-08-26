@@ -34,6 +34,9 @@ type Goliac interface {
 
 	// to close the clone git repository (if you called LoadAndValidateGoliacOrganization)
 	Close()
+
+	// flush remote cache
+	FlushCache()
 }
 
 type GoliacImpl struct {
@@ -65,6 +68,10 @@ func NewGoliacImpl() (Goliac, error) {
 		remote:       remote,
 		repoconfig:   &config.RepositoryConfig{},
 	}, nil
+}
+
+func (g *GoliacImpl) FlushCache() {
+	g.remote.FlushCache()
 }
 
 func (g *GoliacImpl) LoadAndValidateGoliacOrganization(repositoryUrl, branch string) error {

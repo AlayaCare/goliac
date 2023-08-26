@@ -19,6 +19,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
+	"github.com/Alayacare/goliac/swagger_gen/restapi/operations/app"
 	"github.com/Alayacare/goliac/swagger_gen/restapi/operations/health"
 )
 
@@ -44,6 +45,9 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 
 		JSONProducer: runtime.JSONProducer(),
 
+		AppGetFlushCacheHandler: app.GetFlushCacheHandlerFunc(func(params app.GetFlushCacheParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetFlushCache has not yet been implemented")
+		}),
 		HealthGetLivenessHandler: health.GetLivenessHandlerFunc(func(params health.GetLivenessParams) middleware.Responder {
 			return middleware.NotImplemented("operation health.GetLiveness has not yet been implemented")
 		}),
@@ -87,6 +91,8 @@ type GoliacAPI struct {
 	//   - application/json
 	JSONProducer runtime.Producer
 
+	// AppGetFlushCacheHandler sets the operation handler for the get flush cache operation
+	AppGetFlushCacheHandler app.GetFlushCacheHandler
 	// HealthGetLivenessHandler sets the operation handler for the get liveness operation
 	HealthGetLivenessHandler health.GetLivenessHandler
 	// HealthGetReadinessHandler sets the operation handler for the get readiness operation
@@ -168,6 +174,9 @@ func (o *GoliacAPI) Validate() error {
 		unregistered = append(unregistered, "JSONProducer")
 	}
 
+	if o.AppGetFlushCacheHandler == nil {
+		unregistered = append(unregistered, "app.GetFlushCacheHandler")
+	}
 	if o.HealthGetLivenessHandler == nil {
 		unregistered = append(unregistered, "health.GetLivenessHandler")
 	}
@@ -262,6 +271,10 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers = make(map[string]map[string]http.Handler)
 	}
 
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/flushcache"] = app.NewGetFlushCache(o.context, o.AppGetFlushCacheHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
