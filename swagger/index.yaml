@@ -28,6 +28,8 @@ paths:
     $ref: ./liveness.yaml
   /readiness:
     $ref: ./readiness.yaml
+  /flushcache:
+    $ref: ./flushcache.yaml
 
 
 definitions:

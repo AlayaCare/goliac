@@ -35,6 +35,26 @@ func init() {
   },
   "basePath": "/api/v1",
   "paths": {
+    "/flushcache": {
+      "get": {
+        "description": "Flush the Github remote cache",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getFlushCache",
+        "responses": {
+          "200": {
+            "description": "cache flushed"
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/liveness": {
       "get": {
         "description": "Check if Goliac is healthy",
@@ -143,6 +163,26 @@ func init() {
   },
   "basePath": "/api/v1",
   "paths": {
+    "/flushcache": {
+      "get": {
+        "description": "Flush the Github remote cache",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getFlushCache",
+        "responses": {
+          "200": {
+            "description": "cache flushed"
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/liveness": {
       "get": {
         "description": "Check if Goliac is healthy",

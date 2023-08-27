@@ -53,6 +53,19 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
+  /flushcache:
+    get:
+      tags:
+        - app
+      operationId: getFlushCache
+      description: Flush the Github remote cache
+      responses:
+        '200':
+          description: cache flushed
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
 definitions:
   health:
     type: object
