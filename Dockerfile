@@ -24,4 +24,4 @@ RUN useradd --uid 1000 --gid 0 goliac && \
 USER 1000:0
 
 EXPOSE 18000
-CMD ./goliac
+ENTRYPOINT ["./goliac"]

@@ -15,24 +15,17 @@ import (
 
 func main() {
 	verifyCmd := &cobra.Command{
-		Use:   "verify [repository] [branch]",
+		Use:   "verify [path]",
 		Short: "Verify the validity of IAC directory structure",
-		Long: `Verify the validity of IAC directory structure.
-repository: local or remote repository. A remote repository is in the form
-https://github.com/...`,
-		Args: cobra.MatchAll(cobra.MinimumNArgs(1), cobra.OnlyValidArgs),
+		Long:  `Verify the validity of IAC directory structure`,
+		Args:  cobra.MatchAll(cobra.MinimumNArgs(1), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
-			repo := args[0]
-			branch := ""
-			if len(args) > 1 {
-				branch = args[1]
-			}
-			goliac, err := internal.NewGoliacImpl()
+			path := args[0]
+			goliac, err := internal.NewGoliacLightImpl()
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			err = goliac.LoadAndValidateGoliacOrganization(repo, branch)
-			defer goliac.Close()
+			err = goliac.Validate(path)
 			if err != nil {
 				logrus.Fatalf("failed to verify: %s", err)
 			}
