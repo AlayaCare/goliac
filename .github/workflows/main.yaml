@@ -1,35 +1,20 @@
-name: Build and Publish Docker
+name: Build Docker Image on Tag
 
 on:
-  pull_request:
-    types:
-      - closed
-    branches:
-      - main
+  create:
+    tags:
+      - '*'
 
 permissions:
-  contents: write
   packages: write
 
 jobs:
   build:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
-      with:
-        ref: ${{ github.event.pull_request.merge_commit_sha }}
-        fetch-depth: '0'
-
-    - name: Bump version and push tag
-      id: bump_version
-      uses: anothrNick/github-tag-action@1.67.0
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        WITH_V: true
-        GIT_API_TAGGING: false # uses git cli
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2
@@ -56,4 +41,4 @@ jobs:
         file: ./Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ghcr.io/${{ steps.lower-repo.outputs.repository }}:latest,ghcr.io/${{ steps.lower-repo.outputs.repository }}:${{ steps.bump_version.outputs.new_tag }}
+        tags: ghcr.io/${{ steps.lower-repo.outputs.repository }}:latest,ghcr.io/${{ steps.lower-repo.outputs.repository }}:${{ github.ref_name }}
