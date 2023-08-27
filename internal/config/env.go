@@ -9,11 +9,6 @@ var Config = struct {
 	// Possible values: text, json
 	LogrusFormat string `env:"GOLIAC_LOGRUS_FORMAT" envDefault:"text"`
 
-	// PrometheusEnabled - enable prometheus metrics export
-	PrometheusEnabled bool `env:"GOLIAC_PROMETHEUS_ENABLED" envDefault:"false"`
-	// PrometheusPath - set the path on which prometheus metrics are available to scrape
-	PrometheusPath string `env:"GOLIAC_PROMETHEUS_PATH" envDefault:"/metrics"`
-
 	GithubServer            string `env:"GOLIAC_GITHUB_SERVER" envDefault:"https://api.github.com"`
 	GithubAppOrganization   string `env:"GOLIAC_GITHUB_APP_ORGANIZATION" envDefault:""`
 	GithubAppID             int    `env:"GOLIAC_GITHUB_APP_ID"`
@@ -28,9 +23,9 @@ var Config = struct {
 	ServerGitBranch     string `env:"GOLIAC_SERVER_GIT_BRANCH" envDefault:"main"`
 
 	// Host - golang-skeleton server host
-	SwaggerHost string `env:"GOLIAC_RESTSERVER_HOST" envDefault:"localhost"`
+	SwaggerHost string `env:"GOLIAC_SERVER_HOST" envDefault:"localhost"`
 	// Port - golang-skeleton server port
-	SwaggerPort int `env:"GOLIAC_RESTSERVER_PORT" envDefault:"18000"`
+	SwaggerPort int `env:"GOLIAC_SERVER_PORT" envDefault:"18000"`
 
 	// MiddlewareVerboseLoggerEnabled - to enable the negroni-logrus logger for all the endpoints useful for debugging
 	MiddlewareVerboseLoggerEnabled bool `env:"GOLIAC_MIDDLEWARE_VERBOSE_LOGGER_ENABLED" envDefault:"true"`

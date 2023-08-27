@@ -1,4 +1,4 @@
-# ![Goliac](docs/logo_small.png) Goliac
+# ![Goliac](docs/images/logo_small.png) Goliac
 
 Goliac (Github Organization Leveraged by Infrastructure As Code), is a tool to manage your Github Organization (users/teams/repositories) via
 - yaml manifests files structured in a Github repository
@@ -6,88 +6,20 @@ Goliac (Github Organization Leveraged by Infrastructure As Code), is a tool to m
 - all repositories rules are enforced via a central configuration that only the IT/security team can update (if you are using Github Enterprice)
 - a Github App watching this repository and applying any changes
 
-## Why not using terraform/another tool
+![goliac workflow](docs/images/goliac_basic_workflow.png)
 
-You can use Terraform to achieve almost the same result, except that with terraform, you still need to centrally managed all operations via your IT team.
+## For Github admin
 
-Goliac allows you to provide a self-served tool to all your employees
+- [why Goliac](docs/why_goliac.md)
+- [Insallation guide](docs/installation.md)
+- [How to sync from external](docs/installation.md#syncing-users-from-an-external-source)
 
-## Why not using Github integrations
+## For regular users
 
-Github itself allows you different integrations (see `https://github.com/ORG/goliac-project/settings/security`), in particular 
-- SSO users integration (SAML)
-- and teams integration (Azure Active Directory and Okta)
-
-If Github integration fits your needs, go for it. But if you want some flexibility (creating teams independently than the company organization, not having to rely on the IT departement each time you want to create a repository), Goliac may be more flexible to use.
-
-## How to install and use
-
-You need to
-- install the Goliac Github App (and points to the server)
-- create the IAC github repository (with the Github actions associated) or clone the example repository
-- deploy the server somewhere (and configured it)
-
-## Creating the Goliac Githun App
-
-- Register new GitHub App
-- Under Organization permissions
-  - Give Read/Write access to `Administration`
-  - Give Read/Write access to `Members`
-- Under Repository permissions
-  - Give Read/Write access to `Administration` 
-  - Give Read/Write access to `Repository Content` 
-- Where can this GitHub App be installed: `Only on this account`
-- And Create
-- then you must
-  - collect the AppID
-  - Generate (and collect) a client secret
-- Go to the left tab "Install App"
-  - Click on "Install"
-
-## Creating the IAC github repository
-
-You can check https://github.com/goliac-project/teams
-
-You need the following structure:
-```
-/
-|- goliac.yaml
-|- rulesets/
-|- archived/
-|- users/
-| |- org/
-| | |- <user>.yaml
-| | ...
-| \- protected/
-|   |- <user>.yaml
-|   ...
-\- teams/
-   |- <teamname>/
-   | |- team.yaml
-   | |- <reponame>.yaml
-   | |- <reponame>.yaml
-   |  ...
-   |- <teaname>/
-   | |- team.yaml
-   | ...
-   ...
-```
-
-## Usage
-
-### Users
-
-Usually users are imported from from an external source.
-Each user is defined as a yaml file. For example `alice.yaml`:
-
-```
-apiVersion: v1
-kind: User
-metadata:
-  name: alice
-data:
-  githubID: alice-myorg
-```
+As a regular user, you want to be able to
+- create new team
+- edit team's definition
+- manage your team's repositories
 
 ### Create a new team
 
@@ -161,46 +93,4 @@ metadata:
   name: awesome-repository
 data:
   archived: true
-```
-
-### Global configuration
-
-to make Goliac working you can configure the `/goliac.yaml` file
-
-```
-admin_team: admin # the name of the team (in the `/teams` directory ) that can admin this repository 
-everyone_team_enabled: false # if you want all members to have read access to all repositories
-
-enable_rulesets: true # can only be true if you have Github Enterprise
-rulesets:
-  - pattern: .*
-    ruleset: default
-
-max_changesets: 50 # protection measure: how many changes Goliac can do at once before considering that suspicious 
-
-destructive_operations:
-  repositories: false # can Goliac remove repositories not listed in this repository 
-  teams: false        # can Goliac remove teams not listed in this repository
-  users: false        # can Goliac remove users not listed in this repository
-  rulesets: false     # can Goliac remove rulesets not listed in this repository
-```
-
-and you can configure different ruleset in the `/rulesets` directory like
-```
-apiVersion: v1
-kind: Ruleset
-metadata:
-  name: default
-enforcement: evaluate # can be disable, active or evaluate 
-bypassapps:
-  - appname: goliac-project-app
-    mode: always # always or pull_request
-on:
-  include: 
-    - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
-
-rules:
-  - ruletype: pull_request # currently supported: pull_request, required_signatures, required_status_checks
-    parameters:
-      requiredApprovingReviewCount: 1
 ```
