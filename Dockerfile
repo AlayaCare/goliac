@@ -13,9 +13,6 @@ FROM debian:bullseye-slim
 RUN mkdir /app
 WORKDIR /app
 
-ENV HOST=0.0.0.0
-ENV PORT=18000
-
 COPY --from=go_builder /app/goliac ./goliac
 
 RUN useradd --uid 1000 --gid 0 goliac && \
@@ -24,4 +21,5 @@ RUN useradd --uid 1000 --gid 0 goliac && \
 USER 1000:0
 
 EXPOSE 18000
+
 ENTRYPOINT ["./goliac"]
