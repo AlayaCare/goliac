@@ -45,14 +45,14 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 
 		JSONProducer: runtime.JSONProducer(),
 
-		AppGetFlushCacheHandler: app.GetFlushCacheHandlerFunc(func(params app.GetFlushCacheParams) middleware.Responder {
-			return middleware.NotImplemented("operation app.GetFlushCache has not yet been implemented")
-		}),
 		HealthGetLivenessHandler: health.GetLivenessHandlerFunc(func(params health.GetLivenessParams) middleware.Responder {
 			return middleware.NotImplemented("operation health.GetLiveness has not yet been implemented")
 		}),
 		HealthGetReadinessHandler: health.GetReadinessHandlerFunc(func(params health.GetReadinessParams) middleware.Responder {
 			return middleware.NotImplemented("operation health.GetReadiness has not yet been implemented")
+		}),
+		AppPostFlushCacheHandler: app.PostFlushCacheHandlerFunc(func(params app.PostFlushCacheParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.PostFlushCache has not yet been implemented")
 		}),
 	}
 }
@@ -91,12 +91,12 @@ type GoliacAPI struct {
 	//   - application/json
 	JSONProducer runtime.Producer
 
-	// AppGetFlushCacheHandler sets the operation handler for the get flush cache operation
-	AppGetFlushCacheHandler app.GetFlushCacheHandler
 	// HealthGetLivenessHandler sets the operation handler for the get liveness operation
 	HealthGetLivenessHandler health.GetLivenessHandler
 	// HealthGetReadinessHandler sets the operation handler for the get readiness operation
 	HealthGetReadinessHandler health.GetReadinessHandler
+	// AppPostFlushCacheHandler sets the operation handler for the post flush cache operation
+	AppPostFlushCacheHandler app.PostFlushCacheHandler
 
 	// ServeError is called when an error is received, there is a default handler
 	// but you can set your own with this
@@ -174,14 +174,14 @@ func (o *GoliacAPI) Validate() error {
 		unregistered = append(unregistered, "JSONProducer")
 	}
 
-	if o.AppGetFlushCacheHandler == nil {
-		unregistered = append(unregistered, "app.GetFlushCacheHandler")
-	}
 	if o.HealthGetLivenessHandler == nil {
 		unregistered = append(unregistered, "health.GetLivenessHandler")
 	}
 	if o.HealthGetReadinessHandler == nil {
 		unregistered = append(unregistered, "health.GetReadinessHandler")
+	}
+	if o.AppPostFlushCacheHandler == nil {
+		unregistered = append(unregistered, "app.PostFlushCacheHandler")
 	}
 
 	if len(unregistered) > 0 {
@@ -274,15 +274,15 @@ func (o *GoliacAPI) initHandlerCache() {
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
-	o.handlers["GET"]["/flushcache"] = app.NewGetFlushCache(o.context, o.AppGetFlushCacheHandler)
-	if o.handlers["GET"] == nil {
-		o.handlers["GET"] = make(map[string]http.Handler)
-	}
 	o.handlers["GET"]["/liveness"] = health.NewGetLiveness(o.context, o.HealthGetLivenessHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/readiness"] = health.NewGetReadiness(o.context, o.HealthGetReadinessHandler)
+	if o.handlers["POST"] == nil {
+		o.handlers["POST"] = make(map[string]http.Handler)
+	}
+	o.handlers["POST"]["/flushcache"] = app.NewPostFlushCache(o.context, o.AppPostFlushCacheHandler)
 }
 
 // Serve creates a http handler to serve the API over HTTP

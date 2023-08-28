@@ -54,10 +54,10 @@ paths:
           schema:
             $ref: '#/definitions/error'
   /flushcache:
-    get:
+    post:
       tags:
         - app
-      operationId: getFlushCache
+      operationId: postFlushCache
       description: Flush the Github remote cache
       responses:
         '200':

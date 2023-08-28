@@ -12,19 +12,19 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 )
 
-// NewGetFlushCacheParams creates a new GetFlushCacheParams object
+// NewPostFlushCacheParams creates a new PostFlushCacheParams object
 //
 // There are no default values defined in the spec.
-func NewGetFlushCacheParams() GetFlushCacheParams {
+func NewPostFlushCacheParams() PostFlushCacheParams {
 
-	return GetFlushCacheParams{}
+	return PostFlushCacheParams{}
 }
 
-// GetFlushCacheParams contains all the bound params for the get flush cache operation
+// PostFlushCacheParams contains all the bound params for the post flush cache operation
 // typically these are obtained from a http.Request
 //
-// swagger:parameters getFlushCache
-type GetFlushCacheParams struct {
+// swagger:parameters postFlushCache
+type PostFlushCacheParams struct {
 
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
@@ -33,8 +33,8 @@ type GetFlushCacheParams struct {
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
 // for simple values it will use straight method calls.
 //
-// To ensure default values, the struct must have been initialized with NewGetFlushCacheParams() beforehand.
-func (o *GetFlushCacheParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
+// To ensure default values, the struct must have been initialized with NewPostFlushCacheParams() beforehand.
+func (o *PostFlushCacheParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
 	var res []error
 
 	o.HTTPRequest = r

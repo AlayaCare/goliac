@@ -1,4 +1,12 @@
 ######################################
+# Prepare npm_builder
+######################################
+FROM node:16 as npm_builder
+WORKDIR /app
+ADD . .
+RUN make build_ui
+
+######################################
 # Prepare go_builder
 ######################################
 FROM golang:1.20-bullseye as go_builder
@@ -14,6 +22,7 @@ RUN mkdir /app
 WORKDIR /app
 
 COPY --from=go_builder /app/goliac ./goliac
+COPY --from=npm_builder /app/browser/goliac-ui/dist ./browser/goliac-ui/dist
 
 RUN useradd --uid 1000 --gid 0 goliac && \
     chown goliac:root /app && \

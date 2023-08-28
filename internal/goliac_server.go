@@ -27,7 +27,7 @@ type GoliacServer interface {
 	Serve()
 	GetLiveness(health.GetLivenessParams) middleware.Responder
 	GetReadiness(health.GetReadinessParams) middleware.Responder
-	GetFlushCache(app.GetFlushCacheParams) middleware.Responder
+	PostFlushCache(app.PostFlushCacheParams) middleware.Responder
 }
 
 type GoliacServerImpl struct {
@@ -57,9 +57,9 @@ func (c *GoliacServerImpl) GetReadiness(params health.GetReadinessParams) middle
 	}
 }
 
-func (c *GoliacServerImpl) GetFlushCache(app.GetFlushCacheParams) middleware.Responder {
+func (c *GoliacServerImpl) PostFlushCache(app.PostFlushCacheParams) middleware.Responder {
 	c.goliac.FlushCache()
-	return app.NewGetFlushCacheOK()
+	return app.NewPostFlushCacheOK()
 }
 
 func (g *GoliacServerImpl) Serve() {
@@ -129,6 +129,7 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.HealthGetLivenessHandler = health.GetLivenessHandlerFunc(g.GetLiveness)
 	api.HealthGetReadinessHandler = health.GetReadinessHandlerFunc(g.GetReadiness)
 
+	api.AppPostFlushCacheHandler = app.PostFlushCacheHandlerFunc(g.PostFlushCache)
 	server := restapi.NewServer(api)
 
 	server.Host = config.Config.SwaggerHost
