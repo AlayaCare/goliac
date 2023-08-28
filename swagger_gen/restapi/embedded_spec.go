@@ -36,12 +36,12 @@ func init() {
   "basePath": "/api/v1",
   "paths": {
     "/flushcache": {
-      "get": {
+      "post": {
         "description": "Flush the Github remote cache",
         "tags": [
           "app"
         ],
-        "operationId": "getFlushCache",
+        "operationId": "postFlushCache",
         "responses": {
           "200": {
             "description": "cache flushed"
@@ -164,12 +164,12 @@ func init() {
   "basePath": "/api/v1",
   "paths": {
     "/flushcache": {
-      "get": {
+      "post": {
         "description": "Flush the Github remote cache",
         "tags": [
           "app"
         ],
-        "operationId": "getFlushCache",
+        "operationId": "postFlushCache",
         "responses": {
           "200": {
             "description": "cache flushed"

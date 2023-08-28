@@ -5,6 +5,7 @@ import (
 
 	negronilogrus "github.com/meatballhat/negroni-logrus"
 	"github.com/phyber/negroni-gzip/gzip"
+	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/negroni"
 )
@@ -31,6 +32,22 @@ func SetupGlobalMiddleware(handler http.Handler) http.Handler {
 
 		n.Use(middleware)
 	}
+
+	if Config.CORSEnabled {
+		n.Use(cors.New(cors.Options{
+			AllowedOrigins:   Config.CORSAllowedOrigins,
+			AllowedHeaders:   Config.CORSAllowedHeaders,
+			ExposedHeaders:   Config.CORSExposedHeaders,
+			AllowedMethods:   Config.CORSAllowedMethods,
+			AllowCredentials: Config.CORSAllowCredentials,
+		}))
+	}
+
+	n.Use(&negroni.Static{
+		Dir:       http.Dir("./browser/goliac-ui/dist/"),
+		Prefix:    Config.WebPrefix,
+		IndexFile: "index.html",
+	})
 
 	n.Use(setupRecoveryMiddleware())
 

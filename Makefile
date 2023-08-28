@@ -1,10 +1,17 @@
 
-all: deps gen build
+all: deps gen build build_ui
 
 rebuild: gen build
 
 build:
 	@GO111MODULE=on go build -o goliac ./cmd/goliac
+
+build_ui:
+	@echo "Building Goliac UI ..."
+	@cd ./browser/goliac-ui/; npm install --legacy-peer-deps && npm run build
+
+run_ui:
+	@cd ./browser/goliac-ui/; npm run serve
 
 test: deps verifiers
 	@GO111MODULE=on go test -race -covermode=atomic -coverprofile=coverage.txt ./internal/...
