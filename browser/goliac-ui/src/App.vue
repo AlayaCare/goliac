@@ -1,41 +1,59 @@
+<script setup>
+import { User, MessageBox, Folder } from '@element-plus/icons-vue'
+</script>
+
 <template>
-  <div id="app">
-    <el-row style="background-color:#000000; height:40px;">
-      <el-col :span="22" :offset="2" style="margin-top:8px;">
-        <router-link :to="{ name: 'dashboard' }">
-          <span style="color:#ffffff;">Goliac</span>
-        </router-link>
-      </el-col>
-    </el-row>
-    <el-row>
-      &nbsp;
-    </el-row>
-    <div class="router-view-container">
-      <router-view></router-view>
-    </div>
+ <div id="app">
+    <el-container>
+      <el-aside width="130px">
+        <el-menu>
+          <el-menu-item index="1" style="justify-content: center">
+            <template #title>
+              <img src="/logo.png">
+            </template>
+          </el-menu-item>
+          <el-menu-item index="2">
+            <template #title>
+              <el-icon :size="16"><User /></el-icon>Users
+            </template>
+          </el-menu-item>
+          <el-menu-item index="3">
+            <template #title>
+              <el-icon :size="16"><MessageBox /></el-icon>Teams
+            </template>
+          </el-menu-item>
+          <el-menu-item index="4">
+            <template #title>
+              <el-icon :size="16"><Folder /></el-icon>Repositories
+            </template>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
+
+      <el-container>
+        <el-main>
+          <router-view></router-view>
+        </el-main>
+      </el-container>
+    </el-container>
   </div>
 </template>
 
 <script>
-
 export default {
   name: 'App',
 }
+
 </script>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: left;
-  color: #2c3e50;
+<style scoped>
+.layout-container .el-header {
+  position: relative;
+  background-color: var(--el-color-primary-light-7);
+  color: var(--el-text-color-primary);
 }
-
-a:link { text-decoration: none; }
-a:visited { text-decoration: none; }
-a:hover { text-decoration: none; }
-a:active { text-decoration: none; }
-
-
+.layout-container .el-aside {
+  color: var(--el-text-color-primary);
+  background: var(--el-color-primary-light-8);
+}
 </style>
