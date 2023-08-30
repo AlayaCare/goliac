@@ -1,0 +1,14 @@
+get:
+  tags:
+    - app
+  operationId: getStatus
+  description: Get different statistics on Goliac
+  responses:
+    200:
+      description: get Goliac statistics
+      schema:
+        $ref: "#/definitions/status"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

@@ -28,13 +28,16 @@ type GoliacServer interface {
 	GetLiveness(health.GetLivenessParams) middleware.Responder
 	GetReadiness(health.GetReadinessParams) middleware.Responder
 	PostFlushCache(app.PostFlushCacheParams) middleware.Responder
+	GetStatus(app.GetStatusParams) middleware.Responder
 }
 
 type GoliacServerImpl struct {
 	goliac     Goliac
 	applyMutex gosync.Mutex
 	// when the server has finished to load the local configuration
-	ready bool
+	ready         bool
+	lastSyncTime  *time.Time
+	lastSyncError error
 }
 
 func NewGoliacServer(goliac Goliac) GoliacServer {
@@ -42,6 +45,24 @@ func NewGoliacServer(goliac Goliac) GoliacServer {
 		goliac: goliac,
 		ready:  false,
 	}
+}
+
+func (c *GoliacServerImpl) GetStatus(app.GetStatusParams) middleware.Responder {
+	s := models.Status{
+		LastSyncError:   "",
+		LastSyncTime:    "N/A",
+		NbRepos:         int64(len(c.goliac.GetLocal().Repositories())),
+		NbTeams:         int64(len(c.goliac.GetLocal().Teams())),
+		NbUsers:         int64(len(c.goliac.GetLocal().Users())),
+		NbUsersExternal: int64(len(c.goliac.GetLocal().ExternalUsers())),
+	}
+	if c.lastSyncError != nil {
+		s.LastSyncError = c.lastSyncError.Error()
+	}
+	if c.lastSyncTime != nil {
+		s.LastSyncTime = c.lastSyncTime.String()
+	}
+	return app.NewGetStatusOK().WithPayload(&s)
 }
 
 func (c *GoliacServerImpl) GetLiveness(params health.GetLivenessParams) middleware.Responder {
@@ -96,6 +117,9 @@ func (g *GoliacServerImpl) Serve() {
 				if interval <= 0 {
 					// Do some work here
 					err := g.serveApply()
+					now := time.Now()
+					g.lastSyncTime = &now
+					g.lastSyncError = err
 					if err != nil {
 						logrus.Error(err)
 					}
@@ -130,6 +154,7 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.HealthGetReadinessHandler = health.GetReadinessHandlerFunc(g.GetReadiness)
 
 	api.AppPostFlushCacheHandler = app.PostFlushCacheHandlerFunc(g.PostFlushCache)
+	api.AppGetStatusHandler = app.GetStatusHandlerFunc(g.GetStatus)
 	server := restapi.NewServer(api)
 
 	server.Host = config.Config.SwaggerHost

@@ -100,6 +100,29 @@ func init() {
           }
         }
       }
+    },
+    "/status": {
+      "get": {
+        "description": "Get different statistics on Goliac",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getStatus",
+        "responses": {
+          "200": {
+            "description": "get Goliac statistics",
+            "schema": {
+              "$ref": "#/definitions/status"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -120,6 +143,30 @@ func init() {
       "properties": {
         "status": {
           "type": "string"
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "lastSyncError": {
+          "type": "string"
+        },
+        "lastSyncTime": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nbRepos": {
+          "type": "integer"
+        },
+        "nbTeams": {
+          "type": "integer"
+        },
+        "nbUsers": {
+          "type": "integer"
+        },
+        "nbUsersExternal": {
+          "type": "integer"
         }
       }
     }
@@ -228,6 +275,29 @@ func init() {
           }
         }
       }
+    },
+    "/status": {
+      "get": {
+        "description": "Get different statistics on Goliac",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getStatus",
+        "responses": {
+          "200": {
+            "description": "get Goliac statistics",
+            "schema": {
+              "$ref": "#/definitions/status"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -248,6 +318,30 @@ func init() {
       "properties": {
         "status": {
           "type": "string"
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "lastSyncError": {
+          "type": "string"
+        },
+        "lastSyncTime": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nbRepos": {
+          "type": "integer"
+        },
+        "nbTeams": {
+          "type": "integer"
+        },
+        "nbUsers": {
+          "type": "integer"
+        },
+        "nbUsersExternal": {
+          "type": "integer"
         }
       }
     }

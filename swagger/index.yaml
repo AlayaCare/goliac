@@ -30,6 +30,8 @@ paths:
     $ref: ./readiness.yaml
   /flushcache:
     $ref: ./flushcache.yaml
+  /status:
+    $ref: ./status.yaml
 
 
 definitions:
@@ -40,6 +42,24 @@ definitions:
     properties:
       status:
         type: string
+
+  # Goliac statistics
+  status:
+    type: object
+    properties:
+      lastSyncTime:
+        type: string
+        minLength: 1
+      lastSyncError:
+        type: string
+      nbUsers:
+        type: integer
+      nbUsersExternal:
+        type: integer
+      nbTeams:
+        type: integer
+      nbRepos:
+        type: integer
 
   # Default Error
   error:

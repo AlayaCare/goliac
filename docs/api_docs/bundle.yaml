@@ -66,12 +66,43 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
+  /status:
+    get:
+      tags:
+        - app
+      operationId: getStatus
+      description: Get different statistics on Goliac
+      responses:
+        '200':
+          description: get Goliac statistics
+          schema:
+            $ref: '#/definitions/status'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
 definitions:
   health:
     type: object
     properties:
       status:
         type: string
+  status:
+    type: object
+    properties:
+      lastSyncTime:
+        type: string
+        minLength: 1
+      lastSyncError:
+        type: string
+      nbUsers:
+        type: integer
+      nbUsersExternal:
+        type: integer
+      nbTeams:
+        type: integer
+      nbRepos:
+        type: integer
   error:
     type: object
     required:
