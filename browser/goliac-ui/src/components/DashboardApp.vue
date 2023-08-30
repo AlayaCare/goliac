@@ -9,7 +9,14 @@
       </span>
     </template>
   </el-dialog>
-  test
+
+  <el-breadcrumb separator="/">
+    <el-breadcrumb-item :to="{ path: '/' }">dashboard</el-breadcrumb-item>
+  </el-breadcrumb>
+  <el-divider />
+
+test
+<el-button @click="flushcache">Flush cache</el-button>
 </template>
   
 <script>
