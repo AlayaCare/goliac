@@ -54,6 +54,12 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		AppGetStatusHandler: app.GetStatusHandlerFunc(func(params app.GetStatusParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetStatus has not yet been implemented")
 		}),
+		AppGetUserHandler: app.GetUserHandlerFunc(func(params app.GetUserParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetUser has not yet been implemented")
+		}),
+		AppGetUsersHandler: app.GetUsersHandlerFunc(func(params app.GetUsersParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetUsers has not yet been implemented")
+		}),
 		AppPostFlushCacheHandler: app.PostFlushCacheHandlerFunc(func(params app.PostFlushCacheParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.PostFlushCache has not yet been implemented")
 		}),
@@ -103,6 +109,10 @@ type GoliacAPI struct {
 	HealthGetReadinessHandler health.GetReadinessHandler
 	// AppGetStatusHandler sets the operation handler for the get status operation
 	AppGetStatusHandler app.GetStatusHandler
+	// AppGetUserHandler sets the operation handler for the get user operation
+	AppGetUserHandler app.GetUserHandler
+	// AppGetUsersHandler sets the operation handler for the get users operation
+	AppGetUsersHandler app.GetUsersHandler
 	// AppPostFlushCacheHandler sets the operation handler for the post flush cache operation
 	AppPostFlushCacheHandler app.PostFlushCacheHandler
 	// AppPostResyncHandler sets the operation handler for the post resync operation
@@ -192,6 +202,12 @@ func (o *GoliacAPI) Validate() error {
 	}
 	if o.AppGetStatusHandler == nil {
 		unregistered = append(unregistered, "app.GetStatusHandler")
+	}
+	if o.AppGetUserHandler == nil {
+		unregistered = append(unregistered, "app.GetUserHandler")
+	}
+	if o.AppGetUsersHandler == nil {
+		unregistered = append(unregistered, "app.GetUsersHandler")
 	}
 	if o.AppPostFlushCacheHandler == nil {
 		unregistered = append(unregistered, "app.PostFlushCacheHandler")
@@ -299,6 +315,14 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/status"] = app.NewGetStatus(o.context, o.AppGetStatusHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/users/{userID}"] = app.NewGetUser(o.context, o.AppGetUserHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/users"] = app.NewGetUsers(o.context, o.AppGetUsersHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}

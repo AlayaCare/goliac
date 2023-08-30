@@ -354,6 +354,7 @@ func (client *GitHubClientImpl) getAccessTokenForInstallation(jwt string) (strin
  *	},
  */
 func (client *GitHubClientImpl) GetAccessToken() (string, error) {
+	logrus.Debugf("GetAccessToken(): client.tokenExpiration: %v", client.tokenExpiration)
 
 	if client.accessToken != "" && client.tokenExpiration.After(time.Now()) {
 		return client.accessToken, nil
@@ -371,6 +372,8 @@ func (client *GitHubClientImpl) GetAccessToken() (string, error) {
 
 	client.accessToken = accessToken
 	client.tokenExpiration = expiration
+
+	logrus.Debugf("GetAccessToken(): client.tokenExpiration: %v", client.tokenExpiration)
 
 	return accessToken, nil
 }

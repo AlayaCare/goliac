@@ -143,6 +143,62 @@ func init() {
           }
         }
       }
+    },
+    "/users": {
+      "get": {
+        "description": "Get all users",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getUsers",
+        "responses": {
+          "200": {
+            "description": "get list of users (organization or external)",
+            "schema": {
+              "$ref": "#/definitions/users"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/users/{userID}": {
+      "get": {
+        "description": "Get user and associated teams and repos",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "minLength": 1,
+            "type": "string",
+            "description": "user name",
+            "name": "userID",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "get user details especially teams and repositories",
+            "schema": {
+              "$ref": "#/definitions/userDetails"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -163,6 +219,25 @@ func init() {
       "properties": {
         "status": {
           "type": "string"
+        }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "properties": {
+        "archived": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "public": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
         }
       }
     },
@@ -191,6 +266,70 @@ func init() {
         "nbUsersExternal": {
           "type": "integer",
           "x-omitempty": false
+        }
+      }
+    },
+    "team": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "user": {
+      "type": "object",
+      "properties": {
+        "external": {
+          "type": "boolean",
+          "x-isnullable": false
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        }
+      }
+    },
+    "userDetails": {
+      "type": "object",
+      "properties": {
+        "repositories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/repository"
+          }
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/team"
+          }
+        }
+      }
+    },
+    "users": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/user"
+          }
         }
       }
     }
@@ -342,6 +481,62 @@ func init() {
           }
         }
       }
+    },
+    "/users": {
+      "get": {
+        "description": "Get all users",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getUsers",
+        "responses": {
+          "200": {
+            "description": "get list of users (organization or external)",
+            "schema": {
+              "$ref": "#/definitions/users"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/users/{userID}": {
+      "get": {
+        "description": "Get user and associated teams and repos",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "minLength": 1,
+            "type": "string",
+            "description": "user name",
+            "name": "userID",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "get user details especially teams and repositories",
+            "schema": {
+              "$ref": "#/definitions/userDetails"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -362,6 +557,25 @@ func init() {
       "properties": {
         "status": {
           "type": "string"
+        }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "properties": {
+        "archived": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "public": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
         }
       }
     },
@@ -390,6 +604,70 @@ func init() {
         "nbUsersExternal": {
           "type": "integer",
           "x-omitempty": false
+        }
+      }
+    },
+    "team": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "user": {
+      "type": "object",
+      "properties": {
+        "external": {
+          "type": "boolean",
+          "x-isnullable": false
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        }
+      }
+    },
+    "userDetails": {
+      "type": "object",
+      "properties": {
+        "repositories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/repository"
+          }
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/team"
+          }
+        }
+      }
+    },
+    "users": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/user"
+          }
         }
       }
     }
