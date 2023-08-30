@@ -1,4 +1,4 @@
-package sync
+package engine
 
 type ReconciliatorExecutor interface {
 	AddUserToOrg(ghuserid string)

@@ -1,4 +1,4 @@
-package sync
+package engine
 
 import (
 	"github.com/Alayacare/goliac/internal/slugify"

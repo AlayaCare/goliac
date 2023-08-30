@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/sync"
+	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
@@ -15,13 +15,13 @@ type GoliacLight interface {
 }
 
 type GoliacLightImpl struct {
-	local      sync.GoliacLocal
+	local      engine.GoliacLocal
 	repoconfig *config.RepositoryConfig
 }
 
 func NewGoliacLightImpl() (GoliacLight, error) {
 	return &GoliacLightImpl{
-		local:      sync.NewGoliacLocalImpl(),
+		local:      engine.NewGoliacLocalImpl(),
 		repoconfig: &config.RepositoryConfig{},
 	}, nil
 }

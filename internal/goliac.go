@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/Alayacare/goliac/internal/config"
+	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
-	"github.com/Alayacare/goliac/internal/sync"
 	"github.com/Alayacare/goliac/internal/usersync"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
@@ -37,11 +37,13 @@ type Goliac interface {
 
 	// flush remote cache
 	FlushCache()
+
+	GetLocal() engine.GoliacLocal
 }
 
 type GoliacImpl struct {
-	local        sync.GoliacLocal
-	remote       sync.GoliacRemoteExecutor
+	local        engine.GoliacLocal
+	remote       engine.GoliacRemoteExecutor
 	githubClient github.GitHubClient
 	repoconfig   *config.RepositoryConfig
 }
@@ -58,16 +60,20 @@ func NewGoliacImpl() (Goliac, error) {
 		return nil, err
 	}
 
-	remote := sync.NewGoliacRemoteImpl(githubClient)
+	remote := engine.NewGoliacRemoteImpl(githubClient)
 
 	usersync.InitPlugins(githubClient)
 
 	return &GoliacImpl{
-		local:        sync.NewGoliacLocalImpl(),
+		local:        engine.NewGoliacLocalImpl(),
 		githubClient: githubClient,
 		remote:       remote,
 		repoconfig:   &config.RepositoryConfig{},
 	}, nil
+}
+
+func (g *GoliacImpl) GetLocal() engine.GoliacLocal {
+	return g.local
 }
 
 func (g *GoliacImpl) FlushCache() {
@@ -122,7 +128,7 @@ func (g *GoliacImpl) ApplyToGithub(dryrun bool, teamreponame string, branch stri
 	commits, err := g.local.ListCommitsFromTag(GOLIAC_GIT_TAG)
 	if err != nil {
 		ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
-		reconciliator := sync.NewGoliacReconciliatorImpl(ga, g.repoconfig)
+		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
 		ctx := context.TODO()
 		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun)
@@ -133,9 +139,9 @@ func (g *GoliacImpl) ApplyToGithub(dryrun bool, teamreponame string, branch stri
 		for _, commit := range commits {
 			if err := g.local.CheckoutCommit(commit); err == nil {
 				ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
-				reconciliator := sync.NewGoliacReconciliatorImpl(ga, g.repoconfig)
+				reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
-				ctx := context.WithValue(context.TODO(), sync.KeyAuthor, commit.Author.Email)
+				ctx := context.WithValue(context.TODO(), engine.KeyAuthor, commit.Author.Email)
 				err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun)
 				if err != nil {
 					return fmt.Errorf("Error when reconciliating: %v", err)
@@ -179,7 +185,7 @@ func (g *GoliacImpl) UsersUpdate(repositoryUrl, branch string) error {
 		return fmt.Errorf("unable to read goliac.yaml config file: %v", err)
 	}
 
-	userplugin, found := sync.GetUserSyncPlugin(g.repoconfig.UserSync.Plugin)
+	userplugin, found := engine.GetUserSyncPlugin(g.repoconfig.UserSync.Plugin)
 	if !found {
 		return fmt.Errorf("User Sync Plugin %s not found", g.repoconfig.UserSync.Plugin)
 	}

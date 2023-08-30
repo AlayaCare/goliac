@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/Alayacare/goliac/internal/config"
+	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
-	"github.com/Alayacare/goliac/internal/sync"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
@@ -17,7 +17,7 @@ import (
 type LoadGithubSamlUsers func() (map[string]*entity.User, error)
 
 type Scaffold struct {
-	remote                     sync.GoliacRemote
+	remote                     engine.GoliacRemote
 	loadUsersFromGithubOrgSaml LoadGithubSamlUsers
 }
 
@@ -33,12 +33,12 @@ func NewScaffold() (*Scaffold, error) {
 		return nil, err
 	}
 
-	remote := sync.NewGoliacRemoteImpl(githubClient)
+	remote := engine.NewGoliacRemoteImpl(githubClient)
 
 	return &Scaffold{
 		remote: remote,
 		loadUsersFromGithubOrgSaml: func() (map[string]*entity.User, error) {
-			return sync.LoadUsersFromGithubOrgSaml(githubClient)
+			return engine.LoadUsersFromGithubOrgSaml(githubClient)
 		},
 	}, nil
 }

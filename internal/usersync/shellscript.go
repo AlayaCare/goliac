@@ -5,14 +5,14 @@ import (
 	"os/exec"
 
 	"github.com/Alayacare/goliac/internal/config"
+	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/sync"
 	"github.com/spf13/afero"
 )
 
 type UserSyncPluginShellScript struct{}
 
-func NewUserSyncPluginShellScript() sync.UserSyncPlugin {
+func NewUserSyncPluginShellScript() engine.UserSyncPlugin {
 	return &UserSyncPluginShellScript{}
 }
 
