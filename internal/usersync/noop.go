@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/Alayacare/goliac/internal/config"
+	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/sync"
 	"github.com/spf13/afero"
 )
 
@@ -13,7 +13,7 @@ type UserSyncPluginNoop struct {
 	Fs afero.Fs
 }
 
-func NewUserSyncPluginNoop() sync.UserSyncPlugin {
+func NewUserSyncPluginNoop() engine.UserSyncPlugin {
 	return &UserSyncPluginNoop{
 		Fs: afero.NewOsFs(),
 	}

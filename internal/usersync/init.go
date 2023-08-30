@@ -1,12 +1,12 @@
 package usersync
 
 import (
+	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/github"
-	"github.com/Alayacare/goliac/internal/sync"
 )
 
 func InitPlugins(client github.GitHubClient) {
-	sync.RegisterPlugin("noop", NewUserSyncPluginNoop())
-	sync.RegisterPlugin("shellscript", NewUserSyncPluginShellScript())
-	sync.RegisterPlugin("fromgithubsaml", NewUserSyncPluginFromGithubSaml(client))
+	engine.RegisterPlugin("noop", NewUserSyncPluginNoop())
+	engine.RegisterPlugin("shellscript", NewUserSyncPluginShellScript())
+	engine.RegisterPlugin("fromgithubsaml", NewUserSyncPluginFromGithubSaml(client))
 }

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/sync"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
@@ -13,9 +13,9 @@ import (
 
 type ScaffoldGoliacRemoteMock struct {
 	users      map[string]string
-	teams      map[string]*sync.GithubTeam
-	repos      map[string]*sync.GithubRepository
-	teamsRepos map[string]map[string]*sync.GithubTeamRepo
+	teams      map[string]*engine.GithubTeam
+	repos      map[string]*engine.GithubRepository
+	teamsRepos map[string]map[string]*engine.GithubTeamRepo
 }
 
 func (s *ScaffoldGoliacRemoteMock) Load() error {
@@ -29,70 +29,70 @@ func (s *ScaffoldGoliacRemoteMock) Users() map[string]string {
 func (s *ScaffoldGoliacRemoteMock) TeamSlugByName() map[string]string {
 	return nil
 }
-func (s *ScaffoldGoliacRemoteMock) Teams() map[string]*sync.GithubTeam {
+func (s *ScaffoldGoliacRemoteMock) Teams() map[string]*engine.GithubTeam {
 	return s.teams
 }
-func (s *ScaffoldGoliacRemoteMock) Repositories() map[string]*sync.GithubRepository {
+func (s *ScaffoldGoliacRemoteMock) Repositories() map[string]*engine.GithubRepository {
 	return s.repos
 }
-func (s *ScaffoldGoliacRemoteMock) TeamRepositories() map[string]map[string]*sync.GithubTeamRepo {
+func (s *ScaffoldGoliacRemoteMock) TeamRepositories() map[string]map[string]*engine.GithubTeamRepo {
 	return s.teamsRepos
 }
-func (s *ScaffoldGoliacRemoteMock) RuleSets() map[string]*sync.GithubRuleSet {
+func (s *ScaffoldGoliacRemoteMock) RuleSets() map[string]*engine.GithubRuleSet {
 	return nil
 }
 func (s *ScaffoldGoliacRemoteMock) AppIds() map[string]int {
 	return nil
 }
 
-func NewScaffoldGoliacRemoteMock() sync.GoliacRemote {
+func NewScaffoldGoliacRemoteMock() engine.GoliacRemote {
 	users := make(map[string]string)
-	teams := make(map[string]*sync.GithubTeam)
-	repos := make(map[string]*sync.GithubRepository)
-	teamsRepos := make(map[string]map[string]*sync.GithubTeamRepo)
+	teams := make(map[string]*engine.GithubTeam)
+	repos := make(map[string]*engine.GithubRepository)
+	teamsRepos := make(map[string]map[string]*engine.GithubTeamRepo)
 
 	users["githubid1"] = "githubid1"
 	users["githubid2"] = "githubid2"
 	users["githubid3"] = "githubid3"
 	users["githubid4"] = "githubid4"
 
-	admin := sync.GithubTeam{
+	admin := engine.GithubTeam{
 		Name:    "admin",
 		Slug:    "admin",
 		Members: []string{"githubid1", "githubid2"},
 	}
 	teams["admin"] = &admin
 
-	regular := sync.GithubTeam{
+	regular := engine.GithubTeam{
 		Name:    "regular",
 		Slug:    "regular",
 		Members: []string{"githubid2", "githubid3"},
 	}
 	teams["regular"] = &regular
 
-	repo1 := sync.GithubRepository{
+	repo1 := engine.GithubRepository{
 		Name: "repo1",
 	}
 	repos["repo1"] = &repo1
 
-	repo2 := sync.GithubRepository{
+	repo2 := engine.GithubRepository{
 		Name: "repo2",
 	}
 	repos["repo2"] = &repo2
 
-	teamRepoRegular := make(map[string]*sync.GithubTeamRepo)
-	teamRepoRegular["repo1"] = &sync.GithubTeamRepo{
+	teamRepoRegular := make(map[string]*engine.GithubTeamRepo)
+	teamRepoRegular["repo1"] = &engine.GithubTeamRepo{
 		Name:       "repo1",
 		Permission: "WRITE",
 	}
-	teamRepoRegular["repo2"] = &sync.GithubTeamRepo{
+	teamRepoRegular["repo2"] = &engine.GithubTeamRepo{
 		Name:       "repo2",
 		Permission: "READ",
 	}
 	teamsRepos["regular"] = teamRepoRegular
 
-	teamRepoAdmin := make(map[string]*sync.GithubTeamRepo)
-	teamRepoAdmin["repo2"] = &sync.GithubTeamRepo{
+	teamRepoAdmin := make(map[string]*engine.GithubTeamRepo)
+	teamRepoAdmin["repo2"] = &engine.GithubTeamRepo{
 		Name:       "repo2",
 		Permission: "WRITE",
 	}

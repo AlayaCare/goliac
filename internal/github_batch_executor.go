@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"github.com/Alayacare/goliac/internal/sync"
+	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/sirupsen/logrus"
 )
 
@@ -25,12 +25,12 @@ type GithubCommand interface {
  * gal.Commit()
  */
 type GithubBatchExecutor struct {
-	client        sync.ReconciliatorExecutor
+	client        engine.ReconciliatorExecutor
 	maxChangesets int
 	commands      []GithubCommand
 }
 
-func NewGithubBatchExecutor(client sync.ReconciliatorExecutor, maxChangesets int) *GithubBatchExecutor {
+func NewGithubBatchExecutor(client engine.ReconciliatorExecutor, maxChangesets int) *GithubBatchExecutor {
 	gal := GithubBatchExecutor{
 		client:        client,
 		maxChangesets: maxChangesets,
@@ -147,14 +147,14 @@ func (g *GithubBatchExecutor) DeleteRepository(reponame string) {
 	})
 }
 
-func (g *GithubBatchExecutor) AddRuleset(ruleset *sync.GithubRuleSet) {
+func (g *GithubBatchExecutor) AddRuleset(ruleset *engine.GithubRuleSet) {
 	g.commands = append(g.commands, &GithubCommandAddRuletset{
 		client:  g.client,
 		ruleset: ruleset,
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRuleset(ruleset *sync.GithubRuleSet) {
+func (g *GithubBatchExecutor) UpdateRuleset(ruleset *engine.GithubRuleSet) {
 	g.commands = append(g.commands, &GithubCommandUpdateRuletset{
 		client:  g.client,
 		ruleset: ruleset,
@@ -186,7 +186,7 @@ func (g *GithubBatchExecutor) Commit() {
 }
 
 type GithubCommandAddUserToOrg struct {
-	client   sync.ReconciliatorExecutor
+	client   engine.ReconciliatorExecutor
 	ghuserid string
 }
 
@@ -195,7 +195,7 @@ func (g *GithubCommandAddUserToOrg) Apply() {
 }
 
 type GithubCommandCreateRepository struct {
-	client      sync.ReconciliatorExecutor
+	client      engine.ReconciliatorExecutor
 	reponame    string
 	description string
 	writers     []string
@@ -208,7 +208,7 @@ func (g *GithubCommandCreateRepository) Apply() {
 }
 
 type GithubCommandCreateTeam struct {
-	client      sync.ReconciliatorExecutor
+	client      engine.ReconciliatorExecutor
 	teamname    string
 	description string
 	members     []string
@@ -219,7 +219,7 @@ func (g *GithubCommandCreateTeam) Apply() {
 }
 
 type GithubCommandDeleteRepository struct {
-	client   sync.ReconciliatorExecutor
+	client   engine.ReconciliatorExecutor
 	reponame string
 }
 
@@ -228,7 +228,7 @@ func (g *GithubCommandDeleteRepository) Apply() {
 }
 
 type GithubCommandDeleteTeam struct {
-	client   sync.ReconciliatorExecutor
+	client   engine.ReconciliatorExecutor
 	teamslug string
 }
 
@@ -237,7 +237,7 @@ func (g *GithubCommandDeleteTeam) Apply() {
 }
 
 type GithubCommandRemoveUserFromOrg struct {
-	client   sync.ReconciliatorExecutor
+	client   engine.ReconciliatorExecutor
 	ghuserid string
 }
 
@@ -246,7 +246,7 @@ func (g *GithubCommandRemoveUserFromOrg) Apply() {
 }
 
 type GithubCommandUpdateRepositoryRemoveTeamAccess struct {
-	client   sync.ReconciliatorExecutor
+	client   engine.ReconciliatorExecutor
 	reponame string
 	teamslug string
 }
@@ -256,7 +256,7 @@ func (g *GithubCommandUpdateRepositoryRemoveTeamAccess) Apply() {
 }
 
 type GithubCommandUpdateRepositoryAddTeamAccess struct {
-	client     sync.ReconciliatorExecutor
+	client     engine.ReconciliatorExecutor
 	reponame   string
 	teamslug   string
 	permission string
@@ -267,7 +267,7 @@ func (g *GithubCommandUpdateRepositoryAddTeamAccess) Apply() {
 }
 
 type GithubCommandUpdateRepositoryUpdateTeamAccess struct {
-	client     sync.ReconciliatorExecutor
+	client     engine.ReconciliatorExecutor
 	reponame   string
 	teamslug   string
 	permission string
@@ -278,7 +278,7 @@ func (g *GithubCommandUpdateRepositoryUpdateTeamAccess) Apply() {
 }
 
 type GithubCommandUpdateRepositoryUpdateArchived struct {
-	client   sync.ReconciliatorExecutor
+	client   engine.ReconciliatorExecutor
 	reponame string
 	archived bool
 }
@@ -288,7 +288,7 @@ func (g *GithubCommandUpdateRepositoryUpdateArchived) Apply() {
 }
 
 type GithubCommandUpdateRepositoryUpdatePrivate struct {
-	client   sync.ReconciliatorExecutor
+	client   engine.ReconciliatorExecutor
 	reponame string
 	private  bool
 }
@@ -298,7 +298,7 @@ func (g *GithubCommandUpdateRepositoryUpdatePrivate) Apply() {
 }
 
 type GithubCommandUpdateTeamAddMember struct {
-	client   sync.ReconciliatorExecutor
+	client   engine.ReconciliatorExecutor
 	teamslug string
 	member   string
 	role     string
@@ -309,7 +309,7 @@ func (g *GithubCommandUpdateTeamAddMember) Apply() {
 }
 
 type GithubCommandUpdateTeamRemoveMember struct {
-	client   sync.ReconciliatorExecutor
+	client   engine.ReconciliatorExecutor
 	teamslug string
 	member   string
 }
@@ -319,8 +319,8 @@ func (g *GithubCommandUpdateTeamRemoveMember) Apply() {
 }
 
 type GithubCommandAddRuletset struct {
-	client  sync.ReconciliatorExecutor
-	ruleset *sync.GithubRuleSet
+	client  engine.ReconciliatorExecutor
+	ruleset *engine.GithubRuleSet
 }
 
 func (g *GithubCommandAddRuletset) Apply() {
@@ -328,8 +328,8 @@ func (g *GithubCommandAddRuletset) Apply() {
 }
 
 type GithubCommandUpdateRuletset struct {
-	client  sync.ReconciliatorExecutor
-	ruleset *sync.GithubRuleSet
+	client  engine.ReconciliatorExecutor
+	ruleset *engine.GithubRuleSet
 }
 
 func (g *GithubCommandUpdateRuletset) Apply() {
@@ -337,7 +337,7 @@ func (g *GithubCommandUpdateRuletset) Apply() {
 }
 
 type GithubCommandDeleteRuletset struct {
-	client    sync.ReconciliatorExecutor
+	client    engine.ReconciliatorExecutor
 	rulesetid int
 }
 
