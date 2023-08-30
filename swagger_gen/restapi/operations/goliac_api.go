@@ -57,6 +57,9 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		AppPostFlushCacheHandler: app.PostFlushCacheHandlerFunc(func(params app.PostFlushCacheParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.PostFlushCache has not yet been implemented")
 		}),
+		AppPostResyncHandler: app.PostResyncHandlerFunc(func(params app.PostResyncParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.PostResync has not yet been implemented")
+		}),
 	}
 }
 
@@ -102,6 +105,8 @@ type GoliacAPI struct {
 	AppGetStatusHandler app.GetStatusHandler
 	// AppPostFlushCacheHandler sets the operation handler for the post flush cache operation
 	AppPostFlushCacheHandler app.PostFlushCacheHandler
+	// AppPostResyncHandler sets the operation handler for the post resync operation
+	AppPostResyncHandler app.PostResyncHandler
 
 	// ServeError is called when an error is received, there is a default handler
 	// but you can set your own with this
@@ -190,6 +195,9 @@ func (o *GoliacAPI) Validate() error {
 	}
 	if o.AppPostFlushCacheHandler == nil {
 		unregistered = append(unregistered, "app.PostFlushCacheHandler")
+	}
+	if o.AppPostResyncHandler == nil {
+		unregistered = append(unregistered, "app.PostResyncHandler")
 	}
 
 	if len(unregistered) > 0 {
@@ -295,6 +303,10 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
 	o.handlers["POST"]["/flushcache"] = app.NewPostFlushCache(o.context, o.AppPostFlushCacheHandler)
+	if o.handlers["POST"] == nil {
+		o.handlers["POST"] = make(map[string]http.Handler)
+	}
+	o.handlers["POST"]["/resync"] = app.NewPostResync(o.context, o.AppPostResyncHandler)
 }
 
 // Serve creates a http handler to serve the API over HTTP

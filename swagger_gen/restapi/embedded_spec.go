@@ -101,6 +101,26 @@ func init() {
         }
       }
     },
+    "/resync": {
+      "post": {
+        "description": "Ask to sync again against Github",
+        "tags": [
+          "app"
+        ],
+        "operationId": "postResync",
+        "responses": {
+          "200": {
+            "description": "resync in progress"
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/status": {
       "get": {
         "description": "Get different statistics on Goliac",
@@ -157,16 +177,20 @@ func init() {
           "minLength": 1
         },
         "nbRepos": {
-          "type": "integer"
+          "type": "integer",
+          "x-omitempty": false
         },
         "nbTeams": {
-          "type": "integer"
+          "type": "integer",
+          "x-omitempty": false
         },
         "nbUsers": {
-          "type": "integer"
+          "type": "integer",
+          "x-omitempty": false
         },
         "nbUsersExternal": {
-          "type": "integer"
+          "type": "integer",
+          "x-omitempty": false
         }
       }
     }
@@ -276,6 +300,26 @@ func init() {
         }
       }
     },
+    "/resync": {
+      "post": {
+        "description": "Ask to sync again against Github",
+        "tags": [
+          "app"
+        ],
+        "operationId": "postResync",
+        "responses": {
+          "200": {
+            "description": "resync in progress"
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/status": {
       "get": {
         "description": "Get different statistics on Goliac",
@@ -332,16 +376,20 @@ func init() {
           "minLength": 1
         },
         "nbRepos": {
-          "type": "integer"
+          "type": "integer",
+          "x-omitempty": false
         },
         "nbTeams": {
-          "type": "integer"
+          "type": "integer",
+          "x-omitempty": false
         },
         "nbUsers": {
-          "type": "integer"
+          "type": "integer",
+          "x-omitempty": false
         },
         "nbUsersExternal": {
-          "type": "integer"
+          "type": "integer",
+          "x-omitempty": false
         }
       }
     }

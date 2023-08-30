@@ -30,6 +30,8 @@ paths:
     $ref: ./readiness.yaml
   /flushcache:
     $ref: ./flushcache.yaml
+  /resync:
+    $ref: ./resync.yaml
   /status:
     $ref: ./status.yaml
 
@@ -54,12 +56,16 @@ definitions:
         type: string
       nbUsers:
         type: integer
+        x-omitempty: false
       nbUsersExternal:
         type: integer
+        x-omitempty: false
       nbTeams:
         type: integer
+        x-omitempty: false
       nbRepos:
         type: integer
+        x-omitempty: false
 
   # Default Error
   error:

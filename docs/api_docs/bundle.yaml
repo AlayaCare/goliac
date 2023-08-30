@@ -66,6 +66,19 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
+  /resync:
+    post:
+      tags:
+        - app
+      operationId: postResync
+      description: Ask to sync again against Github
+      responses:
+        '200':
+          description: resync in progress
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
   /status:
     get:
       tags:
@@ -97,12 +110,16 @@ definitions:
         type: string
       nbUsers:
         type: integer
+        x-omitempty: false
       nbUsersExternal:
         type: integer
+        x-omitempty: false
       nbTeams:
         type: integer
+        x-omitempty: false
       nbRepos:
         type: integer
+        x-omitempty: false
   error:
     type: object
     required:

@@ -27,16 +27,16 @@ type Status struct {
 	LastSyncTime string `json:"lastSyncTime,omitempty"`
 
 	// nb repos
-	NbRepos int64 `json:"nbRepos,omitempty"`
+	NbRepos int64 `json:"nbRepos"`
 
 	// nb teams
-	NbTeams int64 `json:"nbTeams,omitempty"`
+	NbTeams int64 `json:"nbTeams"`
 
 	// nb users
-	NbUsers int64 `json:"nbUsers,omitempty"`
+	NbUsers int64 `json:"nbUsers"`
 
 	// nb users external
-	NbUsersExternal int64 `json:"nbUsersExternal,omitempty"`
+	NbUsersExternal int64 `json:"nbUsersExternal"`
 }
 
 // Validate validates this status

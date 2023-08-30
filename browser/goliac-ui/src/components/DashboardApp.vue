@@ -1,15 +1,4 @@
 <template>
-      <el-dialog v-model="flushcacheVisible" title="Cache flushed" width="60%">
-        <span class="dialog-content">
-            The cache has been flushed, next sync will load from Github
-            </span>
-    <template #footer>
-      <span class="dialog-footer">
-        <el-button type="primary" @click="flushcacheVisible = false">Ok</el-button>
-      </span>
-    </template>
-  </el-dialog>
-
   <el-breadcrumb separator="/">
     <el-breadcrumb-item :to="{ path: '/' }">dashboard</el-breadcrumb-item>
   </el-breadcrumb>
@@ -31,9 +20,24 @@
       </el-row>
       <el-row>
         <el-divider />
-
-        <span style="color:red">Invalidate the cache of remote Github objects? </span> <el-button @click="flushcache">Flush cache</el-button>
       </el-row>
+      <el-row>
+        <div class="flex-container">
+            <span style="color:red;">Force a Github sync ? </span>
+            <span> &nbsp; </span>
+            <el-button @click="resync">Re-sync</el-button>
+        </div>
+      </el-row>
+      <el-row>
+        <span> &nbsp; </span>
+      </el-row>
+      <el-row>
+        <div class="flex-container">
+            <span style="color:red;">Invalidate the cache of remote Github objects? </span>
+            <span> &nbsp; </span>
+            <el-button @click="flushcache">Flush cache</el-button>
+        </div>
+      </el-row>  
     </el-col>
   </el-row>
 </template>
@@ -43,6 +47,8 @@
   
   import constants from "@/constants";
   import helpers from "@/helpers/helpers";
+  import { h } from 'vue'
+  import { ElNotification } from 'element-plus'
   
   const { handleErr } = helpers;
   
@@ -68,7 +74,7 @@
                 this.statusTable = [
                     {
                         key: "Last Sync",
-                        value: status.lastSyncTime,
+                        value: status.lastSyncTime+" (UTC)",
                     },
                     {
                         key: "Last Sync Error",
@@ -96,9 +102,20 @@
         },
         flushcache() {
           Axios.post(`${API_URL}/flushcache`,{}).then(() => {
-            this.flushcacheVisible=false
+            ElNotification({
+                title: 'Cache flushed',
+                message: h('i', { style: 'color: teal' }, 'Github cache objects flushed'),
+            })          
           }, handleErr.bind(this));
-        }
+        },
+        resync() {
+          Axios.post(`${API_URL}/resync`,{}).then(() => {
+            ElNotification({
+                title: 'Sync started',
+                message: h('i', { style: 'color: teal' }, 'Refresh this page in a moment'),
+            })          
+          }, handleErr.bind(this));
+        },
     }
   };
 </script>

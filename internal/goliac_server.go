@@ -28,6 +28,7 @@ type GoliacServer interface {
 	GetLiveness(health.GetLivenessParams) middleware.Responder
 	GetReadiness(health.GetReadinessParams) middleware.Responder
 	PostFlushCache(app.PostFlushCacheParams) middleware.Responder
+	PostResync(app.PostResyncParams) middleware.Responder
 	GetStatus(app.GetStatusParams) middleware.Responder
 }
 
@@ -38,6 +39,7 @@ type GoliacServerImpl struct {
 	ready         bool
 	lastSyncTime  *time.Time
 	lastSyncError error
+	syncInterval  int // in seconds time remaining between 2 sync
 }
 
 func NewGoliacServer(goliac Goliac) GoliacServer {
@@ -47,30 +49,30 @@ func NewGoliacServer(goliac Goliac) GoliacServer {
 	}
 }
 
-func (c *GoliacServerImpl) GetStatus(app.GetStatusParams) middleware.Responder {
+func (g *GoliacServerImpl) GetStatus(app.GetStatusParams) middleware.Responder {
 	s := models.Status{
 		LastSyncError:   "",
 		LastSyncTime:    "N/A",
-		NbRepos:         int64(len(c.goliac.GetLocal().Repositories())),
-		NbTeams:         int64(len(c.goliac.GetLocal().Teams())),
-		NbUsers:         int64(len(c.goliac.GetLocal().Users())),
-		NbUsersExternal: int64(len(c.goliac.GetLocal().ExternalUsers())),
+		NbRepos:         int64(len(g.goliac.GetLocal().Repositories())),
+		NbTeams:         int64(len(g.goliac.GetLocal().Teams())),
+		NbUsers:         int64(len(g.goliac.GetLocal().Users())),
+		NbUsersExternal: int64(len(g.goliac.GetLocal().ExternalUsers())),
 	}
-	if c.lastSyncError != nil {
-		s.LastSyncError = c.lastSyncError.Error()
+	if g.lastSyncError != nil {
+		s.LastSyncError = g.lastSyncError.Error()
 	}
-	if c.lastSyncTime != nil {
-		s.LastSyncTime = c.lastSyncTime.String()
+	if g.lastSyncTime != nil {
+		s.LastSyncTime = g.lastSyncTime.UTC().Format("2006-01-02T15:04:05")
 	}
 	return app.NewGetStatusOK().WithPayload(&s)
 }
 
-func (c *GoliacServerImpl) GetLiveness(params health.GetLivenessParams) middleware.Responder {
+func (g *GoliacServerImpl) GetLiveness(params health.GetLivenessParams) middleware.Responder {
 	return health.NewGetLivenessOK().WithPayload(&models.Health{Status: "OK"})
 }
 
-func (c *GoliacServerImpl) GetReadiness(params health.GetReadinessParams) middleware.Responder {
-	if c.ready {
+func (g *GoliacServerImpl) GetReadiness(params health.GetReadinessParams) middleware.Responder {
+	if g.ready {
 		return health.NewGetLivenessOK().WithPayload(&models.Health{Status: "OK"})
 	} else {
 		message := "Not yet ready, loading local state"
@@ -78,9 +80,23 @@ func (c *GoliacServerImpl) GetReadiness(params health.GetReadinessParams) middle
 	}
 }
 
-func (c *GoliacServerImpl) PostFlushCache(app.PostFlushCacheParams) middleware.Responder {
-	c.goliac.FlushCache()
+func (g *GoliacServerImpl) PostFlushCache(app.PostFlushCacheParams) middleware.Responder {
+	g.goliac.FlushCache()
 	return app.NewPostFlushCacheOK()
+}
+
+func (g *GoliacServerImpl) PostResync(app.PostResyncParams) middleware.Responder {
+	go func() {
+		err := g.serveApply()
+		now := time.Now()
+		g.lastSyncTime = &now
+		g.lastSyncError = err
+		if err != nil {
+			logrus.Error(err)
+		}
+		g.syncInterval = config.Config.ServerApplyInterval
+	}()
+	return app.NewPostResyncOK()
 }
 
 func (g *GoliacServerImpl) Serve() {
@@ -105,16 +121,16 @@ func (g *GoliacServerImpl) Serve() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		interval := 0
+		g.syncInterval = 0
 		for {
 			select {
 			case <-stopCh:
 				restserver.Shutdown()
 				return
 			default:
-				interval--
+				g.syncInterval--
 				time.Sleep(1 * time.Second)
-				if interval <= 0 {
+				if g.syncInterval <= 0 {
 					// Do some work here
 					err := g.serveApply()
 					now := time.Now()
@@ -123,7 +139,7 @@ func (g *GoliacServerImpl) Serve() {
 					if err != nil {
 						logrus.Error(err)
 					}
-					interval = config.Config.ServerApplyInterval
+					g.syncInterval = config.Config.ServerApplyInterval
 				}
 			}
 		}
@@ -154,6 +170,7 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.HealthGetReadinessHandler = health.GetReadinessHandlerFunc(g.GetReadiness)
 
 	api.AppPostFlushCacheHandler = app.PostFlushCacheHandlerFunc(g.PostFlushCache)
+	api.AppPostResyncHandler = app.PostResyncHandlerFunc(g.PostResync)
 	api.AppGetStatusHandler = app.GetStatusHandlerFunc(g.GetStatus)
 	server := restapi.NewServer(api)
 

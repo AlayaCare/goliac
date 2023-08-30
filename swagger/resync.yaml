@@ -1,0 +1,12 @@
+post:
+  tags:
+    - app
+  operationId: postResync
+  description: Ask to sync again against Github
+  responses:
+    200:
+      description: resync in progress
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"
