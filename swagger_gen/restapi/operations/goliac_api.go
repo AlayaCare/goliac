@@ -51,8 +51,14 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		HealthGetReadinessHandler: health.GetReadinessHandlerFunc(func(params health.GetReadinessParams) middleware.Responder {
 			return middleware.NotImplemented("operation health.GetReadiness has not yet been implemented")
 		}),
+		AppGetStatusHandler: app.GetStatusHandlerFunc(func(params app.GetStatusParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetStatus has not yet been implemented")
+		}),
 		AppPostFlushCacheHandler: app.PostFlushCacheHandlerFunc(func(params app.PostFlushCacheParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.PostFlushCache has not yet been implemented")
+		}),
+		AppPostResyncHandler: app.PostResyncHandlerFunc(func(params app.PostResyncParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.PostResync has not yet been implemented")
 		}),
 	}
 }
@@ -95,8 +101,12 @@ type GoliacAPI struct {
 	HealthGetLivenessHandler health.GetLivenessHandler
 	// HealthGetReadinessHandler sets the operation handler for the get readiness operation
 	HealthGetReadinessHandler health.GetReadinessHandler
+	// AppGetStatusHandler sets the operation handler for the get status operation
+	AppGetStatusHandler app.GetStatusHandler
 	// AppPostFlushCacheHandler sets the operation handler for the post flush cache operation
 	AppPostFlushCacheHandler app.PostFlushCacheHandler
+	// AppPostResyncHandler sets the operation handler for the post resync operation
+	AppPostResyncHandler app.PostResyncHandler
 
 	// ServeError is called when an error is received, there is a default handler
 	// but you can set your own with this
@@ -180,8 +190,14 @@ func (o *GoliacAPI) Validate() error {
 	if o.HealthGetReadinessHandler == nil {
 		unregistered = append(unregistered, "health.GetReadinessHandler")
 	}
+	if o.AppGetStatusHandler == nil {
+		unregistered = append(unregistered, "app.GetStatusHandler")
+	}
 	if o.AppPostFlushCacheHandler == nil {
 		unregistered = append(unregistered, "app.PostFlushCacheHandler")
+	}
+	if o.AppPostResyncHandler == nil {
+		unregistered = append(unregistered, "app.PostResyncHandler")
 	}
 
 	if len(unregistered) > 0 {
@@ -279,10 +295,18 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/readiness"] = health.NewGetReadiness(o.context, o.HealthGetReadinessHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/status"] = app.NewGetStatus(o.context, o.AppGetStatusHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
 	o.handlers["POST"]["/flushcache"] = app.NewPostFlushCache(o.context, o.AppPostFlushCacheHandler)
+	if o.handlers["POST"] == nil {
+		o.handlers["POST"] = make(map[string]http.Handler)
+	}
+	o.handlers["POST"]["/resync"] = app.NewPostResync(o.context, o.AppPostResyncHandler)
 }
 
 // Serve creates a http handler to serve the API over HTTP

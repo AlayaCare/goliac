@@ -66,12 +66,60 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
+  /resync:
+    post:
+      tags:
+        - app
+      operationId: postResync
+      description: Ask to sync again against Github
+      responses:
+        '200':
+          description: resync in progress
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
+  /status:
+    get:
+      tags:
+        - app
+      operationId: getStatus
+      description: Get different statistics on Goliac
+      responses:
+        '200':
+          description: get Goliac statistics
+          schema:
+            $ref: '#/definitions/status'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
 definitions:
   health:
     type: object
     properties:
       status:
         type: string
+  status:
+    type: object
+    properties:
+      lastSyncTime:
+        type: string
+        minLength: 1
+      lastSyncError:
+        type: string
+      nbUsers:
+        type: integer
+        x-omitempty: false
+      nbUsersExternal:
+        type: integer
+        x-omitempty: false
+      nbTeams:
+        type: integer
+        x-omitempty: false
+      nbRepos:
+        type: integer
+        x-omitempty: false
   error:
     type: object
     required:

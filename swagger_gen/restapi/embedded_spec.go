@@ -100,6 +100,49 @@ func init() {
           }
         }
       }
+    },
+    "/resync": {
+      "post": {
+        "description": "Ask to sync again against Github",
+        "tags": [
+          "app"
+        ],
+        "operationId": "postResync",
+        "responses": {
+          "200": {
+            "description": "resync in progress"
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "description": "Get different statistics on Goliac",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getStatus",
+        "responses": {
+          "200": {
+            "description": "get Goliac statistics",
+            "schema": {
+              "$ref": "#/definitions/status"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -120,6 +163,34 @@ func init() {
       "properties": {
         "status": {
           "type": "string"
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "lastSyncError": {
+          "type": "string"
+        },
+        "lastSyncTime": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nbRepos": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "nbTeams": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "nbUsers": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "nbUsersExternal": {
+          "type": "integer",
+          "x-omitempty": false
         }
       }
     }
@@ -228,6 +299,49 @@ func init() {
           }
         }
       }
+    },
+    "/resync": {
+      "post": {
+        "description": "Ask to sync again against Github",
+        "tags": [
+          "app"
+        ],
+        "operationId": "postResync",
+        "responses": {
+          "200": {
+            "description": "resync in progress"
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "description": "Get different statistics on Goliac",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getStatus",
+        "responses": {
+          "200": {
+            "description": "get Goliac statistics",
+            "schema": {
+              "$ref": "#/definitions/status"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -248,6 +362,34 @@ func init() {
       "properties": {
         "status": {
           "type": "string"
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "lastSyncError": {
+          "type": "string"
+        },
+        "lastSyncTime": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nbRepos": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "nbTeams": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "nbUsers": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "nbUsersExternal": {
+          "type": "integer",
+          "x-omitempty": false
         }
       }
     }
