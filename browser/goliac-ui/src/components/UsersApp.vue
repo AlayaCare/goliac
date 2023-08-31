@@ -53,7 +53,7 @@
         },
           getUsers() {
               Axios.get(`${API_URL}/users`).then(response => {
-                  let users = response.data.users;
+                  let users = response.data;
                   this.users = users
               }, handleErr.bind(this));
           },

@@ -39,6 +39,8 @@ type GoliacServer interface {
 
 	GetUsers(app.GetUsersParams) middleware.Responder
 	GetUser(app.GetUserParams) middleware.Responder
+	GetTeams(app.GetTeamsParams) middleware.Responder
+	GetTeam(app.GetTeamParams) middleware.Responder
 }
 
 type GoliacServerImpl struct {
@@ -57,10 +59,109 @@ func NewGoliacServer(goliac Goliac) GoliacServer {
 	}
 }
 
-func (g *GoliacServerImpl) GetUsers(app.GetUsersParams) middleware.Responder {
-	users := models.Users{
-		Users: make([]*models.User, 0),
+func (g *GoliacServerImpl) GetTeams(app.GetTeamsParams) middleware.Responder {
+	teams := make(models.Teams, 0)
+
+	local := g.goliac.GetLocal()
+	for teamname, team := range local.Teams() {
+		t := models.Team{
+			Name:    teamname,
+			Members: team.Data.Members,
+			Owners:  team.Data.Owners,
+		}
+		teams = append(teams, &t)
+
 	}
+	return app.NewGetTeamsOK().WithPayload(teams)
+
+}
+
+func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responder {
+	local := g.goliac.GetLocal()
+
+	team, found := local.Teams()[params.TeamID]
+	if !found {
+		message := fmt.Sprintf("Team %s not found", params.TeamID)
+		return app.NewGetTeamDefault(404).WithPayload(&models.Error{Message: &message})
+	}
+
+	repos := make(map[string]*entity.Repository)
+	for reponame, repo := range local.Repositories() {
+		if repo.Owner != nil && *repo.Owner == params.TeamID {
+			repos[reponame] = repo
+		}
+		for _, r := range repo.Data.Readers {
+			if r == params.TeamID {
+				repos[reponame] = repo
+				break
+			}
+		}
+		for _, r := range repo.Data.Writers {
+			if r == params.TeamID {
+				repos[reponame] = repo
+				break
+			}
+		}
+	}
+
+	repositories := make([]*models.Repository, 0, len(repos))
+	for reponame, repo := range repos {
+		r := models.Repository{
+			Name:     reponame,
+			Archived: repo.Data.IsArchived,
+			Public:   repo.Data.IsPublic,
+		}
+		repositories = append(repositories, &r)
+	}
+
+	teamDetails := models.TeamDetails{
+		Owners:       make([]*models.TeamDetailsOwnersItems0, len(team.Data.Owners)),
+		Members:      make([]*models.TeamDetailsMembersItems0, len(team.Data.Members)),
+		Name:         team.Metadata.Name,
+		Repositories: repositories,
+	}
+
+	for i, u := range team.Data.Owners {
+		if orgUser, ok := local.Users()[u]; ok {
+			teamDetails.Owners[i] = &models.TeamDetailsOwnersItems0{
+				Name:     u,
+				Githubid: orgUser.Data.GithubID,
+				External: false,
+			}
+		} else {
+			extUser := local.ExternalUsers()[u]
+			teamDetails.Owners[i] = &models.TeamDetailsOwnersItems0{
+				Name:     u,
+				Githubid: extUser.Data.GithubID,
+				External: false,
+			}
+		}
+	}
+
+	for i, u := range team.Data.Members {
+		if orgUser, ok := local.Users()[u]; ok {
+			teamDetails.Members[i] = &models.TeamDetailsMembersItems0{
+				Name:     u,
+				Githubid: orgUser.Data.GithubID,
+				External: false,
+			}
+		} else {
+			extUser := local.ExternalUsers()[u]
+			teamDetails.Members[i] = &models.TeamDetailsMembersItems0{
+				Name:     u,
+				Githubid: extUser.Data.GithubID,
+				External: false,
+			}
+		}
+
+	}
+
+	return app.NewGetTeamOK().WithPayload(&teamDetails)
+}
+
+func (g *GoliacServerImpl) GetUsers(app.GetUsersParams) middleware.Responder {
+	users := make(models.Users, 0)
+
 	local := g.goliac.GetLocal()
 	for username, user := range local.Users() {
 		u := models.User{
@@ -68,7 +169,7 @@ func (g *GoliacServerImpl) GetUsers(app.GetUsersParams) middleware.Responder {
 			Name:     username,
 			Githubid: user.Data.GithubID,
 		}
-		users.Users = append(users.Users, &u)
+		users = append(users, &u)
 	}
 	for username, user := range local.ExternalUsers() {
 		u := models.User{
@@ -76,9 +177,9 @@ func (g *GoliacServerImpl) GetUsers(app.GetUsersParams) middleware.Responder {
 			Name:     username,
 			Githubid: user.Data.GithubID,
 		}
-		users.Users = append(users.Users, &u)
+		users = append(users, &u)
 	}
-	return app.NewGetUsersOK().WithPayload(&users)
+	return app.NewGetUsersOK().WithPayload(users)
 }
 
 func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responder {
@@ -304,6 +405,8 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 
 	api.AppGetUsersHandler = app.GetUsersHandlerFunc(g.GetUsers)
 	api.AppGetUserHandler = app.GetUserHandlerFunc(g.GetUser)
+	api.AppGetTeamsHandler = app.GetTeamsHandlerFunc(g.GetTeams)
+	api.AppGetTeamHandler = app.GetTeamHandlerFunc(g.GetTeam)
 
 	server := restapi.NewServer(api)
 

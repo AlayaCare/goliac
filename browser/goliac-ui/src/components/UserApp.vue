@@ -37,6 +37,7 @@
               :data="teams"
               :stripe="true"
               :highlight-current-row="false"
+              v-on:row-click="goToTeam"
               :default-sort="{ prop: 'name', order: 'descending' }"
           >
               <el-table-column prop="name" align="left" label="Team" sortable />
@@ -56,6 +57,7 @@
               :data="repositories"
               :stripe="true"
               :highlight-current-row="false"
+              v-on:row-click="goToRepository"
               :default-sort="{ prop: 'name', order: 'descending' }"
           >
               <el-table-column prop="name" align="left" label="Repository" sortable />
@@ -99,6 +101,12 @@
         this.getUser()
       },
       methods: {
+        goToTeam(row) {
+            this.$router.push({ name: "team", params: { teamId: row.name } });
+        },
+        goToRepository(row) {
+            this.$router.push({ name: "repository", params: { repositoryId: row.name } });
+        },
           getUser() {
               Axios.get(`${API_URL}/users/${this.userid}`).then(response => {
                   let user = response.data;

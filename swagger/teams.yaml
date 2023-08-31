@@ -1,0 +1,14 @@
+get:
+  tags:
+    - app
+  operationId: getTeams
+  description: Get all teams
+  responses:
+    200:
+      description: get list of teams
+      schema:
+        $ref: "#/definitions/teams"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

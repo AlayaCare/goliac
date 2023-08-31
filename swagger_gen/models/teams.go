@@ -14,13 +14,13 @@ import (
 	"github.com/go-openapi/swag"
 )
 
-// Users users
+// Teams teams
 //
-// swagger:model users
-type Users []*User
+// swagger:model teams
+type Teams []*Team
 
-// Validate validates this users
-func (m Users) Validate(formats strfmt.Registry) error {
+// Validate validates this teams
+func (m Teams) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	for i := 0; i < len(m); i++ {
@@ -47,8 +47,8 @@ func (m Users) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validate this users based on the context it is used
-func (m Users) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this teams based on the context it is used
+func (m Teams) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	for i := 0; i < len(m); i++ {

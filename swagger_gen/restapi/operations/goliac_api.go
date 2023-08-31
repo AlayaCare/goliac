@@ -54,6 +54,12 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		AppGetStatusHandler: app.GetStatusHandlerFunc(func(params app.GetStatusParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetStatus has not yet been implemented")
 		}),
+		AppGetTeamHandler: app.GetTeamHandlerFunc(func(params app.GetTeamParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetTeam has not yet been implemented")
+		}),
+		AppGetTeamsHandler: app.GetTeamsHandlerFunc(func(params app.GetTeamsParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetTeams has not yet been implemented")
+		}),
 		AppGetUserHandler: app.GetUserHandlerFunc(func(params app.GetUserParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetUser has not yet been implemented")
 		}),
@@ -109,6 +115,10 @@ type GoliacAPI struct {
 	HealthGetReadinessHandler health.GetReadinessHandler
 	// AppGetStatusHandler sets the operation handler for the get status operation
 	AppGetStatusHandler app.GetStatusHandler
+	// AppGetTeamHandler sets the operation handler for the get team operation
+	AppGetTeamHandler app.GetTeamHandler
+	// AppGetTeamsHandler sets the operation handler for the get teams operation
+	AppGetTeamsHandler app.GetTeamsHandler
 	// AppGetUserHandler sets the operation handler for the get user operation
 	AppGetUserHandler app.GetUserHandler
 	// AppGetUsersHandler sets the operation handler for the get users operation
@@ -202,6 +212,12 @@ func (o *GoliacAPI) Validate() error {
 	}
 	if o.AppGetStatusHandler == nil {
 		unregistered = append(unregistered, "app.GetStatusHandler")
+	}
+	if o.AppGetTeamHandler == nil {
+		unregistered = append(unregistered, "app.GetTeamHandler")
+	}
+	if o.AppGetTeamsHandler == nil {
+		unregistered = append(unregistered, "app.GetTeamsHandler")
 	}
 	if o.AppGetUserHandler == nil {
 		unregistered = append(unregistered, "app.GetUserHandler")
@@ -315,6 +331,14 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/status"] = app.NewGetStatus(o.context, o.AppGetStatusHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/teams/{teamID}"] = app.NewGetTeam(o.context, o.AppGetTeamHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/teams"] = app.NewGetTeams(o.context, o.AppGetTeamsHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}

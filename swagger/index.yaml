@@ -38,6 +38,10 @@ paths:
     $ref: ./users.yaml
   /users/{userID}:
     $ref: ./user.yaml
+  /teams:
+    $ref: ./teams.yaml
+  /teams/{teamID}:
+    $ref: ./team.yaml
 
 definitions:
 
@@ -50,12 +54,9 @@ definitions:
 
   # users (org and external)
   users:
-    type: object
-    properties:
-      users:
-        type: array
-        items:
-          $ref: "#/definitions/user"
+    type: array
+    items:
+      $ref: "#/definitions/user"
 
   user:
     type: object
@@ -105,6 +106,12 @@ definitions:
         x-isnullable: false
         x-omitempty: false
 
+  # teams
+  teams:
+    type: array
+    items:
+      $ref: "#/definitions/team"
+
   team:
     type: object
     properties:
@@ -121,6 +128,48 @@ definitions:
         items:
           type: string
           minLength: 1
+
+  teamDetails:
+    type: object
+    properties:
+      name:
+        type: string
+        x-isnullable: false
+      owners:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+            githubid:
+              type: string
+              x-isnullable: false
+            external:
+              type: boolean
+              x-isnullable: false
+              x-omitempty: false
+      members:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+            githubid:
+              type: string
+              x-isnullable: false
+            external:
+              type: boolean
+              x-isnullable: false
+              x-omitempty: false
+      repositories:
+        type: array
+        items:
+          $ref: "#/definitions/repository"
+
 
   # Goliac statistics
   status:
