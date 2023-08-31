@@ -63,13 +63,24 @@ definitions:
       name:
         type: string
         x-isnullable: false
+      githubid:
+        type: string
+        x-isnullable: false
       external:
         type: boolean
         x-isnullable: false
+        x-omitempty: false
 
   userDetails:
     type: object
     properties:
+      githubid:
+        type: string
+        x-isnullable: false
+      external:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
       teams:
         type: array
         items:

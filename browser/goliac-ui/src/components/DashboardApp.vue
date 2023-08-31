@@ -24,7 +24,7 @@
       </el-row>
       <el-row>
         <div class="flex-container">
-            <span style="color:red;">Force a Github sync ? </span>
+            <el-text style="color:red;">Force a Github sync ? </el-text>
             <span> &nbsp; </span>
             <el-button @click="resync">Re-sync</el-button>
         </div>
@@ -34,7 +34,7 @@
       </el-row>
       <el-row>
         <div class="flex-container">
-            <span style="color:red;">Invalidate the cache of remote Github objects? </span>
+            <el-text style="color:red;">Invalidate the cache of remote Github objects? </el-text>
             <span> &nbsp; </span>
             <el-button @click="flushcache">Flush cache</el-button>
         </div>

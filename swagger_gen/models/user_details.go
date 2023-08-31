@@ -19,6 +19,12 @@ import (
 // swagger:model userDetails
 type UserDetails struct {
 
+	// external
+	External bool `json:"external"`
+
+	// githubid
+	Githubid string `json:"githubid,omitempty"`
+
 	// repositories
 	Repositories []*Repository `json:"repositories"`
 

@@ -18,7 +18,10 @@ import (
 type User struct {
 
 	// external
-	External bool `json:"external,omitempty"`
+	External bool `json:"external"`
+
+	// githubid
+	Githubid string `json:"githubid,omitempty"`
 
 	// name
 	Name string `json:"name,omitempty"`
