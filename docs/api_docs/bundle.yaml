@@ -131,6 +131,43 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
+  /teams:
+    get:
+      tags:
+        - app
+      operationId: getTeams
+      description: Get all teams
+      responses:
+        '200':
+          description: get list of teams
+          schema:
+            $ref: '#/definitions/teams'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
+  /teams/{teamID}:
+    get:
+      tags:
+        - app
+      operationId: getTeam
+      parameters:
+        - in: path
+          name: teamID
+          description: team name
+          required: true
+          type: string
+          minLength: 1
+      description: Get team and associated users and repos
+      responses:
+        '200':
+          description: get team details especially users and repositories
+          schema:
+            $ref: '#/definitions/teamDetails'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
 definitions:
   health:
     type: object
@@ -138,12 +175,9 @@ definitions:
       status:
         type: string
   users:
-    type: object
-    properties:
-      users:
-        type: array
-        items:
-          $ref: '#/definitions/user'
+    type: array
+    items:
+      $ref: '#/definitions/user'
   user:
     type: object
     properties:
@@ -189,6 +223,10 @@ definitions:
         type: boolean
         x-isnullable: false
         x-omitempty: false
+  teams:
+    type: array
+    items:
+      $ref: '#/definitions/team'
   team:
     type: object
     properties:
@@ -205,6 +243,46 @@ definitions:
         items:
           type: string
           minLength: 1
+  teamDetails:
+    type: object
+    properties:
+      name:
+        type: string
+        x-isnullable: false
+      owners:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+            githubid:
+              type: string
+              x-isnullable: false
+            external:
+              type: boolean
+              x-isnullable: false
+              x-omitempty: false
+      members:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+            githubid:
+              type: string
+              x-isnullable: false
+            external:
+              type: boolean
+              x-isnullable: false
+              x-omitempty: false
+      repositories:
+        type: array
+        items:
+          $ref: '#/definitions/repository'
   status:
     type: object
     properties:

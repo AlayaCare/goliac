@@ -144,6 +144,62 @@ func init() {
         }
       }
     },
+    "/teams": {
+      "get": {
+        "description": "Get all teams",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getTeams",
+        "responses": {
+          "200": {
+            "description": "get list of teams",
+            "schema": {
+              "$ref": "#/definitions/teams"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/teams/{teamID}": {
+      "get": {
+        "description": "Get team and associated users and repos",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getTeam",
+        "parameters": [
+          {
+            "minLength": 1,
+            "type": "string",
+            "description": "team name",
+            "name": "teamID",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "get team details especially users and repositories",
+            "schema": {
+              "$ref": "#/definitions/teamDetails"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/users": {
       "get": {
         "description": "Get all users",
@@ -292,6 +348,69 @@ func init() {
         }
       }
     },
+    "teamDetails": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "external": {
+                "type": "boolean",
+                "x-isnullable": false,
+                "x-omitempty": false
+              },
+              "githubid": {
+                "type": "string",
+                "x-isnullable": false
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "external": {
+                "type": "boolean",
+                "x-isnullable": false,
+                "x-omitempty": false
+              },
+              "githubid": {
+                "type": "string",
+                "x-isnullable": false
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "repositories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/repository"
+          }
+        }
+      }
+    },
+    "teams": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/team"
+      }
+    },
     "user": {
       "type": "object",
       "properties": {
@@ -337,14 +456,9 @@ func init() {
       }
     },
     "users": {
-      "type": "object",
-      "properties": {
-        "users": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/user"
-          }
-        }
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/user"
       }
     }
   },
@@ -496,6 +610,62 @@ func init() {
         }
       }
     },
+    "/teams": {
+      "get": {
+        "description": "Get all teams",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getTeams",
+        "responses": {
+          "200": {
+            "description": "get list of teams",
+            "schema": {
+              "$ref": "#/definitions/teams"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/teams/{teamID}": {
+      "get": {
+        "description": "Get team and associated users and repos",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getTeam",
+        "parameters": [
+          {
+            "minLength": 1,
+            "type": "string",
+            "description": "team name",
+            "name": "teamID",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "get team details especially users and repositories",
+            "schema": {
+              "$ref": "#/definitions/teamDetails"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/users": {
       "get": {
         "description": "Get all users",
@@ -554,6 +724,42 @@ func init() {
     }
   },
   "definitions": {
+    "TeamDetailsMembersItems0": {
+      "type": "object",
+      "properties": {
+        "external": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "githubid": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "TeamDetailsOwnersItems0": {
+      "type": "object",
+      "properties": {
+        "external": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "githubid": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "error": {
       "type": "object",
       "required": [
@@ -644,6 +850,39 @@ func init() {
         }
       }
     },
+    "teamDetails": {
+      "type": "object",
+      "properties": {
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TeamDetailsMembersItems0"
+          }
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "owners": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TeamDetailsOwnersItems0"
+          }
+        },
+        "repositories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/repository"
+          }
+        }
+      }
+    },
+    "teams": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/team"
+      }
+    },
     "user": {
       "type": "object",
       "properties": {
@@ -689,14 +928,9 @@ func init() {
       }
     },
     "users": {
-      "type": "object",
-      "properties": {
-        "users": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/user"
-          }
-        }
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/user"
       }
     }
   },

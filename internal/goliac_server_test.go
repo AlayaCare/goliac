@@ -155,7 +155,7 @@ func TestAppGetUsers(t *testing.T) {
 	t.Run("happy path: list users", func(t *testing.T) {
 		res := server.GetUsers(app.GetUsersParams{})
 		payload := res.(*app.GetUsersOK)
-		assert.Equal(t, 4, len(payload.Payload.Users)) // 3 users + 1 external
+		assert.Equal(t, 4, len(payload.Payload)) // 3 users + 1 external
 	})
 
 	t.Run("happy path: get user1", func(t *testing.T) {
@@ -167,5 +167,30 @@ func TestAppGetUsers(t *testing.T) {
 		}
 		assert.Equal(t, 2, len(payload.Payload.Teams))
 		assert.Equal(t, 2, len(payload.Payload.Repositories))
+	})
+}
+func TestAppGetTeams(t *testing.T) {
+	fixture := fixtureGoliacLocal()
+	goliac := NewGoliacMock(fixture)
+	now := time.Now()
+	server := GoliacServerImpl{
+		goliac:        goliac,
+		ready:         true,
+		lastSyncTime:  &now,
+		lastSyncError: nil,
+	}
+
+	t.Run("happy path: get teams", func(t *testing.T) {
+		res := server.GetTeams(app.GetTeamsParams{})
+		payload := res.(*app.GetTeamsOK)
+		assert.Equal(t, 2, len(payload.Payload))
+	})
+
+	t.Run("happy path: get team ", func(t *testing.T) {
+		res := server.GetTeam(app.GetTeamParams{TeamID: "ateam"})
+		payload := res.(*app.GetTeamOK)
+		assert.Equal(t, "ateam", payload.Payload.Name)
+		assert.Equal(t, 1, len(payload.Payload.Owners))
+		assert.Equal(t, 1, len(payload.Payload.Members))
 	})
 }
