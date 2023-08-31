@@ -101,6 +101,62 @@ func init() {
         }
       }
     },
+    "/repositories": {
+      "get": {
+        "description": "Get all repositories",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getRepositories",
+        "responses": {
+          "200": {
+            "description": "get list of repositories",
+            "schema": {
+              "$ref": "#/definitions/repositories"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/repositories/{repositoryID}": {
+      "get": {
+        "description": "Get repository and associated teams",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getRepository",
+        "parameters": [
+          {
+            "minLength": 1,
+            "type": "string",
+            "description": "repository slug name",
+            "name": "repositoryID",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "get repository details especially teams that have access",
+            "schema": {
+              "$ref": "#/definitions/repositoryDetails"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/resync": {
       "post": {
         "description": "Ask to sync again against Github",
@@ -278,6 +334,12 @@ func init() {
         }
       }
     },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/repository"
+      }
+    },
     "repository": {
       "type": "object",
       "properties": {
@@ -294,6 +356,49 @@ func init() {
           "type": "boolean",
           "x-isnullable": false,
           "x-omitempty": false
+        }
+      }
+    },
+    "repositoryDetails": {
+      "type": "object",
+      "properties": {
+        "archived": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "public": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "readers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "writers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
         }
       }
     },
@@ -567,6 +672,62 @@ func init() {
         }
       }
     },
+    "/repositories": {
+      "get": {
+        "description": "Get all repositories",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getRepositories",
+        "responses": {
+          "200": {
+            "description": "get list of repositories",
+            "schema": {
+              "$ref": "#/definitions/repositories"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/repositories/{repositoryID}": {
+      "get": {
+        "description": "Get repository and associated teams",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getRepository",
+        "parameters": [
+          {
+            "minLength": 1,
+            "type": "string",
+            "description": "repository slug name",
+            "name": "repositoryID",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "get repository details especially teams that have access",
+            "schema": {
+              "$ref": "#/definitions/repositoryDetails"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/resync": {
       "post": {
         "description": "Ask to sync again against Github",
@@ -724,6 +885,24 @@ func init() {
     }
   },
   "definitions": {
+    "RepositoryDetailsReadersItems0": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "RepositoryDetailsWritersItems0": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "TeamDetailsMembersItems0": {
       "type": "object",
       "properties": {
@@ -780,6 +959,12 @@ func init() {
         }
       }
     },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/repository"
+      }
+    },
     "repository": {
       "type": "object",
       "properties": {
@@ -796,6 +981,37 @@ func init() {
           "type": "boolean",
           "x-isnullable": false,
           "x-omitempty": false
+        }
+      }
+    },
+    "repositoryDetails": {
+      "type": "object",
+      "properties": {
+        "archived": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "public": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "readers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepositoryDetailsReadersItems0"
+          }
+        },
+        "writers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepositoryDetailsWritersItems0"
+          }
         }
       }
     },

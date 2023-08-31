@@ -41,6 +41,8 @@ type GoliacServer interface {
 	GetUser(app.GetUserParams) middleware.Responder
 	GetTeams(app.GetTeamsParams) middleware.Responder
 	GetTeam(app.GetTeamParams) middleware.Responder
+	GetRepositories(app.GetRepositoriesParams) middleware.Responder
+	GetRepository(app.GetRepositoryParams) middleware.Responder
 }
 
 type GoliacServerImpl struct {
@@ -59,6 +61,66 @@ func NewGoliacServer(goliac Goliac) GoliacServer {
 	}
 }
 
+func (g *GoliacServerImpl) GetRepositories(app.GetRepositoriesParams) middleware.Responder {
+	local := g.goliac.GetLocal()
+	repositories := make(models.Repositories, 0, len(local.Repositories()))
+
+	for _, r := range local.Repositories() {
+		repo := models.Repository{
+			Name:     r.Metadata.Name,
+			Public:   r.Data.IsPublic,
+			Archived: r.Data.IsArchived,
+		}
+		repositories = append(repositories, &repo)
+	}
+
+	return app.NewGetRepositoriesOK().WithPayload(repositories)
+}
+
+func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middleware.Responder {
+	local := g.goliac.GetLocal()
+
+	repository, found := local.Repositories()[params.RepositoryID]
+	if !found {
+		message := fmt.Sprintf("Repository %s not found", params.RepositoryID)
+		return app.NewGetRepositoryDefault(404).WithPayload(&models.Error{Message: &message})
+	}
+
+	readers := make([]*models.RepositoryDetailsReadersItems0, 0)
+	writers := make([]*models.RepositoryDetailsWritersItems0, 0)
+
+	for _, r := range repository.Data.Readers {
+		reader := models.RepositoryDetailsReadersItems0{
+			Name: r,
+		}
+		readers = append(readers, &reader)
+	}
+
+	if repository.Owner != nil {
+		writer := models.RepositoryDetailsWritersItems0{
+			Name: *repository.Owner,
+		}
+		writers = append(writers, &writer)
+	}
+
+	for _, w := range repository.Data.Writers {
+		writer := models.RepositoryDetailsWritersItems0{
+			Name: w,
+		}
+		writers = append(writers, &writer)
+	}
+
+	repositoryDetails := models.RepositoryDetails{
+		Name:     repository.Metadata.Name,
+		Public:   repository.Data.IsPublic,
+		Archived: repository.Data.IsArchived,
+		Readers:  readers,
+		Writers:  writers,
+	}
+
+	return app.NewGetRepositoryOK().WithPayload(&repositoryDetails)
+}
+
 func (g *GoliacServerImpl) GetTeams(app.GetTeamsParams) middleware.Responder {
 	teams := make(models.Teams, 0)
 
@@ -73,7 +135,6 @@ func (g *GoliacServerImpl) GetTeams(app.GetTeamsParams) middleware.Responder {
 
 	}
 	return app.NewGetTeamsOK().WithPayload(teams)
-
 }
 
 func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responder {
@@ -407,6 +468,8 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.AppGetUserHandler = app.GetUserHandlerFunc(g.GetUser)
 	api.AppGetTeamsHandler = app.GetTeamsHandlerFunc(g.GetTeams)
 	api.AppGetTeamHandler = app.GetTeamHandlerFunc(g.GetTeam)
+	api.AppGetRepositoriesHandler = app.GetRepositoriesHandlerFunc(g.GetRepositories)
+	api.AppGetRepositoryHandler = app.GetRepositoryHandlerFunc(g.GetRepository)
 
 	server := restapi.NewServer(api)
 

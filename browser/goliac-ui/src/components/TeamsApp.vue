@@ -1,7 +1,7 @@
 <template>
     <el-breadcrumb separator="/">
       <el-breadcrumb-item :to="{ path: '/' }">Goliac</el-breadcrumb-item>
-      <el-breadcrumb-item :to="{ path: '/' }">teams</el-breadcrumb-item>
+      <el-breadcrumb-item :to="{ path: '/teams' }">teams</el-breadcrumb-item>
     </el-breadcrumb>
     <el-divider />
   

@@ -1,7 +1,7 @@
 <template>
     <el-breadcrumb separator="/">
       <el-breadcrumb-item :to="{ path: '/' }">Goliac</el-breadcrumb-item>
-      <el-breadcrumb-item :to="{ path: '/users' }">users</el-breadcrumb-item>
+      <el-breadcrumb-item :to="{ path: '/repositories' }">repositories</el-breadcrumb-item>
     </el-breadcrumb>
     <el-divider />
   
@@ -9,16 +9,15 @@
       <el-col :span="20" :offset="2">
         <el-row>
           <el-table
-              :data="users"
+              :data="repositories"
               :stripe="true"
               :highlight-current-row="false"
-              v-on:row-click="goToUser"
+              v-on:row-click="goToRepository"
               :default-sort="{ prop: 'name', order: 'descending' }"
           >
-              <el-table-column prop="name" align="left" label="Username" sortable />
-              <el-table-column prop="githubid" align="left" label="Github Id" />
-              <el-table-column prop="external" align="left" label="External" />
-  
+              <el-table-column prop="name" align="left" label="Repository name" sortable />
+              <el-table-column prop="public" align="left" label="Public" />
+              <el-table-column prop="archived" align="left" label="Archived" />
           </el-table>
         </el-row>
       </el-col>
@@ -36,25 +35,25 @@
     const { API_URL } = constants;
     
     export default {
-      name: "UsersApp",
+      name: "RepositoriesApp",
       components: {
       },
       data() {
         return {
-          users: [],
+          repositories: [],
         };
       },
       created() {
-        this.getUsers()
+        this.getRepositories()
       },
       methods: {
-        goToUser(row) {
-            this.$router.push({ name: "user", params: { userId: row.name } });
+        goToRepository(row) {
+            this.$router.push({ name: "repository", params: { repositoryId: row.name } });
         },
-          getUsers() {
-              Axios.get(`${API_URL}/users`).then(response => {
-                  let users = response.data;
-                  this.users = users
+          getRepositories() {
+              Axios.get(`${API_URL}/repositories`).then(response => {
+                  let repositories = response.data;
+                  this.repositories = repositories
               }, handleErr.bind(this));
           },
       }

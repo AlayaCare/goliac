@@ -1,0 +1,21 @@
+get:
+  tags:
+    - app
+  operationId: getRepository
+  parameters:
+    - in: path
+      name: repositoryID
+      description: repository slug name
+      required: true
+      type: string
+      minLength: 1
+  description: Get repository and associated teams
+  responses:
+    200:
+      description: get repository details especially teams that have access
+      schema:
+        $ref: "#/definitions/repositoryDetails"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

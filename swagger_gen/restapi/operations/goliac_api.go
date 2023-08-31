@@ -51,6 +51,12 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		HealthGetReadinessHandler: health.GetReadinessHandlerFunc(func(params health.GetReadinessParams) middleware.Responder {
 			return middleware.NotImplemented("operation health.GetReadiness has not yet been implemented")
 		}),
+		AppGetRepositoriesHandler: app.GetRepositoriesHandlerFunc(func(params app.GetRepositoriesParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetRepositories has not yet been implemented")
+		}),
+		AppGetRepositoryHandler: app.GetRepositoryHandlerFunc(func(params app.GetRepositoryParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetRepository has not yet been implemented")
+		}),
 		AppGetStatusHandler: app.GetStatusHandlerFunc(func(params app.GetStatusParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetStatus has not yet been implemented")
 		}),
@@ -113,6 +119,10 @@ type GoliacAPI struct {
 	HealthGetLivenessHandler health.GetLivenessHandler
 	// HealthGetReadinessHandler sets the operation handler for the get readiness operation
 	HealthGetReadinessHandler health.GetReadinessHandler
+	// AppGetRepositoriesHandler sets the operation handler for the get repositories operation
+	AppGetRepositoriesHandler app.GetRepositoriesHandler
+	// AppGetRepositoryHandler sets the operation handler for the get repository operation
+	AppGetRepositoryHandler app.GetRepositoryHandler
 	// AppGetStatusHandler sets the operation handler for the get status operation
 	AppGetStatusHandler app.GetStatusHandler
 	// AppGetTeamHandler sets the operation handler for the get team operation
@@ -209,6 +219,12 @@ func (o *GoliacAPI) Validate() error {
 	}
 	if o.HealthGetReadinessHandler == nil {
 		unregistered = append(unregistered, "health.GetReadinessHandler")
+	}
+	if o.AppGetRepositoriesHandler == nil {
+		unregistered = append(unregistered, "app.GetRepositoriesHandler")
+	}
+	if o.AppGetRepositoryHandler == nil {
+		unregistered = append(unregistered, "app.GetRepositoryHandler")
 	}
 	if o.AppGetStatusHandler == nil {
 		unregistered = append(unregistered, "app.GetStatusHandler")
@@ -327,6 +343,14 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/readiness"] = health.NewGetReadiness(o.context, o.HealthGetReadinessHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/repositories"] = app.NewGetRepositories(o.context, o.AppGetRepositoriesHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/repositories/{repositoryID}"] = app.NewGetRepository(o.context, o.AppGetRepositoryHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
