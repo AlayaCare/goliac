@@ -1,0 +1,14 @@
+get:
+  tags:
+    - app
+  operationId: getRepositories
+  description: Get all repositories
+  responses:
+    200:
+      description: get list of repositories
+      schema:
+        $ref: "#/definitions/repositories"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

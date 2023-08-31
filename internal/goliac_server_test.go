@@ -193,4 +193,39 @@ func TestAppGetTeams(t *testing.T) {
 		assert.Equal(t, 1, len(payload.Payload.Owners))
 		assert.Equal(t, 1, len(payload.Payload.Members))
 	})
+	t.Run("not happy path: team not found", func(t *testing.T) {
+		res := server.GetTeam(app.GetTeamParams{TeamID: "unknown"})
+		assert.NotZero(t, res.(*app.GetTeamDefault))
+	})
+}
+
+func TestAppGetRepositories(t *testing.T) {
+	fixture := fixtureGoliacLocal()
+	goliac := NewGoliacMock(fixture)
+	now := time.Now()
+	server := GoliacServerImpl{
+		goliac:        goliac,
+		ready:         true,
+		lastSyncTime:  &now,
+		lastSyncError: nil,
+	}
+
+	t.Run("happy path: get repositories", func(t *testing.T) {
+		res := server.GetRepositories(app.GetRepositoriesParams{})
+		payload := res.(*app.GetRepositoriesOK)
+		assert.Equal(t, 2, len(payload.Payload))
+	})
+
+	t.Run("happy path: get repository ", func(t *testing.T) {
+		res := server.GetRepository(app.GetRepositoryParams{RepositoryID: "repoB"})
+		payload := res.(*app.GetRepositoryOK)
+		assert.Equal(t, "repoB", payload.Payload.Name)
+		assert.Equal(t, 1, len(payload.Payload.Writers))
+		assert.Equal(t, 1, len(payload.Payload.Readers))
+	})
+
+	t.Run("not happy path: repository not found", func(t *testing.T) {
+		res := server.GetRepository(app.GetRepositoryParams{RepositoryID: "repoC"})
+		assert.NotZero(t, res.(*app.GetRepositoryDefault))
+	})
 }

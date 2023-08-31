@@ -168,6 +168,43 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
+  /repositories:
+    get:
+      tags:
+        - app
+      operationId: getRepositories
+      description: Get all repositories
+      responses:
+        '200':
+          description: get list of repositories
+          schema:
+            $ref: '#/definitions/repositories'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
+  /repositories/{repositoryID}:
+    get:
+      tags:
+        - app
+      operationId: getRepository
+      parameters:
+        - in: path
+          name: repositoryID
+          description: repository slug name
+          required: true
+          type: string
+          minLength: 1
+      description: Get repository and associated teams
+      responses:
+        '200':
+          description: get repository details especially teams that have access
+          schema:
+            $ref: '#/definitions/repositoryDetails'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
 definitions:
   health:
     type: object
@@ -223,6 +260,40 @@ definitions:
         type: boolean
         x-isnullable: false
         x-omitempty: false
+  repositories:
+    type: array
+    items:
+      $ref: '#/definitions/repository'
+  repositoryDetails:
+    type: object
+    properties:
+      name:
+        type: string
+        x-isnullable: false
+      public:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
+      archived:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
+      readers:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+      writers:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
   teams:
     type: array
     items:

@@ -4,6 +4,8 @@ import UsersApp from "@/components/UsersApp.vue";
 import UserApp from "@/components/UserApp.vue";
 import TeamsApp from "@/components/TeamsApp.vue";
 import TeamApp from "@/components/TeamApp.vue";
+import RepositoriesApp from "@/components/RepositoriesApp.vue";
+import RepositoryApp from "@/components/RepositoryApp.vue";
 
 const routes = [
   {
@@ -30,6 +32,16 @@ const routes = [
     path: "/teams/:teamId",
     name: "team",
     component: TeamApp,
+  },
+  {
+    path: "/repositories",
+    name: "repositories",
+    component: RepositoriesApp,
+  },
+  {
+    path: "/repositories/:repositoryId",
+    name: "repository",
+    component: RepositoryApp,
   },
 ];
 
