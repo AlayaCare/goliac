@@ -9,6 +9,11 @@ import (
 	"github.com/spf13/afero"
 )
 
+/*
+ * This "version" of Goliac is here just to validate a local
+ * teams directory. It is mainly used for CI purpose when we need to validate
+ * a PR
+ */
 type GoliacLight interface {
 	// Validate a local teams directory
 	Validate(path string) error

@@ -24,6 +24,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+/*
+ * GoliacServer is here to run as a serve that
+ * - sync/reconciliate periodically
+ * - provide a REST API server
+ */
 type GoliacServer interface {
 	Serve()
 	GetLiveness(health.GetLivenessParams) middleware.Responder
@@ -37,10 +42,9 @@ type GoliacServer interface {
 }
 
 type GoliacServerImpl struct {
-	goliac     Goliac
-	applyMutex gosync.Mutex
-	// when the server has finished to load the local configuration
-	ready         bool
+	goliac        Goliac
+	applyMutex    gosync.Mutex
+	ready         bool // when the server has finished to load the local configuration
 	lastSyncTime  *time.Time
 	lastSyncError error
 	syncInterval  int // in seconds time remaining between 2 sync
@@ -80,6 +84,9 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 		Teams:        make([]*models.Team, 0),
 		Repositories: make([]*models.Repository, 0),
 	}
+
+	// [teamname]team
+	userTeams := make(map[string]*models.Team)
 	local := g.goliac.GetLocal()
 	for teamname, team := range local.Teams() {
 		for _, owner := range team.Data.Owners {
@@ -89,7 +96,7 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 					Members: team.Data.Members,
 					Owners:  team.Data.Owners,
 				}
-				userdetails.Teams = append(userdetails.Teams, &team)
+				userTeams[teamname] = &team
 				break
 			}
 		}
@@ -100,38 +107,56 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 					Members: team.Data.Members,
 					Owners:  team.Data.Owners,
 				}
-				userdetails.Teams = append(userdetails.Teams, &team)
+				userTeams[teamname] = &team
 				break
 			}
 		}
 	}
 
-	teamRepo := make(map[string][]*entity.Repository)
+	for _, t := range userTeams {
+		userdetails.Teams = append(userdetails.Teams, t)
+	}
+
+	// let's sort repo per team
+	teamRepo := make(map[string]map[string]*entity.Repository)
 	for _, repo := range local.Repositories() {
 		if repo.Owner != nil {
-			teamRepo[*repo.Owner] = append(teamRepo[*repo.Owner], repo)
+			if _, ok := teamRepo[*repo.Owner]; !ok {
+				teamRepo[*repo.Owner] = make(map[string]*entity.Repository)
+			}
+			teamRepo[*repo.Owner][repo.Metadata.Name] = repo
 		}
 		for _, r := range repo.Data.Readers {
-			teamRepo[r] = append(teamRepo[*repo.Owner], repo)
+			if _, ok := teamRepo[r]; !ok {
+				teamRepo[r] = make(map[string]*entity.Repository)
+			}
+			teamRepo[r][repo.Metadata.Name] = repo
 		}
 		for _, w := range repo.Data.Writers {
-			teamRepo[w] = append(teamRepo[*repo.Owner], repo)
+			if _, ok := teamRepo[w]; !ok {
+				teamRepo[w] = make(map[string]*entity.Repository)
+			}
+			teamRepo[w][repo.Metadata.Name] = repo
 		}
 	}
-	fmt.Println(local.Repositories())
-	fmt.Println(teamRepo)
 
+	// [reponame]repo
+	userRepos := make(map[string]*entity.Repository)
 	for _, team := range userdetails.Teams {
 		if repositories, ok := teamRepo[team.Name]; ok {
-			for _, r := range repositories {
-				repo := models.Repository{
-					Name:     r.Metadata.Name,
-					Public:   r.Data.IsPublic,
-					Archived: r.Data.IsArchived,
-				}
-				userdetails.Repositories = append(userdetails.Repositories, &repo)
+			for n, r := range repositories {
+				userRepos[n] = r
 			}
 		}
+	}
+
+	for _, r := range userRepos {
+		repo := models.Repository{
+			Name:     r.Metadata.Name,
+			Public:   r.Data.IsPublic,
+			Archived: r.Data.IsArchived,
+		}
+		userdetails.Repositories = append(userdetails.Repositories, &repo)
 	}
 
 	return app.NewGetUserOK().WithPayload(&userdetails)
