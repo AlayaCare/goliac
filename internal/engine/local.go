@@ -31,6 +31,11 @@ import (
  * and mount it in memory
  */
 type GoliacLocal interface {
+	GoliacLocalGit
+	GoliacLocalResources
+}
+
+type GoliacLocalGit interface {
 	Clone(accesstoken, repositoryUrl, branch string) error
 
 	// Return commits from tagname to HEAD
@@ -50,7 +55,9 @@ type GoliacLocal interface {
 
 	// Load and Validate from a local directory
 	LoadAndValidateLocal(fs afero.Fs, path string) ([]error, []entity.Warning)
+}
 
+type GoliacLocalResources interface {
 	Teams() map[string]*entity.Team              // teamname, team definition
 	Repositories() map[string]*entity.Repository // reponame, repo definition
 	Users() map[string]*entity.User              // github username, user definition

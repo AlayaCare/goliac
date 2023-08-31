@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Alayacare/goliac/internal/config"
+	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/swagger_gen/models"
 	"github.com/Alayacare/goliac/swagger_gen/restapi"
 	"github.com/Alayacare/goliac/swagger_gen/restapi/operations"
@@ -23,6 +24,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+/*
+ * GoliacServer is here to run as a serve that
+ * - sync/reconciliate periodically
+ * - provide a REST API server
+ */
 type GoliacServer interface {
 	Serve()
 	GetLiveness(health.GetLivenessParams) middleware.Responder
@@ -30,13 +36,15 @@ type GoliacServer interface {
 	PostFlushCache(app.PostFlushCacheParams) middleware.Responder
 	PostResync(app.PostResyncParams) middleware.Responder
 	GetStatus(app.GetStatusParams) middleware.Responder
+
+	GetUsers(app.GetUsersParams) middleware.Responder
+	GetUser(app.GetUserParams) middleware.Responder
 }
 
 type GoliacServerImpl struct {
-	goliac     Goliac
-	applyMutex gosync.Mutex
-	// when the server has finished to load the local configuration
-	ready         bool
+	goliac        Goliac
+	applyMutex    gosync.Mutex
+	ready         bool // when the server has finished to load the local configuration
 	lastSyncTime  *time.Time
 	lastSyncError error
 	syncInterval  int // in seconds time remaining between 2 sync
@@ -47,6 +55,111 @@ func NewGoliacServer(goliac Goliac) GoliacServer {
 		goliac: goliac,
 		ready:  false,
 	}
+}
+
+func (g *GoliacServerImpl) GetUsers(app.GetUsersParams) middleware.Responder {
+	users := models.Users{
+		Users: make([]*models.User, 0),
+	}
+	local := g.goliac.GetLocal()
+	for username := range local.Users() {
+		u := models.User{
+			External: false,
+			Name:     username,
+		}
+		users.Users = append(users.Users, &u)
+	}
+	for username := range local.ExternalUsers() {
+		u := models.User{
+			External: true,
+			Name:     username,
+		}
+		users.Users = append(users.Users, &u)
+	}
+	return app.NewGetUsersOK().WithPayload(&users)
+}
+
+func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responder {
+	userdetails := models.UserDetails{
+		Teams:        make([]*models.Team, 0),
+		Repositories: make([]*models.Repository, 0),
+	}
+
+	// [teamname]team
+	userTeams := make(map[string]*models.Team)
+	local := g.goliac.GetLocal()
+	for teamname, team := range local.Teams() {
+		for _, owner := range team.Data.Owners {
+			if owner == params.UserID {
+				team := models.Team{
+					Name:    teamname,
+					Members: team.Data.Members,
+					Owners:  team.Data.Owners,
+				}
+				userTeams[teamname] = &team
+				break
+			}
+		}
+		for _, member := range team.Data.Members {
+			if member == params.UserID {
+				team := models.Team{
+					Name:    teamname,
+					Members: team.Data.Members,
+					Owners:  team.Data.Owners,
+				}
+				userTeams[teamname] = &team
+				break
+			}
+		}
+	}
+
+	for _, t := range userTeams {
+		userdetails.Teams = append(userdetails.Teams, t)
+	}
+
+	// let's sort repo per team
+	teamRepo := make(map[string]map[string]*entity.Repository)
+	for _, repo := range local.Repositories() {
+		if repo.Owner != nil {
+			if _, ok := teamRepo[*repo.Owner]; !ok {
+				teamRepo[*repo.Owner] = make(map[string]*entity.Repository)
+			}
+			teamRepo[*repo.Owner][repo.Metadata.Name] = repo
+		}
+		for _, r := range repo.Data.Readers {
+			if _, ok := teamRepo[r]; !ok {
+				teamRepo[r] = make(map[string]*entity.Repository)
+			}
+			teamRepo[r][repo.Metadata.Name] = repo
+		}
+		for _, w := range repo.Data.Writers {
+			if _, ok := teamRepo[w]; !ok {
+				teamRepo[w] = make(map[string]*entity.Repository)
+			}
+			teamRepo[w][repo.Metadata.Name] = repo
+		}
+	}
+
+	// [reponame]repo
+	userRepos := make(map[string]*entity.Repository)
+	for _, team := range userdetails.Teams {
+		if repositories, ok := teamRepo[team.Name]; ok {
+			for n, r := range repositories {
+				userRepos[n] = r
+			}
+		}
+	}
+
+	for _, r := range userRepos {
+		repo := models.Repository{
+			Name:     r.Metadata.Name,
+			Public:   r.Data.IsPublic,
+			Archived: r.Data.IsArchived,
+		}
+		userdetails.Repositories = append(userdetails.Repositories, &repo)
+	}
+
+	return app.NewGetUserOK().WithPayload(&userdetails)
 }
 
 func (g *GoliacServerImpl) GetStatus(app.GetStatusParams) middleware.Responder {
@@ -172,6 +285,10 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.AppPostFlushCacheHandler = app.PostFlushCacheHandlerFunc(g.PostFlushCache)
 	api.AppPostResyncHandler = app.PostResyncHandlerFunc(g.PostResync)
 	api.AppGetStatusHandler = app.GetStatusHandlerFunc(g.GetStatus)
+
+	api.AppGetUsersHandler = app.GetUsersHandlerFunc(g.GetUsers)
+	api.AppGetUserHandler = app.GetUserHandlerFunc(g.GetUser)
+
 	server := restapi.NewServer(api)
 
 	server.Host = config.Config.SwaggerHost

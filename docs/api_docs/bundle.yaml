@@ -94,12 +94,106 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
+  /users:
+    get:
+      tags:
+        - app
+      operationId: getUsers
+      description: Get all users
+      responses:
+        '200':
+          description: get list of users (organization or external)
+          schema:
+            $ref: '#/definitions/users'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
+  /users/{userID}:
+    get:
+      tags:
+        - app
+      operationId: getUser
+      parameters:
+        - in: path
+          name: userID
+          description: user name
+          required: true
+          type: string
+          minLength: 1
+      description: Get user and associated teams and repos
+      responses:
+        '200':
+          description: get user details especially teams and repositories
+          schema:
+            $ref: '#/definitions/userDetails'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
 definitions:
   health:
     type: object
     properties:
       status:
         type: string
+  users:
+    type: object
+    properties:
+      users:
+        type: array
+        items:
+          $ref: '#/definitions/user'
+  user:
+    type: object
+    properties:
+      name:
+        type: string
+        x-isnullable: false
+      external:
+        type: boolean
+        x-isnullable: false
+  userDetails:
+    type: object
+    properties:
+      teams:
+        type: array
+        items:
+          $ref: '#/definitions/team'
+      repositories:
+        type: array
+        items:
+          $ref: '#/definitions/repository'
+  repository:
+    type: object
+    properties:
+      name:
+        type: string
+        x-isnullable: false
+      public:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
+      archived:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
+  team:
+    type: object
+    properties:
+      name:
+        type: string
+        x-isnullable: false
+      owners:
+        type: array
+        items:
+          type: string
+          minLength: 1
+      members:
+        type: array
+        items:
+          type: string
+          minLength: 1
   status:
     type: object
     properties:

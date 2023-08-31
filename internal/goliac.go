@@ -38,7 +38,7 @@ type Goliac interface {
 	// flush remote cache
 	FlushCache()
 
-	GetLocal() engine.GoliacLocal
+	GetLocal() engine.GoliacLocalResources
 }
 
 type GoliacImpl struct {
@@ -72,7 +72,7 @@ func NewGoliacImpl() (Goliac, error) {
 	}, nil
 }
 
-func (g *GoliacImpl) GetLocal() engine.GoliacLocal {
+func (g *GoliacImpl) GetLocal() engine.GoliacLocalResources {
 	return g.local
 }
 

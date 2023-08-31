@@ -1,0 +1,21 @@
+get:
+  tags:
+    - app
+  operationId: getUser
+  parameters:
+    - in: path
+      name: userID
+      description: user name
+      required: true
+      type: string
+      minLength: 1
+  description: Get user and associated teams and repos
+  responses:
+    200:
+      description: get user details especially teams and repositories
+      schema:
+        $ref: "#/definitions/userDetails"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"
