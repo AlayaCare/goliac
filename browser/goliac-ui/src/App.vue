@@ -6,23 +6,23 @@ import { User, MessageBox, Folder } from '@element-plus/icons-vue'
  <div id="app">
     <el-container>
       <el-aside width="130px">
-        <el-menu>
-          <el-menu-item index="1" style="justify-content: center">
+        <el-menu :router="true">
+          <el-menu-item index="/" style="justify-content: center">
             <template #title>
               <img src="/logo.png">
             </template>
           </el-menu-item>
-          <el-menu-item index="2">
+          <el-menu-item index="/users">
             <template #title>
               <el-icon :size="16"><User /></el-icon>Users
             </template>
           </el-menu-item>
-          <el-menu-item index="3">
+          <el-menu-item index="/teams">
             <template #title>
               <el-icon :size="16"><MessageBox /></el-icon>Teams
             </template>
           </el-menu-item>
-          <el-menu-item index="4">
+          <el-menu-item index="/repositories">
             <template #title>
               <el-icon :size="16"><Folder /></el-icon>Repositories
             </template>

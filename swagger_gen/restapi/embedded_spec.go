@@ -297,6 +297,11 @@ func init() {
       "properties": {
         "external": {
           "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "githubid": {
+          "type": "string",
           "x-isnullable": false
         },
         "name": {
@@ -308,6 +313,15 @@ func init() {
     "userDetails": {
       "type": "object",
       "properties": {
+        "external": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "githubid": {
+          "type": "string",
+          "x-isnullable": false
+        },
         "repositories": {
           "type": "array",
           "items": {
@@ -635,6 +649,11 @@ func init() {
       "properties": {
         "external": {
           "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "githubid": {
+          "type": "string",
           "x-isnullable": false
         },
         "name": {
@@ -646,6 +665,15 @@ func init() {
     "userDetails": {
       "type": "object",
       "properties": {
+        "external": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "githubid": {
+          "type": "string",
+          "x-isnullable": false
+        },
         "repositories": {
           "type": "array",
           "items": {

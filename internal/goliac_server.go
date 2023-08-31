@@ -62,17 +62,19 @@ func (g *GoliacServerImpl) GetUsers(app.GetUsersParams) middleware.Responder {
 		Users: make([]*models.User, 0),
 	}
 	local := g.goliac.GetLocal()
-	for username := range local.Users() {
+	for username, user := range local.Users() {
 		u := models.User{
 			External: false,
 			Name:     username,
+			Githubid: user.Data.GithubID,
 		}
 		users.Users = append(users.Users, &u)
 	}
-	for username := range local.ExternalUsers() {
+	for username, user := range local.ExternalUsers() {
 		u := models.User{
 			External: true,
 			Name:     username,
+			Githubid: user.Data.GithubID,
 		}
 		users.Users = append(users.Users, &u)
 	}
@@ -80,14 +82,28 @@ func (g *GoliacServerImpl) GetUsers(app.GetUsersParams) middleware.Responder {
 }
 
 func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responder {
+	local := g.goliac.GetLocal()
+
+	user, found := local.Users()[params.UserID]
+	external := false
+	if !found {
+		user, found = local.ExternalUsers()[params.UserID]
+		if !found {
+			message := fmt.Sprintf("User %s not found", params.UserID)
+			return app.NewGetUserDefault(404).WithPayload(&models.Error{Message: &message})
+		}
+		external = true
+	}
+
 	userdetails := models.UserDetails{
+		Githubid:     user.Data.GithubID,
+		External:     external,
 		Teams:        make([]*models.Team, 0),
 		Repositories: make([]*models.Repository, 0),
 	}
 
 	// [teamname]team
 	userTeams := make(map[string]*models.Team)
-	local := g.goliac.GetLocal()
 	for teamname, team := range local.Teams() {
 		for _, owner := range team.Data.Owners {
 			if owner == params.UserID {
