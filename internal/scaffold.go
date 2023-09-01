@@ -85,6 +85,10 @@ func (s *Scaffold) generate(fs afero.Fs, rootpath string, adminteam string) erro
 		return fmt.Errorf("Error creating the .github/workflows/pr.yaml file: %v", err)
 	}
 
+	if err := s.generateReadme(fs, rootpath); err != nil {
+		return fmt.Errorf("Error creating the README.md file: %v", err)
+	}
+
 	return nil
 }
 
@@ -319,6 +323,8 @@ usersync:
 }
 
 func (s *Scaffold) generateGithubAction(fs afero.Fs, rootpath string) error {
+	fs.MkdirAll(path.Join(rootpath, ".github", "workflows"), 0755)
+
 	workflow := `
 name: Validate structure
 
@@ -339,6 +345,93 @@ jobs:
 			run: /app/goliac verify /work
 `
 	if err := writeFile(path.Join(rootpath, ".github", "workflows", "pr.yaml"), []byte(workflow), fs); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Scaffold) generateReadme(fs afero.Fs, rootpath string) error {
+	readme := `
+# teams
+
+This repository manage the Github organization through [Goliac](https://github.com/alayacare/goliac) application
+
+## Create a repository
+
+On a given team subdirectory you can create a repository definition via a yaml file (like ` + "`" + `/teams/foobar/awesome-repository.yaml` + "`" + `):
+
+` + "```" + `
+apiVersion: v1
+kind: Repository
+metadata:
+  name: awesome-repository
+` + "```" + `
+
+This will create a ` + "`" + `awesome-repository` + "`" + ` repository under your organization, that will be 
+- private by default
+- writable by all owners/members of this team (in our example ` + "`" + `foobar` + "`" + `)
+
+You can of course tweak that:
+
+` + "```" + `
+apiVersion: v1
+kind: Repository
+metadata:
+  name: awesome-repository
+data:
+  public: true
+  writers:
+  - anotherteamA
+  - anotherteamB
+  readers:
+  - anotherteamC
+  - anotherteamD
+` + "```" + `
+
+In this last example:
+- the repository is now publci
+- other teams have write (` + "`" + `notherteamA` + "`" + `, ` + "`" + `anotherteamB` + "`" + `) or read (` + "`" + `anotherteamC` + "`" + `, ` + "`" + `anotherteamD` + "`" + `) access
+
+### Create a new team
+
+If you want to create a new team (like ` + "`" + `foobar` + "`" + `), you need to create a PR with a ` + "`" + `/teams/foobar/team.yaml` + "`" + ` file:
+
+` + "```" + `
+apiVersion: v1
+kind: Team
+metadata:
+  name: foobar
+data:
+  owners:
+    - user1
+    - user2
+  members:
+    - user3
+    - user4
+` + "```" + `
+
+The users defined there are in 2 different categories
+- members: are part of the team (and will be writer on all repositories of the team)
+- owners: are part of the team (and will be writer on all repositories of the team) AMD can approve PR in the ` + "`" + `foobar` + "`" + ` teams repository (when you want to change a team definition, or when you want to create/update a repository definition)
+
+The users name used are the one defined in the ` + "`" + `/users` + "`" + ` sub directories (like ` + "`" + `alice` + "`" + `)
+
+### Archive a repository
+
+You can archive a repository, by a PR that
+- move the yaml repository file into the ` + "`" + `/archived` + "`" + ` directory
+- and chage the repository definition like
+` + "```" + `
+apiVersion: v1
+kind: Repository
+metadata:
+  name: awesome-repository
+data:
+  archived: true
+` + "```" + `
+
+`
+	if err := writeFile(path.Join(rootpath, "README.md"), []byte(readme), fs); err != nil {
 		return err
 	}
 	return nil

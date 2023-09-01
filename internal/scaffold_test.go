@@ -159,7 +159,7 @@ func TestScaffoldUnit(t *testing.T) {
 		assert.Equal(t, true, found)
 	})
 
-	t.Run("happy path: test users  SAML", func(t *testing.T) {
+	t.Run("happy path: test users SAML", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
 		// MockGithubClient doesn't support concurrent access
 
@@ -211,6 +211,22 @@ func TestScaffoldUnit(t *testing.T) {
 		assert.Equal(t, true, found)
 	})
 
+	t.Run("happy path: test github action", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		// MockGithubClient doesn't support concurrent access
+
+		scaffold := &Scaffold{
+			remote:                     NewScaffoldGoliacRemoteMock(),
+			loadUsersFromGithubOrgSaml: LoadGithubSamlUsersMock,
+		}
+
+		err := scaffold.generateGithubAction(fs, "/")
+		assert.Nil(t, err)
+
+		found, err := afero.Exists(fs, "/.github/workflows/pr.yaml")
+		assert.Nil(t, err)
+		assert.Equal(t, true, found)
+	})
 }
 func TestScaffoldFull(t *testing.T) {
 

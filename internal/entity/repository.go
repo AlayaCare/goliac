@@ -134,15 +134,15 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 func (r *Repository) Validate(filename string, teams map[string]*Team, externalUsers map[string]*User, archived bool) error {
 
 	if r.ApiVersion != "v1" {
-		return fmt.Errorf("invalid apiVersion: %s for repository filename %s", r.ApiVersion, filename)
+		return fmt.Errorf("invalid apiVersion: %s (check repository filename %s)", r.ApiVersion, filename)
 	}
 
 	if r.Kind != "Repository" {
-		return fmt.Errorf("invalid kind: %s for repository filename %s", r.Kind, filename)
+		return fmt.Errorf("invalid kind: %s (check repository filename %s)", r.Kind, filename)
 	}
 
 	if r.Metadata.Name == "" {
-		return fmt.Errorf("metadata.name is empty for repository filename %s", filename)
+		return fmt.Errorf("metadata.name is empty (check repository filename %s)", filename)
 	}
 
 	filename = filepath.Base(filename)
@@ -152,12 +152,12 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 
 	for _, writer := range r.Data.Writers {
 		if _, ok := teams[writer]; !ok {
-			return fmt.Errorf("invalid writer: %s doesn't exist in repository filename %s", writer, filename)
+			return fmt.Errorf("invalid writer: %s doesn't exist (check repository filename %s)", writer, filename)
 		}
 	}
 	for _, reader := range r.Data.Readers {
 		if _, ok := teams[reader]; !ok {
-			return fmt.Errorf("invalid reader: %s doesn't exist in repository filename %s", reader, filename)
+			return fmt.Errorf("invalid reader: %s doesn't exist (check repository filename %s)", reader, filename)
 		}
 	}
 
