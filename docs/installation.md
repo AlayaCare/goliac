@@ -164,6 +164,11 @@ then you just need to start it with
 
 You can connect (eventually) to the UI for some statistic to `http://GOLIAC_SERVER_HOST:GOLIAC_SERVER_PORT`
 
+### Using docker container
+
+```
+docker run -ti -v `pwd`/goliac-project-app.2023-07-03.private-key.pem:/app/private-key.pem -e GOLIAC_GITHUB_APP_ID=355525 -e GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=/app/private-key.pem -e GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project -e GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams -e GOLIAC_SERVER_HOST=0.0.0.0 -p 18000:18000 ghcr.io/nzin/goliac serve
+```
 
 ## Syncing Users from an external source
 

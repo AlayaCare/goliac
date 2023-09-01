@@ -21,6 +21,8 @@ FROM debian:bullseye-slim
 RUN mkdir /app
 WORKDIR /app
 
+RUN apt-get update -y && apt-get install ca-certificates -y
+
 COPY --from=go_builder /app/goliac ./goliac
 COPY --from=npm_builder /app/browser/goliac-ui/dist ./browser/goliac-ui/dist
 
