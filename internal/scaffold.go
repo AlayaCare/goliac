@@ -81,6 +81,10 @@ func (s *Scaffold) generate(fs afero.Fs, rootpath string, adminteam string) erro
 		return fmt.Errorf("Error creating the goliac.yaml file: %v", err)
 	}
 
+	if err := s.generateGithubAction(fs, rootpath); err != nil {
+		return fmt.Errorf("Error creating the .github/workflows/pr.yaml file: %v", err)
+	}
+
 	return nil
 }
 
@@ -309,6 +313,32 @@ usersync:
   plugin: noop
 `, adminteam)
 	if err := writeFile(path.Join(rootpath, "goliac.yaml"), []byte(conf), fs); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Scaffold) generateGithubAction(fs afero.Fs, rootpath string) error {
+	workflow := `
+name: Validate structure
+
+on: [pull_request]
+
+jobs:
+	build:
+
+	runs-on: ubuntu-latest
+	steps:
+		- uses: actions/checkout@v3
+
+		- name: Verify
+		uses: addnab/docker-run-action@v3
+		with:
+			image: ghcr.io/nzin/goliac
+			options: -v ${{ github.workspace }}:/work 
+			run: /app/goliac verify /work
+`
+	if err := writeFile(path.Join(rootpath, ".github", "workflows", "pr.yaml"), []byte(workflow), fs); err != nil {
 		return err
 	}
 	return nil
