@@ -71,6 +71,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 				continue
 			}
 			if !strings.HasSuffix(entry.Name(), ".yaml") {
+				warning = append(warning, fmt.Errorf("File %s doesn't have a .yaml extension", entry.Name()))
 				continue
 			}
 			repo, err := NewRepository(fs, filepath.Join(archivedDirname, entry.Name()))
@@ -118,9 +119,18 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 						if err := repo.Validate(filepath.Join(teamDirname, team.Name(), sube.Name()), teams, externalUsers, false); err != nil {
 							errors = append(errors, err)
 						} else {
-							teamname := team.Name()
-							repo.Owner = &teamname
-							repos[repo.Metadata.Name] = repo
+							// check if the repository doesn't already exists
+							if _, exist := repos[repo.Metadata.Name]; exist {
+								existing := filepath.Join(archivedDirname, repo.Metadata.Name)
+								if repos[repo.Metadata.Name].Owner != nil {
+									existing = filepath.Join(teamDirname, *repos[repo.Metadata.Name].Owner, repo.Metadata.Name)
+								}
+								errors = append(errors, fmt.Errorf("Repository %s defined in 2 places (check %s and %s)", repo.Metadata.Name, filepath.Join(teamDirname, team.Name(), sube.Name()), existing))
+							} else {
+								teamname := team.Name()
+								repo.Owner = &teamname
+								repos[repo.Metadata.Name] = repo
+							}
 						}
 					}
 				}
