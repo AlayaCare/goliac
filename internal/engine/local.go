@@ -227,7 +227,11 @@ func (g *GoliacLocalImpl) ListCommitsFromTag(tagname string) ([]*object.Commit, 
 		if c.Hash == refTag.Hash() {
 			return errors.New("stop iteration") // This is used to stop the iteration
 		}
-		commits = append(commits, c)
+		// filter for merge commits
+		// merge commits typically have two parents
+		if len(c.ParentHashes) > 1 {
+			commits = append(commits, c)
+		}
 
 		return nil
 	})

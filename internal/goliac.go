@@ -141,7 +141,7 @@ func (g *GoliacImpl) ApplyToGithub(dryrun bool, teamreponame string, branch stri
 				ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
 				reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
-				ctx := context.WithValue(context.TODO(), engine.KeyAuthor, commit.Author.Email)
+				ctx := context.WithValue(context.TODO(), engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
 				err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun)
 				if err != nil {
 					return fmt.Errorf("Error when reconciliating: %v", err)
