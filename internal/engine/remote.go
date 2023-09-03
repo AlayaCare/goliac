@@ -40,11 +40,12 @@ type GoliacRemoteExecutor interface {
 }
 
 type GithubRepository struct {
-	Name       string
-	Id         int
-	RefId      string
-	IsArchived bool
-	IsPrivate  bool
+	Name          string
+	Id            int
+	RefId         string
+	IsArchived    bool
+	IsPrivate     bool
+	ExternalUsers map[string]string // [githubid]permission
 }
 
 type GithubTeam struct {
@@ -289,6 +290,14 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
 		  databaseId
           isArchived
           isPrivate
+          collaborators(affiliation: OUTSIDE, first: 100) {
+            edges {
+              node {
+                login
+              }
+              permission
+            }
+          }
         }
         pageInfo {
           hasNextPage
@@ -305,11 +314,19 @@ type GraplQLRepositories struct {
 		Organization struct {
 			Repositories struct {
 				Nodes []struct {
-					Name       string
-					Id         string
-					DatabaseId int
-					IsArchived bool
-					IsPrivate  bool
+					Name          string
+					Id            string
+					DatabaseId    int
+					IsArchived    bool
+					IsPrivate     bool
+					Collaborators struct {
+						Edges []struct {
+							Node struct {
+								Login string
+							}
+							Permission string
+						}
+					}
 				} `json:"nodes"`
 				PageInfo struct {
 					HasNextPage bool
@@ -359,11 +376,15 @@ func (g *GoliacRemoteImpl) loadRepositories() (map[string]*GithubRepository, map
 
 		for _, c := range gResult.Data.Organization.Repositories.Nodes {
 			repo := &GithubRepository{
-				Name:       c.Name,
-				Id:         c.DatabaseId,
-				RefId:      c.Id,
-				IsArchived: c.IsArchived,
-				IsPrivate:  c.IsPrivate,
+				Name:          c.Name,
+				Id:            c.DatabaseId,
+				RefId:         c.Id,
+				IsArchived:    c.IsArchived,
+				IsPrivate:     c.IsPrivate,
+				ExternalUsers: make(map[string]string),
+			}
+			for _, collaborator := range c.Collaborators.Edges {
+				repo.ExternalUsers[collaborator.Node.Login] = collaborator.Permission
 			}
 			repositories[c.Name] = repo
 			repositoriesByRefId[c.Id] = repo
@@ -1533,6 +1554,42 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateArchived(reponame string, archi
 
 	if repo, ok := g.repositories[reponame]; ok {
 		repo.IsArchived = archived
+	}
+}
+
+func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, githubid string, permission string) {
+	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#add-a-repository-collaborator
+	body, err := g.client.CallRestAPI(
+		fmt.Sprintf("repos/%s/%s/collaborator/%s", config.Config.GithubAppOrganization, reponame, githubid),
+		"PUT",
+		map[string]interface{}{"permission": permission},
+	)
+	if err != nil {
+		logrus.Errorf("failed to set repository collaborator: %v. %s", err, string(body))
+	}
+
+	if repo, ok := g.repositories[reponame]; ok {
+		if permission == "push" {
+			repo.ExternalUsers[githubid] = "WRITE"
+		} else {
+			repo.ExternalUsers[githubid] = "READ"
+		}
+	}
+}
+
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(reponame string, githubid string) {
+	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#remove-a-repository-collaborator
+	body, err := g.client.CallRestAPI(
+		fmt.Sprintf("repos/%s/%s/collaborator/%s", config.Config.GithubAppOrganization, reponame, githubid),
+		"DELETE",
+		nil,
+	)
+	if err != nil {
+		logrus.Errorf("failed to remove repository collaborator: %v. %s", err, string(body))
+	}
+
+	if repo, ok := g.repositories[reponame]; ok {
+		delete(repo.ExternalUsers, githubid)
 	}
 }
 

@@ -140,6 +140,23 @@ func (g *GithubBatchExecutor) UpdateRepositoryUpdateArchived(reponame string, ar
 	})
 }
 
+func (g *GithubBatchExecutor) UpdateRepositorySetExternalUser(reponame string, githubid string, permission string) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositorySetExternalUser{
+		client:     g.client,
+		reponame:   reponame,
+		githubid:   githubid,
+		permission: permission,
+	})
+}
+
+func (g *GithubBatchExecutor) UpdateRepositoryRemoveExternalUser(reponame string, githubid string) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositoryRemoveExternalUser{
+		client:   g.client,
+		reponame: reponame,
+		githubid: githubid,
+	})
+}
+
 func (g *GithubBatchExecutor) DeleteRepository(reponame string) {
 	g.commands = append(g.commands, &GithubCommandDeleteRepository{
 		client:   g.client,
@@ -285,6 +302,27 @@ type GithubCommandUpdateRepositoryUpdateArchived struct {
 
 func (g *GithubCommandUpdateRepositoryUpdateArchived) Apply() {
 	g.client.UpdateRepositoryUpdateArchived(g.reponame, g.archived)
+}
+
+type GithubCommandUpdateRepositorySetExternalUser struct {
+	client     engine.ReconciliatorExecutor
+	reponame   string
+	githubid   string
+	permission string
+}
+
+func (g *GithubCommandUpdateRepositorySetExternalUser) Apply() {
+	g.client.UpdateRepositorySetExternalUser(g.reponame, g.githubid, g.permission)
+}
+
+type GithubCommandUpdateRepositoryRemoveExternalUser struct {
+	client   engine.ReconciliatorExecutor
+	reponame string
+	githubid string
+}
+
+func (g *GithubCommandUpdateRepositoryRemoveExternalUser) Apply() {
+	g.client.UpdateRepositoryRemoveExternalUser(g.reponame, g.githubid)
 }
 
 type GithubCommandUpdateRepositoryUpdatePrivate struct {

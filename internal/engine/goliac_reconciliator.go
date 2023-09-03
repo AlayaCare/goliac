@@ -198,10 +198,12 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 }
 
 type GithubRepoComparable struct {
-	IsPublic   bool
-	IsArchived bool
-	Writers    []string
-	Readers    []string
+	IsPublic            bool
+	IsArchived          bool
+	Writers             []string
+	Readers             []string
+	ExternalUserReaders []string // githubids
+	ExternalUserWriters []string // githubids
 }
 
 /*
@@ -211,12 +213,24 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	ghRepos := remote.Repositories()
 	rRepos := make(map[string]*GithubRepoComparable)
 	for k, v := range ghRepos {
-		rRepos[k] = &GithubRepoComparable{
-			IsPublic:   !v.IsPrivate,
-			IsArchived: v.IsArchived,
-			Writers:    []string{},
-			Readers:    []string{},
+		repo := &GithubRepoComparable{
+			IsPublic:            !v.IsPrivate,
+			IsArchived:          v.IsArchived,
+			Writers:             []string{},
+			Readers:             []string{},
+			ExternalUserReaders: []string{},
+			ExternalUserWriters: []string{},
 		}
+
+		for cGithubid, cPermission := range v.ExternalUsers {
+			if cPermission == "WRITE" {
+				repo.ExternalUserWriters = append(repo.ExternalUserWriters, cGithubid)
+			} else {
+				repo.ExternalUserReaders = append(repo.ExternalUserReaders, cGithubid)
+			}
+		}
+
+		rRepos[k] = repo
 	}
 
 	// on the remote object, I have teams->repos, and I need repos->teams
@@ -259,11 +273,28 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			readers = append(readers, "everyone")
 		}
 
+		// adding exernal reader/writer
+		eReaders := make([]string, 0)
+		for _, r := range lRepo.Data.ExternalUserReaders {
+			if user, ok := local.ExternalUsers()[r]; ok {
+				eReaders = append(eReaders, user.Data.GithubID)
+			}
+		}
+
+		eWriters := make([]string, 0)
+		for _, w := range lRepo.Data.ExternalUserWriters {
+			if user, ok := local.ExternalUsers()[w]; ok {
+				eWriters = append(eWriters, user.Data.GithubID)
+			}
+		}
+
 		lRepos[reponame] = &GithubRepoComparable{
-			IsPublic:   lRepo.Data.IsPublic,
-			IsArchived: lRepo.Data.IsArchived,
-			Readers:    readers,
-			Writers:    writers,
+			IsPublic:            lRepo.Data.IsPublic,
+			IsArchived:          lRepo.Data.IsArchived,
+			Readers:             readers,
+			Writers:             writers,
+			ExternalUserReaders: eReaders,
+			ExternalUserWriters: eWriters,
 		}
 	}
 
@@ -284,6 +315,15 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		if res, _, _ := entity.StringArrayEquivalent(lRepo.Writers, rRepo.Writers); !res {
 			return false
 		}
+
+		if res, _, _ := entity.StringArrayEquivalent(lRepo.ExternalUserReaders, rRepo.ExternalUserReaders); !res {
+			return false
+		}
+
+		if res, _, _ := entity.StringArrayEquivalent(lRepo.ExternalUserWriters, rRepo.ExternalUserWriters); !res {
+			return false
+		}
+
 		return true
 	}
 
@@ -324,6 +364,47 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 			for _, teamSlug := range writeToRemove {
 				r.UpdateRepositoryRemoveTeamAccess(ctx, dryrun, remote, reponame, teamSlug)
+			}
+		}
+
+		resEreader, ereaderToRemove, ereaderToAdd := entity.StringArrayEquivalent(lRepo.ExternalUserReaders, rRepo.ExternalUserReaders)
+		resEWriter, ewriteToRemove, ewriteToAdd := entity.StringArrayEquivalent(lRepo.ExternalUserWriters, rRepo.ExternalUserWriters)
+
+		if !resEreader {
+			for _, eReader := range ereaderToRemove {
+				// check if it is added in the writers
+				found := false
+				for _, eWriter := range ewriteToAdd {
+					if eWriter == eReader {
+						found = true
+						break
+					}
+				}
+				if !found {
+					r.UpdateRepositoryRemoveExternalUser(ctx, dryrun, remote, reponame, eReader)
+				}
+			}
+			for _, eReader := range ereaderToAdd {
+				r.UpdateRepositorySetExternalUser(ctx, dryrun, remote, reponame, eReader, "pull")
+			}
+		}
+
+		if !resEWriter {
+			for _, eWriter := range ewriteToRemove {
+				// check if it is added in the writers
+				found := false
+				for _, eReader := range ereaderToAdd {
+					if eReader == eWriter {
+						found = true
+						break
+					}
+				}
+				if !found {
+					r.UpdateRepositoryRemoveExternalUser(ctx, dryrun, remote, reponame, eWriter)
+				}
+			}
+			for _, eWriter := range ewriteToAdd {
+				r.UpdateRepositorySetExternalUser(ctx, dryrun, remote, reponame, eWriter, "push")
 			}
 		}
 
@@ -645,6 +726,32 @@ func (r *GoliacReconciliatorImpl) DeleteRuleset(ctx context.Context, dryrun bool
 			if r.executor != nil {
 				r.executor.DeleteRuleset(rulesetid)
 			}
+		}
+	}
+}
+func (r *GoliacReconciliatorImpl) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string, permission string) {
+	author := "unknown"
+	if a := ctx.Value(KeyAuthor); a != nil {
+		author = a.(string)
+	}
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_set_external_user"}).Infof("repositoryname: %s collaborator:%s permission:%s", reponame, collaboatorGithubId, permission)
+	if !dryrun {
+		remote.UpdateRepositorySetExternalUser(reponame, collaboatorGithubId, permission)
+		if r.executor != nil {
+			r.executor.UpdateRepositorySetExternalUser(reponame, collaboatorGithubId, permission)
+		}
+	}
+}
+func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string) {
+	author := "unknown"
+	if a := ctx.Value(KeyAuthor); a != nil {
+		author = a.(string)
+	}
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_remove_external_user"}).Infof("repositoryname: %s collaborator:%s", reponame, collaboatorGithubId)
+	if !dryrun {
+		remote.UpdateRepositoryRemoveExternalUser(reponame, collaboatorGithubId)
+		if r.executor != nil {
+			r.executor.UpdateRepositoryRemoveExternalUser(reponame, collaboatorGithubId)
 		}
 	}
 }

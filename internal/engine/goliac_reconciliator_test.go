@@ -122,13 +122,15 @@ type ReconciliatorListenerRecorder struct {
 	TeamMemberRemoved map[string][]string
 	TeamDeleted       map[string]bool
 
-	RepositoryCreated          map[string]bool
-	RepositoryTeamAdded        map[string][]string
-	RepositoryTeamUpdated      map[string][]string
-	RepositoryTeamRemoved      map[string][]string
-	RepositoriesDeleted        map[string]bool
-	RepositoriesUpdatePrivate  map[string]bool
-	RepositoriesUpdateArchived map[string]bool
+	RepositoryCreated              map[string]bool
+	RepositoryTeamAdded            map[string][]string
+	RepositoryTeamUpdated          map[string][]string
+	RepositoryTeamRemoved          map[string][]string
+	RepositoriesDeleted            map[string]bool
+	RepositoriesUpdatePrivate      map[string]bool
+	RepositoriesUpdateArchived     map[string]bool
+	RepositoriesAddExternalUser    map[string]string
+	RepositoriesRemoveExternalUser map[string]bool
 
 	RuleSetCreated map[string]*GithubRuleSet
 	RuleSetUpdated map[string]*GithubRuleSet
@@ -137,22 +139,24 @@ type ReconciliatorListenerRecorder struct {
 
 func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 	r := ReconciliatorListenerRecorder{
-		UsersCreated:               make(map[string]string),
-		UsersRemoved:               make(map[string]string),
-		TeamsCreated:               make(map[string][]string),
-		TeamMemberAdded:            make(map[string][]string),
-		TeamMemberRemoved:          make(map[string][]string),
-		TeamDeleted:                make(map[string]bool),
-		RepositoryCreated:          make(map[string]bool),
-		RepositoryTeamAdded:        make(map[string][]string),
-		RepositoryTeamUpdated:      make(map[string][]string),
-		RepositoryTeamRemoved:      make(map[string][]string),
-		RepositoriesDeleted:        make(map[string]bool),
-		RepositoriesUpdatePrivate:  make(map[string]bool),
-		RepositoriesUpdateArchived: make(map[string]bool),
-		RuleSetCreated:             make(map[string]*GithubRuleSet),
-		RuleSetUpdated:             make(map[string]*GithubRuleSet),
-		RuleSetDeleted:             make([]int, 0),
+		UsersCreated:                   make(map[string]string),
+		UsersRemoved:                   make(map[string]string),
+		TeamsCreated:                   make(map[string][]string),
+		TeamMemberAdded:                make(map[string][]string),
+		TeamMemberRemoved:              make(map[string][]string),
+		TeamDeleted:                    make(map[string]bool),
+		RepositoryCreated:              make(map[string]bool),
+		RepositoryTeamAdded:            make(map[string][]string),
+		RepositoryTeamUpdated:          make(map[string][]string),
+		RepositoryTeamRemoved:          make(map[string][]string),
+		RepositoriesDeleted:            make(map[string]bool),
+		RepositoriesUpdatePrivate:      make(map[string]bool),
+		RepositoriesUpdateArchived:     make(map[string]bool),
+		RepositoriesAddExternalUser:    make(map[string]string),
+		RepositoriesRemoveExternalUser: make(map[string]bool),
+		RuleSetCreated:                 make(map[string]*GithubRuleSet),
+		RuleSetUpdated:                 make(map[string]*GithubRuleSet),
+		RuleSetDeleted:                 make([]int, 0),
 	}
 	return &r
 }
@@ -194,6 +198,12 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdatePrivate(reponame s
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateArchived(reponame string, archived bool) {
 	r.RepositoriesUpdateArchived[reponame] = true
+}
+func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(reponame string, githubid string, permission string) {
+	r.RepositoriesAddExternalUser[githubid] = permission
+}
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveExternalUser(reponame string, githubid string) {
+	r.RepositoriesRemoveExternalUser[githubid] = true
 }
 func (r *ReconciliatorListenerRecorder) AddRuleset(ruleset *GithubRuleSet) {
 	r.RuleSetCreated[ruleset.Name] = ruleset
