@@ -15,10 +15,11 @@ import (
 )
 
 type GoliacLocalMock struct {
-	users    map[string]*entity.User
-	teams    map[string]*entity.Team
-	repos    map[string]*entity.Repository
-	rulesets map[string]*entity.RuleSet
+	users     map[string]*entity.User
+	externals map[string]*entity.User
+	teams     map[string]*entity.Team
+	repos     map[string]*entity.Repository
+	rulesets  map[string]*entity.RuleSet
 }
 
 func (m *GoliacLocalMock) Clone(accesstoken, repositoryUrl, branch string) error {
@@ -53,7 +54,7 @@ func (m *GoliacLocalMock) Users() map[string]*entity.User {
 	return m.users
 }
 func (m *GoliacLocalMock) ExternalUsers() map[string]*entity.User {
-	return nil
+	return m.externals
 }
 func (m *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 	return m.rulesets
@@ -129,7 +130,7 @@ type ReconciliatorListenerRecorder struct {
 	RepositoriesDeleted            map[string]bool
 	RepositoriesUpdatePrivate      map[string]bool
 	RepositoriesUpdateArchived     map[string]bool
-	RepositoriesAddExternalUser    map[string]string
+	RepositoriesSetExternalUser    map[string]string
 	RepositoriesRemoveExternalUser map[string]bool
 
 	RuleSetCreated map[string]*GithubRuleSet
@@ -152,7 +153,7 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 		RepositoriesDeleted:            make(map[string]bool),
 		RepositoriesUpdatePrivate:      make(map[string]bool),
 		RepositoriesUpdateArchived:     make(map[string]bool),
-		RepositoriesAddExternalUser:    make(map[string]string),
+		RepositoriesSetExternalUser:    make(map[string]string),
 		RepositoriesRemoveExternalUser: make(map[string]bool),
 		RuleSetCreated:                 make(map[string]*GithubRuleSet),
 		RuleSetUpdated:                 make(map[string]*GithubRuleSet),
@@ -200,7 +201,7 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateArchived(reponame 
 	r.RepositoriesUpdateArchived[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(reponame string, githubid string, permission string) {
-	r.RepositoriesAddExternalUser[githubid] = permission
+	r.RepositoriesSetExternalUser[githubid] = permission
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveExternalUser(reponame string, githubid string) {
 	r.RepositoriesRemoveExternalUser[githubid] = true
@@ -1026,6 +1027,219 @@ func TestReconciliation(t *testing.T) {
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
 		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded))
+	})
+
+	t.Run("happy path: existing repo with new external write collaborator", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users:     make(map[string]*entity.User),
+			externals: make(map[string]*entity.User),
+			teams:     make(map[string]*entity.Team),
+			repos:     make(map[string]*entity.Repository),
+		}
+		outside1 := entity.User{}
+		outside1.Metadata.Name = "outside1"
+		outside1.Data.GithubID = "outside1-githubid"
+		local.externals["outside1"] = &outside1
+
+		lRepo := &entity.Repository{}
+		lRepo.Metadata.Name = "myrepo"
+		lRepo.Data.Readers = []string{}
+		lRepo.Data.Writers = []string{}
+		lRepo.Data.ExternalUserWriters = []string{"outside1"}
+		lowner := "existing"
+		lRepo.Owner = &lowner
+		local.repos["myrepo"] = lRepo
+
+		existingTeam := &entity.Team{}
+		existingTeam.Metadata.Name = "existing"
+		existingTeam.Data.Owners = []string{"existing_owner"}
+		existingTeam.Data.Members = []string{}
+		local.teams["existing"] = existingTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+		existing := &GithubTeam{
+			Name:    "existing",
+			Slug:    "existing",
+			Members: []string{"existing_owner"},
+		}
+		remote.teams["existing"] = existing
+		rRepo := GithubRepository{
+			Name:          "myrepo",
+			ExternalUsers: make(map[string]string),
+		}
+		remote.repos["myrepo"] = &rRepo
+
+		remote.teamsrepos["existing"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["existing"]["myrepo"] = &GithubTeamRepo{
+			Name:       "myrepo",
+			Permission: "WRITE",
+		}
+
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false)
+
+		// 1 team updated
+		assert.Equal(t, 0, len(recorder.RepositoryCreated))
+		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
+		assert.Equal(t, 1, len(recorder.RepositoriesSetExternalUser))
+		assert.Equal(t, 0, len(recorder.RepositoriesRemoveExternalUser))
+	})
+
+	t.Run("happy path: existing repo with deleted external write collaborator", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users:     make(map[string]*entity.User),
+			externals: make(map[string]*entity.User),
+			teams:     make(map[string]*entity.Team),
+			repos:     make(map[string]*entity.Repository),
+		}
+
+		lRepo := &entity.Repository{}
+		lRepo.Metadata.Name = "myrepo"
+		lRepo.Data.Readers = []string{}
+		lRepo.Data.Writers = []string{}
+		lRepo.Data.ExternalUserWriters = []string{}
+		lowner := "existing"
+		lRepo.Owner = &lowner
+		local.repos["myrepo"] = lRepo
+
+		existingTeam := &entity.Team{}
+		existingTeam.Metadata.Name = "existing"
+		existingTeam.Data.Owners = []string{"existing_owner"}
+		existingTeam.Data.Members = []string{}
+		local.teams["existing"] = existingTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+		existing := &GithubTeam{
+			Name:    "existing",
+			Slug:    "existing",
+			Members: []string{"existing_owner"},
+		}
+		remote.teams["existing"] = existing
+		rRepo := GithubRepository{
+			Name:          "myrepo",
+			ExternalUsers: make(map[string]string),
+		}
+		rRepo.ExternalUsers["outside1-githubid"] = "WRITE"
+		remote.repos["myrepo"] = &rRepo
+
+		remote.teamsrepos["existing"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["existing"]["myrepo"] = &GithubTeamRepo{
+			Name:       "myrepo",
+			Permission: "WRITE",
+		}
+
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false)
+
+		// 1 team updated
+		assert.Equal(t, 0, len(recorder.RepositoryCreated))
+		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
+		assert.Equal(t, 0, len(recorder.RepositoriesSetExternalUser))
+		assert.Equal(t, 1, len(recorder.RepositoriesRemoveExternalUser))
+	})
+
+	t.Run("happy path: existing repo with changed external write collaborator (from read to write)", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users:     make(map[string]*entity.User),
+			externals: make(map[string]*entity.User),
+			teams:     make(map[string]*entity.Team),
+			repos:     make(map[string]*entity.Repository),
+		}
+
+		outside1 := entity.User{}
+		outside1.Metadata.Name = "outside1"
+		outside1.Data.GithubID = "outside1-githubid"
+		local.externals["outside1"] = &outside1
+
+		lRepo := &entity.Repository{}
+		lRepo.Metadata.Name = "myrepo"
+		lRepo.Data.Readers = []string{}
+		lRepo.Data.Writers = []string{}
+		lRepo.Data.ExternalUserWriters = []string{}
+		lRepo.Data.ExternalUserReaders = []string{"outside1"}
+		lowner := "existing"
+		lRepo.Owner = &lowner
+		local.repos["myrepo"] = lRepo
+
+		existingTeam := &entity.Team{}
+		existingTeam.Metadata.Name = "existing"
+		existingTeam.Data.Owners = []string{"existing_owner"}
+		existingTeam.Data.Members = []string{}
+		local.teams["existing"] = existingTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+		existing := &GithubTeam{
+			Name:    "existing",
+			Slug:    "existing",
+			Members: []string{"existing_owner"},
+		}
+		remote.teams["existing"] = existing
+		rRepo := GithubRepository{
+			Name:          "myrepo",
+			ExternalUsers: make(map[string]string),
+		}
+		rRepo.ExternalUsers["outside1-githubid"] = "WRITE"
+		remote.repos["myrepo"] = &rRepo
+
+		remote.teamsrepos["existing"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["existing"]["myrepo"] = &GithubTeamRepo{
+			Name:       "myrepo",
+			Permission: "WRITE",
+		}
+
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false)
+
+		// 1 team updated
+		assert.Equal(t, 0, len(recorder.RepositoryCreated))
+		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
+		assert.Equal(t, 1, len(recorder.RepositoriesSetExternalUser))
+		assert.Equal(t, 0, len(recorder.RepositoriesRemoveExternalUser))
 	})
 
 	t.Run("happy path: removed repo without destructive operation", func(t *testing.T) {

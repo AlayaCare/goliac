@@ -29,6 +29,20 @@ In Github
 - Go to the left tab "Install App"
   - Click on "Install"
 
+## The goliac application
+
+By using the docker container (`ghcr.io/nzin/goliac`) or the standalone application, goliac comes with different commands
+
+| Command  | Description                                                                    |
+|----------|--------------------------------------------------------------------------------|
+| scaffold | help you bootstrap an IAC structure, based on your current Github organization |
+| verify   | check the validity of a local IAC structure. Used for the CI (for example)  to valiate a PR |
+| plan     | download a teams IAC repository, and show changes to apply                     |
+| apply    | download a teams IAC repository, and apply it to Github                        |
+| serve    | starts a server (and a UI) and apply automaticall every 10 minutes             |
+| syncusers| get the definition of users outside and put it back to the IAC structure       |
+
+
 ## Creating the IAC github repository
 
 In your Github organization, you need to create a git repository. Usually it is called `teams`.
@@ -134,6 +148,41 @@ rules:
     parameters:
       requiredApprovingReviewCount: 1
 ```
+
+## Testing your IAC github repository
+
+Before commiting your new structure you can use `goliac verify` to test the validity:
+
+```
+cd teams
+goliac verify
+```
+
+## Applying manually
+
+After merging your team IAC teams repository, you can begin to test and apply
+
+```
+export GOLIAC_GITHUB_APP_ID=355525
+export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
+export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
+export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
+
+./goliac plan https://github.com/goliac-project/teams main
+```
+
+and you can apply the change "manaully"
+
+```
+export GOLIAC_GITHUB_APP_ID=355525
+export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
+export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
+export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
+
+./goliac plan https://github.com/goliac-project/teams apply
+```
+
+If it works for you, you can put in place the goliac service to fetch and apply automatically (like every 10 minute). See below
 
 ## Configure the Goliac server
 
