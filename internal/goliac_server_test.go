@@ -220,8 +220,7 @@ func TestAppGetRepositories(t *testing.T) {
 		res := server.GetRepository(app.GetRepositoryParams{RepositoryID: "repoB"})
 		payload := res.(*app.GetRepositoryOK)
 		assert.Equal(t, "repoB", payload.Payload.Name)
-		assert.Equal(t, 1, len(payload.Payload.Writers))
-		assert.Equal(t, 1, len(payload.Payload.Readers))
+		assert.Equal(t, 2, len(payload.Payload.Teams))
 	})
 
 	t.Run("not happy path: repository not found", func(t *testing.T) {

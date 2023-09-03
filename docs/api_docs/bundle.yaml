@@ -317,7 +317,7 @@ definitions:
         type: boolean
         x-isnullable: false
         x-omitempty: false
-      readers:
+      teams:
         type: array
         items:
           type: object
@@ -325,7 +325,10 @@ definitions:
             name:
               type: string
               minLength: 1
-      writers:
+            access:
+              type: string
+              minLength: 1
+      collaborators:
         type: array
         items:
           type: object
@@ -333,20 +336,7 @@ definitions:
             name:
               type: string
               minLength: 1
-      collaboratorreaders:
-        type: array
-        items:
-          type: object
-          properties:
-            name:
-              type: string
-              minLength: 1
-      collaboratorwriters:
-        type: array
-        items:
-          type: object
-          properties:
-            name:
+            access:
               type: string
               minLength: 1
   teams:

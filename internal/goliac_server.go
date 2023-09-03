@@ -88,54 +88,55 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 		return app.NewGetRepositoryDefault(404).WithPayload(&models.Error{Message: &message})
 	}
 
-	readers := make([]*models.RepositoryDetailsReadersItems0, 0)
-	writers := make([]*models.RepositoryDetailsWritersItems0, 0)
-	collaboratorreaders := make([]*models.RepositoryDetailsCollaboratorreadersItems0, 0)
-	collaboratorwriters := make([]*models.RepositoryDetailsCollaboratorwritersItems0, 0)
+	teams := make([]*models.RepositoryDetailsTeamsItems0, 0)
+	collaborators := make([]*models.RepositoryDetailsCollaboratorsItems0, 0)
 
 	for _, r := range repository.Data.Readers {
-		reader := models.RepositoryDetailsReadersItems0{
-			Name: r,
+		team := models.RepositoryDetailsTeamsItems0{
+			Name:   r,
+			Access: "read",
 		}
-		readers = append(readers, &reader)
+		teams = append(teams, &team)
 	}
 
 	if repository.Owner != nil {
-		writer := models.RepositoryDetailsWritersItems0{
-			Name: *repository.Owner,
+		team := models.RepositoryDetailsTeamsItems0{
+			Name:   *repository.Owner,
+			Access: "write",
 		}
-		writers = append(writers, &writer)
+		teams = append(teams, &team)
 	}
 
 	for _, w := range repository.Data.Writers {
-		writer := models.RepositoryDetailsWritersItems0{
-			Name: w,
+		team := models.RepositoryDetailsTeamsItems0{
+			Name:   w,
+			Access: "write",
 		}
-		writers = append(writers, &writer)
+		teams = append(teams, &team)
 	}
 
 	for _, r := range repository.Data.ExternalUserReaders {
-		reader := models.RepositoryDetailsCollaboratorreadersItems0{
-			Name: r,
+		collaborator := models.RepositoryDetailsCollaboratorsItems0{
+			Name:   r,
+			Access: "read",
 		}
-		collaboratorreaders = append(collaboratorreaders, &reader)
+		collaborators = append(collaborators, &collaborator)
 	}
 
 	for _, r := range repository.Data.ExternalUserWriters {
-		writer := models.RepositoryDetailsCollaboratorwritersItems0{
-			Name: r,
+		collaborator := models.RepositoryDetailsCollaboratorsItems0{
+			Name:   r,
+			Access: "write",
 		}
-		collaboratorwriters = append(collaboratorwriters, &writer)
+		collaborators = append(collaborators, &collaborator)
 	}
 
 	repositoryDetails := models.RepositoryDetails{
-		Name:                repository.Metadata.Name,
-		Public:              repository.Data.IsPublic,
-		Archived:            repository.Data.IsArchived,
-		Readers:             readers,
-		Writers:             writers,
-		Collaboratorreaders: collaboratorreaders,
-		Collaboratorwriters: collaboratorwriters,
+		Name:          repository.Metadata.Name,
+		Public:        repository.Data.IsPublic,
+		Archived:      repository.Data.IsArchived,
+		Teams:         teams,
+		Collaborators: collaborators,
 	}
 
 	return app.NewGetRepositoryOK().WithPayload(&repositoryDetails)

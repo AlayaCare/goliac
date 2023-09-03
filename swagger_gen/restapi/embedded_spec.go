@@ -438,23 +438,15 @@ func init() {
           "x-isnullable": false,
           "x-omitempty": false
         },
-        "collaboratorreaders": {
+        "collaborators": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "name": {
+              "access": {
                 "type": "string",
                 "minLength": 1
-              }
-            }
-          }
-        },
-        "collaboratorwriters": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
+              },
               "name": {
                 "type": "string",
                 "minLength": 1
@@ -471,23 +463,15 @@ func init() {
           "x-isnullable": false,
           "x-omitempty": false
         },
-        "readers": {
+        "teams": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "name": {
+              "access": {
                 "type": "string",
                 "minLength": 1
-              }
-            }
-          }
-        },
-        "writers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
+              },
               "name": {
                 "type": "string",
                 "minLength": 1
@@ -1026,36 +1010,26 @@ func init() {
     }
   },
   "definitions": {
-    "RepositoryDetailsCollaboratorreadersItems0": {
+    "RepositoryDetailsCollaboratorsItems0": {
       "type": "object",
       "properties": {
+        "access": {
+          "type": "string",
+          "minLength": 1
+        },
         "name": {
           "type": "string",
           "minLength": 1
         }
       }
     },
-    "RepositoryDetailsCollaboratorwritersItems0": {
+    "RepositoryDetailsTeamsItems0": {
       "type": "object",
       "properties": {
-        "name": {
+        "access": {
           "type": "string",
           "minLength": 1
-        }
-      }
-    },
-    "RepositoryDetailsReadersItems0": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
-    "RepositoryDetailsWritersItems0": {
-      "type": "object",
-      "properties": {
+        },
         "name": {
           "type": "string",
           "minLength": 1
@@ -1166,16 +1140,10 @@ func init() {
           "x-isnullable": false,
           "x-omitempty": false
         },
-        "collaboratorreaders": {
+        "collaborators": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/RepositoryDetailsCollaboratorreadersItems0"
-          }
-        },
-        "collaboratorwriters": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/RepositoryDetailsCollaboratorwritersItems0"
+            "$ref": "#/definitions/RepositoryDetailsCollaboratorsItems0"
           }
         },
         "name": {
@@ -1187,16 +1155,10 @@ func init() {
           "x-isnullable": false,
           "x-omitempty": false
         },
-        "readers": {
+        "teams": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/RepositoryDetailsReadersItems0"
-          }
-        },
-        "writers": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/RepositoryDetailsWritersItems0"
+            "$ref": "#/definitions/RepositoryDetailsTeamsItems0"
           }
         }
       }
