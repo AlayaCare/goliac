@@ -33,38 +33,17 @@
     <el-row>
       <el-col :span="20" :offset="2">
         <el-card>
-            <el-text>Teams with write access</el-text>
-            <el-table
-                :data="writers"
-                :stripe="true"
-                :highlight-current-row="false"
-                v-on:row-click="goToTeam"
-                :default-sort="{ prop: 'name', order: 'descending' }"
-            >
-            <el-table-column prop="name" align="left" label="Team Name" sortable />
-
-            </el-table>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-row>
-        &nbsp;
-    </el-row>
-
-    <el-row>
-      <el-col :span="20" :offset="2">
-        <el-card>
-            <el-text>Teams with read access</el-text>
+            <el-text>Teams</el-text>
 
             <el-table
-                :data="readers"
+                :data="teams"
                 :stripe="true"
                 :highlight-current-row="false"
                 v-on:row-click="goToTeam"
                 :default-sort="{ prop: 'name', order: 'descending' }"
             >
                 <el-table-column prop="name" align="left" label="Team Name" sortable />
+                <el-table-column prop="access" align="left" label="Access" sortable />
 
             </el-table>
         </el-card>
@@ -78,46 +57,21 @@
     <el-row>
       <el-col :span="20" :offset="2">
         <el-card>
-            <el-text>Collaborators with read access</el-text>
+            <el-text>Collaborators</el-text>
 
             <el-table
-                :data="collaboratorreaders"
+                :data="collaborators"
                 :stripe="true"
                 :highlight-current-row="false"
                 v-on:row-click="goToCollaborator"
                 :default-sort="{ prop: 'name', order: 'descending' }"
             >
                 <el-table-column prop="name" align="left" label="Collaborator Name" sortable />
+                <el-table-column prop="access" align="left" label="Access" sortable />
 
             </el-table>
         </el-card>
       </el-col>
-    </el-row>
-
-    <el-row>
-        &nbsp;
-    </el-row>
-
-    <el-row>
-      <el-col :span="20" :offset="2">
-        <el-card>
-            <el-text>Collaborator with write access</el-text>
-            <el-table
-                :data="collaboratorwriters"
-                :stripe="true"
-                :highlight-current-row="false"
-                v-on:row-click="goToCollaborator"
-                :default-sort="{ prop: 'name', order: 'descending' }"
-            >
-            <el-table-column prop="name" align="left" label="Collaborator Name" sortable />
-
-            </el-table>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-row>
-        &nbsp;
     </el-row>
 </template>
     
@@ -144,10 +98,8 @@
       data() {
         return {
           repository: {},
-          readers: [],
-          writers: [],
-          collaboratorreaders: [],
-          collaboratorwriters: [],
+          teams: [],
+          collaborators: [],
         };
       },
       created() {
@@ -164,10 +116,8 @@
               Axios.get(`${API_URL}/repositories/${this.repositoryid}`).then(response => {
                   let repository = response.data;
                   this.repository = repository
-                  this.readers=repository.readers
-                  this.writers=repository.writers
-                  this.collaboratorreaders=repository.collaboratorreaders
-                  this.collaboratorwriters=repository.collaboratorwriters
+                  this.teams=repository.teams
+                  this.collaborators=repository.collaborators
               }, handleErr.bind(this));
           },
       }

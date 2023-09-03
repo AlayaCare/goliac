@@ -23,11 +23,8 @@ type RepositoryDetails struct {
 	// archived
 	Archived bool `json:"archived"`
 
-	// collaboratorreaders
-	Collaboratorreaders []*RepositoryDetailsCollaboratorreadersItems0 `json:"collaboratorreaders"`
-
-	// collaboratorwriters
-	Collaboratorwriters []*RepositoryDetailsCollaboratorwritersItems0 `json:"collaboratorwriters"`
+	// collaborators
+	Collaborators []*RepositoryDetailsCollaboratorsItems0 `json:"collaborators"`
 
 	// name
 	Name string `json:"name,omitempty"`
@@ -35,30 +32,19 @@ type RepositoryDetails struct {
 	// public
 	Public bool `json:"public"`
 
-	// readers
-	Readers []*RepositoryDetailsReadersItems0 `json:"readers"`
-
-	// writers
-	Writers []*RepositoryDetailsWritersItems0 `json:"writers"`
+	// teams
+	Teams []*RepositoryDetailsTeamsItems0 `json:"teams"`
 }
 
 // Validate validates this repository details
 func (m *RepositoryDetails) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateCollaboratorreaders(formats); err != nil {
+	if err := m.validateCollaborators(formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.validateCollaboratorwriters(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateReaders(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateWriters(formats); err != nil {
+	if err := m.validateTeams(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -68,22 +54,22 @@ func (m *RepositoryDetails) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *RepositoryDetails) validateCollaboratorreaders(formats strfmt.Registry) error {
-	if swag.IsZero(m.Collaboratorreaders) { // not required
+func (m *RepositoryDetails) validateCollaborators(formats strfmt.Registry) error {
+	if swag.IsZero(m.Collaborators) { // not required
 		return nil
 	}
 
-	for i := 0; i < len(m.Collaboratorreaders); i++ {
-		if swag.IsZero(m.Collaboratorreaders[i]) { // not required
+	for i := 0; i < len(m.Collaborators); i++ {
+		if swag.IsZero(m.Collaborators[i]) { // not required
 			continue
 		}
 
-		if m.Collaboratorreaders[i] != nil {
-			if err := m.Collaboratorreaders[i].Validate(formats); err != nil {
+		if m.Collaborators[i] != nil {
+			if err := m.Collaborators[i].Validate(formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("collaboratorreaders" + "." + strconv.Itoa(i))
+					return ve.ValidateName("collaborators" + "." + strconv.Itoa(i))
 				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("collaboratorreaders" + "." + strconv.Itoa(i))
+					return ce.ValidateName("collaborators" + "." + strconv.Itoa(i))
 				}
 				return err
 			}
@@ -94,74 +80,22 @@ func (m *RepositoryDetails) validateCollaboratorreaders(formats strfmt.Registry)
 	return nil
 }
 
-func (m *RepositoryDetails) validateCollaboratorwriters(formats strfmt.Registry) error {
-	if swag.IsZero(m.Collaboratorwriters) { // not required
+func (m *RepositoryDetails) validateTeams(formats strfmt.Registry) error {
+	if swag.IsZero(m.Teams) { // not required
 		return nil
 	}
 
-	for i := 0; i < len(m.Collaboratorwriters); i++ {
-		if swag.IsZero(m.Collaboratorwriters[i]) { // not required
+	for i := 0; i < len(m.Teams); i++ {
+		if swag.IsZero(m.Teams[i]) { // not required
 			continue
 		}
 
-		if m.Collaboratorwriters[i] != nil {
-			if err := m.Collaboratorwriters[i].Validate(formats); err != nil {
+		if m.Teams[i] != nil {
+			if err := m.Teams[i].Validate(formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("collaboratorwriters" + "." + strconv.Itoa(i))
+					return ve.ValidateName("teams" + "." + strconv.Itoa(i))
 				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("collaboratorwriters" + "." + strconv.Itoa(i))
-				}
-				return err
-			}
-		}
-
-	}
-
-	return nil
-}
-
-func (m *RepositoryDetails) validateReaders(formats strfmt.Registry) error {
-	if swag.IsZero(m.Readers) { // not required
-		return nil
-	}
-
-	for i := 0; i < len(m.Readers); i++ {
-		if swag.IsZero(m.Readers[i]) { // not required
-			continue
-		}
-
-		if m.Readers[i] != nil {
-			if err := m.Readers[i].Validate(formats); err != nil {
-				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("readers" + "." + strconv.Itoa(i))
-				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("readers" + "." + strconv.Itoa(i))
-				}
-				return err
-			}
-		}
-
-	}
-
-	return nil
-}
-
-func (m *RepositoryDetails) validateWriters(formats strfmt.Registry) error {
-	if swag.IsZero(m.Writers) { // not required
-		return nil
-	}
-
-	for i := 0; i < len(m.Writers); i++ {
-		if swag.IsZero(m.Writers[i]) { // not required
-			continue
-		}
-
-		if m.Writers[i] != nil {
-			if err := m.Writers[i].Validate(formats); err != nil {
-				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("writers" + "." + strconv.Itoa(i))
-				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("writers" + "." + strconv.Itoa(i))
+					return ce.ValidateName("teams" + "." + strconv.Itoa(i))
 				}
 				return err
 			}
@@ -176,19 +110,11 @@ func (m *RepositoryDetails) validateWriters(formats strfmt.Registry) error {
 func (m *RepositoryDetails) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.contextValidateCollaboratorreaders(ctx, formats); err != nil {
+	if err := m.contextValidateCollaborators(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.contextValidateCollaboratorwriters(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateReaders(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateWriters(ctx, formats); err != nil {
+	if err := m.contextValidateTeams(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -198,21 +124,21 @@ func (m *RepositoryDetails) ContextValidate(ctx context.Context, formats strfmt.
 	return nil
 }
 
-func (m *RepositoryDetails) contextValidateCollaboratorreaders(ctx context.Context, formats strfmt.Registry) error {
+func (m *RepositoryDetails) contextValidateCollaborators(ctx context.Context, formats strfmt.Registry) error {
 
-	for i := 0; i < len(m.Collaboratorreaders); i++ {
+	for i := 0; i < len(m.Collaborators); i++ {
 
-		if m.Collaboratorreaders[i] != nil {
+		if m.Collaborators[i] != nil {
 
-			if swag.IsZero(m.Collaboratorreaders[i]) { // not required
+			if swag.IsZero(m.Collaborators[i]) { // not required
 				return nil
 			}
 
-			if err := m.Collaboratorreaders[i].ContextValidate(ctx, formats); err != nil {
+			if err := m.Collaborators[i].ContextValidate(ctx, formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("collaboratorreaders" + "." + strconv.Itoa(i))
+					return ve.ValidateName("collaborators" + "." + strconv.Itoa(i))
 				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("collaboratorreaders" + "." + strconv.Itoa(i))
+					return ce.ValidateName("collaborators" + "." + strconv.Itoa(i))
 				}
 				return err
 			}
@@ -223,71 +149,21 @@ func (m *RepositoryDetails) contextValidateCollaboratorreaders(ctx context.Conte
 	return nil
 }
 
-func (m *RepositoryDetails) contextValidateCollaboratorwriters(ctx context.Context, formats strfmt.Registry) error {
+func (m *RepositoryDetails) contextValidateTeams(ctx context.Context, formats strfmt.Registry) error {
 
-	for i := 0; i < len(m.Collaboratorwriters); i++ {
+	for i := 0; i < len(m.Teams); i++ {
 
-		if m.Collaboratorwriters[i] != nil {
+		if m.Teams[i] != nil {
 
-			if swag.IsZero(m.Collaboratorwriters[i]) { // not required
+			if swag.IsZero(m.Teams[i]) { // not required
 				return nil
 			}
 
-			if err := m.Collaboratorwriters[i].ContextValidate(ctx, formats); err != nil {
+			if err := m.Teams[i].ContextValidate(ctx, formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("collaboratorwriters" + "." + strconv.Itoa(i))
+					return ve.ValidateName("teams" + "." + strconv.Itoa(i))
 				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("collaboratorwriters" + "." + strconv.Itoa(i))
-				}
-				return err
-			}
-		}
-
-	}
-
-	return nil
-}
-
-func (m *RepositoryDetails) contextValidateReaders(ctx context.Context, formats strfmt.Registry) error {
-
-	for i := 0; i < len(m.Readers); i++ {
-
-		if m.Readers[i] != nil {
-
-			if swag.IsZero(m.Readers[i]) { // not required
-				return nil
-			}
-
-			if err := m.Readers[i].ContextValidate(ctx, formats); err != nil {
-				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("readers" + "." + strconv.Itoa(i))
-				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("readers" + "." + strconv.Itoa(i))
-				}
-				return err
-			}
-		}
-
-	}
-
-	return nil
-}
-
-func (m *RepositoryDetails) contextValidateWriters(ctx context.Context, formats strfmt.Registry) error {
-
-	for i := 0; i < len(m.Writers); i++ {
-
-		if m.Writers[i] != nil {
-
-			if swag.IsZero(m.Writers[i]) { // not required
-				return nil
-			}
-
-			if err := m.Writers[i].ContextValidate(ctx, formats); err != nil {
-				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("writers" + "." + strconv.Itoa(i))
-				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("writers" + "." + strconv.Itoa(i))
+					return ce.ValidateName("teams" + "." + strconv.Itoa(i))
 				}
 				return err
 			}
@@ -316,19 +192,27 @@ func (m *RepositoryDetails) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
-// RepositoryDetailsCollaboratorreadersItems0 repository details collaboratorreaders items0
+// RepositoryDetailsCollaboratorsItems0 repository details collaborators items0
 //
-// swagger:model RepositoryDetailsCollaboratorreadersItems0
-type RepositoryDetailsCollaboratorreadersItems0 struct {
+// swagger:model RepositoryDetailsCollaboratorsItems0
+type RepositoryDetailsCollaboratorsItems0 struct {
+
+	// access
+	// Min Length: 1
+	Access string `json:"access,omitempty"`
 
 	// name
 	// Min Length: 1
 	Name string `json:"name,omitempty"`
 }
 
-// Validate validates this repository details collaboratorreaders items0
-func (m *RepositoryDetailsCollaboratorreadersItems0) Validate(formats strfmt.Registry) error {
+// Validate validates this repository details collaborators items0
+func (m *RepositoryDetailsCollaboratorsItems0) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateAccess(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateName(formats); err != nil {
 		res = append(res, err)
@@ -340,7 +224,19 @@ func (m *RepositoryDetailsCollaboratorreadersItems0) Validate(formats strfmt.Reg
 	return nil
 }
 
-func (m *RepositoryDetailsCollaboratorreadersItems0) validateName(formats strfmt.Registry) error {
+func (m *RepositoryDetailsCollaboratorsItems0) validateAccess(formats strfmt.Registry) error {
+	if swag.IsZero(m.Access) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("access", "body", m.Access, 1); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *RepositoryDetailsCollaboratorsItems0) validateName(formats strfmt.Registry) error {
 	if swag.IsZero(m.Name) { // not required
 		return nil
 	}
@@ -352,13 +248,13 @@ func (m *RepositoryDetailsCollaboratorreadersItems0) validateName(formats strfmt
 	return nil
 }
 
-// ContextValidate validates this repository details collaboratorreaders items0 based on context it is used
-func (m *RepositoryDetailsCollaboratorreadersItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validates this repository details collaborators items0 based on context it is used
+func (m *RepositoryDetailsCollaboratorsItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *RepositoryDetailsCollaboratorreadersItems0) MarshalBinary() ([]byte, error) {
+func (m *RepositoryDetailsCollaboratorsItems0) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -366,8 +262,8 @@ func (m *RepositoryDetailsCollaboratorreadersItems0) MarshalBinary() ([]byte, er
 }
 
 // UnmarshalBinary interface implementation
-func (m *RepositoryDetailsCollaboratorreadersItems0) UnmarshalBinary(b []byte) error {
-	var res RepositoryDetailsCollaboratorreadersItems0
+func (m *RepositoryDetailsCollaboratorsItems0) UnmarshalBinary(b []byte) error {
+	var res RepositoryDetailsCollaboratorsItems0
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
@@ -375,19 +271,27 @@ func (m *RepositoryDetailsCollaboratorreadersItems0) UnmarshalBinary(b []byte) e
 	return nil
 }
 
-// RepositoryDetailsCollaboratorwritersItems0 repository details collaboratorwriters items0
+// RepositoryDetailsTeamsItems0 repository details teams items0
 //
-// swagger:model RepositoryDetailsCollaboratorwritersItems0
-type RepositoryDetailsCollaboratorwritersItems0 struct {
+// swagger:model RepositoryDetailsTeamsItems0
+type RepositoryDetailsTeamsItems0 struct {
+
+	// access
+	// Min Length: 1
+	Access string `json:"access,omitempty"`
 
 	// name
 	// Min Length: 1
 	Name string `json:"name,omitempty"`
 }
 
-// Validate validates this repository details collaboratorwriters items0
-func (m *RepositoryDetailsCollaboratorwritersItems0) Validate(formats strfmt.Registry) error {
+// Validate validates this repository details teams items0
+func (m *RepositoryDetailsTeamsItems0) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateAccess(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateName(formats); err != nil {
 		res = append(res, err)
@@ -399,7 +303,19 @@ func (m *RepositoryDetailsCollaboratorwritersItems0) Validate(formats strfmt.Reg
 	return nil
 }
 
-func (m *RepositoryDetailsCollaboratorwritersItems0) validateName(formats strfmt.Registry) error {
+func (m *RepositoryDetailsTeamsItems0) validateAccess(formats strfmt.Registry) error {
+	if swag.IsZero(m.Access) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("access", "body", m.Access, 1); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *RepositoryDetailsTeamsItems0) validateName(formats strfmt.Registry) error {
 	if swag.IsZero(m.Name) { // not required
 		return nil
 	}
@@ -411,13 +327,13 @@ func (m *RepositoryDetailsCollaboratorwritersItems0) validateName(formats strfmt
 	return nil
 }
 
-// ContextValidate validates this repository details collaboratorwriters items0 based on context it is used
-func (m *RepositoryDetailsCollaboratorwritersItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validates this repository details teams items0 based on context it is used
+func (m *RepositoryDetailsTeamsItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *RepositoryDetailsCollaboratorwritersItems0) MarshalBinary() ([]byte, error) {
+func (m *RepositoryDetailsTeamsItems0) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -425,126 +341,8 @@ func (m *RepositoryDetailsCollaboratorwritersItems0) MarshalBinary() ([]byte, er
 }
 
 // UnmarshalBinary interface implementation
-func (m *RepositoryDetailsCollaboratorwritersItems0) UnmarshalBinary(b []byte) error {
-	var res RepositoryDetailsCollaboratorwritersItems0
-	if err := swag.ReadJSON(b, &res); err != nil {
-		return err
-	}
-	*m = res
-	return nil
-}
-
-// RepositoryDetailsReadersItems0 repository details readers items0
-//
-// swagger:model RepositoryDetailsReadersItems0
-type RepositoryDetailsReadersItems0 struct {
-
-	// name
-	// Min Length: 1
-	Name string `json:"name,omitempty"`
-}
-
-// Validate validates this repository details readers items0
-func (m *RepositoryDetailsReadersItems0) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateName(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *RepositoryDetailsReadersItems0) validateName(formats strfmt.Registry) error {
-	if swag.IsZero(m.Name) { // not required
-		return nil
-	}
-
-	if err := validate.MinLength("name", "body", m.Name, 1); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ContextValidate validates this repository details readers items0 based on context it is used
-func (m *RepositoryDetailsReadersItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	return nil
-}
-
-// MarshalBinary interface implementation
-func (m *RepositoryDetailsReadersItems0) MarshalBinary() ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return swag.WriteJSON(m)
-}
-
-// UnmarshalBinary interface implementation
-func (m *RepositoryDetailsReadersItems0) UnmarshalBinary(b []byte) error {
-	var res RepositoryDetailsReadersItems0
-	if err := swag.ReadJSON(b, &res); err != nil {
-		return err
-	}
-	*m = res
-	return nil
-}
-
-// RepositoryDetailsWritersItems0 repository details writers items0
-//
-// swagger:model RepositoryDetailsWritersItems0
-type RepositoryDetailsWritersItems0 struct {
-
-	// name
-	// Min Length: 1
-	Name string `json:"name,omitempty"`
-}
-
-// Validate validates this repository details writers items0
-func (m *RepositoryDetailsWritersItems0) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateName(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *RepositoryDetailsWritersItems0) validateName(formats strfmt.Registry) error {
-	if swag.IsZero(m.Name) { // not required
-		return nil
-	}
-
-	if err := validate.MinLength("name", "body", m.Name, 1); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ContextValidate validates this repository details writers items0 based on context it is used
-func (m *RepositoryDetailsWritersItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	return nil
-}
-
-// MarshalBinary interface implementation
-func (m *RepositoryDetailsWritersItems0) MarshalBinary() ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return swag.WriteJSON(m)
-}
-
-// UnmarshalBinary interface implementation
-func (m *RepositoryDetailsWritersItems0) UnmarshalBinary(b []byte) error {
-	var res RepositoryDetailsWritersItems0
+func (m *RepositoryDetailsTeamsItems0) UnmarshalBinary(b []byte) error {
+	var res RepositoryDetailsTeamsItems0
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
