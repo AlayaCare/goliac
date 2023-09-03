@@ -131,6 +131,43 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
+  /collaborators:
+    get:
+      tags:
+        - app
+      operationId: getCollaborators
+      description: Get all external collaborators
+      responses:
+        '200':
+          description: get list of collarators
+          schema:
+            $ref: '#/definitions/users'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
+  /collaborators/{collaboratorID}:
+    get:
+      tags:
+        - app
+      operationId: getCollaborator
+      parameters:
+        - in: path
+          name: collaboratorID
+          description: collaborator name
+          required: true
+          type: string
+          minLength: 1
+      description: Get collaborator and repos
+      responses:
+        '200':
+          description: get collaborator details especially repositories
+          schema:
+            $ref: '#/definitions/collaboratorDetails'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
   /teams:
     get:
       tags:
@@ -224,24 +261,26 @@ definitions:
       githubid:
         type: string
         x-isnullable: false
-      external:
-        type: boolean
-        x-isnullable: false
-        x-omitempty: false
   userDetails:
     type: object
     properties:
       githubid:
         type: string
         x-isnullable: false
-      external:
-        type: boolean
-        x-isnullable: false
-        x-omitempty: false
       teams:
         type: array
         items:
           $ref: '#/definitions/team'
+      repositories:
+        type: array
+        items:
+          $ref: '#/definitions/repository'
+  collaboratorDetails:
+    type: object
+    properties:
+      githubid:
+        type: string
+        x-isnullable: false
       repositories:
         type: array
         items:
@@ -287,6 +326,22 @@ definitions:
               type: string
               minLength: 1
       writers:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+      collaboratorreaders:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+      collaboratorwriters:
         type: array
         items:
           type: object

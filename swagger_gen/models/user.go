@@ -17,9 +17,6 @@ import (
 // swagger:model user
 type User struct {
 
-	// external
-	External bool `json:"external"`
-
 	// githubid
 	Githubid string `json:"githubid,omitempty"`
 

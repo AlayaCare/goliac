@@ -45,6 +45,12 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 
 		JSONProducer: runtime.JSONProducer(),
 
+		AppGetCollaboratorHandler: app.GetCollaboratorHandlerFunc(func(params app.GetCollaboratorParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetCollaborator has not yet been implemented")
+		}),
+		AppGetCollaboratorsHandler: app.GetCollaboratorsHandlerFunc(func(params app.GetCollaboratorsParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetCollaborators has not yet been implemented")
+		}),
 		HealthGetLivenessHandler: health.GetLivenessHandlerFunc(func(params health.GetLivenessParams) middleware.Responder {
 			return middleware.NotImplemented("operation health.GetLiveness has not yet been implemented")
 		}),
@@ -115,6 +121,10 @@ type GoliacAPI struct {
 	//   - application/json
 	JSONProducer runtime.Producer
 
+	// AppGetCollaboratorHandler sets the operation handler for the get collaborator operation
+	AppGetCollaboratorHandler app.GetCollaboratorHandler
+	// AppGetCollaboratorsHandler sets the operation handler for the get collaborators operation
+	AppGetCollaboratorsHandler app.GetCollaboratorsHandler
 	// HealthGetLivenessHandler sets the operation handler for the get liveness operation
 	HealthGetLivenessHandler health.GetLivenessHandler
 	// HealthGetReadinessHandler sets the operation handler for the get readiness operation
@@ -214,6 +224,12 @@ func (o *GoliacAPI) Validate() error {
 		unregistered = append(unregistered, "JSONProducer")
 	}
 
+	if o.AppGetCollaboratorHandler == nil {
+		unregistered = append(unregistered, "app.GetCollaboratorHandler")
+	}
+	if o.AppGetCollaboratorsHandler == nil {
+		unregistered = append(unregistered, "app.GetCollaboratorsHandler")
+	}
 	if o.HealthGetLivenessHandler == nil {
 		unregistered = append(unregistered, "health.GetLivenessHandler")
 	}
@@ -335,6 +351,14 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers = make(map[string]map[string]http.Handler)
 	}
 
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/collaborators/{collaboratorID}"] = app.NewGetCollaborator(o.context, o.AppGetCollaboratorHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/collaborators"] = app.NewGetCollaborators(o.context, o.AppGetCollaboratorsHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}

@@ -5,7 +5,7 @@ import { User, MessageBox, Folder } from '@element-plus/icons-vue'
 <template>
  <div id="app">
     <el-container>
-      <el-aside width="130px">
+      <el-aside width="160px">
         <el-menu :router="true">
           <el-menu-item index="/" style="justify-content: center">
             <template #title>
@@ -15,6 +15,11 @@ import { User, MessageBox, Folder } from '@element-plus/icons-vue'
           <el-menu-item index="/users">
             <template #title>
               <el-icon :size="16"><User /></el-icon>Users
+            </template>
+          </el-menu-item>
+            <el-menu-item index="/collaborators">
+            <template #title>
+              <el-icon :size="16"><User /></el-icon>Ext. Collaborators
             </template>
           </el-menu-item>
           <el-menu-item index="/teams">

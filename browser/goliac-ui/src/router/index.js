@@ -2,6 +2,8 @@ import { createWebHashHistory, createRouter } from "vue-router";
 import DashboardApp from "@/components/DashboardApp.vue";
 import UsersApp from "@/components/UsersApp.vue";
 import UserApp from "@/components/UserApp.vue";
+import CollaboratorsApp from "@/components/CollaboratorsApp.vue";
+import CollaboratorApp from "@/components/CollaboratorApp.vue";
 import TeamsApp from "@/components/TeamsApp.vue";
 import TeamApp from "@/components/TeamApp.vue";
 import RepositoriesApp from "@/components/RepositoriesApp.vue";
@@ -22,6 +24,16 @@ const routes = [
     path: "/users/:userId",
     name: "user",
     component: UserApp,
+  },
+  {
+    path: "/collaborators",
+    name: "collaborators",
+    component: CollaboratorsApp,
+  },
+  {
+    path: "/collaborators/:collaboratorId",
+    name: "collaborator",
+    component: CollaboratorApp,
   },
   {
     path: "/teams",

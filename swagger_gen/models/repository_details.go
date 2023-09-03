@@ -23,6 +23,12 @@ type RepositoryDetails struct {
 	// archived
 	Archived bool `json:"archived"`
 
+	// collaboratorreaders
+	Collaboratorreaders []*RepositoryDetailsCollaboratorreadersItems0 `json:"collaboratorreaders"`
+
+	// collaboratorwriters
+	Collaboratorwriters []*RepositoryDetailsCollaboratorwritersItems0 `json:"collaboratorwriters"`
+
 	// name
 	Name string `json:"name,omitempty"`
 
@@ -40,6 +46,14 @@ type RepositoryDetails struct {
 func (m *RepositoryDetails) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateCollaboratorreaders(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateCollaboratorwriters(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateReaders(formats); err != nil {
 		res = append(res, err)
 	}
@@ -51,6 +65,58 @@ func (m *RepositoryDetails) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *RepositoryDetails) validateCollaboratorreaders(formats strfmt.Registry) error {
+	if swag.IsZero(m.Collaboratorreaders) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.Collaboratorreaders); i++ {
+		if swag.IsZero(m.Collaboratorreaders[i]) { // not required
+			continue
+		}
+
+		if m.Collaboratorreaders[i] != nil {
+			if err := m.Collaboratorreaders[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("collaboratorreaders" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("collaboratorreaders" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *RepositoryDetails) validateCollaboratorwriters(formats strfmt.Registry) error {
+	if swag.IsZero(m.Collaboratorwriters) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.Collaboratorwriters); i++ {
+		if swag.IsZero(m.Collaboratorwriters[i]) { // not required
+			continue
+		}
+
+		if m.Collaboratorwriters[i] != nil {
+			if err := m.Collaboratorwriters[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("collaboratorwriters" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("collaboratorwriters" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 
@@ -110,6 +176,14 @@ func (m *RepositoryDetails) validateWriters(formats strfmt.Registry) error {
 func (m *RepositoryDetails) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.contextValidateCollaboratorreaders(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateCollaboratorwriters(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateReaders(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -121,6 +195,56 @@ func (m *RepositoryDetails) ContextValidate(ctx context.Context, formats strfmt.
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *RepositoryDetails) contextValidateCollaboratorreaders(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.Collaboratorreaders); i++ {
+
+		if m.Collaboratorreaders[i] != nil {
+
+			if swag.IsZero(m.Collaboratorreaders[i]) { // not required
+				return nil
+			}
+
+			if err := m.Collaboratorreaders[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("collaboratorreaders" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("collaboratorreaders" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *RepositoryDetails) contextValidateCollaboratorwriters(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.Collaboratorwriters); i++ {
+
+		if m.Collaboratorwriters[i] != nil {
+
+			if swag.IsZero(m.Collaboratorwriters[i]) { // not required
+				return nil
+			}
+
+			if err := m.Collaboratorwriters[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("collaboratorwriters" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("collaboratorwriters" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 
@@ -185,6 +309,124 @@ func (m *RepositoryDetails) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (m *RepositoryDetails) UnmarshalBinary(b []byte) error {
 	var res RepositoryDetails
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// RepositoryDetailsCollaboratorreadersItems0 repository details collaboratorreaders items0
+//
+// swagger:model RepositoryDetailsCollaboratorreadersItems0
+type RepositoryDetailsCollaboratorreadersItems0 struct {
+
+	// name
+	// Min Length: 1
+	Name string `json:"name,omitempty"`
+}
+
+// Validate validates this repository details collaboratorreaders items0
+func (m *RepositoryDetailsCollaboratorreadersItems0) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *RepositoryDetailsCollaboratorreadersItems0) validateName(formats strfmt.Registry) error {
+	if swag.IsZero(m.Name) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("name", "body", m.Name, 1); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validates this repository details collaboratorreaders items0 based on context it is used
+func (m *RepositoryDetailsCollaboratorreadersItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *RepositoryDetailsCollaboratorreadersItems0) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *RepositoryDetailsCollaboratorreadersItems0) UnmarshalBinary(b []byte) error {
+	var res RepositoryDetailsCollaboratorreadersItems0
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// RepositoryDetailsCollaboratorwritersItems0 repository details collaboratorwriters items0
+//
+// swagger:model RepositoryDetailsCollaboratorwritersItems0
+type RepositoryDetailsCollaboratorwritersItems0 struct {
+
+	// name
+	// Min Length: 1
+	Name string `json:"name,omitempty"`
+}
+
+// Validate validates this repository details collaboratorwriters items0
+func (m *RepositoryDetailsCollaboratorwritersItems0) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *RepositoryDetailsCollaboratorwritersItems0) validateName(formats strfmt.Registry) error {
+	if swag.IsZero(m.Name) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("name", "body", m.Name, 1); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validates this repository details collaboratorwriters items0 based on context it is used
+func (m *RepositoryDetailsCollaboratorwritersItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *RepositoryDetailsCollaboratorwritersItems0) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *RepositoryDetailsCollaboratorwritersItems0) UnmarshalBinary(b []byte) error {
+	var res RepositoryDetailsCollaboratorwritersItems0
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

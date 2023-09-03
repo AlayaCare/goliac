@@ -1,0 +1,21 @@
+get:
+  tags:
+    - app
+  operationId: getCollaborator
+  parameters:
+    - in: path
+      name: collaboratorID
+      description: collaborator name
+      required: true
+      type: string
+      minLength: 1
+  description: Get collaborator and repos
+  responses:
+    200:
+      description: get collaborator details especially repositories
+      schema:
+        $ref: "#/definitions/collaboratorDetails"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

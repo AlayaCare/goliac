@@ -1560,7 +1560,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateArchived(reponame string, archi
 func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, githubid string, permission string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#add-a-repository-collaborator
 	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("repos/%s/%s/collaborator/%s", config.Config.GithubAppOrganization, reponame, githubid),
+		fmt.Sprintf("repos/%s/%s/collaborators/%s", config.Config.GithubAppOrganization, reponame, githubid),
 		"PUT",
 		map[string]interface{}{"permission": permission},
 	)
@@ -1580,7 +1580,7 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, gith
 func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(reponame string, githubid string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#remove-a-repository-collaborator
 	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("repos/%s/%s/collaborator/%s", config.Config.GithubAppOrganization, reponame, githubid),
+		fmt.Sprintf("repos/%s/%s/collaborators/%s", config.Config.GithubAppOrganization, reponame, githubid),
 		"DELETE",
 		nil,
 	)

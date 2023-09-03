@@ -14,30 +14,23 @@ import (
 	"github.com/go-openapi/swag"
 )
 
-// UserDetails user details
+// CollaboratorDetails collaborator details
 //
-// swagger:model userDetails
-type UserDetails struct {
+// swagger:model collaboratorDetails
+type CollaboratorDetails struct {
 
 	// githubid
 	Githubid string `json:"githubid,omitempty"`
 
 	// repositories
 	Repositories []*Repository `json:"repositories"`
-
-	// teams
-	Teams []*Team `json:"teams"`
 }
 
-// Validate validates this user details
-func (m *UserDetails) Validate(formats strfmt.Registry) error {
+// Validate validates this collaborator details
+func (m *CollaboratorDetails) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateRepositories(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateTeams(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -47,7 +40,7 @@ func (m *UserDetails) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *UserDetails) validateRepositories(formats strfmt.Registry) error {
+func (m *CollaboratorDetails) validateRepositories(formats strfmt.Registry) error {
 	if swag.IsZero(m.Repositories) { // not required
 		return nil
 	}
@@ -73,41 +66,11 @@ func (m *UserDetails) validateRepositories(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *UserDetails) validateTeams(formats strfmt.Registry) error {
-	if swag.IsZero(m.Teams) { // not required
-		return nil
-	}
-
-	for i := 0; i < len(m.Teams); i++ {
-		if swag.IsZero(m.Teams[i]) { // not required
-			continue
-		}
-
-		if m.Teams[i] != nil {
-			if err := m.Teams[i].Validate(formats); err != nil {
-				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("teams" + "." + strconv.Itoa(i))
-				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("teams" + "." + strconv.Itoa(i))
-				}
-				return err
-			}
-		}
-
-	}
-
-	return nil
-}
-
-// ContextValidate validate this user details based on the context it is used
-func (m *UserDetails) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this collaborator details based on the context it is used
+func (m *CollaboratorDetails) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateRepositories(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateTeams(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -117,7 +80,7 @@ func (m *UserDetails) ContextValidate(ctx context.Context, formats strfmt.Regist
 	return nil
 }
 
-func (m *UserDetails) contextValidateRepositories(ctx context.Context, formats strfmt.Registry) error {
+func (m *CollaboratorDetails) contextValidateRepositories(ctx context.Context, formats strfmt.Registry) error {
 
 	for i := 0; i < len(m.Repositories); i++ {
 
@@ -142,33 +105,8 @@ func (m *UserDetails) contextValidateRepositories(ctx context.Context, formats s
 	return nil
 }
 
-func (m *UserDetails) contextValidateTeams(ctx context.Context, formats strfmt.Registry) error {
-
-	for i := 0; i < len(m.Teams); i++ {
-
-		if m.Teams[i] != nil {
-
-			if swag.IsZero(m.Teams[i]) { // not required
-				return nil
-			}
-
-			if err := m.Teams[i].ContextValidate(ctx, formats); err != nil {
-				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("teams" + "." + strconv.Itoa(i))
-				} else if ce, ok := err.(*errors.CompositeError); ok {
-					return ce.ValidateName("teams" + "." + strconv.Itoa(i))
-				}
-				return err
-			}
-		}
-
-	}
-
-	return nil
-}
-
 // MarshalBinary interface implementation
-func (m *UserDetails) MarshalBinary() ([]byte, error) {
+func (m *CollaboratorDetails) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -176,8 +114,8 @@ func (m *UserDetails) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *UserDetails) UnmarshalBinary(b []byte) error {
-	var res UserDetails
+func (m *CollaboratorDetails) UnmarshalBinary(b []byte) error {
+	var res CollaboratorDetails
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

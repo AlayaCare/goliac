@@ -155,7 +155,7 @@ func TestAppGetUsers(t *testing.T) {
 	t.Run("happy path: list users", func(t *testing.T) {
 		res := server.GetUsers(app.GetUsersParams{})
 		payload := res.(*app.GetUsersOK)
-		assert.Equal(t, 4, len(payload.Payload)) // 3 users + 1 external
+		assert.Equal(t, 3, len(payload.Payload)) // 3 users + 1 external
 	})
 
 	t.Run("happy path: get user1", func(t *testing.T) {

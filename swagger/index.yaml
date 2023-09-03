@@ -38,6 +38,10 @@ paths:
     $ref: ./users.yaml
   /users/{userID}:
     $ref: ./user.yaml
+  /collaborators:
+    $ref: ./collaborators.yaml
+  /collaborators/{collaboratorID}:
+    $ref: ./collaborator.yaml
   /teams:
     $ref: ./teams.yaml
   /teams/{teamID}:
@@ -71,10 +75,6 @@ definitions:
       githubid:
         type: string
         x-isnullable: false
-      external:
-        type: boolean
-        x-isnullable: false
-        x-omitempty: false
 
   userDetails:
     type: object
@@ -82,10 +82,6 @@ definitions:
       githubid:
         type: string
         x-isnullable: false
-      external:
-        type: boolean
-        x-isnullable: false
-        x-omitempty: false
       teams:
         type: array
         items:
@@ -95,6 +91,17 @@ definitions:
         items:
           $ref: "#/definitions/repository"
 
+  collaboratorDetails:
+    type: object
+    properties:
+      githubid:
+        type: string
+        x-isnullable: false
+      repositories:
+        type: array
+        items:
+          $ref: "#/definitions/repository"
+  
   repository:
     type: object
     properties:
@@ -139,6 +146,22 @@ definitions:
               type: string
               minLength: 1
       writers:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+      collaboratorreaders:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+              minLength: 1
+      collaboratorwriters:
         type: array
         items:
           type: object
