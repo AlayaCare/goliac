@@ -180,6 +180,16 @@ func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateArchived(reponame string
 		r.IsArchived = archived
 	}
 }
+func (m *MutableGoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, collaboatorGithubId string, permission string) {
+	if r, ok := m.repositories[reponame]; ok {
+		r.ExternalUsers[collaboatorGithubId] = permission
+	}
+}
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(reponame string, collaboatorGithubId string) {
+	if r, ok := m.repositories[reponame]; ok {
+		delete(r.ExternalUsers, collaboatorGithubId)
+	}
+}
 
 func (m *MutableGoliacRemoteImpl) AddRuleset(ruleset *GithubRuleSet) {
 

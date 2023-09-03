@@ -19,9 +19,8 @@ type ReconciliatorExecutor interface {
 	AddRuleset(ruleset *GithubRuleSet)
 	UpdateRuleset(ruleset *GithubRuleSet)
 	DeleteRuleset(rulesetid int)
-	//	UpdateRepositoryAddCollaboratorAccess(reponame string, username string, permission string)    // permission can be "pull", "push", or "admin" which correspond to read, write, and admin access.
-	//	UpdateRepositoryUpdateCollaboratorAccess(reponame string, username string, permission string) // permission can be "pull", "push", or "admin" which correspond to read, write, and admin access.
-	//	UpdateRepositoryRemoveCollaboratorAccess(reponame string, username string)
+	UpdateRepositorySetExternalUser(reponame string, githubid string, permission string) // permission can be "pull" or "push"
+	UpdateRepositoryRemoveExternalUser(reponame string, githubid string)
 	DeleteRepository(reponame string)
 
 	Begin()
