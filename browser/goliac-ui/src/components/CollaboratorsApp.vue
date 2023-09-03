@@ -1,7 +1,7 @@
 <template>
     <el-breadcrumb separator="/">
       <el-breadcrumb-item :to="{ path: '/' }">Goliac</el-breadcrumb-item>
-      <el-breadcrumb-item :to="{ path: '/users' }">users</el-breadcrumb-item>
+      <el-breadcrumb-item :to="{ path: '/collaborators' }">external collaborators</el-breadcrumb-item>
     </el-breadcrumb>
     <el-divider />
   
@@ -9,10 +9,10 @@
       <el-col :span="20" :offset="2">
         <el-row>
           <el-table
-              :data="users"
+              :data="collaborators"
               :stripe="true"
               :highlight-current-row="false"
-              v-on:row-click="goToUser"
+              v-on:row-click="goToCollaborator"
               :default-sort="{ prop: 'name', order: 'descending' }"
           >
               <el-table-column prop="name" align="left" label="Username" sortable />
@@ -35,25 +35,25 @@
     const { API_URL } = constants;
     
     export default {
-      name: "UsersApp",
+      name: "CollaboratorsApp",
       components: {
       },
       data() {
         return {
-          users: [],
+          collaborators: [],
         };
       },
       created() {
-        this.getUsers()
+        this.getCollaborators()
       },
       methods: {
-        goToUser(row) {
-            this.$router.push({ name: "user", params: { userId: row.name } });
+        goToCollaborator(row) {
+            this.$router.push({ name: "collaborator", params: { collaboratorId: row.name } });
         },
-          getUsers() {
-              Axios.get(`${API_URL}/users`).then(response => {
-                  let users = response.data;
-                  this.users = users
+          getCollaborators() {
+              Axios.get(`${API_URL}/collaborators`).then(response => {
+                  let collaborators = response.data;
+                  this.collaborators = collaborators
               }, handleErr.bind(this));
           },
       }

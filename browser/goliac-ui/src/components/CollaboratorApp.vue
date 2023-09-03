@@ -1,8 +1,8 @@
 <template>
     <el-breadcrumb separator="/">
       <el-breadcrumb-item :to="{ path: '/' }">Goliac</el-breadcrumb-item>
-      <el-breadcrumb-item :to="{ path: '/users' }">users</el-breadcrumb-item>
-      <el-breadcrumb-item>{{ userid }}</el-breadcrumb-item>
+      <el-breadcrumb-item :to="{ path: '/collaborators' }">external collaborators</el-breadcrumb-item>
+      <el-breadcrumb-item>{{ collaboratorid }}</el-breadcrumb-item>
     </el-breadcrumb>
     <el-divider />
     
@@ -11,37 +11,17 @@
             <el-card>
                 <template #header>
                     <div class="card-header">
-                        <el-text>{{userid}}</el-text>
+                        <el-text>{{collaboratorid}}</el-text>
                     </div>
                 </template>
                 <div class="flex-container">
                     <el-text>Github id : </el-text>
-                    <el-text>{{ user.githubid}}</el-text>
+                    <el-text>{{ collaborator.githubid}}</el-text>
                 </div>
             </el-card>
         </el-col>
     </el-row>  
 
-    <el-row>
-        &nbsp;
-    </el-row>
-
-    <el-row>
-      <el-col :span="20" :offset="2">
-        <el-card>
-          <el-table
-              :data="teams"
-              :stripe="true"
-              :highlight-current-row="false"
-              v-on:row-click="goToTeam"
-              :default-sort="{ prop: 'name', order: 'descending' }"
-          >
-              <el-table-column prop="name" align="left" label="Team" sortable />
-  
-          </el-table>
-        </el-card>
-      </el-col>
-    </el-row>
     <el-row>
         &nbsp;
     </el-row>
@@ -77,38 +57,33 @@
     const { API_URL } = constants;
     
     export default {
-      name: "UserApp",
+      name: "CollaboratorApp",
       components: {
       },
       computed: {
-        userid() {
-          return this.$route.params.userId;
+        collaboratorid() {
+          return this.$route.params.collaboratorId;
         },
       },
 
       data() {
         return {
-          user: {},
+          collaborator: {},
           repositories: [],
-          teams: [],
         };
       },
       created() {
-        this.getUser()
+        this.getCollaborator()
       },
       methods: {
-        goToTeam(row) {
-            this.$router.push({ name: "team", params: { teamId: row.name } });
-        },
         goToRepository(row) {
             this.$router.push({ name: "repository", params: { repositoryId: row.name } });
         },
-          getUser() {
-              Axios.get(`${API_URL}/users/${this.userid}`).then(response => {
-                  let user = response.data;
-                  this.user = user
-                  this.repositories=user.repositories
-                  this.teams=user.teams
+          getCollaborator() {
+              Axios.get(`${API_URL}/collaborators/${this.collaboratorid}`).then(response => {
+                  let collaborator = response.data;
+                  this.collaborator = collaborator
+                  this.repositories=collaborator.repositories
               }, handleErr.bind(this));
           },
       }

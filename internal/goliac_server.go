@@ -39,6 +39,8 @@ type GoliacServer interface {
 
 	GetUsers(app.GetUsersParams) middleware.Responder
 	GetUser(app.GetUserParams) middleware.Responder
+	GetCollaborators(app.GetCollaboratorsParams) middleware.Responder
+	GetCollaborator(app.GetCollaboratorParams) middleware.Responder
 	GetTeams(app.GetTeamsParams) middleware.Responder
 	GetTeam(app.GetTeamParams) middleware.Responder
 	GetRepositories(app.GetRepositoriesParams) middleware.Responder
@@ -88,6 +90,8 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 
 	readers := make([]*models.RepositoryDetailsReadersItems0, 0)
 	writers := make([]*models.RepositoryDetailsWritersItems0, 0)
+	collaboratorreaders := make([]*models.RepositoryDetailsCollaboratorreadersItems0, 0)
+	collaboratorwriters := make([]*models.RepositoryDetailsCollaboratorwritersItems0, 0)
 
 	for _, r := range repository.Data.Readers {
 		reader := models.RepositoryDetailsReadersItems0{
@@ -110,12 +114,28 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 		writers = append(writers, &writer)
 	}
 
+	for _, r := range repository.Data.ExternalUserReaders {
+		reader := models.RepositoryDetailsCollaboratorreadersItems0{
+			Name: r,
+		}
+		collaboratorreaders = append(collaboratorreaders, &reader)
+	}
+
+	for _, r := range repository.Data.ExternalUserWriters {
+		writer := models.RepositoryDetailsCollaboratorwritersItems0{
+			Name: r,
+		}
+		collaboratorwriters = append(collaboratorwriters, &writer)
+	}
+
 	repositoryDetails := models.RepositoryDetails{
-		Name:     repository.Metadata.Name,
-		Public:   repository.Data.IsPublic,
-		Archived: repository.Data.IsArchived,
-		Readers:  readers,
-		Writers:  writers,
+		Name:                repository.Metadata.Name,
+		Public:              repository.Data.IsPublic,
+		Archived:            repository.Data.IsArchived,
+		Readers:             readers,
+		Writers:             writers,
+		Collaboratorreaders: collaboratorreaders,
+		Collaboratorwriters: collaboratorwriters,
 	}
 
 	return app.NewGetRepositoryOK().WithPayload(&repositoryDetails)
@@ -220,21 +240,71 @@ func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responde
 	return app.NewGetTeamOK().WithPayload(&teamDetails)
 }
 
+func (g *GoliacServerImpl) GetCollaborators(app.GetCollaboratorsParams) middleware.Responder {
+	users := make(models.Users, 0)
+
+	local := g.goliac.GetLocal()
+	for username, user := range local.ExternalUsers() {
+		u := models.User{
+			Name:     username,
+			Githubid: user.Data.GithubID,
+		}
+		users = append(users, &u)
+	}
+	return app.NewGetCollaboratorsOK().WithPayload(users)
+
+}
+
+func (g *GoliacServerImpl) GetCollaborator(params app.GetCollaboratorParams) middleware.Responder {
+	local := g.goliac.GetLocal()
+
+	user, found := local.ExternalUsers()[params.CollaboratorID]
+	if !found {
+		message := fmt.Sprintf("Collaborator %s not found", params.CollaboratorID)
+		return app.NewGetCollaboratorDefault(404).WithPayload(&models.Error{Message: &message})
+	}
+
+	collaboratordetails := models.CollaboratorDetails{
+		Githubid:     user.Data.GithubID,
+		Repositories: make([]*models.Repository, 0),
+	}
+
+	githubidToExternal := make(map[string]string)
+	for _, e := range local.ExternalUsers() {
+		githubidToExternal[e.Data.GithubID] = e.Metadata.Name
+	}
+
+	// let's sort repo per team
+	for _, repo := range local.Repositories() {
+		for _, r := range repo.Data.ExternalUserReaders {
+			if r == params.CollaboratorID {
+				collaboratordetails.Repositories = append(collaboratordetails.Repositories, &models.Repository{
+					Name:     repo.Metadata.Name,
+					Public:   repo.Data.IsPublic,
+					Archived: repo.Data.IsArchived,
+				})
+			}
+		}
+		for _, r := range repo.Data.ExternalUserWriters {
+			if r == params.CollaboratorID {
+				collaboratordetails.Repositories = append(collaboratordetails.Repositories, &models.Repository{
+					Name:     repo.Metadata.Name,
+					Public:   repo.Data.IsPublic,
+					Archived: repo.Data.IsArchived,
+				})
+			}
+		}
+	}
+
+	return app.NewGetCollaboratorOK().WithPayload(&collaboratordetails)
+}
+
 func (g *GoliacServerImpl) GetUsers(app.GetUsersParams) middleware.Responder {
 	users := make(models.Users, 0)
 
 	local := g.goliac.GetLocal()
 	for username, user := range local.Users() {
 		u := models.User{
-			External: false,
-			Name:     username,
-			Githubid: user.Data.GithubID,
-		}
-		users = append(users, &u)
-	}
-	for username, user := range local.ExternalUsers() {
-		u := models.User{
-			External: true,
 			Name:     username,
 			Githubid: user.Data.GithubID,
 		}
@@ -247,19 +317,13 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 	local := g.goliac.GetLocal()
 
 	user, found := local.Users()[params.UserID]
-	external := false
 	if !found {
-		user, found = local.ExternalUsers()[params.UserID]
-		if !found {
-			message := fmt.Sprintf("User %s not found", params.UserID)
-			return app.NewGetUserDefault(404).WithPayload(&models.Error{Message: &message})
-		}
-		external = true
+		message := fmt.Sprintf("User %s not found", params.UserID)
+		return app.NewGetUserDefault(404).WithPayload(&models.Error{Message: &message})
 	}
 
 	userdetails := models.UserDetails{
 		Githubid:     user.Data.GithubID,
-		External:     external,
 		Teams:        make([]*models.Team, 0),
 		Repositories: make([]*models.Repository, 0),
 	}
@@ -466,6 +530,8 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 
 	api.AppGetUsersHandler = app.GetUsersHandlerFunc(g.GetUsers)
 	api.AppGetUserHandler = app.GetUserHandlerFunc(g.GetUser)
+	api.AppGetCollaboratorsHandler = app.GetCollaboratorsHandlerFunc(g.GetCollaborators)
+	api.AppGetCollaboratorHandler = app.GetCollaboratorHandlerFunc(g.GetCollaborator)
 	api.AppGetTeamsHandler = app.GetTeamsHandlerFunc(g.GetTeams)
 	api.AppGetTeamHandler = app.GetTeamHandlerFunc(g.GetTeam)
 	api.AppGetRepositoriesHandler = app.GetRepositoriesHandlerFunc(g.GetRepositories)

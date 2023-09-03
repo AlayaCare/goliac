@@ -35,6 +35,62 @@ func init() {
   },
   "basePath": "/api/v1",
   "paths": {
+    "/collaborators": {
+      "get": {
+        "description": "Get all external collaborators",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getCollaborators",
+        "responses": {
+          "200": {
+            "description": "get list of collarators",
+            "schema": {
+              "$ref": "#/definitions/users"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/collaborators/{collaboratorID}": {
+      "get": {
+        "description": "Get collaborator and repos",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getCollaborator",
+        "parameters": [
+          {
+            "minLength": 1,
+            "type": "string",
+            "description": "collaborator name",
+            "name": "collaboratorID",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "get collaborator details especially repositories",
+            "schema": {
+              "$ref": "#/definitions/collaboratorDetails"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/flushcache": {
       "post": {
         "description": "Flush the Github remote cache",
@@ -314,6 +370,21 @@ func init() {
     }
   },
   "definitions": {
+    "collaboratorDetails": {
+      "type": "object",
+      "properties": {
+        "githubid": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "repositories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/repository"
+          }
+        }
+      }
+    },
     "error": {
       "type": "object",
       "required": [
@@ -366,6 +437,30 @@ func init() {
           "type": "boolean",
           "x-isnullable": false,
           "x-omitempty": false
+        },
+        "collaboratorreaders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "collaboratorwriters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
         },
         "name": {
           "type": "string",
@@ -519,11 +614,6 @@ func init() {
     "user": {
       "type": "object",
       "properties": {
-        "external": {
-          "type": "boolean",
-          "x-isnullable": false,
-          "x-omitempty": false
-        },
         "githubid": {
           "type": "string",
           "x-isnullable": false
@@ -537,11 +627,6 @@ func init() {
     "userDetails": {
       "type": "object",
       "properties": {
-        "external": {
-          "type": "boolean",
-          "x-isnullable": false,
-          "x-omitempty": false
-        },
         "githubid": {
           "type": "string",
           "x-isnullable": false
@@ -606,6 +691,62 @@ func init() {
   },
   "basePath": "/api/v1",
   "paths": {
+    "/collaborators": {
+      "get": {
+        "description": "Get all external collaborators",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getCollaborators",
+        "responses": {
+          "200": {
+            "description": "get list of collarators",
+            "schema": {
+              "$ref": "#/definitions/users"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/collaborators/{collaboratorID}": {
+      "get": {
+        "description": "Get collaborator and repos",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getCollaborator",
+        "parameters": [
+          {
+            "minLength": 1,
+            "type": "string",
+            "description": "collaborator name",
+            "name": "collaboratorID",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "get collaborator details especially repositories",
+            "schema": {
+              "$ref": "#/definitions/collaboratorDetails"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/flushcache": {
       "post": {
         "description": "Flush the Github remote cache",
@@ -885,6 +1026,24 @@ func init() {
     }
   },
   "definitions": {
+    "RepositoryDetailsCollaboratorreadersItems0": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "RepositoryDetailsCollaboratorwritersItems0": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "RepositoryDetailsReadersItems0": {
       "type": "object",
       "properties": {
@@ -936,6 +1095,21 @@ func init() {
         "name": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "collaboratorDetails": {
+      "type": "object",
+      "properties": {
+        "githubid": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "repositories": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/repository"
+          }
         }
       }
     },
@@ -991,6 +1165,18 @@ func init() {
           "type": "boolean",
           "x-isnullable": false,
           "x-omitempty": false
+        },
+        "collaboratorreaders": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepositoryDetailsCollaboratorreadersItems0"
+          }
+        },
+        "collaboratorwriters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepositoryDetailsCollaboratorwritersItems0"
+          }
         },
         "name": {
           "type": "string",
@@ -1102,11 +1288,6 @@ func init() {
     "user": {
       "type": "object",
       "properties": {
-        "external": {
-          "type": "boolean",
-          "x-isnullable": false,
-          "x-omitempty": false
-        },
         "githubid": {
           "type": "string",
           "x-isnullable": false
@@ -1120,11 +1301,6 @@ func init() {
     "userDetails": {
       "type": "object",
       "properties": {
-        "external": {
-          "type": "boolean",
-          "x-isnullable": false,
-          "x-omitempty": false
-        },
         "githubid": {
           "type": "string",
           "x-isnullable": false
