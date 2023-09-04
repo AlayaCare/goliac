@@ -7,9 +7,9 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/slugify"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/gosimple/slug"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -94,7 +94,7 @@ func (m *GoliacRemoteMock) Users() map[string]string {
 func (m *GoliacRemoteMock) TeamSlugByName() map[string]string {
 	slugs := make(map[string]string)
 	for _, v := range m.teams {
-		slugs[v.Name] = slugify.Make(v.Name)
+		slugs[v.Name] = slug.Make(v.Name)
 	}
 	return slugs
 }
@@ -306,8 +306,8 @@ func TestReconciliation(t *testing.T) {
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false)
 
 		// 2 members created
-		assert.Equal(t, 2, len(recorder.TeamsCreated["nouveaut"]))
-		assert.Equal(t, 1, len(recorder.TeamsCreated["nouveaut-owners"]))
+		assert.Equal(t, 2, len(recorder.TeamsCreated["nouveaute"]))
+		assert.Equal(t, 1, len(recorder.TeamsCreated["nouveaute-owners"]))
 	})
 
 	t.Run("happy path: existing team with new members", func(t *testing.T) {

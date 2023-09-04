@@ -13,13 +13,13 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/slugify"
 	"github.com/go-git/go-git/v5"
 	goconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
@@ -290,7 +290,7 @@ func (g *GoliacLocalImpl) LoadRepoConfig() (error, *config.RepositoryConfig) {
 
 func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string) string {
 	codeowners := "# DO NOT MODIFY THIS FILE MANUALLY\n"
-	codeowners += fmt.Sprintf("* @%s/%s\n", config.Config.GithubAppOrganization, slugify.Make(adminteam))
+	codeowners += fmt.Sprintf("* @%s/%s\n", config.Config.GithubAppOrganization, slug.Make(adminteam))
 
 	teamsnames := make([]string, 0)
 	for _, t := range g.teams {
@@ -299,7 +299,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string) string {
 	sort.Strings(teamsnames)
 
 	for _, t := range teamsnames {
-		codeowners += fmt.Sprintf("/teams/%s/* @%s/%s-owners @%s/%s\n", t, config.Config.GithubAppOrganization, slugify.Make(t), config.Config.GithubAppOrganization, slugify.Make(adminteam))
+		codeowners += fmt.Sprintf("/teams/%s/* @%s/%s-owners @%s/%s\n", t, config.Config.GithubAppOrganization, slug.Make(t), config.Config.GithubAppOrganization, slug.Make(adminteam))
 	}
 
 	return codeowners

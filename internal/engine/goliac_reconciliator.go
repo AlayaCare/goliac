@@ -8,7 +8,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/slugify"
+	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
 )
 
@@ -119,7 +119,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		members = append(members, teamvalue.Data.Members...)
 		members = append(members, teamvalue.Data.Owners...)
 
-		teamslug := slugify.Make(teamname)
+		teamslug := slug.Make(teamname)
 		slugTeams[teamslug] = &GithubTeam{
 			Name:    teamname,
 			Slug:    teamslug,
@@ -250,21 +250,21 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	for reponame, lRepo := range local.Repositories() {
 		writers := make([]string, 0)
 		for _, w := range lRepo.Data.Writers {
-			writers = append(writers, slugify.Make(w))
+			writers = append(writers, slug.Make(w))
 		}
 		// add the team owner's name ;-)
 		if lRepo.Owner != nil {
-			writers = append(writers, slugify.Make(*lRepo.Owner))
+			writers = append(writers, slug.Make(*lRepo.Owner))
 		}
 		readers := make([]string, 0)
 		for _, r := range lRepo.Data.Readers {
-			readers = append(readers, slugify.Make(r))
+			readers = append(readers, slug.Make(r))
 		}
 
 		// special case for the Goliac "teams" repo
 		if reponame == teamsreponame {
 			for teamname := range local.Teams() {
-				writers = append(writers, slugify.Make(teamname)+"-owners")
+				writers = append(writers, slug.Make(teamname)+"-owners")
 			}
 		}
 
