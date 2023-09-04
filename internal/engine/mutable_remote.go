@@ -1,8 +1,6 @@
 package engine
 
-import (
-	"github.com/Alayacare/goliac/internal/slugify"
-)
+import "github.com/gosimple/slug"
 
 /*
  * MutableGoliacRemoteImpl is used by GoliacReconciliatorImpl to update
@@ -106,7 +104,7 @@ func (m *MutableGoliacRemoteImpl) RemoveUserFromOrg(ghuserid string) {
 }
 
 func (m *MutableGoliacRemoteImpl) CreateTeam(teamname string, description string, members []string) {
-	teamslug := slugify.Make(teamname)
+	teamslug := slug.Make(teamname)
 	t := GithubTeam{
 		Name:    teamname,
 		Slug:    teamslug,
