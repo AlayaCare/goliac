@@ -1597,7 +1597,7 @@ func (g *GoliacRemoteImpl) DeleteRepository(reponame string) {
 	// delete repo
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#delete-a-repository
 	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/%s", config.Config.GithubAppOrganization, reponame),
+		fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, reponame),
 		"DELETE",
 		nil,
 	)
