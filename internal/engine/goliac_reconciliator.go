@@ -288,7 +288,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
-		lRepos[reponame] = &GithubRepoComparable{
+		lRepos[slug.Make(reponame)] = &GithubRepoComparable{
 			IsPublic:            lRepo.Data.IsPublic,
 			IsArchived:          lRepo.Data.IsArchived,
 			Readers:             readers,
@@ -445,8 +445,8 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 			grs.Rules[r.Ruletype] = r.Parameters
 		}
 		for reponame := range repositories {
-			if match.Match([]byte(reponame)) {
-				grs.Repositories = append(grs.Repositories, reponame)
+			if match.Match([]byte(slug.Make(reponame))) {
+				grs.Repositories = append(grs.Repositories, slug.Make(reponame))
 			}
 		}
 		lgrs[rs.Metadata.Name] = &grs
