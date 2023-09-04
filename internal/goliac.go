@@ -138,6 +138,13 @@ func (g *GoliacImpl) ApplyToGithub(dryrun bool, teamreponame string, branch stri
 	} else {
 		for _, commit := range commits {
 			if err := g.local.CheckoutCommit(commit); err == nil {
+				errs, _ := g.local.LoadAndValidate()
+				if len(errs) > 0 {
+					for _, err := range errs {
+						logrus.Error(err)
+					}
+					continue
+				}
 				ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
 				reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
