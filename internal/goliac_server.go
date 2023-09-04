@@ -8,7 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	gosync "sync"
+	"sync"
 	"syscall"
 	"time"
 
@@ -48,19 +48,25 @@ type GoliacServer interface {
 }
 
 type GoliacServerImpl struct {
-	goliac        Goliac
-	applyMutex    gosync.Mutex
-	ready         bool // when the server has finished to load the local configuration
-	lastSyncTime  *time.Time
-	lastSyncError error
-	syncInterval  int // in seconds time remaining between 2 sync
+	goliac          Goliac
+	applyLobbyMutex sync.Mutex
+	applyLobbyCond  *sync.Cond
+	applyCurrent    bool
+	applyLobby      bool
+	ready           bool // when the server has finished to load the local configuration
+	lastSyncTime    *time.Time
+	lastSyncError   error
+	syncInterval    int // in seconds time remaining between 2 sync
 }
 
 func NewGoliacServer(goliac Goliac) GoliacServer {
-	return &GoliacServerImpl{
+	server := GoliacServerImpl{
 		goliac: goliac,
 		ready:  false,
 	}
+	server.applyLobbyCond = sync.NewCond(&server.applyLobbyMutex)
+
+	return &server
 }
 
 func (g *GoliacServerImpl) GetRepositories(app.GetRepositoriesParams) middleware.Responder {
@@ -443,20 +449,25 @@ func (g *GoliacServerImpl) PostFlushCache(app.PostFlushCacheParams) middleware.R
 
 func (g *GoliacServerImpl) PostResync(app.PostResyncParams) middleware.Responder {
 	go func() {
-		err := g.serveApply()
-		now := time.Now()
-		g.lastSyncTime = &now
-		g.lastSyncError = err
-		if err != nil {
-			logrus.Error(err)
+		err, applied := g.serveApply()
+		if !applied && err == nil {
+			// the run was skipped
+			g.syncInterval = config.Config.ServerApplyInterval
+		} else {
+			now := time.Now()
+			g.lastSyncTime = &now
+			g.lastSyncError = err
+			if err != nil {
+				logrus.Error(err)
+			}
+			g.syncInterval = config.Config.ServerApplyInterval
 		}
-		g.syncInterval = config.Config.ServerApplyInterval
 	}()
 	return app.NewPostResyncOK()
 }
 
 func (g *GoliacServerImpl) Serve() {
-	var wg gosync.WaitGroup
+	var wg sync.WaitGroup
 	stopCh := make(chan struct{})
 
 	restserver, err := g.StartRESTApi()
@@ -488,14 +499,19 @@ func (g *GoliacServerImpl) Serve() {
 				time.Sleep(1 * time.Second)
 				if g.syncInterval <= 0 {
 					// Do some work here
-					err := g.serveApply()
-					now := time.Now()
-					g.lastSyncTime = &now
-					g.lastSyncError = err
-					if err != nil {
-						logrus.Error(err)
+					err, applied := g.serveApply()
+					if !applied && err == nil {
+						// the run was skipped
+						g.syncInterval = config.Config.ServerApplyInterval
+					} else {
+						now := time.Now()
+						g.lastSyncTime = &now
+						g.lastSyncError = err
+						if err != nil {
+							logrus.Error(err)
+						}
+						g.syncInterval = config.Config.ServerApplyInterval
 					}
-					g.syncInterval = config.Config.ServerApplyInterval
 				}
 			}
 		}
@@ -548,18 +564,44 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	return server, nil
 }
 
-func (g *GoliacServerImpl) serveApply() error {
-	if !g.applyMutex.TryLock() {
-		// already locked: we are already appyling
-		return nil
+func (g *GoliacServerImpl) serveApply() (error, bool) {
+	// we want to run ApplyToGithub
+	// and queue one new run (the lobby) if a new run is asked
+	g.applyLobbyMutex.Lock()
+	// we already have a current run, and another waiting in the lobby
+	if g.applyLobby {
+		g.applyLobbyMutex.Unlock()
+		return nil, false
 	}
-	defer g.applyMutex.Unlock()
+
+	if !g.applyCurrent {
+		g.applyCurrent = true
+	} else {
+		g.applyLobby = true
+		for g.applyLobby {
+			g.applyLobbyCond.Wait()
+		}
+	}
+	g.applyLobbyMutex.Unlock()
+
+	// free the lobbdy (or just the current run) for the next run
+	defer func() {
+		g.applyLobbyMutex.Lock()
+		if g.applyLobby {
+			g.applyLobby = false
+			g.applyLobbyCond.Signal()
+		} else {
+			g.applyCurrent = false
+		}
+		g.applyLobbyMutex.Unlock()
+	}()
+
 	repo := config.Config.ServerGitRepository
 	branch := config.Config.ServerGitBranch
 	err := g.goliac.LoadAndValidateGoliacOrganization(repo, branch)
 	defer g.goliac.Close()
 	if err != nil {
-		return fmt.Errorf("failed to load and validate: %s", err)
+		return fmt.Errorf("failed to load and validate: %s", err), false
 	}
 
 	// we are ready (to give local state, and to sync with remote)
@@ -567,13 +609,13 @@ func (g *GoliacServerImpl) serveApply() error {
 
 	u, err := url.Parse(repo)
 	if err != nil {
-		return fmt.Errorf("failed to parse %s: %v", repo, err)
+		return fmt.Errorf("failed to parse %s: %v", repo, err), false
 	}
 	teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
 
 	err = g.goliac.ApplyToGithub(false, teamsreponame, branch)
 	if err != nil {
-		return fmt.Errorf("failed to apply on branch %s: %s", branch, err)
+		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), false
 	}
-	return nil
+	return nil, true
 }

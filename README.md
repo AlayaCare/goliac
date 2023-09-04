@@ -12,7 +12,7 @@ Goliac (Github Organization Leveraged by Infrastructure As Code), is a tool to m
 
 - [why Goliac](docs/why_goliac.md)
 - [Insallation guide](docs/installation.md)
-- [How to sync from external](docs/installation.md#syncing-users-from-an-external-source)
+- [How to sync (users) from external](docs/installation.md#syncing-users-from-an-external-source)
 
 ## For regular users
 
@@ -94,3 +94,9 @@ metadata:
 data:
   archived: true
 ```
+
+## REST API and UI
+
+Goliac comes with a [REST API](docs/api_docs/bundle.yaml) if you need to search through the `teams` repository via APIs, and comes with a UI to explore, and interacts with Goliac
+
+![goliac ui](docs/images/goliac_ui.png)
