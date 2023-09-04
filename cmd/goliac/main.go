@@ -60,7 +60,7 @@ https://github.com/...`,
 			}
 			teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
 
-			err = goliac.ApplyToGithub(true, teamsreponame, branch)
+			err = goliac.ApplyToGithub(true, teamsreponame, branch, true)
 			if err != nil {
 				logrus.Fatalf("failed to plan on branch %s: %s", branch, err)
 			}
@@ -94,7 +94,7 @@ https://github.com/...`,
 			}
 			teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
 
-			err = goliac.ApplyToGithub(false, teamsreponame, branch)
+			err = goliac.ApplyToGithub(false, teamsreponame, branch, true)
 			if err != nil {
 				logrus.Fatalf("failed to apply on branch %s: %s", branch, err)
 			}
