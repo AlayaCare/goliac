@@ -223,15 +223,17 @@ func (g *GoliacLocalImpl) ListCommitsFromTag(tagname string) ([]*object.Commit, 
 		return nil, err
 	}
 
+	last := true
 	err = commitLog.ForEach(func(c *object.Commit) error {
 		if c.Hash == refTag.Hash() {
 			return errors.New("stop iteration") // This is used to stop the iteration
 		}
 		// filter for merge commits
 		// merge commits typically have two parents
-		if len(c.ParentHashes) > 1 {
+		if len(c.ParentHashes) > 1 || last {
 			commits = append(commits, c)
 		}
+		last = false
 
 		return nil
 	})
