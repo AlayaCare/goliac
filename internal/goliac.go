@@ -27,7 +27,7 @@ type Goliac interface {
 	LoadAndValidateGoliacOrganization(repositoryUrl, branch string) error
 
 	// You need to call LoadAndValidategoliacOrganization before calling this function
-	ApplyToGithub(dryrun bool, teamreponame string, branch string) error
+	ApplyToGithub(dryrun bool, teamreponame string, branch string, forceresync bool) error
 
 	// You dont need to call LoadAndValidategoliacOrganization before calling this function
 	UsersUpdate(repositoryUrl, branch string) error
@@ -119,23 +119,43 @@ func (g *GoliacImpl) LoadAndValidateGoliacOrganization(repositoryUrl, branch str
 	return nil
 }
 
-func (g *GoliacImpl) ApplyToGithub(dryrun bool, teamreponame string, branch string) error {
+func (g *GoliacImpl) ApplyToGithub(dryrun bool, teamreponame string, branch string, forceresync bool) error {
 	err := g.remote.Load()
 	if err != nil {
 		return fmt.Errorf("Error when fetching data from Github: %v", err)
 	}
 
 	commits, err := g.local.ListCommitsFromTag(GOLIAC_GIT_TAG)
+	// if we can get commits
 	if err != nil {
 		ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
 		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
 		ctx := context.TODO()
+
+		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun)
+		if err != nil {
+			return fmt.Errorf("Error when reconciliating: %v", err)
+		}
+		// if we resync, and dont have commits, let's resync the latest (HEAD) commit
+	} else if len(commits) == 0 && forceresync {
+
+		ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
+		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
+		commit, err := g.local.GetHeadCommit()
+
+		ctx := context.TODO()
+
+		if err == nil {
+			ctx = context.WithValue(context.TODO(), engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
+		}
+
 		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun)
 		if err != nil {
 			return fmt.Errorf("Error when reconciliating: %v", err)
 		}
 	} else {
+
 		for _, commit := range commits {
 			if err := g.local.CheckoutCommit(commit); err == nil {
 				errs, _ := g.local.LoadAndValidate()

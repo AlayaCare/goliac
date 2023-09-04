@@ -40,6 +40,7 @@ type GoliacLocalGit interface {
 
 	// Return commits from tagname to HEAD
 	ListCommitsFromTag(tagname string) ([]*object.Commit, error)
+	GetHeadCommit() (*object.Commit, error)
 	CheckoutCommit(commit *object.Commit) error
 	PushTag(tagname string, hash plumbing.Hash, accesstoken string) error
 
@@ -190,6 +191,20 @@ func (g *GoliacLocalImpl) CheckoutCommit(commit *object.Commit) error {
 		return err
 	}
 	return nil
+}
+
+func (g *GoliacLocalImpl) GetHeadCommit() (*object.Commit, error) {
+	// Get reference to the HEAD
+	refHead, err := g.repo.Head()
+	if err != nil {
+		return nil, err
+	}
+
+	headCommit, err := g.repo.CommitObject(refHead.Hash())
+	if err != nil {
+		return nil, err
+	}
+	return headCommit, nil
 }
 
 func (g *GoliacLocalImpl) ListCommitsFromTag(tagname string) ([]*object.Commit, error) {

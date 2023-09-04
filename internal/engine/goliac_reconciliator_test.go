@@ -28,13 +28,15 @@ func (m *GoliacLocalMock) Clone(accesstoken, repositoryUrl, branch string) error
 func (m *GoliacLocalMock) ListCommitsFromTag(tagname string) ([]*object.Commit, error) {
 	return nil, fmt.Errorf("not tag %s found", tagname)
 }
+func (m *GoliacLocalMock) GetHeadCommit() (*object.Commit, error) {
+	return nil, nil
+}
 func (m *GoliacLocalMock) CheckoutCommit(commit *object.Commit) error {
 	return nil
 }
 func (m *GoliacLocalMock) PushTag(tagname string, hash plumbing.Hash, accesstoken string) error {
 	return nil
 }
-
 func (m *GoliacLocalMock) LoadRepoConfig() (error, *config.RepositoryConfig) {
 	return nil, &config.RepositoryConfig{}
 }

@@ -111,7 +111,7 @@ type GoliacMock struct {
 func (g *GoliacMock) LoadAndValidateGoliacOrganization(repositoryUrl, branch string) error {
 	return nil
 }
-func (g *GoliacMock) ApplyToGithub(dryrun bool, teamreponame string, branch string) error {
+func (g *GoliacMock) ApplyToGithub(dryrun bool, teamreponame string, branch string, forceresync bool) error {
 	return nil
 }
 func (g *GoliacMock) UsersUpdate(repositoryUrl, branch string) error {

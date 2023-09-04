@@ -449,7 +449,7 @@ func (g *GoliacServerImpl) PostFlushCache(app.PostFlushCacheParams) middleware.R
 
 func (g *GoliacServerImpl) PostResync(app.PostResyncParams) middleware.Responder {
 	go func() {
-		err, applied := g.serveApply()
+		err, applied := g.serveApply(true)
 		if !applied && err == nil {
 			// the run was skipped
 			g.syncInterval = config.Config.ServerApplyInterval
@@ -499,7 +499,7 @@ func (g *GoliacServerImpl) Serve() {
 				time.Sleep(1 * time.Second)
 				if g.syncInterval <= 0 {
 					// Do some work here
-					err, applied := g.serveApply()
+					err, applied := g.serveApply(false)
 					if !applied && err == nil {
 						// the run was skipped
 						g.syncInterval = config.Config.ServerApplyInterval
@@ -564,7 +564,7 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	return server, nil
 }
 
-func (g *GoliacServerImpl) serveApply() (error, bool) {
+func (g *GoliacServerImpl) serveApply(forceresync bool) (error, bool) {
 	// we want to run ApplyToGithub
 	// and queue one new run (the lobby) if a new run is asked
 	g.applyLobbyMutex.Lock()
@@ -613,7 +613,7 @@ func (g *GoliacServerImpl) serveApply() (error, bool) {
 	}
 	teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
 
-	err = g.goliac.ApplyToGithub(false, teamsreponame, branch)
+	err = g.goliac.ApplyToGithub(false, teamsreponame, branch, forceresync)
 	if err != nil {
 		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), false
 	}
