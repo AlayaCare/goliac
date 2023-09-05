@@ -2,13 +2,10 @@ package main
 
 import (
 	"fmt"
-	"net/url"
 	"os"
-	"path"
-	"path/filepath"
-	"strings"
 
 	"github.com/Alayacare/goliac/internal"
+	"github.com/Alayacare/goliac/internal/config"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -40,29 +37,27 @@ repository: local or remote repository. A remote repository is in the form
 https://github.com/...`,
 		Args: cobra.MatchAll(cobra.MinimumNArgs(1), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
-			repo := args[0]
+			repo := ""
 			branch := ""
-			if len(args) > 1 {
+
+			if len(args) == 2 {
+				repo = args[0]
 				branch = args[1]
+			} else {
+				repo = config.Config.ServerGitRepository
+				branch = config.Config.ServerGitBranch
 			}
+			if repo == "" || branch == "" {
+				logrus.Fatalf("missing arguments")
+			}
+
 			goliac, err := internal.NewGoliacImpl()
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			err = goliac.LoadAndValidateGoliacOrganization(repo, branch)
-			defer goliac.Close()
+			err = goliac.Apply(true, repo, branch, true)
 			if err != nil {
-				logrus.Fatalf("failed to load and validate: %s", err)
-			}
-			u, err := url.Parse(repo)
-			if err != nil {
-				logrus.Fatalf("failed to parse %s: %v", repo, err)
-			}
-			teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
-
-			err = goliac.ApplyToGithub(true, teamsreponame, branch, true)
-			if err != nil {
-				logrus.Fatalf("failed to plan on branch %s: %s", branch, err)
+				logrus.Errorf("Failed to plan: %v", err)
 			}
 		},
 	}
@@ -74,29 +69,27 @@ https://github.com/...`,
 repository: local or remote repository. A remote repository is in the form
 https://github.com/...`,
 		Run: func(cmd *cobra.Command, args []string) {
-			repo := args[0]
+			repo := ""
 			branch := ""
-			if len(args) > 1 {
+
+			if len(args) == 2 {
+				repo = args[0]
 				branch = args[1]
+			} else {
+				repo = config.Config.ServerGitRepository
+				branch = config.Config.ServerGitBranch
 			}
+			if repo == "" || branch == "" {
+				logrus.Fatalf("missing arguments")
+			}
+
 			goliac, err := internal.NewGoliacImpl()
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			err = goliac.LoadAndValidateGoliacOrganization(repo, branch)
-			defer goliac.Close()
+			err = goliac.Apply(false, repo, branch, true)
 			if err != nil {
-				logrus.Fatalf("failed to load and validate: %s", err)
-			}
-			u, err := url.Parse(repo)
-			if err != nil {
-				logrus.Fatalf("failed to parse %s: %v", repo, err)
-			}
-			teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
-
-			err = goliac.ApplyToGithub(false, teamsreponame, branch, true)
-			if err != nil {
-				logrus.Fatalf("failed to apply on branch %s: %s", branch, err)
+				logrus.Errorf("Failed to apply: %v", err)
 			}
 		},
 	}
@@ -106,17 +99,25 @@ https://github.com/...`,
 		Short: "Update and commit users and teams definition",
 		Long:  `This command will use a user sync plugin to adjust users and team yaml definition, and commit them`,
 		Run: func(cmd *cobra.Command, args []string) {
-			repo := args[0]
+			repo := ""
 			branch := ""
-			if len(args) > 1 {
+
+			if len(args) == 2 {
+				repo = args[0]
 				branch = args[1]
+			} else {
+				repo = config.Config.ServerGitRepository
+				branch = config.Config.ServerGitBranch
 			}
+			if repo == "" || branch == "" {
+				logrus.Fatalf("missing arguments")
+			}
+
 			goliac, err := internal.NewGoliacImpl()
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
 			err = goliac.UsersUpdate(repo, branch)
-			defer goliac.Close()
 			if err != nil {
 				logrus.Fatalf("failed to update and commit teams: %s", err)
 			}

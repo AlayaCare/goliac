@@ -108,16 +108,11 @@ type GoliacMock struct {
 	local engine.GoliacLocalResources
 }
 
-func (g *GoliacMock) LoadAndValidateGoliacOrganization(repositoryUrl, branch string) error {
-	return nil
-}
-func (g *GoliacMock) ApplyToGithub(dryrun bool, teamreponame string, branch string, forceresync bool) error {
+func (g *GoliacMock) Apply(dryrun bool, repo string, branch string, forceresync bool) error {
 	return nil
 }
 func (g *GoliacMock) UsersUpdate(repositoryUrl, branch string) error {
 	return nil
-}
-func (g *GoliacMock) Close() {
 }
 func (g *GoliacMock) FlushCache() {
 }
