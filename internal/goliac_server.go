@@ -2,12 +2,8 @@ package internal
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"os/signal"
-	"path"
-	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -598,22 +594,11 @@ func (g *GoliacServerImpl) serveApply(forceresync bool) (error, bool) {
 
 	repo := config.Config.ServerGitRepository
 	branch := config.Config.ServerGitBranch
-	err := g.goliac.LoadAndValidateGoliacOrganization(repo, branch)
-	defer g.goliac.Close()
-	if err != nil {
-		return fmt.Errorf("failed to load and validate: %s", err), false
-	}
 
 	// we are ready (to give local state, and to sync with remote)
 	g.ready = true
 
-	u, err := url.Parse(repo)
-	if err != nil {
-		return fmt.Errorf("failed to parse %s: %v", repo, err), false
-	}
-	teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
-
-	err = g.goliac.ApplyToGithub(false, teamsreponame, branch, forceresync)
+	err := g.goliac.Apply(false, repo, branch, forceresync)
 	if err != nil {
 		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), false
 	}
