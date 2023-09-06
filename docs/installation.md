@@ -115,7 +115,6 @@ To make Goliac working you can configure the `/goliac.yaml` file
 admin_team: admin # the name of the team (in the `/teams` directory ) that can admin this repository 
 everyone_team_enabled: false # if you want all members to have read access to all repositories
 
-enable_rulesets: true # can only be true if you have Github Enterprise
 rulesets:
   - pattern: .*
     ruleset: default

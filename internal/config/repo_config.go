@@ -8,8 +8,7 @@ type RepositoryConfig struct {
 	AdminTeam           string `yaml:"admin_team"`
 	EveryoneTeamEnabled bool   `yaml:"everyone_team_enabled"`
 
-	EnableRulesets bool `yaml:"enable_rulesets"`
-	Rulesets       []struct {
+	Rulesets []struct {
 		Pattern string
 		Ruleset string
 	}

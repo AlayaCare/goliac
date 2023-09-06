@@ -10,6 +10,7 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
+	"github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -32,6 +33,8 @@ type GoliacRemote interface {
 	TeamRepositories() map[string]map[string]*GithubTeamRepo // key is team slug, second key is repo name
 	RuleSets() map[string]*GithubRuleSet
 	AppIds() map[string]int
+
+	SupportRulesets() bool // check if we are on an Enterprise version, or if we are on GHES 3.11+
 }
 
 type GoliacRemoteExecutor interface {
@@ -75,6 +78,72 @@ type GoliacRemoteImpl struct {
 	ttlExpireTeamsRepos   time.Time
 	ttlExpireRulesets     time.Time
 	ttlExpireAppIds       time.Time
+	supportRulesets       bool
+}
+
+type GHESInfo struct {
+	InstalledVersion string `json:"installed_version"`
+}
+
+func getGHESVersion(client github.GitHubClient) (*GHESInfo, error) {
+	body, err := client.CallRestAPI("/api/v3", "GET", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var info GHESInfo
+	json.Unmarshal(body, &info)
+	if err != nil {
+		return nil, fmt.Errorf("not able to get github org information: %v", err)
+	}
+
+	return &info, nil
+}
+
+type OrgInfo struct {
+	TwoFactorRequirementEnabled bool `json:"two_factor_requirement_enabled"`
+	Plan                        struct {
+		Name string `json:"name"` // enterprise
+	} `json:"plan"`
+}
+
+func getOrgInfo(client github.GitHubClient) (*OrgInfo, error) {
+	body, err := client.CallRestAPI("/orgs/"+config.Config.GithubAppOrganization, "GET", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var info OrgInfo
+	json.Unmarshal(body, &info)
+	if err != nil {
+		return nil, fmt.Errorf("not able to get github org information: %v", err)
+	}
+
+	return &info, nil
+}
+
+func checkRulesetSupported(client github.GitHubClient) bool {
+	// are we on Github Enteprise Server
+	if ghesInfo, err := getGHESVersion(client); err == nil {
+		logrus.Debugf("GHES versiob: %s", ghesInfo.InstalledVersion)
+		version3_11, err := version.NewVersion("3.11")
+		if err != nil {
+			return false
+		}
+		ghesVersion, err := version.NewVersion(ghesInfo.InstalledVersion)
+		if err != nil {
+			return false
+		}
+		if ghesVersion.GreaterThanOrEqual(version3_11) {
+			return true
+		}
+	} else if info, err := getOrgInfo(client); err == nil {
+		logrus.Debugf("Organization plan: %s", info.Plan.Name)
+		if info.Plan.Name == "enteprise" {
+			return true
+		}
+	}
+	return false
 }
 
 func NewGoliacRemoteImpl(client github.GitHubClient) *GoliacRemoteImpl {
@@ -94,7 +163,12 @@ func NewGoliacRemoteImpl(client github.GitHubClient) *GoliacRemoteImpl {
 		ttlExpireTeamsRepos:   time.Now(),
 		ttlExpireRulesets:     time.Now(),
 		ttlExpireAppIds:       time.Now(),
+		supportRulesets:       checkRulesetSupported(client),
 	}
+}
+
+func (g *GoliacRemoteImpl) SupportRulesets() bool {
+	return g.supportRulesets
 }
 
 func (g *GoliacRemoteImpl) FlushCache() {
@@ -601,9 +675,9 @@ func (g *GoliacRemoteImpl) Load() error {
 		g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
 	}
 
-	logrus.Infof("Nb remote users: %d", len(g.users))
-	logrus.Infof("Nb remote teams: %d", len(g.teams))
-	logrus.Infof("Nb remote repositories: %d", len(g.repositories))
+	logrus.Debugf("Nb remote users: %d", len(g.users))
+	logrus.Debugf("Nb remote teams: %d", len(g.teams))
+	logrus.Debugf("Nb remote repositories: %d", len(g.repositories))
 
 	return nil
 }

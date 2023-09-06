@@ -58,7 +58,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 		return err
 	}
 
-	if r.repoconfig.EnableRulesets {
+	if remote.SupportRulesets() {
 		err = r.reconciliateRulesets(ctx, local, rremote, r.repoconfig, dryrun)
 		if err != nil {
 			r.Rollback(ctx, dryrun, err)
@@ -756,19 +756,19 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveExternalUser(ctx context
 	}
 }
 func (r *GoliacReconciliatorImpl) Begin(ctx context.Context, dryrun bool) {
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun}).Infof("reconciliation begin")
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun}).Debugf("reconciliation begin")
 	if !dryrun && r.executor != nil {
 		r.executor.Begin()
 	}
 }
 func (r *GoliacReconciliatorImpl) Rollback(ctx context.Context, dryrun bool, err error) {
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun}).Infof("reconciliation rollback")
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun}).Debugf("reconciliation rollback")
 	if !dryrun && r.executor != nil {
 		r.executor.Rollback(err)
 	}
 }
 func (r *GoliacReconciliatorImpl) Commit(ctx context.Context, dryrun bool) {
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun}).Infof("reconciliation commit")
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun}).Debugf("reconciliation commit")
 	if !dryrun && r.executor != nil {
 		r.executor.Commit()
 	}
