@@ -83,6 +83,9 @@ type GoliacRemoteMock struct {
 func (m *GoliacRemoteMock) Load() error {
 	return nil
 }
+func (m *GoliacRemoteMock) SupportRulesets() bool {
+	return true
+}
 func (m *GoliacRemoteMock) FlushCache() {
 
 }
@@ -1312,9 +1315,7 @@ func TestReconciliationRulesets(t *testing.T) {
 
 	t.Run("happy path: no new ruleset in goliac conf", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
-		repoconf := config.RepositoryConfig{
-			EnableRulesets: true,
-		}
+		repoconf := config.RepositoryConfig{}
 
 		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
 
@@ -1357,7 +1358,6 @@ func TestReconciliationRulesets(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
 		repoconf := config.RepositoryConfig{
-			EnableRulesets: true,
 			Rulesets: make([]struct {
 				Pattern string
 				Ruleset string
@@ -1412,7 +1412,6 @@ func TestReconciliationRulesets(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
 		repoconf := config.RepositoryConfig{
-			EnableRulesets: true,
 			Rulesets: make([]struct {
 				Pattern string
 				Ruleset string
@@ -1475,7 +1474,6 @@ func TestReconciliationRulesets(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
 		repoconf := config.RepositoryConfig{
-			EnableRulesets: true,
 			Rulesets: make([]struct {
 				Pattern string
 				Ruleset string

@@ -238,17 +238,11 @@ func (g *GoliacLocalImpl) ListCommitsFromTag(tagname string) ([]*object.Commit, 
 		return nil, err
 	}
 
-	last := true
 	err = commitLog.ForEach(func(c *object.Commit) error {
 		if c.Hash == refTag.Hash() {
 			return errors.New("stop iteration") // This is used to stop the iteration
 		}
-		// filter for merge commits
-		// merge commits typically have two parents
-		if len(c.ParentHashes) > 1 || last {
-			commits = append(commits, c)
-		}
-		last = false
+		commits = append(commits, c)
 
 		return nil
 	})
@@ -659,10 +653,10 @@ func (g *GoliacLocalImpl) LoadAndValidateLocal(fs afero.Fs, orgDirectory string)
 	warnings = append(warnings, warns...)
 	g.rulesets = rulesets
 
-	logrus.Infof("Nb local users: %d", len(g.users))
-	logrus.Infof("Nb local external users: %d", len(g.externalUsers))
-	logrus.Infof("Nb local teams: %d", len(g.teams))
-	logrus.Infof("Nb local repositories: %d", len(g.repositories))
+	logrus.Debugf("Nb local users: %d", len(g.users))
+	logrus.Debugf("Nb local external users: %d", len(g.externalUsers))
+	logrus.Debugf("Nb local teams: %d", len(g.teams))
+	logrus.Debugf("Nb local repositories: %d", len(g.repositories))
 
 	return errors, warnings
 }

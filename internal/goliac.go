@@ -136,10 +136,31 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(repositoryUrl, branch str
 	return nil
 }
 
+/*
+ * To ensure we can parse teams git logs, commit by commit (for auditing purpose),
+ * we must ensure that the "squqsh and merge" option is the only option.
+ * Else we may append to apply commits that are part of a PR, but wasn't the final PR commit state
+ */
+func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(teamreponame string) error {
+	_, err := g.githubClient.CallRestAPI(fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, teamreponame), "PATCH",
+		map[string]interface{}{"allow_merge_commit": false,
+			"allow_rebase_merge": false,
+			"allow_squash_merge": true,
+		})
+	return err
+}
+
 func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch string, forceresync bool) error {
 	err := g.remote.Load()
 	if err != nil {
 		return fmt.Errorf("Error when fetching data from Github: %v", err)
+	}
+
+	if !dryrun {
+		err := g.forceSquashMergeOnTeamsRepo(teamreponame)
+		if err != nil {
+			return fmt.Errorf("Error when ensuring PR on %s repo can only be done via squash and merge: %v", teamreponame, err)
+		}
 	}
 
 	commits, err := g.local.ListCommitsFromTag(GOLIAC_GIT_TAG)

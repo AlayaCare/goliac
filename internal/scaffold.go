@@ -300,7 +300,6 @@ func (s *Scaffold) generateGoliacConf(fs afero.Fs, rootpath string, adminteam st
 	conf := fmt.Sprintf(`
 admin_team: %s
 
-enable_rulesets: false # you can switch to true if you are on Github entreprise
 rulesets:
   - pattern: .*
     ruleset: default
