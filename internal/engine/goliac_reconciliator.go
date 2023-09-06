@@ -58,7 +58,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 		return err
 	}
 
-	if remote.SupportRulesets() {
+	if remote.IsEnterprise() {
 		err = r.reconciliateRulesets(ctx, local, rremote, r.repoconfig, dryrun)
 		if err != nil {
 			r.Rollback(ctx, dryrun, err)
