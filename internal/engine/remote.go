@@ -34,7 +34,7 @@ type GoliacRemote interface {
 	RuleSets() map[string]*GithubRuleSet
 	AppIds() map[string]int
 
-	SupportRulesets() bool // check if we are on an Enterprise version, or if we are on GHES 3.11+
+	IsEnterprise() bool // check if we are on an Enterprise version, or if we are on GHES 3.11+
 }
 
 type GoliacRemoteExecutor interface {
@@ -78,7 +78,7 @@ type GoliacRemoteImpl struct {
 	ttlExpireTeamsRepos   time.Time
 	ttlExpireRulesets     time.Time
 	ttlExpireAppIds       time.Time
-	supportRulesets       bool
+	isEnterprise          bool
 }
 
 type GHESInfo struct {
@@ -92,7 +92,7 @@ func getGHESVersion(client github.GitHubClient) (*GHESInfo, error) {
 	}
 
 	var info GHESInfo
-	json.Unmarshal(body, &info)
+	err = json.Unmarshal(body, &info)
 	if err != nil {
 		return nil, fmt.Errorf("not able to get github org information: %v", err)
 	}
@@ -107,14 +107,14 @@ type OrgInfo struct {
 	} `json:"plan"`
 }
 
-func getOrgInfo(client github.GitHubClient) (*OrgInfo, error) {
-	body, err := client.CallRestAPI("/orgs/"+config.Config.GithubAppOrganization, "GET", nil)
+func getOrgInfo(orgname string, client github.GitHubClient) (*OrgInfo, error) {
+	body, err := client.CallRestAPI("/orgs/"+orgname, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	var info OrgInfo
-	json.Unmarshal(body, &info)
+	err = json.Unmarshal(body, &info)
 	if err != nil {
 		return nil, fmt.Errorf("not able to get github org information: %v", err)
 	}
@@ -122,7 +122,7 @@ func getOrgInfo(client github.GitHubClient) (*OrgInfo, error) {
 	return &info, nil
 }
 
-func checkRulesetSupported(client github.GitHubClient) bool {
+func isEnterprise(orgname string, client github.GitHubClient) bool {
 	// are we on Github Enteprise Server
 	if ghesInfo, err := getGHESVersion(client); err == nil {
 		logrus.Debugf("GHES versiob: %s", ghesInfo.InstalledVersion)
@@ -137,9 +137,9 @@ func checkRulesetSupported(client github.GitHubClient) bool {
 		if ghesVersion.GreaterThanOrEqual(version3_11) {
 			return true
 		}
-	} else if info, err := getOrgInfo(client); err == nil {
+	} else if info, err := getOrgInfo(orgname, client); err == nil {
 		logrus.Debugf("Organization plan: %s", info.Plan.Name)
-		if info.Plan.Name == "enteprise" {
+		if info.Plan.Name == "enterprise" {
 			return true
 		}
 	}
@@ -163,12 +163,12 @@ func NewGoliacRemoteImpl(client github.GitHubClient) *GoliacRemoteImpl {
 		ttlExpireTeamsRepos:   time.Now(),
 		ttlExpireRulesets:     time.Now(),
 		ttlExpireAppIds:       time.Now(),
-		supportRulesets:       checkRulesetSupported(client),
+		isEnterprise:          isEnterprise(config.Config.GithubAppOrganization, client),
 	}
 }
 
-func (g *GoliacRemoteImpl) SupportRulesets() bool {
-	return g.supportRulesets
+func (g *GoliacRemoteImpl) IsEnterprise() bool {
+	return g.isEnterprise
 }
 
 func (g *GoliacRemoteImpl) FlushCache() {

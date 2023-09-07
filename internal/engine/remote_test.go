@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/Alayacare/goliac/internal/github"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/vektah/gqlparser/v2/ast"
@@ -446,5 +447,130 @@ func TestRemoteRepository(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 122, len(remoteImpl.teams))
 		assert.Equal(t, 2, len(remoteImpl.teamRepos["slug-1"]))
+	})
+}
+
+type GitHubClientIsEnterpriseMock struct {
+	results map[string][]byte
+	err     error
+}
+
+func (g *GitHubClientIsEnterpriseMock) QueryGraphQLAPI(query string, variables map[string]interface{}) ([]byte, error) {
+	return []byte(""), nil
+}
+func (g *GitHubClientIsEnterpriseMock) CallRestAPI(endpoint, method string, body map[string]interface{}) ([]byte, error) {
+	return g.results[endpoint], g.err
+}
+func (g *GitHubClientIsEnterpriseMock) GetAccessToken() (string, error) {
+	return "", nil
+}
+func (g *GitHubClientIsEnterpriseMock) GetAppSlug() string {
+	return ""
+}
+
+func TestIsEnterprise(t *testing.T) {
+
+	t.Run("test GHES", func(t *testing.T) {
+		type ResultSet struct {
+			mock     github.GitHubClient
+			expected bool
+		}
+
+		tests := []ResultSet{
+			{
+				mock: &GitHubClientIsEnterpriseMock{
+					results: map[string][]byte{
+						"/api/v3":      []byte(`{"github_services_sha": "SOME_SHA_VALUE_HERE","installed_version": "3.12.1"}`),
+						"/orgs/foobar": []byte(`{"two_factor_requirement_enabled": false,"plan": {"name":"unknown"}}`),
+					},
+					err: nil,
+				},
+				expected: true,
+			},
+			{
+				mock: &GitHubClientIsEnterpriseMock{
+					results: map[string][]byte{
+						"/api/v3":      []byte(`{"github_services_sha": "SOME_SHA_VALUE_HERE","installed_version": "3.10"}`),
+						"/orgs/foobar": []byte(`{"two_factor_requirement_enabled": false,"plan": {"name":"unknown"}}`),
+					},
+					err: nil,
+				},
+				expected: false,
+			},
+			{
+				mock: &GitHubClientIsEnterpriseMock{
+					results: map[string][]byte{
+						"/api/v3":      []byte(`{"github_services_sha": "SOME_SHA_VALUE_HERE","installed_version": "3.11"}`),
+						"/orgs/foobar": []byte(`{"two_factor_requirement_enabled": false,"plan": {"name":"unknown"}}`),
+					},
+					err: nil,
+				},
+				expected: true,
+			},
+			{
+				mock: &GitHubClientIsEnterpriseMock{
+					results: map[string][]byte{
+						"/api/v3":      []byte(`{"github_services_sha": "SOME_SHA_VALUE_HERE","installed_version": "3.11"}`),
+						"/orgs/foobar": []byte(`{"two_factor_requirement_enabled": false,"plan": {"name":"unknown"}}`),
+					},
+					err: fmt.Errorf("an error occured"),
+				},
+				expected: false,
+			},
+		}
+
+		for _, set := range tests {
+			res := isEnterprise("foobar", set.mock)
+
+			assert.Equal(t, set.expected, res)
+
+		}
+	})
+
+	t.Run("test Enterprise", func(t *testing.T) {
+		type ResultSet struct {
+			mock     github.GitHubClient
+			expected bool
+		}
+
+		tests := []ResultSet{
+			{
+				mock: &GitHubClientIsEnterpriseMock{
+					results: map[string][]byte{
+						"/api/v3":      []byte(``),
+						"/orgs/foobar": []byte(`{"two_factor_requirement_enabled": false,"plan": {"name":"unknown"}}`),
+					},
+					err: nil,
+				},
+				expected: false,
+			},
+			{
+				mock: &GitHubClientIsEnterpriseMock{
+					results: map[string][]byte{
+						"/api/v3":      []byte(``),
+						"/orgs/foobar": []byte(`{"two_factor_requirement_enabled": false,"plan": {"name":"enterprise"}}`),
+					},
+					err: nil,
+				},
+				expected: true,
+			},
+			{
+				mock: &GitHubClientIsEnterpriseMock{
+					results: map[string][]byte{
+						"/api/v3":      []byte(``),
+						"/orgs/foobar": []byte(`{"two_factor_requirement_enabled": false,"plan": {"name":"unknown"}}`),
+					},
+					err: fmt.Errorf("an error occured"),
+				},
+				expected: false,
+			},
+		}
+
+		for _, set := range tests {
+			res := isEnterprise("foobar", set.mock)
+
+			assert.Equal(t, set.expected, res)
+
+		}
 	})
 }

@@ -156,7 +156,7 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 		return fmt.Errorf("Error when fetching data from Github: %v", err)
 	}
 
-	if !dryrun {
+	if !dryrun && g.remote.IsEnterprise() {
 		err := g.forceSquashMergeOnTeamsRepo(teamreponame)
 		if err != nil {
 			return fmt.Errorf("Error when ensuring PR on %s repo can only be done via squash and merge: %v", teamreponame, err)
@@ -176,7 +176,8 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 			return fmt.Errorf("Error when reconciliating: %v", err)
 		}
 		// if we resync, and dont have commits, let's resync the latest (HEAD) commit
-	} else if len(commits) == 0 && forceresync {
+		// or if are not in enterprise mode and cannot guarrantee that PR commits are squashed
+	} else if (len(commits) == 0 && forceresync) || !g.remote.IsEnterprise() {
 
 		ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
 		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
@@ -193,7 +194,7 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 			return fmt.Errorf("Error when reconciliating: %v", err)
 		}
 	} else {
-
+		// we have 1 or more commits to apply
 		for _, commit := range commits {
 			if err := g.local.CheckoutCommit(commit); err == nil {
 				errs, _ := g.local.LoadAndValidate()

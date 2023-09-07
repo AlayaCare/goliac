@@ -83,7 +83,7 @@ type GoliacRemoteMock struct {
 func (m *GoliacRemoteMock) Load() error {
 	return nil
 }
-func (m *GoliacRemoteMock) SupportRulesets() bool {
+func (m *GoliacRemoteMock) IsEnterprise() bool {
 	return true
 }
 func (m *GoliacRemoteMock) FlushCache() {

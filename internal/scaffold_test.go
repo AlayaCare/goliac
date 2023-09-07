@@ -44,7 +44,7 @@ func (s *ScaffoldGoliacRemoteMock) RuleSets() map[string]*engine.GithubRuleSet {
 func (s *ScaffoldGoliacRemoteMock) AppIds() map[string]int {
 	return nil
 }
-func (s *ScaffoldGoliacRemoteMock) SupportRulesets() bool {
+func (s *ScaffoldGoliacRemoteMock) IsEnterprise() bool {
 	return true
 }
 
