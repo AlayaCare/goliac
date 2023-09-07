@@ -52,7 +52,7 @@ type GoliacServerImpl struct {
 	ready           bool // when the server has finished to load the local configuration
 	lastSyncTime    *time.Time
 	lastSyncError   error
-	syncInterval    int // in seconds time remaining between 2 sync
+	syncInterval    int64 // in seconds time remaining between 2 sync
 }
 
 func NewGoliacServer(goliac Goliac) GoliacServer {
@@ -517,7 +517,7 @@ func (g *GoliacServerImpl) Serve() {
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 	<-signalCh
-	fmt.Println("Received OS signal, stopping Goliac...")
+	logrus.Info("Received OS signal, stopping Goliac...")
 
 	close(stopCh)
 	wg.Wait()

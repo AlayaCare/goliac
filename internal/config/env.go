@@ -11,14 +11,14 @@ var Config = struct {
 
 	GithubServer            string `env:"GOLIAC_GITHUB_SERVER" envDefault:"https://api.github.com"`
 	GithubAppOrganization   string `env:"GOLIAC_GITHUB_APP_ORGANIZATION" envDefault:""`
-	GithubAppID             int    `env:"GOLIAC_GITHUB_APP_ID"`
+	GithubAppID             int64  `env:"GOLIAC_GITHUB_APP_ID"`
 	GithubAppPrivateKeyFile string `env:"GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE" envDefault:"github-app-private-key.pem"`
 	GoliacEmail             string `env:"GOLIAC_EMAIL" envDefault:"goliac@alayacare.com"`
 
-	GithubConcurrentThreads int `env:"GOLIAC_GITHUB_CONCURRENT_THREADS" envDefault:"1"`
-	GithubCacheTTL          int `env:"GOLIAC_GITHUB_CACHE_TTL" envDefault:"86400"`
+	GithubConcurrentThreads int64 `env:"GOLIAC_GITHUB_CONCURRENT_THREADS" envDefault:"1"`
+	GithubCacheTTL          int64 `env:"GOLIAC_GITHUB_CACHE_TTL" envDefault:"86400"`
 
-	ServerApplyInterval int    `env:"GOLIAC_SERVER_APPLY_INTERVAL" envDefault:"600"`
+	ServerApplyInterval int64  `env:"GOLIAC_SERVER_APPLY_INTERVAL" envDefault:"600"`
 	ServerGitRepository string `env:"GOLIAC_SERVER_GIT_REPOSITORY" envDefault:""`
 	ServerGitBranch     string `env:"GOLIAC_SERVER_GIT_BRANCH" envDefault:"main"`
 

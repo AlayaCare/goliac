@@ -25,8 +25,8 @@ type GitHubClient interface {
 
 type GitHubClientImpl struct {
 	gitHubServer    string
-	appID           int
-	installationID  int
+	appID           int64
+	installationID  int64
 	appSlug         string
 	privateKey      []byte
 	accessToken     string
@@ -81,7 +81,7 @@ func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, erro
  * 	"private-key.pem",
  * )
  */
-func NewGitHubClientImpl(githubServer, organizationName string, appID int, privateKeyFile string) (GitHubClient, error) {
+func NewGitHubClientImpl(githubServer, organizationName string, appID int64, privateKeyFile string) (GitHubClient, error) {
 	privateKey, err := os.ReadFile(privateKeyFile)
 	if err != nil {
 		return nil, err

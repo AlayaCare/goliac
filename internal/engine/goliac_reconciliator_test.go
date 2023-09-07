@@ -166,65 +166,65 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 	}
 	return &r
 }
-func (r *ReconciliatorListenerRecorder) AddUserToOrg(ghuserid string) {
+func (r *ReconciliatorListenerRecorder) AddUserToOrg(dryrun bool, ghuserid string) {
 	r.UsersCreated[ghuserid] = ghuserid
 }
-func (r *ReconciliatorListenerRecorder) RemoveUserFromOrg(ghuserid string) {
+func (r *ReconciliatorListenerRecorder) RemoveUserFromOrg(dryrun bool, ghuserid string) {
 	r.UsersRemoved[ghuserid] = ghuserid
 }
-func (r *ReconciliatorListenerRecorder) CreateTeam(teamname string, description string, members []string) {
+func (r *ReconciliatorListenerRecorder) CreateTeam(dryrun bool, teamname string, description string, members []string) {
 	r.TeamsCreated[teamname] = append(r.TeamsCreated[teamname], members...)
 }
-func (r *ReconciliatorListenerRecorder) UpdateTeamAddMember(teamslug string, username string, role string) {
+func (r *ReconciliatorListenerRecorder) UpdateTeamAddMember(dryrun bool, teamslug string, username string, role string) {
 	r.TeamMemberAdded[teamslug] = append(r.TeamMemberAdded[teamslug], username)
 }
-func (r *ReconciliatorListenerRecorder) UpdateTeamRemoveMember(teamslug string, username string) {
+func (r *ReconciliatorListenerRecorder) UpdateTeamRemoveMember(dryrun bool, teamslug string, username string) {
 	r.TeamMemberRemoved[teamslug] = append(r.TeamMemberRemoved[teamslug], username)
 }
-func (r *ReconciliatorListenerRecorder) DeleteTeam(teamslug string) {
+func (r *ReconciliatorListenerRecorder) DeleteTeam(dryrun bool, teamslug string) {
 	r.TeamDeleted[teamslug] = true
 }
-func (r *ReconciliatorListenerRecorder) CreateRepository(reponame string, descrition string, writers []string, readers []string, public bool) {
+func (r *ReconciliatorListenerRecorder) CreateRepository(dryrun bool, reponame string, descrition string, writers []string, readers []string, public bool) {
 	r.RepositoryCreated[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(reponame string, teamslug string, permission string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
 	r.RepositoryTeamAdded[reponame] = append(r.RepositoryTeamAdded[reponame], teamslug)
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateTeamAccess(reponame string, teamslug string, permission string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
 	r.RepositoryTeamUpdated[reponame] = append(r.RepositoryTeamUpdated[reponame], teamslug)
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveTeamAccess(reponame string, teamslug string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveTeamAccess(dryrun bool, reponame string, teamslug string) {
 	r.RepositoryTeamRemoved[reponame] = append(r.RepositoryTeamRemoved[reponame], teamslug)
 }
-func (r *ReconciliatorListenerRecorder) DeleteRepository(reponame string) {
+func (r *ReconciliatorListenerRecorder) DeleteRepository(dryrun bool, reponame string) {
 	r.RepositoriesDeleted[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdatePrivate(reponame string, private bool) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdatePrivate(dryrun bool, reponame string, private bool) {
 	r.RepositoriesUpdatePrivate[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateArchived(reponame string, archived bool) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateArchived(dryrun bool, reponame string, archived bool) {
 	r.RepositoriesUpdateArchived[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(reponame string, githubid string, permission string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(dryrun bool, reponame string, githubid string, permission string) {
 	r.RepositoriesSetExternalUser[githubid] = permission
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveExternalUser(reponame string, githubid string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveExternalUser(dryrun bool, reponame string, githubid string) {
 	r.RepositoriesRemoveExternalUser[githubid] = true
 }
-func (r *ReconciliatorListenerRecorder) AddRuleset(ruleset *GithubRuleSet) {
+func (r *ReconciliatorListenerRecorder) AddRuleset(dryrun bool, ruleset *GithubRuleSet) {
 	r.RuleSetCreated[ruleset.Name] = ruleset
 }
-func (r *ReconciliatorListenerRecorder) UpdateRuleset(ruleset *GithubRuleSet) {
+func (r *ReconciliatorListenerRecorder) UpdateRuleset(dryrun bool, ruleset *GithubRuleSet) {
 	r.RuleSetUpdated[ruleset.Name] = ruleset
 }
-func (r *ReconciliatorListenerRecorder) DeleteRuleset(rulesetid int) {
+func (r *ReconciliatorListenerRecorder) DeleteRuleset(dryrun bool, rulesetid int) {
 	r.RuleSetDeleted = append(r.RuleSetDeleted, rulesetid)
 }
-func (r *ReconciliatorListenerRecorder) Begin() {
+func (r *ReconciliatorListenerRecorder) Begin(dryrun bool) {
 }
-func (r *ReconciliatorListenerRecorder) Rollback(error) {
+func (r *ReconciliatorListenerRecorder) Rollback(dryrun bool, err error) {
 }
-func (r *ReconciliatorListenerRecorder) Commit() {
+func (r *ReconciliatorListenerRecorder) Commit(dryrun bool) {
 }
 
 func TestReconciliation(t *testing.T) {
