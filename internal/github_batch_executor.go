@@ -39,23 +39,26 @@ func NewGithubBatchExecutor(client engine.ReconciliatorExecutor, maxChangesets i
 	return &gal
 }
 
-func (g *GithubBatchExecutor) AddUserToOrg(ghuserid string) {
+func (g *GithubBatchExecutor) AddUserToOrg(dryrun bool, ghuserid string) {
 	g.commands = append(g.commands, &GithubCommandAddUserToOrg{
 		client:   g.client,
+		dryrun:   dryrun,
 		ghuserid: ghuserid,
 	})
 }
 
-func (g *GithubBatchExecutor) RemoveUserFromOrg(ghuserid string) {
+func (g *GithubBatchExecutor) RemoveUserFromOrg(dryrun bool, ghuserid string) {
 	g.commands = append(g.commands, &GithubCommandAddUserToOrg{
 		client:   g.client,
+		dryrun:   dryrun,
 		ghuserid: ghuserid,
 	})
 }
 
-func (g *GithubBatchExecutor) CreateTeam(teamname string, description string, members []string) {
+func (g *GithubBatchExecutor) CreateTeam(dryrun bool, teamname string, description string, members []string) {
 	g.commands = append(g.commands, &GithubCommandCreateTeam{
 		client:      g.client,
+		dryrun:      dryrun,
 		teamname:    teamname,
 		description: description,
 		members:     members,
@@ -63,33 +66,37 @@ func (g *GithubBatchExecutor) CreateTeam(teamname string, description string, me
 }
 
 // role = member or maintainer (usually we use member)
-func (g *GithubBatchExecutor) UpdateTeamAddMember(teamslug string, username string, role string) {
+func (g *GithubBatchExecutor) UpdateTeamAddMember(dryrun bool, teamslug string, username string, role string) {
 	g.commands = append(g.commands, &GithubCommandUpdateTeamAddMember{
 		client:   g.client,
+		dryrun:   dryrun,
 		teamslug: teamslug,
 		member:   username,
 		role:     role,
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateTeamRemoveMember(teamslug string, username string) {
+func (g *GithubBatchExecutor) UpdateTeamRemoveMember(dryrun bool, teamslug string, username string) {
 	g.commands = append(g.commands, &GithubCommandUpdateTeamRemoveMember{
 		client:   g.client,
+		dryrun:   dryrun,
 		teamslug: teamslug,
 		member:   username,
 	})
 }
 
-func (g *GithubBatchExecutor) DeleteTeam(teamslug string) {
+func (g *GithubBatchExecutor) DeleteTeam(dryrun bool, teamslug string) {
 	g.commands = append(g.commands, &GithubCommandDeleteTeam{
 		client:   g.client,
+		dryrun:   dryrun,
 		teamslug: teamslug,
 	})
 }
 
-func (g *GithubBatchExecutor) CreateRepository(reponame string, description string, writers []string, readers []string, public bool) {
+func (g *GithubBatchExecutor) CreateRepository(dryrun bool, reponame string, description string, writers []string, readers []string, public bool) {
 	g.commands = append(g.commands, &GithubCommandCreateRepository{
 		client:      g.client,
+		dryrun:      dryrun,
 		reponame:    reponame,
 		description: description,
 		readers:     readers,
@@ -98,100 +105,111 @@ func (g *GithubBatchExecutor) CreateRepository(reponame string, description stri
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryAddTeamAccess(reponame string, teamslug string, permission string) {
+func (g *GithubBatchExecutor) UpdateRepositoryAddTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryAddTeamAccess{
 		client:     g.client,
+		dryrun:     dryrun,
 		reponame:   reponame,
 		teamslug:   teamslug,
 		permission: permission,
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryUpdateTeamAccess(reponame string, teamslug string, permission string) {
+func (g *GithubBatchExecutor) UpdateRepositoryUpdateTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdateTeamAccess{
 		client:     g.client,
+		dryrun:     dryrun,
 		reponame:   reponame,
 		teamslug:   teamslug,
 		permission: permission,
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryRemoveTeamAccess(reponame string, teamslug string) {
+func (g *GithubBatchExecutor) UpdateRepositoryRemoveTeamAccess(dryrun bool, reponame string, teamslug string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryRemoveTeamAccess{
 		client:   g.client,
+		dryrun:   dryrun,
 		reponame: reponame,
 		teamslug: teamslug,
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryUpdatePrivate(reponame string, private bool) {
+func (g *GithubBatchExecutor) UpdateRepositoryUpdatePrivate(dryrun bool, reponame string, private bool) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdatePrivate{
 		client:   g.client,
+		dryrun:   dryrun,
 		reponame: reponame,
 		private:  private,
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryUpdateArchived(reponame string, archived bool) {
+func (g *GithubBatchExecutor) UpdateRepositoryUpdateArchived(dryrun bool, reponame string, archived bool) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdateArchived{
 		client:   g.client,
+		dryrun:   dryrun,
 		reponame: reponame,
 		archived: archived,
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositorySetExternalUser(reponame string, githubid string, permission string) {
+func (g *GithubBatchExecutor) UpdateRepositorySetExternalUser(dryrun bool, reponame string, githubid string, permission string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositorySetExternalUser{
 		client:     g.client,
+		dryrun:     dryrun,
 		reponame:   reponame,
 		githubid:   githubid,
 		permission: permission,
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryRemoveExternalUser(reponame string, githubid string) {
+func (g *GithubBatchExecutor) UpdateRepositoryRemoveExternalUser(dryrun bool, reponame string, githubid string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryRemoveExternalUser{
 		client:   g.client,
+		dryrun:   dryrun,
 		reponame: reponame,
 		githubid: githubid,
 	})
 }
 
-func (g *GithubBatchExecutor) DeleteRepository(reponame string) {
+func (g *GithubBatchExecutor) DeleteRepository(dryrun bool, reponame string) {
 	g.commands = append(g.commands, &GithubCommandDeleteRepository{
 		client:   g.client,
+		dryrun:   dryrun,
 		reponame: reponame,
 	})
 }
 
-func (g *GithubBatchExecutor) AddRuleset(ruleset *engine.GithubRuleSet) {
+func (g *GithubBatchExecutor) AddRuleset(dryrun bool, ruleset *engine.GithubRuleSet) {
 	g.commands = append(g.commands, &GithubCommandAddRuletset{
 		client:  g.client,
+		dryrun:  dryrun,
 		ruleset: ruleset,
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRuleset(ruleset *engine.GithubRuleSet) {
+func (g *GithubBatchExecutor) UpdateRuleset(dryrun bool, ruleset *engine.GithubRuleSet) {
 	g.commands = append(g.commands, &GithubCommandUpdateRuletset{
 		client:  g.client,
+		dryrun:  dryrun,
 		ruleset: ruleset,
 	})
 }
 
-func (g *GithubBatchExecutor) DeleteRuleset(rulesetid int) {
+func (g *GithubBatchExecutor) DeleteRuleset(dryrun bool, rulesetid int) {
 	g.commands = append(g.commands, &GithubCommandDeleteRuletset{
 		client:    g.client,
+		dryrun:    dryrun,
 		rulesetid: rulesetid,
 	})
 }
 
-func (g *GithubBatchExecutor) Begin() {
+func (g *GithubBatchExecutor) Begin(dryrun bool) {
 	g.commands = make([]GithubCommand, 0)
 }
-func (g *GithubBatchExecutor) Rollback(error) {
+func (g *GithubBatchExecutor) Rollback(dryrun bool, err error) {
 	g.commands = make([]GithubCommand, 0)
 }
-func (g *GithubBatchExecutor) Commit() {
+func (g *GithubBatchExecutor) Commit(dryrun bool) {
 	if len(g.commands) > g.maxChangesets {
 		logrus.Errorf("More than %d changesets to apply (total of %d), this is suspicious. Aborting", g.maxChangesets, len(g.commands))
 		return
@@ -204,15 +222,17 @@ func (g *GithubBatchExecutor) Commit() {
 
 type GithubCommandAddUserToOrg struct {
 	client   engine.ReconciliatorExecutor
+	dryrun   bool
 	ghuserid string
 }
 
 func (g *GithubCommandAddUserToOrg) Apply() {
-	g.client.AddUserToOrg(g.ghuserid)
+	g.client.AddUserToOrg(g.dryrun, g.ghuserid)
 }
 
 type GithubCommandCreateRepository struct {
 	client      engine.ReconciliatorExecutor
+	dryrun      bool
 	reponame    string
 	description string
 	writers     []string
@@ -221,164 +241,180 @@ type GithubCommandCreateRepository struct {
 }
 
 func (g *GithubCommandCreateRepository) Apply() {
-	g.client.CreateRepository(g.reponame, g.description, g.writers, g.readers, g.public)
+	g.client.CreateRepository(g.dryrun, g.reponame, g.description, g.writers, g.readers, g.public)
 }
 
 type GithubCommandCreateTeam struct {
 	client      engine.ReconciliatorExecutor
+	dryrun      bool
 	teamname    string
 	description string
 	members     []string
 }
 
 func (g *GithubCommandCreateTeam) Apply() {
-	g.client.CreateTeam(g.teamname, g.description, g.members)
+	g.client.CreateTeam(g.dryrun, g.teamname, g.description, g.members)
 }
 
 type GithubCommandDeleteRepository struct {
 	client   engine.ReconciliatorExecutor
+	dryrun   bool
 	reponame string
 }
 
 func (g *GithubCommandDeleteRepository) Apply() {
-	g.client.DeleteRepository(g.reponame)
+	g.client.DeleteRepository(g.dryrun, g.reponame)
 }
 
 type GithubCommandDeleteTeam struct {
 	client   engine.ReconciliatorExecutor
+	dryrun   bool
 	teamslug string
 }
 
 func (g *GithubCommandDeleteTeam) Apply() {
-	g.client.DeleteTeam(g.teamslug)
+	g.client.DeleteTeam(g.dryrun, g.teamslug)
 }
 
 type GithubCommandRemoveUserFromOrg struct {
 	client   engine.ReconciliatorExecutor
+	dryrun   bool
 	ghuserid string
 }
 
 func (g *GithubCommandRemoveUserFromOrg) Apply() {
-	g.client.RemoveUserFromOrg(g.ghuserid)
+	g.client.RemoveUserFromOrg(g.dryrun, g.ghuserid)
 }
 
 type GithubCommandUpdateRepositoryRemoveTeamAccess struct {
 	client   engine.ReconciliatorExecutor
+	dryrun   bool
 	reponame string
 	teamslug string
 }
 
 func (g *GithubCommandUpdateRepositoryRemoveTeamAccess) Apply() {
-	g.client.UpdateRepositoryRemoveTeamAccess(g.reponame, g.teamslug)
+	g.client.UpdateRepositoryRemoveTeamAccess(g.dryrun, g.reponame, g.teamslug)
 }
 
 type GithubCommandUpdateRepositoryAddTeamAccess struct {
 	client     engine.ReconciliatorExecutor
+	dryrun     bool
 	reponame   string
 	teamslug   string
 	permission string
 }
 
 func (g *GithubCommandUpdateRepositoryAddTeamAccess) Apply() {
-	g.client.UpdateRepositoryAddTeamAccess(g.reponame, g.teamslug, g.permission)
+	g.client.UpdateRepositoryAddTeamAccess(g.dryrun, g.reponame, g.teamslug, g.permission)
 }
 
 type GithubCommandUpdateRepositoryUpdateTeamAccess struct {
 	client     engine.ReconciliatorExecutor
+	dryrun     bool
 	reponame   string
 	teamslug   string
 	permission string
 }
 
 func (g *GithubCommandUpdateRepositoryUpdateTeamAccess) Apply() {
-	g.client.UpdateRepositoryUpdateTeamAccess(g.reponame, g.teamslug, g.permission)
+	g.client.UpdateRepositoryUpdateTeamAccess(g.dryrun, g.reponame, g.teamslug, g.permission)
 }
 
 type GithubCommandUpdateRepositoryUpdateArchived struct {
 	client   engine.ReconciliatorExecutor
+	dryrun   bool
 	reponame string
 	archived bool
 }
 
 func (g *GithubCommandUpdateRepositoryUpdateArchived) Apply() {
-	g.client.UpdateRepositoryUpdateArchived(g.reponame, g.archived)
+	g.client.UpdateRepositoryUpdateArchived(g.dryrun, g.reponame, g.archived)
 }
 
 type GithubCommandUpdateRepositorySetExternalUser struct {
 	client     engine.ReconciliatorExecutor
+	dryrun     bool
 	reponame   string
 	githubid   string
 	permission string
 }
 
 func (g *GithubCommandUpdateRepositorySetExternalUser) Apply() {
-	g.client.UpdateRepositorySetExternalUser(g.reponame, g.githubid, g.permission)
+	g.client.UpdateRepositorySetExternalUser(g.dryrun, g.reponame, g.githubid, g.permission)
 }
 
 type GithubCommandUpdateRepositoryRemoveExternalUser struct {
 	client   engine.ReconciliatorExecutor
+	dryrun   bool
 	reponame string
 	githubid string
 }
 
 func (g *GithubCommandUpdateRepositoryRemoveExternalUser) Apply() {
-	g.client.UpdateRepositoryRemoveExternalUser(g.reponame, g.githubid)
+	g.client.UpdateRepositoryRemoveExternalUser(g.dryrun, g.reponame, g.githubid)
 }
 
 type GithubCommandUpdateRepositoryUpdatePrivate struct {
 	client   engine.ReconciliatorExecutor
+	dryrun   bool
 	reponame string
 	private  bool
 }
 
 func (g *GithubCommandUpdateRepositoryUpdatePrivate) Apply() {
-	g.client.UpdateRepositoryUpdatePrivate(g.reponame, g.private)
+	g.client.UpdateRepositoryUpdatePrivate(g.dryrun, g.reponame, g.private)
 }
 
 type GithubCommandUpdateTeamAddMember struct {
 	client   engine.ReconciliatorExecutor
+	dryrun   bool
 	teamslug string
 	member   string
 	role     string
 }
 
 func (g *GithubCommandUpdateTeamAddMember) Apply() {
-	g.client.UpdateTeamAddMember(g.teamslug, g.member, g.role)
+	g.client.UpdateTeamAddMember(g.dryrun, g.teamslug, g.member, g.role)
 }
 
 type GithubCommandUpdateTeamRemoveMember struct {
 	client   engine.ReconciliatorExecutor
+	dryrun   bool
 	teamslug string
 	member   string
 }
 
 func (g *GithubCommandUpdateTeamRemoveMember) Apply() {
-	g.client.UpdateTeamRemoveMember(g.teamslug, g.member)
+	g.client.UpdateTeamRemoveMember(g.dryrun, g.teamslug, g.member)
 }
 
 type GithubCommandAddRuletset struct {
 	client  engine.ReconciliatorExecutor
+	dryrun  bool
 	ruleset *engine.GithubRuleSet
 }
 
 func (g *GithubCommandAddRuletset) Apply() {
-	g.client.AddRuleset(g.ruleset)
+	g.client.AddRuleset(g.dryrun, g.ruleset)
 }
 
 type GithubCommandUpdateRuletset struct {
 	client  engine.ReconciliatorExecutor
+	dryrun  bool
 	ruleset *engine.GithubRuleSet
 }
 
 func (g *GithubCommandUpdateRuletset) Apply() {
-	g.client.UpdateRuleset(g.ruleset)
+	g.client.UpdateRuleset(g.dryrun, g.ruleset)
 }
 
 type GithubCommandDeleteRuletset struct {
 	client    engine.ReconciliatorExecutor
+	dryrun    bool
 	rulesetid int
 }
 
 func (g *GithubCommandDeleteRuletset) Apply() {
-	g.client.DeleteRuleset(g.rulesetid)
+	g.client.DeleteRuleset(g.dryrun, g.rulesetid)
 }

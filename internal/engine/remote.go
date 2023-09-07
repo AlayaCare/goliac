@@ -10,6 +10,7 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
+	"github.com/gosimple/slug"
 	"github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
 )
@@ -185,7 +186,7 @@ func (g *GoliacRemoteImpl) RuleSets() map[string]*GithubRuleSet {
 		rulesets, err := g.loadRulesets()
 		if err == nil {
 			g.rulesets = rulesets
-			g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+			g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
 	return g.rulesets
@@ -196,7 +197,7 @@ func (g *GoliacRemoteImpl) AppIds() map[string]int {
 		appIds, err := g.loadAppIds()
 		if err == nil {
 			g.appIds = appIds
-			g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+			g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
 	return g.appIds
@@ -207,7 +208,7 @@ func (g *GoliacRemoteImpl) Users() map[string]string {
 		users, err := g.loadOrgUsers()
 		if err == nil {
 			g.users = users
-			g.ttlExpireUsers = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+			g.ttlExpireUsers = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
 	return g.users
@@ -219,7 +220,7 @@ func (g *GoliacRemoteImpl) TeamSlugByName() map[string]string {
 		if err == nil {
 			g.teams = teams
 			g.teamSlugByName = teamSlugByName
-			g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+			g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
 	return g.teamSlugByName
@@ -231,7 +232,7 @@ func (g *GoliacRemoteImpl) Teams() map[string]*GithubTeam {
 		if err == nil {
 			g.teams = teams
 			g.teamSlugByName = teamSlugByName
-			g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+			g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
 	return g.teams
@@ -243,7 +244,7 @@ func (g *GoliacRemoteImpl) Repositories() map[string]*GithubRepository {
 		if err == nil {
 			g.repositories = repositories
 			g.repositoriesByRefId = repositoriesByRefIds
-			g.ttlExpireRepositories = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+			g.ttlExpireRepositories = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
 	return g.repositories
@@ -255,13 +256,13 @@ func (g *GoliacRemoteImpl) TeamRepositories() map[string]map[string]*GithubTeamR
 			teamsrepos, err := g.loadTeamReposNonConcurrently()
 			if err == nil {
 				g.teamRepos = teamsrepos
-				g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+				g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 			}
 		} else {
 			teamsrepos, err := g.loadTeamReposConcurrently(config.Config.GithubConcurrentThreads)
 			if err == nil {
 				g.teamRepos = teamsrepos
-				g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+				g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 			}
 		}
 	}
@@ -617,7 +618,7 @@ func (g *GoliacRemoteImpl) Load() error {
 			return err
 		}
 		g.users = users
-		g.ttlExpireUsers = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+		g.ttlExpireUsers = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
 	if time.Now().After(g.ttlExpireRepositories) {
@@ -627,7 +628,7 @@ func (g *GoliacRemoteImpl) Load() error {
 		}
 		g.repositories = repositories
 		g.repositoriesByRefId = repositoriesByRefId
-		g.ttlExpireRepositories = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+		g.ttlExpireRepositories = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
 	if time.Now().After(g.ttlExpireTeams) {
@@ -637,7 +638,7 @@ func (g *GoliacRemoteImpl) Load() error {
 		}
 		g.teams = teams
 		g.teamSlugByName = teamSlugByName
-		g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+		g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
 	if time.Now().After(g.ttlExpireAppIds) {
@@ -646,7 +647,7 @@ func (g *GoliacRemoteImpl) Load() error {
 			return err
 		}
 		g.appIds = appIds
-		g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+		g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
 	if time.Now().After(g.ttlExpireRulesets) {
@@ -655,7 +656,7 @@ func (g *GoliacRemoteImpl) Load() error {
 			return err
 		}
 		g.rulesets = rulesets
-		g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+		g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
 	if time.Now().After(g.ttlExpireTeamsRepos) {
@@ -672,7 +673,7 @@ func (g *GoliacRemoteImpl) Load() error {
 			}
 			g.teamRepos = teamsrepos
 		}
-		g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL))
+		g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
 	logrus.Debugf("Nb remote users: %d", len(g.users))
@@ -695,7 +696,7 @@ func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently() (map[string]map[string
 	return teamRepos, nil
 }
 
-func (g *GoliacRemoteImpl) loadTeamReposConcurrently(maxGoroutines int) (map[string]map[string]*GithubTeamRepo, error) {
+func (g *GoliacRemoteImpl) loadTeamReposConcurrently(maxGoroutines int64) (map[string]map[string]*GithubTeamRepo, error) {
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
 
 	var wg sync.WaitGroup
@@ -709,7 +710,7 @@ func (g *GoliacRemoteImpl) loadTeamReposConcurrently(maxGoroutines int) (map[str
 	}, len(g.teams))
 
 	// Create worker goroutines
-	for i := 0; i < maxGoroutines; i++ {
+	for i := int64(0); i < maxGoroutines; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -1242,50 +1243,55 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 	return payload
 }
 
-func (g *GoliacRemoteImpl) AddRuleset(ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) AddRuleset(dryrun bool, ruleset *GithubRuleSet) {
 	// add ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#create-an-organization-repository-ruleset
 
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/rulesets", config.Config.GithubAppOrganization),
-		"POST",
-		g.prepareRuleset(ruleset),
-	)
-	if err != nil {
-		logrus.Errorf("failed to add ruleset to org: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("/orgs/%s/rulesets", config.Config.GithubAppOrganization),
+			"POST",
+			g.prepareRuleset(ruleset),
+		)
+		if err != nil {
+			logrus.Errorf("failed to add ruleset to org: %v. %s", err, string(body))
+		}
 	}
 
 	g.rulesets[ruleset.Name] = ruleset
 }
 
-func (g *GoliacRemoteImpl) UpdateRuleset(ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) UpdateRuleset(dryrun bool, ruleset *GithubRuleSet) {
 	// add ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#update-an-organization-repository-ruleset
 
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/rulesets/%d", config.Config.GithubAppOrganization, ruleset.Id),
-		"PUT",
-		g.prepareRuleset(ruleset),
-	)
-	if err != nil {
-		logrus.Errorf("failed to update ruleset %d to org: %v. %s", ruleset.Id, err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("/orgs/%s/rulesets/%d", config.Config.GithubAppOrganization, ruleset.Id),
+			"PUT",
+			g.prepareRuleset(ruleset),
+		)
+		if err != nil {
+			logrus.Errorf("failed to update ruleset %d to org: %v. %s", ruleset.Id, err, string(body))
+		}
 	}
 
 	g.rulesets[ruleset.Name] = ruleset
 }
 
-func (g *GoliacRemoteImpl) DeleteRuleset(rulesetid int) {
+func (g *GoliacRemoteImpl) DeleteRuleset(dryrun bool, rulesetid int) {
 	// remove ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#delete-an-organization-repository-ruleset
 
-	_, err := g.client.CallRestAPI(
-
-		fmt.Sprintf("/orgs/%s/rulesets/%d", config.Config.GithubAppOrganization, rulesetid),
-		"DELETE",
-		nil,
-	)
-	if err != nil {
-		logrus.Errorf("failed to remove ruleset to org: %v", err)
+	if !dryrun {
+		_, err := g.client.CallRestAPI(
+			fmt.Sprintf("/orgs/%s/rulesets/%d", config.Config.GithubAppOrganization, rulesetid),
+			"DELETE",
+			nil,
+		)
+		if err != nil {
+			logrus.Errorf("failed to remove ruleset to org: %v", err)
+		}
 	}
 
 	for _, r := range g.rulesets {
@@ -1296,31 +1302,35 @@ func (g *GoliacRemoteImpl) DeleteRuleset(rulesetid int) {
 	}
 }
 
-func (g *GoliacRemoteImpl) AddUserToOrg(ghuserid string) {
+func (g *GoliacRemoteImpl) AddUserToOrg(dryrun bool, ghuserid string) {
 	// add member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/memberships/%s", config.Config.GithubAppOrganization, ghuserid),
-		"PUT",
-		map[string]interface{}{"role": "member"},
-	)
-	if err != nil {
-		logrus.Errorf("failed to add user to org: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("/orgs/%s/memberships/%s", config.Config.GithubAppOrganization, ghuserid),
+			"PUT",
+			map[string]interface{}{"role": "member"},
+		)
+		if err != nil {
+			logrus.Errorf("failed to add user to org: %v. %s", err, string(body))
+		}
 	}
 
 	g.users[ghuserid] = ghuserid
 }
 
-func (g *GoliacRemoteImpl) RemoveUserFromOrg(ghuserid string) {
+func (g *GoliacRemoteImpl) RemoveUserFromOrg(dryrun bool, ghuserid string) {
 	// remove member
 	// https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#remove-organization-membership-for-a-user
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/memberships/%s", config.Config.GithubAppOrganization, ghuserid),
-		"DELETE",
-		nil,
-	)
-	if err != nil {
-		logrus.Errorf("failed to remove user from org: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("/orgs/%s/memberships/%s", config.Config.GithubAppOrganization, ghuserid),
+			"DELETE",
+			nil,
+		)
+		if err != nil {
+			logrus.Errorf("failed to remove user from org: %v. %s", err, string(body))
+		}
 	}
 
 	delete(g.users, ghuserid)
@@ -1331,57 +1341,63 @@ type CreateTeamResponse struct {
 	Slug string
 }
 
-func (g *GoliacRemoteImpl) CreateTeam(teamname string, description string, members []string) {
+func (g *GoliacRemoteImpl) CreateTeam(dryrun bool, teamname string, description string, members []string) {
+	slugname := slug.Make(teamname)
 	// create team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/teams", config.Config.GithubAppOrganization),
-		"POST",
-		map[string]interface{}{"name": teamname, "description": description, "privacy": "closed"},
-	)
-	if err != nil {
-		logrus.Errorf("failed to create team: %v. %s", err, string(body))
-		return
-	}
-	var res CreateTeamResponse
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		logrus.Errorf("failed to create team: %v", err)
-		return
-	}
-
-	// add members
-	for _, member := range members {
-		// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
+	if !dryrun {
 		body, err := g.client.CallRestAPI(
-			fmt.Sprintf("orgs/%s/teams/%s/memberships/%s", config.Config.GithubAppOrganization, res.Slug, member),
-			"PUT",
-			map[string]interface{}{"role": "member"},
+			fmt.Sprintf("/orgs/%s/teams", config.Config.GithubAppOrganization),
+			"POST",
+			map[string]interface{}{"name": teamname, "description": description, "privacy": "closed"},
 		)
 		if err != nil {
 			logrus.Errorf("failed to create team: %v. %s", err, string(body))
 			return
 		}
+		var res CreateTeamResponse
+		err = json.Unmarshal(body, &res)
+		if err != nil {
+			logrus.Errorf("failed to create team: %v", err)
+			return
+		}
+
+		// add members
+		for _, member := range members {
+			// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
+			body, err := g.client.CallRestAPI(
+				fmt.Sprintf("orgs/%s/teams/%s/memberships/%s", config.Config.GithubAppOrganization, res.Slug, member),
+				"PUT",
+				map[string]interface{}{"role": "member"},
+			)
+			if err != nil {
+				logrus.Errorf("failed to create team: %v. %s", err, string(body))
+				return
+			}
+		}
+		slugname = res.Slug
 	}
 
-	g.teams[res.Slug] = &GithubTeam{
-		Name:    res.Name,
-		Slug:    res.Slug,
+	g.teams[slugname] = &GithubTeam{
+		Name:    teamname,
+		Slug:    slugname,
 		Members: members,
 	}
-	g.teamSlugByName[teamname] = res.Slug
+	g.teamSlugByName[teamname] = slugname
 }
 
 // role = member or maintainer (usually we use member)
-func (g *GoliacRemoteImpl) UpdateTeamAddMember(teamslug string, username string, role string) {
+func (g *GoliacRemoteImpl) UpdateTeamAddMember(dryrun bool, teamslug string, username string, role string) {
 	// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/teams/%s/memberships/%s", config.Config.GithubAppOrganization, teamslug, username),
-		"PUT",
-		map[string]interface{}{"role": role},
-	)
-	if err != nil {
-		logrus.Errorf("failed to add team member: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("/orgs/%s/teams/%s/memberships/%s", config.Config.GithubAppOrganization, teamslug, username),
+			"PUT",
+			map[string]interface{}{"role": role},
+		)
+		if err != nil {
+			logrus.Errorf("failed to add team member: %v. %s", err, string(body))
+		}
 	}
 
 	if team, ok := g.teams[teamslug]; ok {
@@ -1399,15 +1415,17 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(teamslug string, username string,
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(teamslug string, username string) {
+func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(dryrun bool, teamslug string, username string) {
 	// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("orgs/%s/teams/%s/memberships/%s", config.Config.GithubAppOrganization, teamslug, username),
-		"DELETE",
-		nil,
-	)
-	if err != nil {
-		logrus.Errorf("failed to remove team member: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("orgs/%s/teams/%s/memberships/%s", config.Config.GithubAppOrganization, teamslug, username),
+			"DELETE",
+			nil,
+		)
+		if err != nil {
+			logrus.Errorf("failed to remove team member: %v. %s", err, string(body))
+		}
 	}
 
 	if team, ok := g.teams[teamslug]; ok {
@@ -1425,16 +1443,18 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(teamslug string, username stri
 	}
 }
 
-func (g *GoliacRemoteImpl) DeleteTeam(teamslug string) {
+func (g *GoliacRemoteImpl) DeleteTeam(dryrun bool, teamslug string) {
 	// delete team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#delete-a-team
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/teams/%s", config.Config.GithubAppOrganization, teamslug),
-		"DELETE",
-		nil,
-	)
-	if err != nil {
-		logrus.Errorf("failed to delete a team: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("/orgs/%s/teams/%s", config.Config.GithubAppOrganization, teamslug),
+			"DELETE",
+			nil,
+		)
+		if err != nil {
+			logrus.Errorf("failed to delete a team: %v. %s", err, string(body))
+		}
 	}
 
 	delete(g.teams, teamslug)
@@ -1450,49 +1470,57 @@ type CreateRepositoryResponse struct {
 	NodeId string `json:"node_id"`
 }
 
-func (g *GoliacRemoteImpl) CreateRepository(reponame string, description string, writers []string, readers []string, public bool) {
+func (g *GoliacRemoteImpl) CreateRepository(dryrun bool, reponame string, description string, writers []string, readers []string, public bool) {
+	repoId := 0
+	repoRefId := reponame
 	// create repository
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#create-an-organization-repository
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/repos", config.Config.GithubAppOrganization),
-		"POST",
-		map[string]interface{}{"name": reponame, "description": description, "private": !public},
-	)
-	if err != nil {
-		logrus.Errorf("failed to create repository: %v. %s", err, string(body))
-		return
-	}
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("/orgs/%s/repos", config.Config.GithubAppOrganization),
+			"POST",
+			map[string]interface{}{"name": reponame, "description": description, "private": !public},
+		)
+		if err != nil {
+			logrus.Errorf("failed to create repository: %v. %s", err, string(body))
+			return
+		}
 
-	// get the repo id
-	var resp CreateRepositoryResponse
-	err = json.Unmarshal(body, &resp)
-	if err != nil {
-		logrus.Errorf("failed to read the create repository action response: %v", err)
-		return
+		// get the repo id
+		var resp CreateRepositoryResponse
+		err = json.Unmarshal(body, &resp)
+		if err != nil {
+			logrus.Errorf("failed to read the create repository action response: %v", err)
+			return
+		}
+		repoId = resp.Id
+		repoRefId = resp.NodeId
 	}
 
 	// update the repositories list
 	newRepo := &GithubRepository{
 		Name:       reponame,
-		Id:         resp.Id,
-		RefId:      resp.NodeId,
+		Id:         repoId,
+		RefId:      repoRefId,
 		IsArchived: false,
 		IsPrivate:  !public,
 	}
 	g.repositories[reponame] = newRepo
-	g.repositoriesByRefId[resp.NodeId] = newRepo
+	g.repositoriesByRefId[repoRefId] = newRepo
 
 	// add members
 	for _, reader := range readers {
 		// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#add-or-update-team-repository-permissions
-		body, err := g.client.CallRestAPI(
-			fmt.Sprintf("orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, reader, config.Config.GithubAppOrganization, reponame),
-			"PUT",
-			map[string]interface{}{"permission": "pull"},
-		)
-		if err != nil {
-			logrus.Errorf("failed to create repository (and add members): %v. %s", err, string(body))
-			return
+		if !dryrun {
+			body, err := g.client.CallRestAPI(
+				fmt.Sprintf("orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, reader, config.Config.GithubAppOrganization, reponame),
+				"PUT",
+				map[string]interface{}{"permission": "pull"},
+			)
+			if err != nil {
+				logrus.Errorf("failed to create repository (and add members): %v. %s", err, string(body))
+				return
+			}
 		}
 
 		teamsRepos := g.teamRepos[reader]
@@ -1507,13 +1535,15 @@ func (g *GoliacRemoteImpl) CreateRepository(reponame string, description string,
 	}
 	for _, writer := range writers {
 		// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#add-or-update-team-repository-permissions
-		body, err := g.client.CallRestAPI(
-			fmt.Sprintf("orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, writer, config.Config.GithubAppOrganization, reponame),
-			"PUT",
-			map[string]interface{}{"permission": "push"},
-		)
-		if err != nil {
-			logrus.Errorf("failed to create repository (and add members): %v. %s", err, string(body))
+		if !dryrun {
+			body, err := g.client.CallRestAPI(
+				fmt.Sprintf("orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, writer, config.Config.GithubAppOrganization, reponame),
+				"PUT",
+				map[string]interface{}{"permission": "push"},
+			)
+			if err != nil {
+				logrus.Errorf("failed to create repository (and add members): %v. %s", err, string(body))
+			}
 		}
 
 		teamsRepos := g.teamRepos[writer]
@@ -1528,16 +1558,18 @@ func (g *GoliacRemoteImpl) CreateRepository(reponame string, description string,
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(reponame string, teamslug string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
 	// update member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#add-or-update-team-repository-permissions
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, teamslug, config.Config.GithubAppOrganization, reponame),
-		"PUT",
-		map[string]interface{}{"permission": permission},
-	)
-	if err != nil {
-		logrus.Errorf("failed to add team access: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("/orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, teamslug, config.Config.GithubAppOrganization, reponame),
+			"PUT",
+			map[string]interface{}{"permission": permission},
+		)
+		if err != nil {
+			logrus.Errorf("failed to add team access: %v. %s", err, string(body))
+		}
 	}
 
 	teamsRepos := g.teamRepos[teamslug]
@@ -1555,16 +1587,18 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(reponame string, teamsl
 	g.teamRepos[teamslug] = teamsRepos
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(reponame string, teamslug string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
 	// update member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#add-or-update-team-repository-permissions
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, teamslug, config.Config.GithubAppOrganization, reponame),
-		"PUT",
-		map[string]interface{}{"permission": permission},
-	)
-	if err != nil {
-		logrus.Errorf("failed to add team access: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("/orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, teamslug, config.Config.GithubAppOrganization, reponame),
+			"PUT",
+			map[string]interface{}{"permission": permission},
+		)
+		if err != nil {
+			logrus.Errorf("failed to add team access: %v. %s", err, string(body))
+		}
 	}
 
 	teamsRepos := g.teamRepos[teamslug]
@@ -1582,16 +1616,18 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(reponame string, tea
 	g.teamRepos[teamslug] = teamsRepos
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(reponame string, teamslug string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(dryrun bool, reponame string, teamslug string) {
 	// delete member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#remove-a-repository-from-a-team
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, teamslug, config.Config.GithubAppOrganization, reponame),
-		"DELETE",
-		nil,
-	)
-	if err != nil {
-		logrus.Errorf("failed to remove team access: %. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, teamslug, config.Config.GithubAppOrganization, reponame),
+			"DELETE",
+			nil,
+		)
+		if err != nil {
+			logrus.Errorf("failed to remove team access: %. %s", err, string(body))
+		}
 	}
 
 	teamsRepos := g.teamRepos[teamslug]
@@ -1600,30 +1636,34 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(reponame string, tea
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdatePrivate(reponame string, private bool) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdatePrivate(dryrun bool, reponame string, private bool) {
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("repos/%s/%s", config.Config.GithubAppOrganization, reponame),
-		"PATCH",
-		map[string]interface{}{"private": private},
-	)
-	if err != nil {
-		logrus.Errorf("failed to update repository private setting: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("repos/%s/%s", config.Config.GithubAppOrganization, reponame),
+			"PATCH",
+			map[string]interface{}{"private": private},
+		)
+		if err != nil {
+			logrus.Errorf("failed to update repository private setting: %v. %s", err, string(body))
+		}
 	}
 
 	if repo, ok := g.repositories[reponame]; ok {
 		repo.IsPrivate = private
 	}
 }
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateArchived(reponame string, archived bool) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateArchived(dryrun bool, reponame string, archived bool) {
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("repos/%s/%s", config.Config.GithubAppOrganization, reponame),
-		"PATCH",
-		map[string]interface{}{"archived": archived},
-	)
-	if err != nil {
-		logrus.Errorf("failed to update repository archive setting: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("repos/%s/%s", config.Config.GithubAppOrganization, reponame),
+			"PATCH",
+			map[string]interface{}{"archived": archived},
+		)
+		if err != nil {
+			logrus.Errorf("failed to update repository archive setting: %v. %s", err, string(body))
+		}
 	}
 
 	if repo, ok := g.repositories[reponame]; ok {
@@ -1631,15 +1671,17 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateArchived(reponame string, archi
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, githubid string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(dryrun bool, reponame string, githubid string, permission string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#add-a-repository-collaborator
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("repos/%s/%s/collaborators/%s", config.Config.GithubAppOrganization, reponame, githubid),
-		"PUT",
-		map[string]interface{}{"permission": permission},
-	)
-	if err != nil {
-		logrus.Errorf("failed to set repository collaborator: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("repos/%s/%s/collaborators/%s", config.Config.GithubAppOrganization, reponame, githubid),
+			"PUT",
+			map[string]interface{}{"permission": permission},
+		)
+		if err != nil {
+			logrus.Errorf("failed to set repository collaborator: %v. %s", err, string(body))
+		}
 	}
 
 	if repo, ok := g.repositories[reponame]; ok {
@@ -1651,15 +1693,17 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, gith
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(reponame string, githubid string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(dryrun bool, reponame string, githubid string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#remove-a-repository-collaborator
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("repos/%s/%s/collaborators/%s", config.Config.GithubAppOrganization, reponame, githubid),
-		"DELETE",
-		nil,
-	)
-	if err != nil {
-		logrus.Errorf("failed to remove repository collaborator: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("repos/%s/%s/collaborators/%s", config.Config.GithubAppOrganization, reponame, githubid),
+			"DELETE",
+			nil,
+		)
+		if err != nil {
+			logrus.Errorf("failed to remove repository collaborator: %v. %s", err, string(body))
+		}
 	}
 
 	if repo, ok := g.repositories[reponame]; ok {
@@ -1667,16 +1711,18 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(reponame string, g
 	}
 }
 
-func (g *GoliacRemoteImpl) DeleteRepository(reponame string) {
+func (g *GoliacRemoteImpl) DeleteRepository(dryrun bool, reponame string) {
 	// delete repo
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#delete-a-repository
-	body, err := g.client.CallRestAPI(
-		fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, reponame),
-		"DELETE",
-		nil,
-	)
-	if err != nil {
-		logrus.Errorf("failed to delete repository: %v. %s", err, string(body))
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, reponame),
+			"DELETE",
+			nil,
+		)
+		if err != nil {
+			logrus.Errorf("failed to delete repository: %v. %s", err, string(body))
+		}
 	}
 
 	// update the repositories list
@@ -1686,9 +1732,9 @@ func (g *GoliacRemoteImpl) DeleteRepository(reponame string) {
 	}
 
 }
-func (g *GoliacRemoteImpl) Begin() {
+func (g *GoliacRemoteImpl) Begin(dryrun bool) {
 }
-func (g *GoliacRemoteImpl) Rollback(error) {
+func (g *GoliacRemoteImpl) Rollback(dryrun bool, err error) {
 }
-func (g *GoliacRemoteImpl) Commit() {
+func (g *GoliacRemoteImpl) Commit(dryrun bool) {
 }

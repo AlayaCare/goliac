@@ -6,8 +6,8 @@ import (
 )
 
 type Installation struct {
-	ID      int    `json:"id"`
-	AppId   int    `json:"app_id"`
+	ID      int64  `json:"id"`
+	AppId   int64  `json:"app_id"`
 	AppSlug string `json:"app_slug"`
 	Account struct {
 		Login string `json:"login"`

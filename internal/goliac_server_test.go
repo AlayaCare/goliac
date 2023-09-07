@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -157,9 +156,6 @@ func TestAppGetUsers(t *testing.T) {
 		res := server.GetUser(app.GetUserParams{UserID: "user1"})
 		payload := res.(*app.GetUserOK)
 		assert.Equal(t, 2, len(payload.Payload.Teams))
-		for _, r := range payload.Payload.Repositories {
-			fmt.Println(r.Name)
-		}
 		assert.Equal(t, 2, len(payload.Payload.Teams))
 		assert.Equal(t, 2, len(payload.Payload.Repositories))
 	})
