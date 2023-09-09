@@ -36,9 +36,8 @@ func createBasicStructure(fs afero.Fs, path string) error {
 	err = afero.WriteFile(fs, filepath.Join(path, "users/org/user1.yaml"), []byte(`
 apiVersion: v1
 kind: User
-metadata:
-  name: user1
-data:
+name: user1
+spec:
   githubID: github1
 `), 0644)
 	if err != nil {
@@ -48,9 +47,8 @@ data:
 	err = afero.WriteFile(fs, filepath.Join(path, "users/org/user2.yaml"), []byte(`
 apiVersion: v1
 kind: User
-metadata:
-  name: user2
-data:
+name: user2
+spec:
   githubID: github2
 `), 0644)
 	if err != nil {
@@ -66,9 +64,8 @@ data:
 	err = afero.WriteFile(fs, filepath.Join(path, "teams/team1/team.yaml"), []byte(`
 apiVersion: v1
 kind: Team
-metadata:
-  name: team1
-data:
+name: team1
+spec:
   owners:
   - user1
   - user2
@@ -81,8 +78,7 @@ data:
 	err = afero.WriteFile(fs, filepath.Join(path, "projects/repo1.yaml"), []byte(`
 apiVersion: v1
 kind: Repository
-metadata:
-  name: repo1
+name: repo1
 `), 0644)
 	if err != nil {
 		return err
@@ -157,16 +153,16 @@ func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, orgu
 	foobar := &entity.User{}
 	foobar.ApiVersion = "v1"
 	foobar.Kind = "User"
-	foobar.Metadata.Name = "foobar"
-	foobar.Data.GithubID = "foobar"
+	foobar.Name = "foobar"
+	foobar.Spec.GithubID = "foobar"
 	users["foobar"] = foobar
 
 	// updated
 	user1 := &entity.User{}
 	user1.ApiVersion = "v1"
 	user1.Kind = "User"
-	user1.Metadata.Name = "user1"
-	user1.Data.GithubID = "user1"
+	user1.Name = "user1"
+	user1.Spec.GithubID = "user1"
 	users["user1"] = foobar
 
 	return users, nil

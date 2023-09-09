@@ -242,18 +242,18 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		newTeam := &entity.Team{}
-		newTeam.Metadata.Name = "new"
-		newTeam.Data.Owners = []string{"new.owner"}
-		newTeam.Data.Members = []string{"new.member"}
+		newTeam.Name = "new"
+		newTeam.Spec.Owners = []string{"new.owner"}
+		newTeam.Spec.Members = []string{"new.member"}
 		local.teams["new"] = newTeam
 
 		newOwner := entity.User{}
-		newOwner.Metadata.Name = "new.owner"
-		newOwner.Data.GithubID = "new_owner"
+		newOwner.Name = "new.owner"
+		newOwner.Spec.GithubID = "new_owner"
 		local.users["new.owner"] = &newOwner
 		newMember := entity.User{}
-		newMember.Metadata.Name = "new.member"
-		newMember.Data.GithubID = "new_member"
+		newMember.Name = "new.member"
+		newMember.Spec.GithubID = "new_member"
 		local.users["new.member"] = &newMember
 
 		remote := GoliacRemoteMock{
@@ -285,18 +285,18 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		newTeam := &entity.Team{}
-		newTeam.Metadata.Name = "nouveauté"
-		newTeam.Data.Owners = []string{"new.owner"}
-		newTeam.Data.Members = []string{"new.member"}
+		newTeam.Name = "nouveauté"
+		newTeam.Spec.Owners = []string{"new.owner"}
+		newTeam.Spec.Members = []string{"new.member"}
 		local.teams["nouveauté"] = newTeam
 
 		newOwner := entity.User{}
-		newOwner.Metadata.Name = "new.owner"
-		newOwner.Data.GithubID = "new_owner"
+		newOwner.Name = "new.owner"
+		newOwner.Spec.GithubID = "new_owner"
 		local.users["new.owner"] = &newOwner
 		newMember := entity.User{}
-		newMember.Metadata.Name = "new.member"
-		newMember.Data.GithubID = "new_member"
+		newMember.Name = "new.member"
+		newMember.Spec.GithubID = "new_member"
 		local.users["new.member"] = &newMember
 
 		remote := GoliacRemoteMock{
@@ -328,24 +328,24 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing.owner", "existing.owner2"}
-		existingTeam.Data.Members = []string{"existing.member"}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing.owner", "existing.owner2"}
+		existingTeam.Spec.Members = []string{"existing.member"}
 		local.teams["existing"] = existingTeam
 
 		existing_owner := entity.User{}
-		existing_owner.Metadata.Name = "existing.owner"
-		existing_owner.Data.GithubID = "existing_owner"
+		existing_owner.Name = "existing.owner"
+		existing_owner.Spec.GithubID = "existing_owner"
 		local.users["existing.owner"] = &existing_owner
 
 		existing_owner2 := entity.User{}
-		existing_owner2.Metadata.Name = "existing.owner2"
-		existing_owner2.Data.GithubID = "existing_owner2"
+		existing_owner2.Name = "existing.owner2"
+		existing_owner2.Spec.GithubID = "existing_owner2"
 		local.users["existing.owner2"] = &existing_owner2
 
 		existing_member := entity.User{}
-		existing_member.Metadata.Name = "existing.member"
-		existing_member.Data.GithubID = "existing_member"
+		existing_member.Name = "existing.member"
+		existing_member.Spec.GithubID = "existing_member"
 		local.users["existing.member"] = &existing_member
 
 		remote := GoliacRemoteMock{
@@ -389,24 +389,24 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "exist ing"
-		existingTeam.Data.Owners = []string{"existing.owner", "existing.owner2"}
-		existingTeam.Data.Members = []string{"existing.member"}
+		existingTeam.Name = "exist ing"
+		existingTeam.Spec.Owners = []string{"existing.owner", "existing.owner2"}
+		existingTeam.Spec.Members = []string{"existing.member"}
 		local.teams["exist ing"] = existingTeam
 
 		existing_owner := entity.User{}
-		existing_owner.Metadata.Name = "existing.owner"
-		existing_owner.Data.GithubID = "existing_owner"
+		existing_owner.Name = "existing.owner"
+		existing_owner.Spec.GithubID = "existing_owner"
 		local.users["existing.owner"] = &existing_owner
 
 		existing_owner2 := entity.User{}
-		existing_owner2.Metadata.Name = "existing.owner2"
-		existing_owner2.Data.GithubID = "existing_owner2"
+		existing_owner2.Name = "existing.owner2"
+		existing_owner2.Spec.GithubID = "existing_owner2"
 		local.users["existing.owner2"] = &existing_owner2
 
 		existing_member := entity.User{}
-		existing_member.Metadata.Name = "existing.member"
-		existing_member.Data.GithubID = "existing_member"
+		existing_member.Name = "existing.member"
+		existing_member.Spec.GithubID = "existing_member"
 		local.users["existing.member"] = &existing_member
 
 		remote := GoliacRemoteMock{
@@ -454,18 +454,18 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		newTeam := &entity.Team{}
-		newTeam.Metadata.Name = "new"
-		newTeam.Data.Owners = []string{"new.owner"}
-		newTeam.Data.Members = []string{"new.member"}
+		newTeam.Name = "new"
+		newTeam.Spec.Owners = []string{"new.owner"}
+		newTeam.Spec.Members = []string{"new.member"}
 		local.teams["new"] = newTeam
 
 		newOwner := entity.User{}
-		newOwner.Metadata.Name = "new.owner"
-		newOwner.Data.GithubID = "new_owner"
+		newOwner.Name = "new.owner"
+		newOwner.Spec.GithubID = "new_owner"
 		local.users["new.owner"] = &newOwner
 		newMember := entity.User{}
-		newMember.Metadata.Name = "new.member"
-		newMember.Data.GithubID = "new_member"
+		newMember.Name = "new.member"
+		newMember.Spec.GithubID = "new_member"
 		local.users["new.member"] = &newMember
 
 		remote := GoliacRemoteMock{
@@ -564,9 +564,9 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		newRepo := &entity.Repository{}
-		newRepo.Metadata.Name = "new"
-		newRepo.Data.Readers = []string{}
-		newRepo.Data.Writers = []string{}
+		newRepo.Name = "new"
+		newRepo.Spec.Readers = []string{}
+		newRepo.Spec.Writers = []string{}
 		local.repos["new"] = newRepo
 
 		remote := GoliacRemoteMock{
@@ -597,17 +597,17 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		newRepo := &entity.Repository{}
-		newRepo.Metadata.Name = "new"
-		newRepo.Data.Readers = []string{}
-		newRepo.Data.Writers = []string{}
+		newRepo.Name = "new"
+		newRepo.Spec.Readers = []string{}
+		newRepo.Spec.Writers = []string{}
 		owner := "existing"
 		newRepo.Owner = &owner
 		local.repos["new"] = newRepo
 
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing_owner"}
-		existingTeam.Data.Members = []string{"existing_member"}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{"existing_member"}
 		local.teams["existing"] = existingTeam
 
 		remote := GoliacRemoteMock{
@@ -644,17 +644,17 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		lRepo := &entity.Repository{}
-		lRepo.Metadata.Name = "myrepo"
-		lRepo.Data.Readers = []string{}
-		lRepo.Data.Writers = []string{}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{}
+		lRepo.Spec.Writers = []string{}
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		local.repos["myrepo"] = lRepo
 
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing_owner"}
-		existingTeam.Data.Members = []string{"existing_member"}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{"existing_member"}
 		local.teams["existing"] = existingTeam
 
 		remote := GoliacRemoteMock{
@@ -707,17 +707,17 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		lRepo := &entity.Repository{}
-		lRepo.Metadata.Name = "myrepo"
-		lRepo.Data.Readers = []string{}
-		lRepo.Data.Writers = []string{}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{}
+		lRepo.Spec.Writers = []string{}
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		local.repos["myrepo"] = lRepo
 
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing_owner"}
-		existingTeam.Data.Members = []string{"existing_member"}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{"existing_member"}
 		local.teams["existing"] = existingTeam
 
 		remote := GoliacRemoteMock{
@@ -769,23 +769,23 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		lRepo := &entity.Repository{}
-		lRepo.Metadata.Name = "myrepo"
-		lRepo.Data.Readers = []string{"reader"}
-		lRepo.Data.Writers = []string{}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{"reader"}
+		lRepo.Spec.Writers = []string{}
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		local.repos["myrepo"] = lRepo
 
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing_owner"}
-		existingTeam.Data.Members = []string{"existing_member"}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{"existing_member"}
 		local.teams["existing"] = existingTeam
 
 		readerTeam := &entity.Team{}
-		readerTeam.Metadata.Name = "reader"
-		readerTeam.Data.Owners = []string{"existing_owner"}
-		readerTeam.Data.Members = []string{"existing_member"}
+		readerTeam.Name = "reader"
+		readerTeam.Spec.Owners = []string{"existing_owner"}
+		readerTeam.Spec.Members = []string{"existing_member"}
 		local.teams["reader"] = readerTeam
 
 		remote := GoliacRemoteMock{
@@ -842,23 +842,23 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		lRepo := &entity.Repository{}
-		lRepo.Metadata.Name = "myrepo"
-		lRepo.Data.Readers = []string{}
-		lRepo.Data.Writers = []string{}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{}
+		lRepo.Spec.Writers = []string{}
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		local.repos["myrepo"] = lRepo
 
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing_owner"}
-		existingTeam.Data.Members = []string{"existing_member"}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{"existing_member"}
 		local.teams["existing"] = existingTeam
 
 		readerTeam := &entity.Team{}
-		readerTeam.Metadata.Name = "reader"
-		readerTeam.Data.Owners = []string{"existing_owner"}
-		readerTeam.Data.Members = []string{"existing_member"}
+		readerTeam.Name = "reader"
+		readerTeam.Spec.Owners = []string{"existing_owner"}
+		readerTeam.Spec.Members = []string{"existing_member"}
 		local.teams["reader"] = readerTeam
 
 		remote := GoliacRemoteMock{
@@ -920,17 +920,17 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		lRepo := &entity.Repository{}
-		lRepo.Metadata.Name = "myrepo"
-		lRepo.Data.Readers = []string{}
-		lRepo.Data.Writers = []string{}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{}
+		lRepo.Spec.Writers = []string{}
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		local.repos["myrepo"] = lRepo
 
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing_owner"}
-		existingTeam.Data.Members = []string{}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{}
 		local.teams["existing"] = existingTeam
 
 		remote := GoliacRemoteMock{
@@ -981,23 +981,23 @@ func TestReconciliation(t *testing.T) {
 			repos: make(map[string]*entity.Repository),
 		}
 		lRepo := &entity.Repository{}
-		lRepo.Metadata.Name = "myrepo"
-		lRepo.Data.Readers = []string{"reader"}
-		lRepo.Data.Writers = []string{}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{"reader"}
+		lRepo.Spec.Writers = []string{}
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		local.repos["myrepo"] = lRepo
 
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing_owner"}
-		existingTeam.Data.Members = []string{"existing_member"}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{"existing_member"}
 		local.teams["existing"] = existingTeam
 
 		readerTeam := &entity.Team{}
-		readerTeam.Metadata.Name = "reader"
-		readerTeam.Data.Owners = []string{"existing_owner"}
-		readerTeam.Data.Members = []string{"existing_member"}
+		readerTeam.Name = "reader"
+		readerTeam.Spec.Owners = []string{"existing_owner"}
+		readerTeam.Spec.Members = []string{"existing_member"}
 		local.teams["reader"] = readerTeam
 
 		remote := GoliacRemoteMock{
@@ -1048,23 +1048,23 @@ func TestReconciliation(t *testing.T) {
 			repos:     make(map[string]*entity.Repository),
 		}
 		outside1 := entity.User{}
-		outside1.Metadata.Name = "outside1"
-		outside1.Data.GithubID = "outside1-githubid"
+		outside1.Name = "outside1"
+		outside1.Spec.GithubID = "outside1-githubid"
 		local.externals["outside1"] = &outside1
 
 		lRepo := &entity.Repository{}
-		lRepo.Metadata.Name = "myrepo"
-		lRepo.Data.Readers = []string{}
-		lRepo.Data.Writers = []string{}
-		lRepo.Data.ExternalUserWriters = []string{"outside1"}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{}
+		lRepo.Spec.Writers = []string{}
+		lRepo.Spec.ExternalUserWriters = []string{"outside1"}
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		local.repos["myrepo"] = lRepo
 
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing_owner"}
-		existingTeam.Data.Members = []string{}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{}
 		local.teams["existing"] = existingTeam
 
 		remote := GoliacRemoteMock{
@@ -1120,18 +1120,18 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		lRepo := &entity.Repository{}
-		lRepo.Metadata.Name = "myrepo"
-		lRepo.Data.Readers = []string{}
-		lRepo.Data.Writers = []string{}
-		lRepo.Data.ExternalUserWriters = []string{}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{}
+		lRepo.Spec.Writers = []string{}
+		lRepo.Spec.ExternalUserWriters = []string{}
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		local.repos["myrepo"] = lRepo
 
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing_owner"}
-		existingTeam.Data.Members = []string{}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{}
 		local.teams["existing"] = existingTeam
 
 		remote := GoliacRemoteMock{
@@ -1188,24 +1188,24 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		outside1 := entity.User{}
-		outside1.Metadata.Name = "outside1"
-		outside1.Data.GithubID = "outside1-githubid"
+		outside1.Name = "outside1"
+		outside1.Spec.GithubID = "outside1-githubid"
 		local.externals["outside1"] = &outside1
 
 		lRepo := &entity.Repository{}
-		lRepo.Metadata.Name = "myrepo"
-		lRepo.Data.Readers = []string{}
-		lRepo.Data.Writers = []string{}
-		lRepo.Data.ExternalUserWriters = []string{}
-		lRepo.Data.ExternalUserReaders = []string{"outside1"}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{}
+		lRepo.Spec.Writers = []string{}
+		lRepo.Spec.ExternalUserWriters = []string{}
+		lRepo.Spec.ExternalUserReaders = []string{"outside1"}
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		local.repos["myrepo"] = lRepo
 
 		existingTeam := &entity.Team{}
-		existingTeam.Metadata.Name = "existing"
-		existingTeam.Data.Owners = []string{"existing_owner"}
-		existingTeam.Data.Members = []string{}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{}
 		local.teams["existing"] = existingTeam
 
 		remote := GoliacRemoteMock{
@@ -1327,9 +1327,9 @@ func TestReconciliationRulesets(t *testing.T) {
 		}
 
 		newRuleset := &entity.RuleSet{}
-		newRuleset.Metadata.Name = "new"
-		newRuleset.Enforcement = "evaluate"
-		newRuleset.Rules = append(newRuleset.Rules, struct {
+		newRuleset.Name = "new"
+		newRuleset.Spec.Enforcement = "evaluate"
+		newRuleset.Spec.Rules = append(newRuleset.Spec.Rules, struct {
 			Ruletype   string
 			Parameters entity.RuleSetParameters
 		}{
@@ -1381,9 +1381,9 @@ func TestReconciliationRulesets(t *testing.T) {
 		}
 
 		newRuleset := &entity.RuleSet{}
-		newRuleset.Metadata.Name = "new"
-		newRuleset.Enforcement = "evaluate"
-		newRuleset.Rules = append(newRuleset.Rules, struct {
+		newRuleset.Name = "new"
+		newRuleset.Spec.Enforcement = "evaluate"
+		newRuleset.Spec.Rules = append(newRuleset.Spec.Rules, struct {
 			Ruletype   string
 			Parameters entity.RuleSetParameters
 		}{
@@ -1435,9 +1435,9 @@ func TestReconciliationRulesets(t *testing.T) {
 		}
 
 		lRuleset := &entity.RuleSet{}
-		lRuleset.Metadata.Name = "update"
-		lRuleset.Enforcement = "evaluate"
-		lRuleset.Rules = append(lRuleset.Rules, struct {
+		lRuleset.Name = "update"
+		lRuleset.Spec.Enforcement = "evaluate"
+		lRuleset.Spec.Rules = append(lRuleset.Spec.Rules, struct {
 			Ruletype   string
 			Parameters entity.RuleSetParameters
 		}{

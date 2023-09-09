@@ -46,16 +46,16 @@ func fixtureGoliacLocal() *GoliacLocalMock {
 
 	// users
 	user1 := entity.User{}
-	user1.Metadata.Name = "user1"
-	user1.Data.GithubID = "github1"
+	user1.Name = "user1"
+	user1.Spec.GithubID = "github1"
 
 	user2 := entity.User{}
-	user2.Metadata.Name = "user2"
-	user2.Data.GithubID = "github2"
+	user2.Name = "user2"
+	user2.Spec.GithubID = "github2"
 
 	user3 := entity.User{}
-	user3.Metadata.Name = "user3"
-	user3.Data.GithubID = "github3"
+	user3.Name = "user3"
+	user3.Spec.GithubID = "github3"
 
 	l.users["user1"] = &user1
 	l.users["user2"] = &user2
@@ -63,39 +63,39 @@ func fixtureGoliacLocal() *GoliacLocalMock {
 
 	// external users
 	userE1 := entity.User{}
-	userE1.Metadata.Name = "userE1"
-	userE1.Data.GithubID = "githubE1"
+	userE1.Name = "userE1"
+	userE1.Spec.GithubID = "githubE1"
 
 	l.externalUsers["userE1"] = &userE1
 
 	// teams
 	ateam := entity.Team{}
-	ateam.Metadata.Name = "ateam"
-	ateam.Data.Owners = []string{"user1"}
-	ateam.Data.Members = []string{"user3"}
+	ateam.Name = "ateam"
+	ateam.Spec.Owners = []string{"user1"}
+	ateam.Spec.Members = []string{"user3"}
 
 	mixteam := entity.Team{}
-	mixteam.Metadata.Name = "mixteam"
-	mixteam.Data.Owners = []string{"user1"}
-	mixteam.Data.Members = []string{"userE1"}
+	mixteam.Name = "mixteam"
+	mixteam.Spec.Owners = []string{"user1"}
+	mixteam.Spec.Members = []string{"userE1"}
 
 	l.teams["ateam"] = &ateam
 	l.teams["mixteam"] = &mixteam
 
 	// repositories
 	repoA := entity.Repository{}
-	repoA.Metadata.Name = "repoA"
+	repoA.Name = "repoA"
 	ownerA := "ateam"
 	repoA.Owner = &ownerA
-	repoA.Data.Readers = []string{}
-	repoA.Data.Writers = []string{}
+	repoA.Spec.Readers = []string{}
+	repoA.Spec.Writers = []string{}
 
 	repoB := entity.Repository{}
-	repoB.Metadata.Name = "repoB"
+	repoB.Name = "repoB"
 	ownerB := "mixteam"
 	repoB.Owner = &ownerB
-	repoB.Data.Readers = []string{"ateam"}
-	repoB.Data.Writers = []string{}
+	repoB.Spec.Readers = []string{"ateam"}
+	repoB.Spec.Writers = []string{}
 
 	l.repositories["repoA"] = &repoA
 	l.repositories["repoB"] = &repoB

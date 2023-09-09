@@ -105,8 +105,8 @@ func LoadUsersFromGithubOrgSaml(client github.GitHubClient) (map[string]*entity.
 			user := &entity.User{}
 			user.ApiVersion = "v1"
 			user.Kind = "User"
-			user.Metadata.Name = c.Node.SamlIdentity.NameId
-			user.Data.GithubID = c.Node.User.Login
+			user.Name = c.Node.SamlIdentity.NameId
+			user.Spec.GithubID = c.Node.User.Login
 
 			users[c.Node.SamlIdentity.NameId] = user
 		}

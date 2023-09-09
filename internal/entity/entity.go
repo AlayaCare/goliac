@@ -10,9 +10,7 @@ type Warning error
 type Entity struct {
 	ApiVersion string `yaml:"apiVersion"`
 	Kind       string `yaml:"kind"`
-	Metadata   struct {
-		Name string `yaml:"name"`
-	} `yaml:"metadata"`
+	Name       string `yaml:"name"`
 }
 
 /*

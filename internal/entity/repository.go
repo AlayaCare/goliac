@@ -11,14 +11,14 @@ import (
 
 type Repository struct {
 	Entity `yaml:",inline"`
-	Data   struct {
+	Spec   struct {
 		Writers             []string `yaml:"writers,omitempty"`
 		Readers             []string `yaml:"readers,omitempty"`
 		ExternalUserReaders []string `yaml:"externalUserReaders,omitempty"`
 		ExternalUserWriters []string `yaml:"externalUserWriters,omitempty"`
 		IsPublic            bool     `yaml:"public,omitempty"`
 		IsArchived          bool     `yaml:"archived,omitempty"`
-	} `yaml:"data,omitempty"`
+	} `yaml:"spec,omitempty"`
 	Owner *string `yaml:"owner,omitempty"` // implicit. team name owning the repo (if any)
 }
 
@@ -70,6 +70,10 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 			if entry.IsDir() {
 				continue
 			}
+			// skipping files starting with '.'
+			if entry.Name()[0] == '.' {
+				continue
+			}
 			if !strings.HasSuffix(entry.Name(), ".yaml") {
 				warning = append(warning, fmt.Errorf("File %s doesn't have a .yaml extension", entry.Name()))
 				continue
@@ -81,7 +85,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 				if err := repo.Validate(filepath.Join(archivedDirname, entry.Name()), teams, externalUsers, true); err != nil {
 					errors = append(errors, err)
 				} else {
-					repos[repo.Metadata.Name] = repo
+					repos[repo.Name] = repo
 				}
 			}
 		}
@@ -120,16 +124,16 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 							errors = append(errors, err)
 						} else {
 							// check if the repository doesn't already exists
-							if _, exist := repos[repo.Metadata.Name]; exist {
-								existing := filepath.Join(archivedDirname, repo.Metadata.Name)
-								if repos[repo.Metadata.Name].Owner != nil {
-									existing = filepath.Join(teamDirname, *repos[repo.Metadata.Name].Owner, repo.Metadata.Name)
+							if _, exist := repos[repo.Name]; exist {
+								existing := filepath.Join(archivedDirname, repo.Name)
+								if repos[repo.Name].Owner != nil {
+									existing = filepath.Join(teamDirname, *repos[repo.Name].Owner, repo.Name)
 								}
-								errors = append(errors, fmt.Errorf("Repository %s defined in 2 places (check %s and %s)", repo.Metadata.Name, filepath.Join(teamDirname, team.Name(), sube.Name()), existing))
+								errors = append(errors, fmt.Errorf("Repository %s defined in 2 places (check %s and %s)", repo.Name, filepath.Join(teamDirname, team.Name(), sube.Name()), existing))
 							} else {
 								teamname := team.Name()
 								repo.Owner = &teamname
-								repos[repo.Metadata.Name] = repo
+								repos[repo.Name] = repo
 							}
 						}
 					}
@@ -151,39 +155,39 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		return fmt.Errorf("invalid kind: %s (check repository filename %s)", r.Kind, filename)
 	}
 
-	if r.Metadata.Name == "" {
-		return fmt.Errorf("metadata.name is empty (check repository filename %s)", filename)
+	if r.Name == "" {
+		return fmt.Errorf("name is empty (check repository filename %s)", filename)
 	}
 
 	filename = filepath.Base(filename)
-	if r.Metadata.Name != filename[:len(filename)-len(filepath.Ext(filename))] {
-		return fmt.Errorf("invalid metadata.name: %s for repository filename %s", r.Metadata.Name, filename)
+	if r.Name != filename[:len(filename)-len(filepath.Ext(filename))] {
+		return fmt.Errorf("invalid name: %s for repository filename %s", r.Name, filename)
 	}
 
-	for _, writer := range r.Data.Writers {
+	for _, writer := range r.Spec.Writers {
 		if _, ok := teams[writer]; !ok {
 			return fmt.Errorf("invalid writer: %s doesn't exist (check repository filename %s)", writer, filename)
 		}
 	}
-	for _, reader := range r.Data.Readers {
+	for _, reader := range r.Spec.Readers {
 		if _, ok := teams[reader]; !ok {
 			return fmt.Errorf("invalid reader: %s doesn't exist (check repository filename %s)", reader, filename)
 		}
 	}
 
-	for _, externalUserReader := range r.Data.ExternalUserReaders {
+	for _, externalUserReader := range r.Spec.ExternalUserReaders {
 		if _, ok := externalUsers[externalUserReader]; !ok {
 			return fmt.Errorf("invalid externalUserReader: %s doesn't exist in repository filename %s", externalUserReader, filename)
 		}
 	}
 
-	for _, externalUserWriter := range r.Data.ExternalUserWriters {
+	for _, externalUserWriter := range r.Spec.ExternalUserWriters {
 		if _, ok := externalUsers[externalUserWriter]; !ok {
 			return fmt.Errorf("invalid externalUserWriter: %s doesn't exist in repository filename %s", externalUserWriter, filename)
 		}
 	}
 
-	if archived != r.Data.IsArchived {
+	if archived != r.Spec.IsArchived {
 		if archived {
 			return fmt.Errorf("invalid archived: %s is in the archived directory without the `archived` boolean", filename)
 		} else {

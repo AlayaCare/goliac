@@ -11,10 +11,10 @@ import (
 
 type Team struct {
 	Entity `yaml:",inline"`
-	Data   struct {
+	Spec   struct {
 		Owners  []string `yaml:"owners,omitempty"`
 		Members []string `yaml:"members,omitempty"`
-	} `yaml:"data"`
+	} `yaml:"spec"`
 }
 
 /*
@@ -67,6 +67,10 @@ func ReadTeamDirectory(fs afero.Fs, dirname string, users map[string]*User) (map
 		if !e.IsDir() {
 			continue
 		}
+		// skipping files starting with '.'
+		if e.Name()[0] == '.' {
+			continue
+		}
 		team, err := NewTeam(fs, filepath.Join(dirname, e.Name(), "team.yaml"))
 		if err != nil {
 			errors = append(errors, err)
@@ -76,7 +80,7 @@ func ReadTeamDirectory(fs afero.Fs, dirname string, users map[string]*User) (map
 			if err != nil {
 				errors = append(errors, err)
 			} else {
-				teams[team.Metadata.Name] = team
+				teams[team.Name] = team
 			}
 
 		}
@@ -95,30 +99,30 @@ func (t *Team) Validate(dirname string, users map[string]*User) (error, []Warnin
 		return fmt.Errorf("invalid kind: %s for team filename %s/team.yaml", t.Kind, dirname), warnings
 	}
 
-	if t.Metadata.Name == "" {
+	if t.Name == "" {
 		return fmt.Errorf("metadata.name is empty for team filename %s", dirname), warnings
 	}
 
-	if t.Metadata.Name == "everyone" {
+	if t.Name == "everyone" {
 		return fmt.Errorf("team name 'everyone' is reserved"), warnings
 	}
 
-	if strings.HasSuffix(t.Metadata.Name, "-owners") {
+	if strings.HasSuffix(t.Name, "-owners") {
 		return fmt.Errorf("metadata.name cannot finish with '-owners' for team filename %s. It is a reserved suffix", dirname), warnings
 	}
 
 	teamname := filepath.Base(dirname)
-	if t.Metadata.Name != teamname {
-		return fmt.Errorf("invalid metadata.name: %s for team filename %s/team.yaml", t.Metadata.Name, dirname), warnings
+	if t.Name != teamname {
+		return fmt.Errorf("invalid metadata.name: %s for team filename %s/team.yaml", t.Name, dirname), warnings
 	}
 
-	for _, owner := range t.Data.Owners {
+	for _, owner := range t.Spec.Owners {
 		if _, ok := users[owner]; !ok {
 			return fmt.Errorf("invalid owner: %s doesn't exist in team filename %s/team.yaml", owner, dirname), warnings
 		}
 	}
 
-	for _, member := range t.Data.Members {
+	for _, member := range t.Spec.Members {
 		if _, ok := users[member]; !ok {
 			return fmt.Errorf("invalid member: %s doesn't exist in team filename %s/team.yaml", member, dirname), warnings
 		}
@@ -126,7 +130,7 @@ func (t *Team) Validate(dirname string, users map[string]*User) (error, []Warnin
 
 	// warnings
 
-	if len(t.Data.Owners) < 2 {
+	if len(t.Spec.Owners) < 2 {
 		warnings = append(warnings, fmt.Errorf("no enough owner for team filename %s/team.yaml", dirname))
 	}
 
@@ -178,24 +182,24 @@ func ReadAndAdjustTeamDirectory(fs afero.Fs, dirname string, users map[string]*U
 func (t *Team) Update(fs afero.Fs, filename string, users map[string]*User) (bool, error) {
 	changed := false
 	owners := make([]string, 0)
-	for _, owner := range t.Data.Owners {
+	for _, owner := range t.Spec.Owners {
 		if _, ok := users[owner]; !ok {
 			changed = true
 		} else {
 			owners = append(owners, owner)
 		}
 	}
-	t.Data.Owners = owners
+	t.Spec.Owners = owners
 
 	members := make([]string, 0)
-	for _, member := range t.Data.Members {
+	for _, member := range t.Spec.Members {
 		if _, ok := users[member]; !ok {
 			changed = true
 		} else {
 			members = append(members, member)
 		}
 	}
-	t.Data.Members = members
+	t.Spec.Members = members
 
 	yamlTeam, err := yaml.Marshal(t)
 	if err != nil {

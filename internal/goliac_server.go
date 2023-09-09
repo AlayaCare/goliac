@@ -71,9 +71,9 @@ func (g *GoliacServerImpl) GetRepositories(app.GetRepositoriesParams) middleware
 
 	for _, r := range local.Repositories() {
 		repo := models.Repository{
-			Name:     r.Metadata.Name,
-			Public:   r.Data.IsPublic,
-			Archived: r.Data.IsArchived,
+			Name:     r.Name,
+			Public:   r.Spec.IsPublic,
+			Archived: r.Spec.IsArchived,
 		}
 		repositories = append(repositories, &repo)
 	}
@@ -93,7 +93,7 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 	teams := make([]*models.RepositoryDetailsTeamsItems0, 0)
 	collaborators := make([]*models.RepositoryDetailsCollaboratorsItems0, 0)
 
-	for _, r := range repository.Data.Readers {
+	for _, r := range repository.Spec.Readers {
 		team := models.RepositoryDetailsTeamsItems0{
 			Name:   r,
 			Access: "read",
@@ -109,7 +109,7 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 		teams = append(teams, &team)
 	}
 
-	for _, w := range repository.Data.Writers {
+	for _, w := range repository.Spec.Writers {
 		team := models.RepositoryDetailsTeamsItems0{
 			Name:   w,
 			Access: "write",
@@ -117,7 +117,7 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 		teams = append(teams, &team)
 	}
 
-	for _, r := range repository.Data.ExternalUserReaders {
+	for _, r := range repository.Spec.ExternalUserReaders {
 		collaborator := models.RepositoryDetailsCollaboratorsItems0{
 			Name:   r,
 			Access: "read",
@@ -125,7 +125,7 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 		collaborators = append(collaborators, &collaborator)
 	}
 
-	for _, r := range repository.Data.ExternalUserWriters {
+	for _, r := range repository.Spec.ExternalUserWriters {
 		collaborator := models.RepositoryDetailsCollaboratorsItems0{
 			Name:   r,
 			Access: "write",
@@ -134,9 +134,9 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 	}
 
 	repositoryDetails := models.RepositoryDetails{
-		Name:          repository.Metadata.Name,
-		Public:        repository.Data.IsPublic,
-		Archived:      repository.Data.IsArchived,
+		Name:          repository.Name,
+		Public:        repository.Spec.IsPublic,
+		Archived:      repository.Spec.IsArchived,
 		Teams:         teams,
 		Collaborators: collaborators,
 	}
@@ -151,8 +151,8 @@ func (g *GoliacServerImpl) GetTeams(app.GetTeamsParams) middleware.Responder {
 	for teamname, team := range local.Teams() {
 		t := models.Team{
 			Name:    teamname,
-			Members: team.Data.Members,
-			Owners:  team.Data.Owners,
+			Members: team.Spec.Members,
+			Owners:  team.Spec.Owners,
 		}
 		teams = append(teams, &t)
 
@@ -174,13 +174,13 @@ func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responde
 		if repo.Owner != nil && *repo.Owner == params.TeamID {
 			repos[reponame] = repo
 		}
-		for _, r := range repo.Data.Readers {
+		for _, r := range repo.Spec.Readers {
 			if r == params.TeamID {
 				repos[reponame] = repo
 				break
 			}
 		}
-		for _, r := range repo.Data.Writers {
+		for _, r := range repo.Spec.Writers {
 			if r == params.TeamID {
 				repos[reponame] = repo
 				break
@@ -192,48 +192,48 @@ func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responde
 	for reponame, repo := range repos {
 		r := models.Repository{
 			Name:     reponame,
-			Archived: repo.Data.IsArchived,
-			Public:   repo.Data.IsPublic,
+			Archived: repo.Spec.IsArchived,
+			Public:   repo.Spec.IsPublic,
 		}
 		repositories = append(repositories, &r)
 	}
 
 	teamDetails := models.TeamDetails{
-		Owners:       make([]*models.TeamDetailsOwnersItems0, len(team.Data.Owners)),
-		Members:      make([]*models.TeamDetailsMembersItems0, len(team.Data.Members)),
-		Name:         team.Metadata.Name,
+		Owners:       make([]*models.TeamDetailsOwnersItems0, len(team.Spec.Owners)),
+		Members:      make([]*models.TeamDetailsMembersItems0, len(team.Spec.Members)),
+		Name:         team.Name,
 		Repositories: repositories,
 	}
 
-	for i, u := range team.Data.Owners {
+	for i, u := range team.Spec.Owners {
 		if orgUser, ok := local.Users()[u]; ok {
 			teamDetails.Owners[i] = &models.TeamDetailsOwnersItems0{
 				Name:     u,
-				Githubid: orgUser.Data.GithubID,
+				Githubid: orgUser.Spec.GithubID,
 				External: false,
 			}
 		} else {
 			extUser := local.ExternalUsers()[u]
 			teamDetails.Owners[i] = &models.TeamDetailsOwnersItems0{
 				Name:     u,
-				Githubid: extUser.Data.GithubID,
+				Githubid: extUser.Spec.GithubID,
 				External: false,
 			}
 		}
 	}
 
-	for i, u := range team.Data.Members {
+	for i, u := range team.Spec.Members {
 		if orgUser, ok := local.Users()[u]; ok {
 			teamDetails.Members[i] = &models.TeamDetailsMembersItems0{
 				Name:     u,
-				Githubid: orgUser.Data.GithubID,
+				Githubid: orgUser.Spec.GithubID,
 				External: false,
 			}
 		} else {
 			extUser := local.ExternalUsers()[u]
 			teamDetails.Members[i] = &models.TeamDetailsMembersItems0{
 				Name:     u,
-				Githubid: extUser.Data.GithubID,
+				Githubid: extUser.Spec.GithubID,
 				External: false,
 			}
 		}
@@ -250,7 +250,7 @@ func (g *GoliacServerImpl) GetCollaborators(app.GetCollaboratorsParams) middlewa
 	for username, user := range local.ExternalUsers() {
 		u := models.User{
 			Name:     username,
-			Githubid: user.Data.GithubID,
+			Githubid: user.Spec.GithubID,
 		}
 		users = append(users, &u)
 	}
@@ -268,32 +268,32 @@ func (g *GoliacServerImpl) GetCollaborator(params app.GetCollaboratorParams) mid
 	}
 
 	collaboratordetails := models.CollaboratorDetails{
-		Githubid:     user.Data.GithubID,
+		Githubid:     user.Spec.GithubID,
 		Repositories: make([]*models.Repository, 0),
 	}
 
 	githubidToExternal := make(map[string]string)
 	for _, e := range local.ExternalUsers() {
-		githubidToExternal[e.Data.GithubID] = e.Metadata.Name
+		githubidToExternal[e.Spec.GithubID] = e.Name
 	}
 
 	// let's sort repo per team
 	for _, repo := range local.Repositories() {
-		for _, r := range repo.Data.ExternalUserReaders {
+		for _, r := range repo.Spec.ExternalUserReaders {
 			if r == params.CollaboratorID {
 				collaboratordetails.Repositories = append(collaboratordetails.Repositories, &models.Repository{
-					Name:     repo.Metadata.Name,
-					Public:   repo.Data.IsPublic,
-					Archived: repo.Data.IsArchived,
+					Name:     repo.Name,
+					Public:   repo.Spec.IsPublic,
+					Archived: repo.Spec.IsArchived,
 				})
 			}
 		}
-		for _, r := range repo.Data.ExternalUserWriters {
+		for _, r := range repo.Spec.ExternalUserWriters {
 			if r == params.CollaboratorID {
 				collaboratordetails.Repositories = append(collaboratordetails.Repositories, &models.Repository{
-					Name:     repo.Metadata.Name,
-					Public:   repo.Data.IsPublic,
-					Archived: repo.Data.IsArchived,
+					Name:     repo.Name,
+					Public:   repo.Spec.IsPublic,
+					Archived: repo.Spec.IsArchived,
 				})
 			}
 		}
@@ -309,7 +309,7 @@ func (g *GoliacServerImpl) GetUsers(app.GetUsersParams) middleware.Responder {
 	for username, user := range local.Users() {
 		u := models.User{
 			Name:     username,
-			Githubid: user.Data.GithubID,
+			Githubid: user.Spec.GithubID,
 		}
 		users = append(users, &u)
 	}
@@ -326,7 +326,7 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 	}
 
 	userdetails := models.UserDetails{
-		Githubid:     user.Data.GithubID,
+		Githubid:     user.Spec.GithubID,
 		Teams:        make([]*models.Team, 0),
 		Repositories: make([]*models.Repository, 0),
 	}
@@ -334,23 +334,23 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 	// [teamname]team
 	userTeams := make(map[string]*models.Team)
 	for teamname, team := range local.Teams() {
-		for _, owner := range team.Data.Owners {
+		for _, owner := range team.Spec.Owners {
 			if owner == params.UserID {
 				team := models.Team{
 					Name:    teamname,
-					Members: team.Data.Members,
-					Owners:  team.Data.Owners,
+					Members: team.Spec.Members,
+					Owners:  team.Spec.Owners,
 				}
 				userTeams[teamname] = &team
 				break
 			}
 		}
-		for _, member := range team.Data.Members {
+		for _, member := range team.Spec.Members {
 			if member == params.UserID {
 				team := models.Team{
 					Name:    teamname,
-					Members: team.Data.Members,
-					Owners:  team.Data.Owners,
+					Members: team.Spec.Members,
+					Owners:  team.Spec.Owners,
 				}
 				userTeams[teamname] = &team
 				break
@@ -369,19 +369,19 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 			if _, ok := teamRepo[*repo.Owner]; !ok {
 				teamRepo[*repo.Owner] = make(map[string]*entity.Repository)
 			}
-			teamRepo[*repo.Owner][repo.Metadata.Name] = repo
+			teamRepo[*repo.Owner][repo.Name] = repo
 		}
-		for _, r := range repo.Data.Readers {
+		for _, r := range repo.Spec.Readers {
 			if _, ok := teamRepo[r]; !ok {
 				teamRepo[r] = make(map[string]*entity.Repository)
 			}
-			teamRepo[r][repo.Metadata.Name] = repo
+			teamRepo[r][repo.Name] = repo
 		}
-		for _, w := range repo.Data.Writers {
+		for _, w := range repo.Spec.Writers {
 			if _, ok := teamRepo[w]; !ok {
 				teamRepo[w] = make(map[string]*entity.Repository)
 			}
-			teamRepo[w][repo.Metadata.Name] = repo
+			teamRepo[w][repo.Name] = repo
 		}
 	}
 
@@ -397,9 +397,9 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 
 	for _, r := range userRepos {
 		repo := models.Repository{
-			Name:     r.Metadata.Name,
-			Public:   r.Data.IsPublic,
-			Archived: r.Data.IsArchived,
+			Name:     r.Name,
+			Public:   r.Spec.IsPublic,
+			Archived: r.Spec.IsArchived,
 		}
 		userdetails.Repositories = append(userdetails.Repositories, &repo)
 	}
