@@ -141,11 +141,38 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(repositoryUrl, branch str
  * we must ensure that the "squqsh and merge" option is the only option.
  * Else we may append to apply commits that are part of a PR, but wasn't the final PR commit state
  */
-func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(teamreponame string) error {
+func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(teamreponame string, branchname string) error {
 	_, err := g.githubClient.CallRestAPI(fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, teamreponame), "PATCH",
-		map[string]interface{}{"allow_merge_commit": false,
+		map[string]interface{}{
+			"allow_merge_commit": false,
 			"allow_rebase_merge": false,
 			"allow_squash_merge": true,
+		})
+	if err != nil {
+		return err
+	}
+
+	// add an extra branch protection
+	contexts := []string{}
+
+	if config.Config.ServerGitBranchProtectionRequiredCheck != "" {
+		contexts = append(contexts, config.Config.ServerGitBranchProtectionRequiredCheck)
+	}
+	_, err = g.githubClient.CallRestAPI(fmt.Sprintf("/repos/%s/%s/branches/%s/protection", config.Config.GithubAppOrganization, teamreponame, branchname), "PUT",
+		map[string]interface{}{
+			"required_status_checks": map[string]interface{}{
+				"strict":   true,     // // This ensures branches are up to date before merging
+				"contexts": contexts, // Status checks to enforce, see scaffold.go for the job name
+			},
+			"enforce_admins":                nil,
+			"required_pull_request_reviews": nil,
+			// required_pull_request_reviews could have been
+			//{
+			// "dismiss_stale_reviews": true,   // Optional: Whether or not approved reviews are dismissed when a new commit is pushed.
+			//"require_code_owner_reviews": false,  // Optional: If set, only code owners can approve the PR.
+			//"required_approving_review_count": 1   // Number of approvals required. Set this to 1 for one review.
+			//},
+			"restrictions": nil,
 		})
 	return err
 }
@@ -156,10 +183,10 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 		return fmt.Errorf("Error when fetching data from Github: %v", err)
 	}
 
-	if !dryrun && g.remote.IsEnterprise() {
-		err := g.forceSquashMergeOnTeamsRepo(teamreponame)
+	if !dryrun {
+		err := g.forceSquashMergeOnTeamsRepo(teamreponame, branch)
 		if err != nil {
-			return fmt.Errorf("Error when ensuring PR on %s repo can only be done via squash and merge: %v", teamreponame, err)
+			logrus.Errorf("Error when ensuring PR on %s repo can only be done via squash and merge: %v", teamreponame, err)
 		}
 	}
 
