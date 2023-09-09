@@ -21,6 +21,8 @@ var Config = struct {
 	ServerApplyInterval int64  `env:"GOLIAC_SERVER_APPLY_INTERVAL" envDefault:"600"`
 	ServerGitRepository string `env:"GOLIAC_SERVER_GIT_REPOSITORY" envDefault:""`
 	ServerGitBranch     string `env:"GOLIAC_SERVER_GIT_BRANCH" envDefault:"main"`
+	// the name of the CI validating each PR on the teams repsotiry. See scaffold.go for the Github action
+	ServerGitBranchProtectionRequiredCheck string `env:"GOLIAC_SERVER_GIT_BRANCH_PROTECTION_REQUIRED_CHECK" envDefault:"validate"`
 
 	// Host - golang-skeleton server host
 	SwaggerHost string `env:"GOLIAC_SERVER_HOST" envDefault:"localhost"`
