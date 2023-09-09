@@ -11,9 +11,9 @@ import (
 
 type User struct {
 	Entity `yaml:",inline"`
-	Data   struct {
+	Spec   struct {
 		GithubID string `yaml:"githubID"`
-	} `yaml:"data"`
+	} `yaml:"spec"`
 }
 
 /*
@@ -66,6 +66,10 @@ func ReadUserDirectory(fs afero.Fs, dirname string) (map[string]*User, []error, 
 		if e.IsDir() {
 			continue
 		}
+		// skipping files starting with '.'
+		if e.Name()[0] == '.' {
+			continue
+		}
 		if !strings.HasSuffix(e.Name(), ".yaml") {
 			continue
 		}
@@ -77,7 +81,7 @@ func ReadUserDirectory(fs afero.Fs, dirname string) (map[string]*User, []error, 
 			if err != nil {
 				errors = append(errors, err)
 			} else {
-				users[user.Metadata.Name] = user
+				users[user.Name] = user
 			}
 		}
 
@@ -95,16 +99,16 @@ func (u *User) Validate(filename string) error {
 		return fmt.Errorf("invalid kind: %s for user filename %s", u.Kind, filename)
 	}
 
-	if u.Metadata.Name == "" {
+	if u.Name == "" {
 		return fmt.Errorf("metadata.name is empty for user filename %s", filename)
 	}
 
 	filename = filepath.Base(filename)
-	if u.Metadata.Name != filename[:len(filename)-len(filepath.Ext(filename))] {
-		return fmt.Errorf("invalid metadata.name: %s for user filename %s", u.Metadata.Name, filename)
+	if u.Name != filename[:len(filename)-len(filepath.Ext(filename))] {
+		return fmt.Errorf("invalid metadata.name: %s for user filename %s", u.Name, filename)
 	}
 
-	if u.Data.GithubID == "" {
+	if u.Spec.GithubID == "" {
 		return fmt.Errorf("data.githubID is empty for user filename %s", filename)
 	}
 
@@ -118,10 +122,10 @@ func (u *User) Equals(a *User) bool {
 	if u.Kind != a.Kind {
 		return false
 	}
-	if u.Metadata.Name != a.Metadata.Name {
+	if u.Name != a.Name {
 		return false
 	}
-	if u.Data.GithubID != a.Data.GithubID {
+	if u.Spec.GithubID != a.Spec.GithubID {
 		return false
 	}
 

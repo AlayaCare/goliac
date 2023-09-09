@@ -59,21 +59,23 @@ func CompareRulesetParameters(ruletype string, left RuleSetParameters, right Rul
  */
 type RuleSet struct {
 	Entity `yaml:",inline"`
-	// Target // branch, tag
-	Enforcement string // disabled, active, evaluate
-	BypassApps  []struct {
-		AppName string
-		Mode    string // always, pull_request
-	}
-	On struct {
-		Include []string // ~DEFAULT_BRANCH, ~ALL, branch_name, ...
-		Exclude []string //  branch_name, ...
-	}
+	Spec   struct {
+		// Target // branch, tag
+		Enforcement string // disabled, active, evaluate
+		BypassApps  []struct {
+			AppName string
+			Mode    string // always, pull_request
+		}
+		On struct {
+			Include []string // ~DEFAULT_BRANCH, ~ALL, branch_name, ...
+			Exclude []string //  branch_name, ...
+		}
 
-	Rules []struct {
-		Ruletype   string // required_signatures, pull_request, required_status_checks...
-		Parameters RuleSetParameters
-	} `yaml:"rules"`
+		Rules []struct {
+			Ruletype   string // required_signatures, pull_request, required_status_checks...
+			Parameters RuleSetParameters
+		} `yaml:"rules"`
+	} `yaml:"spec"`
 }
 
 /*
@@ -126,6 +128,10 @@ func ReadRuleSetDirectory(fs afero.Fs, dirname string) (map[string]*RuleSet, []e
 		if e.IsDir() {
 			continue
 		}
+		// skipping files starting with '.'
+		if e.Name()[0] == '.' {
+			continue
+		}
 		ruleset, err := NewRuleSet(fs, filepath.Join(dirname, e.Name()))
 		if err != nil {
 			errors = append(errors, err)
@@ -134,7 +140,7 @@ func ReadRuleSetDirectory(fs afero.Fs, dirname string) (map[string]*RuleSet, []e
 			if err != nil {
 				errors = append(errors, err)
 			} else {
-				rulesets[ruleset.Metadata.Name] = ruleset
+				rulesets[ruleset.Name] = ruleset
 			}
 
 		}
@@ -152,31 +158,31 @@ func (r *RuleSet) Validate(filename string) error {
 		return fmt.Errorf("invalid kind: %s for ruleset filename %s", r.Kind, filename)
 	}
 
-	if r.Metadata.Name == "" {
+	if r.Name == "" {
 		return fmt.Errorf("metadata.name is empty for ruleset filename %s", filename)
 	}
 
 	filename = filepath.Base(filename)
-	if r.Metadata.Name != filename[:len(filename)-len(filepath.Ext(filename))] {
-		return fmt.Errorf("invalid metadata.name: %s for ruleset filename %s", r.Metadata.Name, filename)
+	if r.Name != filename[:len(filename)-len(filepath.Ext(filename))] {
+		return fmt.Errorf("invalid metadata.name: %s for ruleset filename %s", r.Name, filename)
 	}
 
-	for _, rule := range r.Rules {
+	for _, rule := range r.Spec.Rules {
 		if rule.Ruletype != "required_signatures" && rule.Ruletype != "pull_request" && rule.Ruletype != "required_status_checks" {
 			return fmt.Errorf("invalid rulettype: %s for ruleset filename %s", rule.Ruletype, filename)
 		}
 	}
 
-	if r.Enforcement != "disable" && r.Enforcement != "active" && r.Enforcement != "evaluate" {
-		return fmt.Errorf("invalid enforcement: %s for ruleset filename %s", r.Enforcement, filename)
+	if r.Spec.Enforcement != "disable" && r.Spec.Enforcement != "active" && r.Spec.Enforcement != "evaluate" {
+		return fmt.Errorf("invalid enforcement: %s for ruleset filename %s", r.Spec.Enforcement, filename)
 	}
 
-	for _, ba := range r.BypassApps {
+	for _, ba := range r.Spec.BypassApps {
 		if ba.Mode != "always" && ba.Mode != "pull_request" {
 			return fmt.Errorf("invalid mode: %s for bypassapp %s in ruleset filename %s", ba.Mode, ba.AppName, filename)
 		}
 	}
-	for _, on := range r.On.Include {
+	for _, on := range r.Spec.On.Include {
 		if on[0] == '~' && (on != "~DEFAULT_BRANCH" && on != "~ALL") {
 			return fmt.Errorf("invalid include: %s in ruleset filename %s", on, filename)
 		}

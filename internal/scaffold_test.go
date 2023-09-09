@@ -116,22 +116,22 @@ func LoadGithubSamlUsersMock() (map[string]*entity.User, error) {
 	user1 := &entity.User{}
 	user1.ApiVersion = "v1"
 	user1.Kind = "User"
-	user1.Metadata.Name = "user1@company.com"
-	user1.Data.GithubID = "githubid1"
+	user1.Name = "user1@company.com"
+	user1.Spec.GithubID = "githubid1"
 	users["user1@company.com"] = user1
 
 	user2 := &entity.User{}
 	user2.ApiVersion = "v1"
 	user2.Kind = "User"
-	user2.Metadata.Name = "user2@company.com"
-	user2.Data.GithubID = "githubid2"
+	user2.Name = "user2@company.com"
+	user2.Spec.GithubID = "githubid2"
 	users["user2@company.com"] = user2
 
 	user3 := &entity.User{}
 	user3.ApiVersion = "v1"
 	user3.Kind = "User"
-	user3.Metadata.Name = "user3@company.com"
-	user3.Data.GithubID = "githubid3"
+	user3.Name = "user3@company.com"
+	user3.Spec.GithubID = "githubid3"
 	users["user3@company.com"] = user3
 
 	return users, nil
@@ -290,8 +290,8 @@ func TestScaffoldFull(t *testing.T) {
 		var at entity.Team
 		err = yaml.Unmarshal(regularTeam, &at)
 		assert.Nil(t, err)
-		assert.Equal(t, "regular", at.Metadata.Name)
-		assert.Equal(t, 2, len(at.Data.Owners)) // githubid2,githubid3
+		assert.Equal(t, "regular", at.Name)
+		assert.Equal(t, 2, len(at.Spec.Owners)) // githubid2,githubid3
 
 		repo1, err := afero.ReadFile(fs, "/teams/regular/repo1.yaml")
 		assert.Nil(t, err)
@@ -299,8 +299,8 @@ func TestScaffoldFull(t *testing.T) {
 		var r1 entity.Repository
 		err = yaml.Unmarshal(repo1, &r1)
 		assert.Nil(t, err)
-		assert.Equal(t, "repo1", r1.Metadata.Name)
-		assert.Equal(t, 0, len(r1.Data.Writers)) // regular -> not counted
+		assert.Equal(t, "repo1", r1.Name)
+		assert.Equal(t, 0, len(r1.Spec.Writers)) // regular -> not counted
 
 		repo2, err := afero.ReadFile(fs, "/teams/admin/repo2.yaml")
 		assert.Nil(t, err)
@@ -308,7 +308,7 @@ func TestScaffoldFull(t *testing.T) {
 		var r2 entity.Repository
 		err = yaml.Unmarshal(repo2, &r2)
 		assert.Nil(t, err)
-		assert.Equal(t, "repo2", r2.Metadata.Name)
-		assert.Equal(t, 1, len(r2.Data.Readers)) // regular
+		assert.Equal(t, "repo2", r2.Name)
+		assert.Equal(t, 1, len(r2.Spec.Readers)) // regular
 	})
 }

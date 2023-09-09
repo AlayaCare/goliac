@@ -303,7 +303,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string) string {
 
 	teamsnames := make([]string, 0)
 	for _, t := range g.teams {
-		teamsnames = append(teamsnames, t.Metadata.Name)
+		teamsnames = append(teamsnames, t.Name)
 	}
 	sort.Strings(teamsnames)
 

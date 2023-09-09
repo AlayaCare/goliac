@@ -83,7 +83,7 @@ func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local G
 	}
 
 	for _, lUser := range local.Users() {
-		user, ok := rUsers[lUser.Data.GithubID]
+		user, ok := rUsers[lUser.Spec.GithubID]
 
 		if !ok {
 			// deal with non existing remote user
@@ -116,8 +116,8 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 	slugTeams := make(map[string]*GithubTeam)
 	for teamname, teamvalue := range local.Teams() {
 		members := []string{}
-		members = append(members, teamvalue.Data.Members...)
-		members = append(members, teamvalue.Data.Owners...)
+		members = append(members, teamvalue.Spec.Members...)
+		members = append(members, teamvalue.Spec.Owners...)
 
 		teamslug := slug.Make(teamname)
 		slugTeams[teamslug] = &GithubTeam{
@@ -130,7 +130,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		slugTeams[teamslug+"-owners"] = &GithubTeam{
 			Name:    teamname + "-owners",
 			Slug:    teamslug + "-owners",
-			Members: teamvalue.Data.Owners,
+			Members: teamvalue.Spec.Owners,
 		}
 	}
 
@@ -158,7 +158,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		members := make([]string, 0)
 		for _, m := range lTeam.Members {
 			if ghuserid, ok := local.Users()[m]; ok {
-				members = append(members, ghuserid.Data.GithubID)
+				members = append(members, ghuserid.Spec.GithubID)
 			}
 		}
 		// CREATE team
@@ -174,7 +174,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		localMembers := make(map[string]bool)
 		for _, m := range lTeam.Members {
 			if ghuserid, ok := local.Users()[m]; ok {
-				localMembers[ghuserid.Data.GithubID] = true
+				localMembers[ghuserid.Spec.GithubID] = true
 			}
 		}
 
@@ -249,7 +249,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	lRepos := make(map[string]*GithubRepoComparable)
 	for reponame, lRepo := range local.Repositories() {
 		writers := make([]string, 0)
-		for _, w := range lRepo.Data.Writers {
+		for _, w := range lRepo.Spec.Writers {
 			writers = append(writers, slug.Make(w))
 		}
 		// add the team owner's name ;-)
@@ -257,7 +257,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			writers = append(writers, slug.Make(*lRepo.Owner))
 		}
 		readers := make([]string, 0)
-		for _, r := range lRepo.Data.Readers {
+		for _, r := range lRepo.Spec.Readers {
 			readers = append(readers, slug.Make(r))
 		}
 
@@ -275,22 +275,22 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 
 		// adding exernal reader/writer
 		eReaders := make([]string, 0)
-		for _, r := range lRepo.Data.ExternalUserReaders {
+		for _, r := range lRepo.Spec.ExternalUserReaders {
 			if user, ok := local.ExternalUsers()[r]; ok {
-				eReaders = append(eReaders, user.Data.GithubID)
+				eReaders = append(eReaders, user.Spec.GithubID)
 			}
 		}
 
 		eWriters := make([]string, 0)
-		for _, w := range lRepo.Data.ExternalUserWriters {
+		for _, w := range lRepo.Spec.ExternalUserWriters {
 			if user, ok := local.ExternalUsers()[w]; ok {
-				eWriters = append(eWriters, user.Data.GithubID)
+				eWriters = append(eWriters, user.Spec.GithubID)
 			}
 		}
 
 		lRepos[slug.Make(reponame)] = &GithubRepoComparable{
-			IsPublic:            lRepo.Data.IsPublic,
-			IsArchived:          lRepo.Data.IsArchived,
+			IsPublic:            lRepo.Spec.IsPublic,
+			IsArchived:          lRepo.Spec.IsArchived,
 			Readers:             readers,
 			Writers:             writers,
 			ExternalUserReaders: eReaders,
@@ -431,17 +431,17 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 		}
 
 		grs := GithubRuleSet{
-			Name:        rs.Metadata.Name,
-			Enforcement: rs.Enforcement,
+			Name:        rs.Name,
+			Enforcement: rs.Spec.Enforcement,
 			BypassApps:  map[string]string{},
-			OnInclude:   rs.On.Include,
-			OnExclude:   rs.On.Exclude,
+			OnInclude:   rs.Spec.On.Include,
+			OnExclude:   rs.Spec.On.Exclude,
 			Rules:       map[string]entity.RuleSetParameters{},
 		}
-		for _, b := range rs.BypassApps {
+		for _, b := range rs.Spec.BypassApps {
 			grs.BypassApps[b.AppName] = b.Mode
 		}
-		for _, r := range rs.Rules {
+		for _, r := range rs.Spec.Rules {
 			grs.Rules[r.Ruletype] = r.Parameters
 		}
 		for reponame := range repositories {
@@ -449,7 +449,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 				grs.Repositories = append(grs.Repositories, slug.Make(reponame))
 			}
 		}
-		lgrs[rs.Metadata.Name] = &grs
+		lgrs[rs.Name] = &grs
 	}
 
 	// prepare remote comparable

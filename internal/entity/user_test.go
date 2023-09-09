@@ -17,9 +17,8 @@ func TestUser(t *testing.T) {
 		err := afero.WriteFile(fs, "users/user1.yaml", []byte(`
 apiVersion: v1
 kind: User
-metadata:
-  name: user1
-data:
+name: user1
+spec:
   githubID: github1
 `), 0644)
 		assert.Nil(t, err)
@@ -30,7 +29,7 @@ data:
 		assert.Equal(t, len(users), 1)
 		user1 := users["user1"]
 		assert.NotNil(t, user1)
-		assert.Equal(t, "github1", user1.Data.GithubID)
+		assert.Equal(t, "github1", user1.Spec.GithubID)
 	})
 
 	t.Run("happy path: with --- separator", func(t *testing.T) {
@@ -40,9 +39,8 @@ data:
 		err := afero.WriteFile(fs, "users/user1.yaml", []byte(`---
 apiVersion: v1
 kind: User
-metadata:
-  name: user1
-data:
+name: user1
+spec:
   githubID: github1
 `), 0644)
 		assert.Nil(t, err)
@@ -53,7 +51,7 @@ data:
 		assert.Equal(t, len(users), 1)
 		user1 := users["user1"]
 		assert.NotNil(t, user1)
-		assert.Equal(t, "github1", user1.Data.GithubID)
+		assert.Equal(t, "github1", user1.Spec.GithubID)
 	})
 
 	t.Run("not happy path: no users directory", func(t *testing.T) {
@@ -71,7 +69,7 @@ data:
 		err := afero.WriteFile(fs, "users/user1.yaml", []byte(`---
 apiVersion: v1
 kind: User
-data:
+spec:
   githubID: github1
 `), 0644)
 		assert.Nil(t, err)

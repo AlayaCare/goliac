@@ -12,9 +12,8 @@ func fixtureCreateUserTeam(t *testing.T, fs afero.Fs) {
 	err := afero.WriteFile(fs, "users/user1.yaml", []byte(`
 apiVersion: v1
 kind: User
-metadata:
-  name: user1
-data:
+name: user1
+spec:
   githubID: github1
 `), 0644)
 	assert.Nil(t, err)
@@ -22,9 +21,8 @@ data:
 	err = afero.WriteFile(fs, "users/user2.yaml", []byte(`
 apiVersion: v1
 kind: User
-metadata:
-  name: user2
-data:
+name: user2
+spec:
   githubID: github2
 `), 0644)
 	assert.Nil(t, err)
@@ -34,9 +32,8 @@ data:
 	err = afero.WriteFile(fs, "teams/team1/team.yaml", []byte(`
 apiVersion: v1
 kind: Team
-metadata:
-  name: team1
-data:
+name: team1
+spec:
   owners:
   - user1
   - user2
@@ -55,8 +52,7 @@ func TestRepository(t *testing.T) {
 		err := afero.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
 apiVersion: v1
 kind: Repository
-metadata:
-  name: repo1
+name: repo1
 `), 0644)
 		assert.Nil(t, err)
 		users, errs, warns := ReadUserDirectory(fs, "users")
@@ -83,8 +79,7 @@ metadata:
 		err := afero.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
 apiVersion: v1
 kind: Repository
-metadata:
-  name: repo2
+name: repo2
 `), 0644)
 		assert.Nil(t, err)
 		users, errs, warns := ReadUserDirectory(fs, "users")
@@ -110,9 +105,8 @@ metadata:
 		err := afero.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
 apiVersion: v1
 kind: Repository
-metadata:
-  name: repo1
-data:
+name: repo1
+spec:
   writers:
   - wrongteam
 `), 0644)
@@ -140,9 +134,8 @@ data:
 		err := afero.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
 apiVersion: v1
 kind: Repository
-metadata:
-  name: repo1
-data:
+name: repo1
+spec:
   readers:
   - wrongteam
 `), 0644)
@@ -170,9 +163,8 @@ data:
 		err := afero.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
 apiVersion: v1
 kind: Repository
-metadata:
-  name: repo1
-data:
+name: repo1
+spec:
   archived: true
 `), 0644)
 		assert.Nil(t, err)
@@ -201,9 +193,8 @@ data:
 		err := afero.WriteFile(fs, "archived/repo1.yaml", []byte(`
 apiVersion: v1
 kind: Repository
-metadata:
-  name: repo1
-data:
+name: repo1
+spec:
   archived: true
 `), 0644)
 		assert.Nil(t, err)

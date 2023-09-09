@@ -15,14 +15,13 @@ func TestEntity(t *testing.T) {
 		err := afero.WriteFile(fs, "foobar.yaml", []byte(`
 apiVersion: v1
 kind: FooBar
-metadata:
-  name: name
+name: name
 `), 0644)
 		assert.Nil(t, err)
 		e, err := parseEntity(fs, "foobar.yaml")
 		assert.Nil(t, err)
 		assert.NotNil(t, e)
-		assert.Equal(t, "name", e.Metadata.Name)
+		assert.Equal(t, "name", e.Name)
 		assert.Equal(t, "FooBar", e.Kind)
 		assert.Equal(t, "v1", e.ApiVersion)
 
@@ -40,8 +39,8 @@ metadata:
 		err := afero.WriteFile(fs, "foobar.yaml", []byte(`
 apiVersion: v1
 kind: FooBar
-metadata:
-metadata:
+name:
+name:
 `), 0644)
 		assert.Nil(t, err)
 		_, err = parseEntity(fs, "foobar.yaml")

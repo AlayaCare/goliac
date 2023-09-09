@@ -12,9 +12,8 @@ func fixtureCreateUser(t *testing.T, fs afero.Fs) {
 	err := afero.WriteFile(fs, "users/user1.yaml", []byte(`
 apiVersion: v1
 kind: User
-metadata:
-  name: user1
-data:
+name: user1
+spec:
   githubID: github1
 `), 0644)
 	assert.Nil(t, err)
@@ -22,9 +21,8 @@ data:
 	err = afero.WriteFile(fs, "users/user2.yaml", []byte(`
 apiVersion: v1
 kind: User
-metadata:
-  name: user2
-data:
+name: user2
+spec:
   githubID: github2
 `), 0644)
 	assert.Nil(t, err)
@@ -44,9 +42,8 @@ func TestTeam(t *testing.T) {
 		err := afero.WriteFile(fs, "teams/team1/team.yaml", []byte(`
 apiVersion: v1
 kind: Team
-metadata:
-  name: team1
-data:
+name: team1
+spec:
   owners:
   - user1
   - user2
@@ -72,9 +69,8 @@ data:
 		err := afero.WriteFile(fs, "teams/team1/team.yaml", []byte(`
 apiVersion: v1
 kind: Team
-metadata:
-  name: team1
-data:
+name: team1
+spec:
   owners:
   - user1
 `), 0644)
@@ -108,9 +104,8 @@ data:
 		err := afero.WriteFile(fs, "teams/team1/team.yaml", []byte(`
 apiVersion: v1
 kind: Team
-metadata:
-  name: team1
-data:
+name: team1
+spec:
   owners:
   - wronguser1
   - wronguser2
@@ -136,8 +131,7 @@ data:
 		err := afero.WriteFile(fs, "teams/team1/team.yaml", []byte(`
 apiVersion: v2
 kind: Foo
-metadata:
-  name: team2
+name: team2
 `), 0644)
 		assert.Nil(t, err)
 		users, errs, warns := ReadUserDirectory(fs, "users")

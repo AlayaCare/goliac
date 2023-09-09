@@ -28,9 +28,8 @@ If you want to create a new team (like `foobar`), you need to create a PR with a
 ```
 apiVersion: v1
 kind: Team
-metadata:
-  name: foobar
-data:
+name: foobar
+spec:
   owners:
     - user1
     - user2
@@ -52,8 +51,7 @@ On a given team subdirectory you can create a repository definition via a yaml f
 ```
 apiVersion: v1
 kind: Repository
-metadata:
-  name: awesome-repository
+name: awesome-repository
 ```
 
 This will create a `awesome-repository` repository under your organization, that will be 
@@ -65,9 +63,8 @@ You can of course tweak that:
 ```
 apiVersion: v1
 kind: Repository
-metadata:
-  name: awesome-repository
-data:
+name: awesome-repository
+spec:
   public: true
   writers:
   - anotherteamA
@@ -89,9 +86,8 @@ You can archive a repository, by a PR that
 ```
 apiVersion: v1
 kind: Repository
-metadata:
-  name: awesome-repository
-data:
+name: awesome-repository
+spec:
   archived: true
 ```
 

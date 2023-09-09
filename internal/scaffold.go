@@ -142,8 +142,8 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 			lTeam := entity.Team{}
 			lTeam.ApiVersion = "v1"
 			lTeam.Kind = "Team"
-			lTeam.Metadata.Name = team
-			lTeam.Data.Owners = t.Members
+			lTeam.Name = team
+			lTeam.Spec.Owners = t.Members
 			out, err := yaml.Marshal(&lTeam)
 
 			if err == nil {
@@ -160,21 +160,21 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 				lRepo := entity.Repository{}
 				lRepo.ApiVersion = "v1"
 				lRepo.Kind = "Repository"
-				lRepo.Metadata.Name = r
-				lRepo.Data.Writers = repoWrite[r]
-				lRepo.Data.Readers = repoRead[r]
+				lRepo.Name = r
+				lRepo.Spec.Writers = repoWrite[r]
+				lRepo.Spec.Readers = repoRead[r]
 
 				// removing team name from writer
-				for i, t := range lRepo.Data.Writers {
+				for i, t := range lRepo.Spec.Writers {
 					if t == team {
-						lRepo.Data.Writers = append(lRepo.Data.Writers[:i], lRepo.Data.Writers[i+1:]...)
+						lRepo.Spec.Writers = append(lRepo.Spec.Writers[:i], lRepo.Spec.Writers[i+1:]...)
 						break
 					}
 				}
 				// removing team owner (especially for the special case teams repo)
-				for i, t := range lRepo.Data.Writers {
+				for i, t := range lRepo.Spec.Writers {
 					if strings.HasSuffix(t, "-owners") {
-						lRepo.Data.Writers = append(lRepo.Data.Writers[:i], lRepo.Data.Writers[i+1:]...)
+						lRepo.Spec.Writers = append(lRepo.Spec.Writers[:i], lRepo.Spec.Writers[i+1:]...)
 						break
 					}
 				}
@@ -204,8 +204,8 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 			lTeam := entity.Team{}
 			lTeam.ApiVersion = "v1"
 			lTeam.Kind = "Team"
-			lTeam.Metadata.Name = team
-			lTeam.Data.Owners = t.Members
+			lTeam.Name = team
+			lTeam.Spec.Owners = t.Members
 			out, err := yaml.Marshal(&lTeam)
 
 			if err == nil {
@@ -237,7 +237,7 @@ func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]stri
 
 	if len(users) > 0 && err == nil {
 		for username, user := range users {
-			usermap[user.Data.GithubID] = username
+			usermap[user.Spec.GithubID] = username
 			out, err := yaml.Marshal(&user)
 			if err == nil {
 				if err := writeFile(path.Join(userspath, "org", username+".yaml"), out, fs); err != nil {
@@ -254,8 +254,8 @@ func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]stri
 			user := entity.User{}
 			user.ApiVersion = "v1"
 			user.Kind = "User"
-			user.Metadata.Name = githubid
-			user.Data.GithubID = githubid
+			user.Name = githubid
+			user.Spec.GithubID = githubid
 
 			out, err := yaml.Marshal(&user)
 			if err == nil {
@@ -274,20 +274,20 @@ func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]stri
 func (s *Scaffold) generateRuleset(fs afero.Fs, rulesetspath string) error {
 	ruleset := `apiVersion: v1
 kind: Ruleset
-metadata:
-  name: default
-enforcement: active
-bypassapps:
-  - appname: goliac-project-app
-    mode: always
-on:
-  include: 
-  - "~DEFAULT_BRANCH"
+name: default
+spec:
+  enforcement: active
+  bypassapps:
+    - appname: goliac-project-app
+      mode: always
+  on:
+    include: 
+    - "~DEFAULT_BRANCH"
 
-rules:
-  - ruletype: pull_request
-    parameters:
-      requiredApprovingReviewCount: 1
+  rules:
+    - ruletype: pull_request
+      parameters:
+        requiredApprovingReviewCount: 1
 `
 	if err := writeFile(path.Join(rulesetspath, "default.yaml"), []byte(ruleset), fs); err != nil {
 		return err
@@ -362,8 +362,7 @@ On a given team subdirectory you can create a repository definition via a yaml f
 ` + "```" + `
 apiVersion: v1
 kind: Repository
-metadata:
-  name: awesome-repository
+name: awesome-repository
 ` + "```" + `
 
 This will create a ` + "`" + `awesome-repository` + "`" + ` repository under your organization, that will be 
@@ -375,9 +374,8 @@ You can of course tweak that:
 ` + "```" + `
 apiVersion: v1
 kind: Repository
-metadata:
-  name: awesome-repository
-data:
+name: awesome-repository
+spec:
   public: true
   writers:
   - anotherteamA
@@ -398,9 +396,8 @@ If you want to create a new team (like ` + "`" + `foobar` + "`" + `), you need t
 ` + "```" + `
 apiVersion: v1
 kind: Team
-metadata:
-  name: foobar
-data:
+name: foobar
+spec:
   owners:
     - user1
     - user2
@@ -423,9 +420,8 @@ You can archive a repository, by a PR that
 ` + "```" + `
 apiVersion: v1
 kind: Repository
-metadata:
-  name: awesome-repository
-data:
+name: awesome-repository
+spec:
   archived: true
 ` + "```" + `
 

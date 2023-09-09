@@ -132,20 +132,20 @@ and you can configure different ruleset in the `/rulesets` directory like
 ```
 apiVersion: v1
 kind: Ruleset
-metadata:
-  name: default
-enforcement: evaluate # can be disable, active or evaluate 
-bypassapps:
-  - appname: goliac-project-app
-    mode: always # always or pull_request
-on:
-  include: 
-    - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
+name: default
+spec:
+  enforcement: evaluate # can be disable, active or evaluate 
+  bypassapps:
+    - appname: goliac-project-app
+      mode: always # always or pull_request
+  on:
+    include: 
+      - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
 
-rules:
-  - ruletype: pull_request # currently supported: pull_request, required_signatures, required_status_checks
-    parameters:
-      requiredApprovingReviewCount: 1
+  rules:
+    - ruletype: pull_request # currently supported: pull_request, required_signatures,required_status_checks
+      parameters:
+        requiredApprovingReviewCount: 1
 ```
 
 ## Testing your IAC github repository
@@ -203,7 +203,7 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_SERVER_GIT_BRANCH         | main        | teams repo default branch name to use |
 | GOLIAC_SERVER_HOST               |localhost    | useful to put it to `0.0.0.0` |
 | GOLIAC_SERVER_PORT               | 18000       |                            |
-
+| GOLIAC_SERVER_GIT_BRANCH_PROTECTION_REQUIRED_CHECK | validate | ci check to enforce when evaluating a PR (used for CI mode) |
 then you just need to start it with
 
 ```
@@ -243,8 +243,7 @@ As a reminder a user is defined via a yaml file like `alice.yaml` with the conte
 ```
 apiVersion: v1
 kind: User
-metadata:
-  name: alice
-data:
+name: alice
+spec:
   githubID: alice-myorg
 ```
