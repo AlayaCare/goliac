@@ -414,16 +414,7 @@ The users name used are the one defined in the ` + "`" + `/users` + "`" + ` sub 
 
 ### Archive a repository
 
-You can archive a repository, by a PR that
-- move the yaml repository file into the ` + "`" + `/archived` + "`" + ` directory
-- and chage the repository definition like
-` + "```" + `
-apiVersion: v1
-kind: Repository
-name: awesome-repository
-spec:
-  archived: true
-` + "```" + `
+You can archive a repository, by a PR that move the yaml repository file into the ` + "`" + `/archived` + "`" + ` directory
 
 `
 	if err := writeFile(path.Join(rootpath, "README.md"), []byte(readme), fs); err != nil {
