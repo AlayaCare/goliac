@@ -290,7 +290,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 
 		lRepos[slug.Make(reponame)] = &GithubRepoComparable{
 			IsPublic:            lRepo.Spec.IsPublic,
-			IsArchived:          lRepo.Spec.IsArchived,
+			IsArchived:          lRepo.Archived,
 			Readers:             readers,
 			Writers:             writers,
 			ExternalUserReaders: eReaders,

@@ -73,7 +73,7 @@ func (g *GoliacServerImpl) GetRepositories(app.GetRepositoriesParams) middleware
 		repo := models.Repository{
 			Name:     r.Name,
 			Public:   r.Spec.IsPublic,
-			Archived: r.Spec.IsArchived,
+			Archived: r.Archived,
 		}
 		repositories = append(repositories, &repo)
 	}
@@ -136,7 +136,7 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 	repositoryDetails := models.RepositoryDetails{
 		Name:          repository.Name,
 		Public:        repository.Spec.IsPublic,
-		Archived:      repository.Spec.IsArchived,
+		Archived:      repository.Archived,
 		Teams:         teams,
 		Collaborators: collaborators,
 	}
@@ -192,7 +192,7 @@ func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responde
 	for reponame, repo := range repos {
 		r := models.Repository{
 			Name:     reponame,
-			Archived: repo.Spec.IsArchived,
+			Archived: repo.Archived,
 			Public:   repo.Spec.IsPublic,
 		}
 		repositories = append(repositories, &r)
@@ -284,7 +284,7 @@ func (g *GoliacServerImpl) GetCollaborator(params app.GetCollaboratorParams) mid
 				collaboratordetails.Repositories = append(collaboratordetails.Repositories, &models.Repository{
 					Name:     repo.Name,
 					Public:   repo.Spec.IsPublic,
-					Archived: repo.Spec.IsArchived,
+					Archived: repo.Archived,
 				})
 			}
 		}
@@ -293,7 +293,7 @@ func (g *GoliacServerImpl) GetCollaborator(params app.GetCollaboratorParams) mid
 				collaboratordetails.Repositories = append(collaboratordetails.Repositories, &models.Repository{
 					Name:     repo.Name,
 					Public:   repo.Spec.IsPublic,
-					Archived: repo.Spec.IsArchived,
+					Archived: repo.Archived,
 				})
 			}
 		}
@@ -399,7 +399,7 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 		repo := models.Repository{
 			Name:     r.Name,
 			Public:   r.Spec.IsPublic,
-			Archived: r.Spec.IsArchived,
+			Archived: r.Archived,
 		}
 		userdetails.Repositories = append(userdetails.Repositories, &repo)
 	}

@@ -17,9 +17,9 @@ type Repository struct {
 		ExternalUserReaders []string `yaml:"externalUserReaders,omitempty"`
 		ExternalUserWriters []string `yaml:"externalUserWriters,omitempty"`
 		IsPublic            bool     `yaml:"public,omitempty"`
-		IsArchived          bool     `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	} `yaml:"spec,omitempty"`
-	Owner *string `yaml:"owner,omitempty"` // implicit. team name owning the repo (if any)
+	Archived bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
+	Owner    *string `yaml:"owner,omitempty"`    // implicit. team name owning the repo (if any)
 }
 
 /*
@@ -85,7 +85,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 				if err := repo.Validate(filepath.Join(archivedDirname, entry.Name()), teams, externalUsers); err != nil {
 					errors = append(errors, err)
 				} else {
-					repo.Spec.IsArchived = true
+					repo.Archived = true
 					repos[repo.Name] = repo
 				}
 			}
@@ -134,7 +134,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 							} else {
 								teamname := team.Name()
 								repo.Owner = &teamname
-								repo.Spec.IsArchived = false
+								repo.Archived = false
 								repos[repo.Name] = repo
 							}
 						}
