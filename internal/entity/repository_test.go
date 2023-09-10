@@ -155,7 +155,7 @@ spec:
 		assert.Equal(t, len(warns), 0)
 	})
 
-	t.Run("happy path: archived repo in the wrong place", func(t *testing.T) {
+	t.Run("happy path: archived repo in the wrong place: it doesn't matter", func(t *testing.T) {
 		// create a new user
 		fs := afero.NewMemMapFs()
 		fixtureCreateUserTeam(t, fs)
@@ -179,10 +179,10 @@ spec:
 		assert.NotNil(t, teams)
 
 		repos, errs, warns := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
-		assert.Equal(t, len(errs), 1)
+		assert.Equal(t, len(errs), 0)
 		assert.Equal(t, len(warns), 0)
 		assert.NotNil(t, repos)
-		assert.Equal(t, len(repos), 0)
+		assert.Equal(t, len(repos), 1)
 	})
 
 	t.Run("happy path: archived repo", func(t *testing.T) {
@@ -194,8 +194,6 @@ spec:
 apiVersion: v1
 kind: Repository
 name: repo1
-spec:
-  archived: true
 `), 0644)
 		assert.Nil(t, err)
 		users, errs, warns := ReadUserDirectory(fs, "users")

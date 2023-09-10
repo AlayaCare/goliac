@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 )
 
 func fixtureCreateUser(t *testing.T, fs afero.Fs) {
@@ -143,5 +144,118 @@ name: team2
 		assert.Equal(t, len(errs), 1)
 		assert.Equal(t, len(warns), 0)
 		assert.NotNil(t, teams)
+	})
+}
+
+func TestAdjustTeam(t *testing.T) {
+	t.Run("happy path: no change ", func(t *testing.T) {
+		team := Team{}
+		team.Spec.Owners = []string{"owner2", "owner3"}
+		team.Spec.Members = []string{"member2", "member3"}
+		users := make(map[string]*User)
+		for _, username := range []string{"owner1", "owner2", "owner3", "owner3", "member1", "member2", "member3", "member4"} {
+			u := User{}
+			u.Name = username
+			u.Spec.GithubID = username
+			users[username] = &u
+		}
+		fs := afero.NewMemMapFs()
+		changed, err := team.Update(fs, "/teams/ateam/team.yaml", users)
+
+		assert.Nil(t, err)
+		assert.False(t, changed)
+	})
+	t.Run("not happy path: missing member ", func(t *testing.T) {
+		team := Team{}
+		team.Spec.Owners = []string{"owner2", "owner3"}
+		team.Spec.Members = []string{"member2", "member3"}
+		users := make(map[string]*User)
+		for _, username := range []string{"owner1", "owner2", "owner3", "owner3", "member1", "member2"} {
+			u := User{}
+			u.Name = username
+			u.Spec.GithubID = username
+			users[username] = &u
+		}
+		fs := afero.NewMemMapFs()
+		changed, err := team.Update(fs, "/teams/ateam/team.yaml", users)
+
+		assert.Nil(t, err)
+		assert.True(t, changed)
+
+		f, err := afero.ReadFile(fs, "/teams/ateam/team.yaml")
+		assert.Nil(t, err)
+
+		var checkTeam Team
+		yaml.Unmarshal(f, &checkTeam)
+
+		assert.Equal(t, 1, len(checkTeam.Spec.Members))
+		assert.Equal(t, 2, len(checkTeam.Spec.Owners))
+		assert.Equal(t, "member2", checkTeam.Spec.Members[0])
+	})
+}
+
+func TestReadAndAdjustTeam(t *testing.T) {
+	t.Run("happy path: no team, no problem", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		users := make(map[string]*User)
+
+		changed, err := ReadAndAdjustTeamDirectory(fs, "/teams", users)
+		assert.Nil(t, err)
+		assert.Equal(t, 0, len(changed))
+	})
+
+	t.Run("happy path: no change ", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		users := make(map[string]*User)
+		for _, username := range []string{"owner1", "owner2", "owner3", "owner3", "member1", "member2", "member3", "member4"} {
+			u := User{}
+			u.Name = username
+			u.Spec.GithubID = username
+			users[username] = &u
+		}
+
+		err := afero.WriteFile(fs, "/teams/ateam/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: ateam
+spec:
+  owners:
+    - owner2
+    - owner3
+  members:
+    - member2
+    - member3
+`), 0644)
+		assert.Nil(t, err)
+		changed, err := ReadAndAdjustTeamDirectory(fs, "/teams", users)
+		assert.Nil(t, err)
+		assert.Equal(t, 0, len(changed))
+	})
+	t.Run("not happy path: missing member ", func(t *testing.T) {
+		fs := afero.NewMemMapFs()
+		users := make(map[string]*User)
+		for _, username := range []string{"owner1", "owner2", "owner3", "owner3", "member1", "member2"} {
+			u := User{}
+			u.Name = username
+			u.Spec.GithubID = username
+			users[username] = &u
+		}
+
+		err := afero.WriteFile(fs, "/teams/ateam/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: ateam
+spec:
+  owners:
+    - owner2
+    - owner3
+  members:
+    - member2
+    - member3
+`), 0644)
+		assert.Nil(t, err)
+		changed, err := ReadAndAdjustTeamDirectory(fs, "/teams", users)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(changed))
 	})
 }

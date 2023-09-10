@@ -17,9 +17,9 @@ type Repository struct {
 		ExternalUserReaders []string `yaml:"externalUserReaders,omitempty"`
 		ExternalUserWriters []string `yaml:"externalUserWriters,omitempty"`
 		IsPublic            bool     `yaml:"public,omitempty"`
-		IsArchived          bool     `yaml:"archived,omitempty"`
 	} `yaml:"spec,omitempty"`
-	Owner *string `yaml:"owner,omitempty"` // implicit. team name owning the repo (if any)
+	Archived bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
+	Owner    *string `yaml:"owner,omitempty"`    // implicit. team name owning the repo (if any)
 }
 
 /*
@@ -82,9 +82,10 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 			if err != nil {
 				errors = append(errors, err)
 			} else {
-				if err := repo.Validate(filepath.Join(archivedDirname, entry.Name()), teams, externalUsers, true); err != nil {
+				if err := repo.Validate(filepath.Join(archivedDirname, entry.Name()), teams, externalUsers); err != nil {
 					errors = append(errors, err)
 				} else {
+					repo.Archived = true
 					repos[repo.Name] = repo
 				}
 			}
@@ -120,7 +121,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 					if err != nil {
 						errors = append(errors, err)
 					} else {
-						if err := repo.Validate(filepath.Join(teamDirname, team.Name(), sube.Name()), teams, externalUsers, false); err != nil {
+						if err := repo.Validate(filepath.Join(teamDirname, team.Name(), sube.Name()), teams, externalUsers); err != nil {
 							errors = append(errors, err)
 						} else {
 							// check if the repository doesn't already exists
@@ -133,6 +134,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 							} else {
 								teamname := team.Name()
 								repo.Owner = &teamname
+								repo.Archived = false
 								repos[repo.Name] = repo
 							}
 						}
@@ -145,7 +147,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 	return repos, errors, warning
 }
 
-func (r *Repository) Validate(filename string, teams map[string]*Team, externalUsers map[string]*User, archived bool) error {
+func (r *Repository) Validate(filename string, teams map[string]*Team, externalUsers map[string]*User) error {
 
 	if r.ApiVersion != "v1" {
 		return fmt.Errorf("invalid apiVersion: %s (check repository filename %s)", r.ApiVersion, filename)
@@ -187,12 +189,5 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		}
 	}
 
-	if archived != r.Spec.IsArchived {
-		if archived {
-			return fmt.Errorf("invalid archived: %s is in the archived directory without the `archived` boolean", filename)
-		} else {
-			return fmt.Errorf("invalid archived: %s has `archived` set to true, but isn't in the archived directory", filename)
-		}
-	}
 	return nil
 }

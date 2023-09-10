@@ -179,6 +179,8 @@ func ReadAndAdjustTeamDirectory(fs afero.Fs, dirname string, users map[string]*U
 	return teamschanged, nil
 }
 
+// Update is telling if the team needs to be adjust (and the team's definition was changed on disk),
+// based on the list of (still) existing users
 func (t *Team) Update(fs afero.Fs, filename string, users map[string]*User) (bool, error) {
 	changed := false
 	owners := make([]string, 0)
