@@ -3,7 +3,7 @@
 Goliac (Github Organization Leveraged by Infrastructure As Code), is a tool to manage your Github Organization (users/teams/repositories) via
 - yaml manifests files structured in a Github repository
 - this IAC Github repositories can be updated by teams from your organization, but only the repositories they owns
-- all repositories rules are enforced via a central configuration that only the IT/security team can update (if you are using Github Enterprice)
+- all repositories rules are enforced via a central configuration that only the IT/security team can update (if you are using Github Enterprise)
 - a Github App watching this repository and applying any changes
 
 ![goliac workflow](docs/images/goliac_basic_workflow.png)
