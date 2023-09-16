@@ -203,11 +203,17 @@ func (t *Team) Update(fs afero.Fs, filename string, users map[string]*User) (boo
 	}
 	t.Spec.Members = members
 
-	yamlTeam, err := yaml.Marshal(t)
+	file, err := fs.Create(filename)
 	if err != nil {
-		return changed, err
+		return changed, fmt.Errorf("Not able to create file %s: %v", filename, err)
 	}
-	err = afero.WriteFile(fs, filename, yamlTeam, 0644)
+	defer file.Close()
 
+	encoder := yaml.NewEncoder(file)
+	encoder.SetIndent(2)
+	err = encoder.Encode(t)
+	if err != nil {
+		return changed, fmt.Errorf("Not able to write file %s: %v", filename, err)
+	}
 	return changed, err
 }
