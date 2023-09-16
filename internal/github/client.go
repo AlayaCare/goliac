@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -54,7 +55,6 @@ func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		if err != nil {
 			return nil, err
 		}
-
 		t.client.accessToken = accessToken
 		t.client.tokenExpiration = expiresAt
 	}
@@ -107,7 +107,8 @@ func NewGitHubClientImpl(githubServer, organizationName string, appID int64, pri
 
 	// find the installation ID for the given organization
 	for _, installation := range installations {
-		if installation.Account.Login == organizationName && installation.AppId == appID {
+		logrus.Debugf("Found installation %s with id %d for organization: %s", installation.AppSlug, installation.ID, organizationName)
+		if strings.EqualFold(installation.Account.Login, organizationName) && installation.AppId == appID {
 			client.installationID = installation.ID
 			client.appSlug = installation.AppSlug
 			break

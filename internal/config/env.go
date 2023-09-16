@@ -37,16 +37,16 @@ var Config = struct {
 	MiddlewareGzipEnabled bool `env:"GOLIAC_MIDDLEWARE_GZIP_ENABLED" envDefault:"true"`
 
 	// CORSEnabled - enable CORS
-	CORSEnabled          bool     `env:"GOLIAC__CORS_ENABLED" envDefault:"true"`
-	CORSAllowCredentials bool     `env:"GOLIAC__CORS_ALLOW_CREDENTIALS" envDefault:"true"`
-	CORSAllowedHeaders   []string `env:"GOLIAC__CORS_ALLOWED_HEADERS" envDefault:"Origin,Accept,Content-Type,X-Requested-With,Authorization,Time_Zone" envSeparator:","`
-	CORSAllowedMethods   []string `env:"GOLIAC__CORS_ALLOWED_METHODS" envDefault:"GET,POST,PUT,DELETE,PATCH" envSeparator:","`
-	CORSAllowedOrigins   []string `env:"GOLIAC__CORS_ALLOWED_ORIGINS" envDefault:"*" envSeparator:","`
-	CORSExposedHeaders   []string `env:"GOLIAC__CORS_EXPOSED_HEADERS" envDefault:"WWW-Authenticate" envSeparator:","`
+	CORSEnabled          bool     `env:"GOLIAC_CORS_ENABLED" envDefault:"true"`
+	CORSAllowCredentials bool     `env:"GOLIAC_CORS_ALLOW_CREDENTIALS" envDefault:"true"`
+	CORSAllowedHeaders   []string `env:"GOLIAC_CORS_ALLOWED_HEADERS" envDefault:"Origin,Accept,Content-Type,X-Requested-With,Authorization,Time_Zone" envSeparator:","`
+	CORSAllowedMethods   []string `env:"GOLIAC_CORS_ALLOWED_METHODS" envDefault:"GET,POST,PUT,DELETE,PATCH" envSeparator:","`
+	CORSAllowedOrigins   []string `env:"GOLIAC_CORS_ALLOWED_ORIGINS" envDefault:"*" envSeparator:","`
+	CORSExposedHeaders   []string `env:"GOLIAC_CORS_EXPOSED_HEADERS" envDefault:"WWW-Authenticate" envSeparator:","`
 
 	// WebPrefix - base path for web and API
 	// e.g. GOLANG_SKELETON_WEB_PREFIX=/foo
 	// UI path  => localhost:18000/foo"
 	// API path => localhost:18000/foo/api/v1"
-	WebPrefix string `env:"GOLIAC__WEB_PREFIX" envDefault:""`
+	WebPrefix string `env:"GOLIAC_WEB_PREFIX" envDefault:""`
 }{}

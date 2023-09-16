@@ -80,7 +80,7 @@ type GoliacRemoteMock struct {
 	appids     map[string]int
 }
 
-func (m *GoliacRemoteMock) Load() error {
+func (m *GoliacRemoteMock) Load(continueOnError bool) error {
 	return nil
 }
 func (m *GoliacRemoteMock) IsEnterprise() bool {

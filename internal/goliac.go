@@ -178,7 +178,7 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(teamreponame string, branchname
 }
 
 func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch string, forceresync bool) error {
-	err := g.remote.Load()
+	err := g.remote.Load(false)
 	if err != nil {
 		return fmt.Errorf("Error when fetching data from Github: %v", err)
 	}
