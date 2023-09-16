@@ -443,7 +443,7 @@ func TestRemoteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
 
-		err := remoteImpl.Load()
+		err := remoteImpl.Load(false)
 		assert.Nil(t, err)
 		assert.Equal(t, 122, len(remoteImpl.teams))
 		assert.Equal(t, 2, len(remoteImpl.teamRepos["slug-1"]))

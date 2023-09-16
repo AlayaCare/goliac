@@ -23,8 +23,8 @@ const FORLOOP_STOP = 100
  * and mount it in memory
  */
 type GoliacRemote interface {
-	// Load from a github repository
-	Load() error
+	// Load from a github repository. continueOnError is used for scaffolding
+	Load(continueOnError bool) error
 	FlushCache()
 
 	Users() map[string]string
@@ -302,9 +302,7 @@ type GraplQLUsers struct {
 		}
 	}
 	Errors []struct {
-		Path []struct {
-			Query string `json:"query"`
-		} `json:"path"`
+		Path       []interface{} `json:"path"`
 		Extensions struct {
 			Code         string
 			ErrorMessage string
@@ -314,6 +312,7 @@ type GraplQLUsers struct {
 }
 
 func (g *GoliacRemoteImpl) loadOrgUsers() (map[string]string, error) {
+	logrus.Debug("loading orgUsers")
 	users := make(map[string]string)
 
 	variables := make(map[string]interface{})
@@ -335,7 +334,7 @@ func (g *GoliacRemoteImpl) loadOrgUsers() (map[string]string, error) {
 			return users, err
 		}
 		if len(gResult.Errors) > 0 {
-			return users, fmt.Errorf("Graphql error: %v", gResult.Errors[0].Message)
+			return users, fmt.Errorf("Graphql error on loadOrgUsers: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 		}
 
 		for _, c := range gResult.Data.Organization.MembersWithRole.Nodes {
@@ -412,9 +411,7 @@ type GraplQLRepositories struct {
 		}
 	}
 	Errors []struct {
-		Path []struct {
-			Query string `json:"query"`
-		} `json:"path"`
+		Path       []interface{} `json:"path"`
 		Extensions struct {
 			Code         string
 			ErrorMessage string
@@ -424,6 +421,7 @@ type GraplQLRepositories struct {
 }
 
 func (g *GoliacRemoteImpl) loadRepositories() (map[string]*GithubRepository, map[string]*GithubRepository, error) {
+	logrus.Debug("loading repositories")
 	repositories := make(map[string]*GithubRepository)
 	repositoriesByRefId := make(map[string]*GithubRepository)
 
@@ -431,6 +429,7 @@ func (g *GoliacRemoteImpl) loadRepositories() (map[string]*GithubRepository, map
 	variables["orgLogin"] = config.Config.GithubAppOrganization
 	variables["endCursor"] = nil
 
+	var retErr error
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
@@ -446,7 +445,7 @@ func (g *GoliacRemoteImpl) loadRepositories() (map[string]*GithubRepository, map
 			return repositories, repositoriesByRefId, err
 		}
 		if len(gResult.Errors) > 0 {
-			return repositories, repositoriesByRefId, fmt.Errorf("Graphql error: %v", gResult.Errors[0].Message)
+			retErr = fmt.Errorf("Graphql error on loadRepositories: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 		}
 
 		for _, c := range gResult.Data.Organization.Repositories.Nodes {
@@ -475,7 +474,7 @@ func (g *GoliacRemoteImpl) loadRepositories() (map[string]*GithubRepository, map
 		}
 	}
 
-	return repositories, repositoriesByRefId, nil
+	return repositories, repositoriesByRefId, retErr
 }
 
 const listAllTeamsInOrg = `
@@ -513,9 +512,7 @@ type GraplQLTeams struct {
 		}
 	}
 	Errors []struct {
-		Path []struct {
-			Query string `json:"query"`
-		} `json:"path"`
+		Path       []interface{} `json:"path"`
 		Extensions struct {
 			Code         string
 			ErrorMessage string
@@ -567,9 +564,7 @@ type GraplQLTeamsRepos struct {
 		}
 	}
 	Errors []struct {
-		Path []struct {
-			Query string `json:"query"`
-		} `json:"path"`
+		Path       []interface{} `json:"path"`
 		Extensions struct {
 			Code         string
 			ErrorMessage string
@@ -579,6 +574,7 @@ type GraplQLTeamsRepos struct {
 }
 
 func (g *GoliacRemoteImpl) loadAppIds() (map[string]int, error) {
+	logrus.Debug("loading appIds")
 	type Installation struct {
 		TotalClount   int `json:"total_count"`
 		Installations []struct {
@@ -611,11 +607,43 @@ func (g *GoliacRemoteImpl) loadAppIds() (map[string]int, error) {
 	return appIds, nil
 }
 
-func (g *GoliacRemoteImpl) Load() error {
+func (g *GoliacRemoteImpl) Load(continueOnError bool) error {
+	var retErr error
+
+	if time.Now().After(g.ttlExpireRulesets) {
+		rulesets, err := g.loadRulesets()
+		if err != nil {
+			if !continueOnError {
+				return err
+			}
+			logrus.Debugf("Error loading rulesets: %v", err)
+			retErr = fmt.Errorf("Error loading rulesets: %v", err)
+		}
+		g.rulesets = rulesets
+		g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
+	}
+
+	if time.Now().After(g.ttlExpireAppIds) {
+		appIds, err := g.loadAppIds()
+		if err != nil {
+			if !continueOnError {
+				return err
+			}
+			logrus.Debugf("Error loading app ids: %v", err)
+			retErr = fmt.Errorf("Error loading app ids: %v", err)
+		}
+		g.appIds = appIds
+		g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
+	}
+
 	if time.Now().After(g.ttlExpireUsers) {
 		users, err := g.loadOrgUsers()
 		if err != nil {
-			return err
+			if !continueOnError {
+				return err
+			}
+			logrus.Debugf("Error loading users: %v", err)
+			retErr = fmt.Errorf("Error loading users: %v", err)
 		}
 		g.users = users
 		g.ttlExpireUsers = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
@@ -624,7 +652,11 @@ func (g *GoliacRemoteImpl) Load() error {
 	if time.Now().After(g.ttlExpireRepositories) {
 		repositories, repositoriesByRefId, err := g.loadRepositories()
 		if err != nil {
-			return err
+			if !continueOnError {
+				return err
+			}
+			logrus.Debugf("Error loading repositories: %v", err)
+			retErr = fmt.Errorf("Error loading repositories: %v", err)
 		}
 		g.repositories = repositories
 		g.repositoriesByRefId = repositoriesByRefId
@@ -634,42 +666,36 @@ func (g *GoliacRemoteImpl) Load() error {
 	if time.Now().After(g.ttlExpireTeams) {
 		teams, teamSlugByName, err := g.loadTeams()
 		if err != nil {
-			return err
+			if !continueOnError {
+				return err
+			}
+			logrus.Debugf("Error loading teams: %v", err)
+			retErr = fmt.Errorf("Error loading teams: %v", err)
 		}
 		g.teams = teams
 		g.teamSlugByName = teamSlugByName
 		g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
-	if time.Now().After(g.ttlExpireAppIds) {
-		appIds, err := g.loadAppIds()
-		if err != nil {
-			return err
-		}
-		g.appIds = appIds
-		g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
-	}
-
-	if time.Now().After(g.ttlExpireRulesets) {
-		rulesets, err := g.loadRulesets()
-		if err != nil {
-			return err
-		}
-		g.rulesets = rulesets
-		g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
-	}
-
 	if time.Now().After(g.ttlExpireTeamsRepos) {
 		if config.Config.GithubConcurrentThreads <= 1 {
 			teamsrepos, err := g.loadTeamReposNonConcurrently()
 			if err != nil {
-				return err
+				if !continueOnError {
+					return err
+				}
+				logrus.Debugf("Error loading teams-repos: %v", err)
+				retErr = fmt.Errorf("Error loading teams-repos: %v", err)
 			}
 			g.teamRepos = teamsrepos
 		} else {
 			teamsrepos, err := g.loadTeamReposConcurrently(config.Config.GithubConcurrentThreads)
 			if err != nil {
-				return err
+				if !continueOnError {
+					return err
+				}
+				logrus.Debugf("Error loading teams-repos: %v", err)
+				retErr = fmt.Errorf("Error loading teams-repos: %v", err)
 			}
 			g.teamRepos = teamsrepos
 		}
@@ -680,10 +706,11 @@ func (g *GoliacRemoteImpl) Load() error {
 	logrus.Debugf("Nb remote teams: %d", len(g.teams))
 	logrus.Debugf("Nb remote repositories: %d", len(g.repositories))
 
-	return nil
+	return retErr
 }
 
 func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently() (map[string]map[string]*GithubTeamRepo, error) {
+	logrus.Debug("loading teamReposNonConcurrently")
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
 
 	for teamSlug := range g.teams {
@@ -697,6 +724,7 @@ func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently() (map[string]map[string
 }
 
 func (g *GoliacRemoteImpl) loadTeamReposConcurrently(maxGoroutines int64) (map[string]map[string]*GithubTeamRepo, error) {
+	logrus.Debug("loading teamReposConcurrently")
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
 
 	var wg sync.WaitGroup
@@ -779,7 +807,7 @@ func (g *GoliacRemoteImpl) loadTeamRepos(teamSlug string) (map[string]*GithubTea
 			return nil, err
 		}
 		if len(gResult.Errors) > 0 {
-			return nil, fmt.Errorf("Graphql error: %v", gResult.Errors[0].Message)
+			return nil, fmt.Errorf("Graphql error on loadTeamRepos: %v (%v) for teamSlug %s", gResult.Errors[0].Message, gResult.Errors[0].Path, teamSlug)
 		}
 
 		for _, c := range gResult.Data.Organization.Team.Repository.Edges {
@@ -842,9 +870,7 @@ type GraplQLTeamMembers struct {
 		}
 	}
 	Errors []struct {
-		Path []struct {
-			Query string `json:"query"`
-		} `json:"path"`
+		Path       []interface{} `json:"path"`
 		Extensions struct {
 			Code         string
 			ErrorMessage string
@@ -854,6 +880,7 @@ type GraplQLTeamMembers struct {
 }
 
 func (g *GoliacRemoteImpl) loadTeams() (map[string]*GithubTeam, map[string]string, error) {
+	logrus.Debug("loading teams")
 	teams := make(map[string]*GithubTeam)
 	teamSlugByName := make(map[string]string)
 
@@ -876,7 +903,7 @@ func (g *GoliacRemoteImpl) loadTeams() (map[string]*GithubTeam, map[string]strin
 			return teams, teamSlugByName, err
 		}
 		if len(gResult.Errors) > 0 {
-			return teams, teamSlugByName, fmt.Errorf("Graphql error: %v", gResult.Errors[0].Message)
+			return teams, teamSlugByName, fmt.Errorf("Graphql error on loadTeams: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 		}
 
 		for _, c := range gResult.Data.Organization.Teams.Nodes {
@@ -918,7 +945,7 @@ func (g *GoliacRemoteImpl) loadTeams() (map[string]*GithubTeam, map[string]strin
 				return teams, teamSlugByName, err
 			}
 			if len(gResult.Errors) > 0 {
-				return teams, teamSlugByName, fmt.Errorf("Graphql error: %v", gResult.Errors[0].Message)
+				return teams, teamSlugByName, fmt.Errorf("Graphql error on loadTeams members: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 			}
 
 			for _, c := range gResult.Data.Organization.Team.Members.Edges {
@@ -1131,6 +1158,7 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRulset(src *GraphQLGithubRuleSet) 
 }
 
 func (g *GoliacRemoteImpl) loadRulesets() (map[string]*GithubRuleSet, error) {
+	logrus.Debug("loading rulesets")
 	variables := make(map[string]interface{})
 	variables["orgLogin"] = config.Config.GithubAppOrganization
 	variables["endCursor"] = nil
@@ -1152,7 +1180,7 @@ func (g *GoliacRemoteImpl) loadRulesets() (map[string]*GithubRuleSet, error) {
 			return rulesets, err
 		}
 		if len(gResult.Errors) > 0 {
-			return rulesets, fmt.Errorf("Graphql error: %v", gResult.Errors[0].Message)
+			return rulesets, fmt.Errorf("Graphql error on loadRulesets: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 		}
 
 		for _, c := range gResult.Data.Organization.Rulesets.Nodes {

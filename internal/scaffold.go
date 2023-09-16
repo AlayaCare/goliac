@@ -48,13 +48,18 @@ func NewScaffold() (*Scaffold, error) {
  */
 func (s *Scaffold) Generate(rootpath string, adminteam string) error {
 	fs := afero.NewOsFs()
-	if err := s.remote.Load(); err != nil {
-		return fmt.Errorf("Not able to load all information from Github: %v", err)
+	if err := s.remote.Load(true); err != nil {
+		logrus.Warnf("Not able to load all information from Github: %v, but I will try to continue", err)
 	}
 	return s.generate(fs, rootpath, adminteam)
 }
 
 func (s *Scaffold) generate(fs afero.Fs, rootpath string, adminteam string) error {
+	fs.RemoveAll(path.Join(rootpath, "users"))
+	fs.RemoveAll(path.Join(rootpath, "teams"))
+	fs.RemoveAll(path.Join(rootpath, "rulesets"))
+	fs.RemoveAll(path.Join(rootpath, "archived"))
+
 	fs.MkdirAll(path.Join(rootpath, "archived"), 0755)
 	fs.MkdirAll(path.Join(rootpath, "rulesets"), 0755)
 	fs.MkdirAll(path.Join(rootpath, "teams"), 0755)
@@ -67,10 +72,6 @@ func (s *Scaffold) generate(fs afero.Fs, rootpath string, adminteam string) erro
 	err, foundAdmin := s.generateTeams(fs, path.Join(rootpath, "teams"), usermap, adminteam)
 	if err != nil {
 		return fmt.Errorf("Error creating the teams directory: %v", err)
-	}
-
-	if !foundAdmin {
-		return fmt.Errorf("The admin team %s was not found", adminteam)
 	}
 
 	if err := s.generateRuleset(fs, path.Join(rootpath, "rulesets")); err != nil {
@@ -87,6 +88,10 @@ func (s *Scaffold) generate(fs afero.Fs, rootpath string, adminteam string) erro
 
 	if err := s.generateReadme(fs, rootpath); err != nil {
 		return fmt.Errorf("Error creating the README.md file: %v", err)
+	}
+
+	if !foundAdmin {
+		return fmt.Errorf("The admin team '%s' was not found", adminteam)
 	}
 
 	return nil
@@ -109,6 +114,7 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 	for team, tr := range teamsRepositories {
 		for reponame, repo := range tr {
 			if repo.Permission == "ADMIN" {
+				// if there is no admin attached yet to this repo
 				if _, ok := repoAdmin[reponame]; !ok {
 					repoAdmin[reponame] = team
 					teamsRepos[team] = append(teamsRepos[team], reponame)
@@ -121,6 +127,7 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 	for team, tr := range teamsRepositories {
 		for reponame, repo := range tr {
 			if repo.Permission == "WRITE" {
+				// if there is no admin attached yet to this repo
 				if _, ok := repoAdmin[reponame]; !ok {
 					repoAdmin[reponame] = team
 					teamsRepos[team] = append(teamsRepos[team], reponame)
@@ -133,6 +140,18 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 		}
 	}
 
+	countOrphaned := 0
+	// orphan repos should go to the admin team
+	for repo := range s.remote.Repositories() {
+		logrus.Debugf("repo %s is orphaned, attaching it to the admin (%s) team", repo, adminteam)
+		if _, ok := repoAdmin[repo]; !ok {
+			repoAdmin[repo] = adminteam
+			teamsRepos[adminteam] = append(teamsRepos[adminteam], repo)
+			countOrphaned++
+		}
+	}
+	logrus.Infof("%d orphaned repositories have been added to the admin %s team", countOrphaned, adminteam)
+
 	for team, repos := range teamsRepos {
 		// write the team dir
 		if t := teams[team]; t != nil {
@@ -143,7 +162,10 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 			lTeam.ApiVersion = "v1"
 			lTeam.Kind = "Team"
 			lTeam.Name = team
-			lTeam.Spec.Owners = t.Members
+			for _, m := range t.Members {
+				// put the right user name instead of the github id
+				lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
+			}
 			out, err := yaml.Marshal(&lTeam)
 
 			if err == nil {
@@ -205,7 +227,10 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 			lTeam.ApiVersion = "v1"
 			lTeam.Kind = "Team"
 			lTeam.Name = team
-			lTeam.Spec.Owners = t.Members
+			for _, m := range t.Members {
+				// put the right user name instead of the github id
+				lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
+			}
 			out, err := yaml.Marshal(&lTeam)
 
 			if err == nil {
@@ -236,6 +261,7 @@ func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]stri
 	users, err := s.loadUsersFromGithubOrgSaml()
 
 	if len(users) > 0 && err == nil {
+		logrus.Debug("SAML integration enabled")
 		for username, user := range users {
 			usermap[user.Spec.GithubID] = username
 			out, err := yaml.Marshal(&user)
@@ -249,6 +275,7 @@ func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]stri
 		}
 	} else {
 		// fail back on github id
+		logrus.Debug("SAML integration disabled")
 		for githubid := range s.remote.Users() {
 			usermap[githubid] = githubid
 			user := entity.User{}

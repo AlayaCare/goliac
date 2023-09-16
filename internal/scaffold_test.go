@@ -18,7 +18,7 @@ type ScaffoldGoliacRemoteMock struct {
 	teamsRepos map[string]map[string]*engine.GithubTeamRepo
 }
 
-func (s *ScaffoldGoliacRemoteMock) Load() error {
+func (s *ScaffoldGoliacRemoteMock) Load(continueOnError bool) error {
 	return nil
 }
 func (s *ScaffoldGoliacRemoteMock) FlushCache() {
