@@ -166,15 +166,9 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 				// put the right user name instead of the github id
 				lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
 			}
-			out, err := yaml.Marshal(&lTeam)
-
-			if err == nil {
-				fs.MkdirAll(path.Join(teamspath, team), 0755)
-				if err := writeFile(path.Join(teamspath, team, "team.yaml"), out, fs); err != nil {
-					logrus.Error(err)
-				}
-			} else {
-				logrus.Errorf("not able to marshall team %s", team)
+			fs.MkdirAll(path.Join(teamspath, team), 0755)
+			if err := writeYamlFile(path.Join(teamspath, team, "team.yaml"), &lTeam, fs); err != nil {
+				logrus.Errorf("not able to write team file %s: %v", team, err)
 			}
 
 			// write repos
@@ -200,13 +194,8 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 						break
 					}
 				}
-				out, err := yaml.Marshal(&lRepo)
-				if err == nil {
-					if err := writeFile(path.Join(teamspath, team, r+".yaml"), out, fs); err != nil {
-						logrus.Error(err)
-					}
-				} else {
-					logrus.Errorf("not able to marshall repo %s", r)
+				if err := writeYamlFile(path.Join(teamspath, team, r+".yaml"), &lRepo, fs); err != nil {
+					logrus.Errorf("not able to write repo file %s/%s.yaml: %v", team, r, err)
 				}
 			}
 		}
@@ -231,15 +220,9 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 				// put the right user name instead of the github id
 				lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
 			}
-			out, err := yaml.Marshal(&lTeam)
-
-			if err == nil {
-				fs.MkdirAll(path.Join(teamspath, team), 0755)
-				if err := writeFile(path.Join(teamspath, team, "team.yaml"), out, fs); err != nil {
-					logrus.Error(err)
-				}
-			} else {
-				logrus.Errorf("not able to marshall team %s", team)
+			fs.MkdirAll(path.Join(teamspath, team), 0755)
+			if err := writeYamlFile(path.Join(teamspath, team, "team.yaml"), &lTeam, fs); err != nil {
+				logrus.Errorf("not able to write team file %s/team.yaml: %v", team, err)
 			}
 
 		}
@@ -264,13 +247,8 @@ func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]stri
 		logrus.Debug("SAML integration enabled")
 		for username, user := range users {
 			usermap[user.Spec.GithubID] = username
-			out, err := yaml.Marshal(&user)
-			if err == nil {
-				if err := writeFile(path.Join(userspath, "org", username+".yaml"), out, fs); err != nil {
-					logrus.Error(err)
-				}
-			} else {
-				logrus.Errorf("Not able to marshal user %s: %v", username, err)
+			if err := writeYamlFile(path.Join(userspath, "org", username+".yaml"), &user, fs); err != nil {
+				logrus.Errorf("Not able to write user file org/%s.yaml: %v", username, err)
 			}
 		}
 	} else {
@@ -284,13 +262,8 @@ func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]stri
 			user.Name = githubid
 			user.Spec.GithubID = githubid
 
-			out, err := yaml.Marshal(&user)
-			if err == nil {
-				if err := writeFile(path.Join(userspath, "org", githubid+".yaml"), out, fs); err != nil {
-					logrus.Error(err)
-				}
-			} else {
-				logrus.Errorf("Not able to marshal user %s: %v", githubid, err)
+			if err := writeYamlFile(path.Join(userspath, "org", githubid+".yaml"), user, fs); err != nil {
+				logrus.Errorf("Not able to write user file org/%s.yaml: %v", githubid, err)
 			}
 		}
 	}
@@ -450,15 +423,34 @@ You can archive a repository, by a PR that move the yaml repository file into th
 	return nil
 }
 
+// helper function to write a yaml file (with 2 spaces indentation)
+func writeYamlFile(filename string, in interface{}, fs afero.Fs) error {
+	file, err := fs.Create(filename)
+	if err != nil {
+		return fmt.Errorf("Not able to create file %s: %v", filename, err)
+	}
+	defer file.Close()
+
+	encoder := yaml.NewEncoder(file)
+	encoder.SetIndent(2)
+	err = encoder.Encode(in)
+	if err != nil {
+		return fmt.Errorf("Not able to write to file %s: %v", filename, err)
+	}
+	return nil
+}
+
+// helper function to write a file
 func writeFile(filename string, content []byte, fs afero.Fs) error {
 	file, err := fs.Create(filename)
-	if err == nil {
-		_, err := file.Write(content)
-		if err != nil {
-			return fmt.Errorf("Not able to write to file %s: %v", filename, err)
-		}
-	} else {
+	if err != nil {
 		return fmt.Errorf("Not able to create file %s: %v", filename, err)
+	}
+	defer file.Close()
+
+	_, err = file.Write(content)
+	if err != nil {
+		return fmt.Errorf("Not able to write to file %s: %v", filename, err)
 	}
 	return nil
 }

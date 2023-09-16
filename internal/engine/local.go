@@ -445,11 +445,18 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, us
 			// check if user changed
 			if !newuser.Equals(user) {
 				// changed user
-				newContent, err := yaml.Marshal(newuser)
+				file, err := fs.Create(filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
 				if err != nil {
 					return nil, nil, err
 				}
-				afero.WriteFile(fs, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)), newContent, 0644)
+				defer file.Close()
+
+				encoder := yaml.NewEncoder(file)
+				encoder.SetIndent(2)
+				err = encoder.Encode(newuser)
+				if err != nil {
+					return nil, nil, err
+				}
 				updatedusers = append(updatedusers, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
 			}
 
@@ -458,11 +465,18 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, us
 	}
 	for username, user := range newOrgUsers {
 		// new user
-		newContent, err := yaml.Marshal(user)
+		file, err := fs.Create(filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
 		if err != nil {
 			return nil, nil, err
 		}
-		afero.WriteFile(fs, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)), newContent, 0644)
+		defer file.Close()
+
+		encoder := yaml.NewEncoder(file)
+		encoder.SetIndent(2)
+		err = encoder.Encode(user)
+		if err != nil {
+			return nil, nil, err
+		}
 		updatedusers = append(updatedusers, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
 	}
 	return deletedusers, updatedusers, nil
