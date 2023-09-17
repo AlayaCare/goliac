@@ -30,7 +30,7 @@ type Goliac interface {
 	Apply(dryrun bool, repositoryUrl, branch string, forcesync bool) error
 
 	// will clone run the user-plugin to sync users, and will commit to the team repository
-	UsersUpdate(repositoryUrl, branch string) error
+	UsersUpdate(repositoryUrl, branch string, dryrun bool, force bool) error
 
 	// flush remote cache
 	FlushCache()
@@ -262,7 +262,7 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 	return nil
 }
 
-func (g *GoliacImpl) UsersUpdate(repositoryUrl, branch string) error {
+func (g *GoliacImpl) UsersUpdate(repositoryUrl, branch string, dryrun bool, force bool) error {
 	accessToken, err := g.githubClient.GetAccessToken()
 	if err != nil {
 		return err
@@ -284,6 +284,6 @@ func (g *GoliacImpl) UsersUpdate(repositoryUrl, branch string) error {
 		return fmt.Errorf("User Sync Plugin %s not found", repoconfig.UserSync.Plugin)
 	}
 
-	err = g.local.SyncUsersAndTeams(repoconfig, userplugin, accessToken, false)
+	err = g.local.SyncUsersAndTeams(repoconfig, userplugin, accessToken, dryrun, force)
 	return err
 }

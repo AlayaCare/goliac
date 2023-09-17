@@ -10,6 +10,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var dryrunParameter bool
+var forceParameter bool
+
 func main() {
 	verifyCmd := &cobra.Command{
 		Use:   "verify [path]",
@@ -33,8 +36,9 @@ func main() {
 		Use:   "plan [repository] [branch]",
 		Short: "Check the validity of IAC directory structure against a Github organization",
 		Long: `Check the validity of IAC directory structure against a Github organization.
-repository: local or remote repository. A remote repository is in the form
-https://github.com/...`,
+repository: a remote repository in the form https://github.com/...
+repository can be passed by parameter or by defining GOLIAC_SERVER_GIT_REPOSITORY env variable
+branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env variable`,
 		Args: cobra.MatchAll(cobra.MinimumNArgs(1), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
 			repo := ""
@@ -66,8 +70,9 @@ https://github.com/...`,
 		Use:   "apply [repository] [branch]",
 		Short: "Verify and apply a IAC directory structure to a Github organization",
 		Long: `Apply a IAC directory structure to a Github organization.
-repository: local or remote repository. A remote repository is in the form
-https://github.com/...`,
+repository: a remote repository in the form https://github.com/...
+repository can be passed by parameter or by defining GOLIAC_SERVER_GIT_REPOSITORY env variable
+branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env variable`,
 		Run: func(cmd *cobra.Command, args []string) {
 			repo := ""
 			branch := ""
@@ -97,7 +102,12 @@ https://github.com/...`,
 	postSyncUsersCmd := &cobra.Command{
 		Use:   "syncusers [repository] [branch]",
 		Short: "Update and commit users and teams definition",
-		Long:  `This command will use a user sync plugin to adjust users and team yaml definition, and commit them`,
+		Long: `This command will use a user sync plugin to adjust users
+ and team yaml definition, and commit them.
+ repository: a remote repository in the form https://github.com/...
+ branch: the branch to commit to.
+ repository can be passed by parameter or by defining GOLIAC_SERVER_GIT_REPOSITORY env variable
+ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env variable`,
 		Run: func(cmd *cobra.Command, args []string) {
 			repo := ""
 			branch := ""
@@ -117,12 +127,14 @@ https://github.com/...`,
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			err = goliac.UsersUpdate(repo, branch)
+			err = goliac.UsersUpdate(repo, branch, dryrunParameter, forceParameter)
 			if err != nil {
 				logrus.Fatalf("failed to update and commit teams: %s", err)
 			}
 		},
 	}
+	postSyncUsersCmd.Flags().BoolVarP(&dryrunParameter, "dryrun", "d", false, "dryrun mode")
+	postSyncUsersCmd.Flags().BoolVarP(&forceParameter, "force", "f", false, "force mode")
 
 	scaffoldcmd := &cobra.Command{
 		Use:   "scaffold [directory] [adminteam]",
