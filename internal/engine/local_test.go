@@ -218,8 +218,8 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(removed))
 		assert.Equal(t, 2, len(added))
-		assert.Equal(t, "/tmp/goliac/users/org/user1.yaml", added[0])
-		assert.Equal(t, "/tmp/goliac/users/org/foobar.yaml", added[1])
+		assert.Equal(t, "users/org/user1.yaml", added[0])
+		assert.Equal(t, "users/org/foobar.yaml", added[1])
 	})
 	t.Run("not happy path: dealing with usersync error", func(t *testing.T) {
 		fs := afero.NewMemMapFs()

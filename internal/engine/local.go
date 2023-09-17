@@ -51,7 +51,7 @@ type GoliacLocalGit interface {
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
 	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string) error
 	// whenever the users list is changing, reload users and teams, and commit them
-	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, dryrun bool) error
+	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool) error
 	Close()
 
 	// Load and Validate from a local directory
@@ -439,7 +439,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, us
 	for username, user := range orgUsers {
 		if newuser, ok := newOrgUsers[username]; !ok {
 			// deleted user
-			deletedusers = append(deletedusers, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
+			deletedusers = append(deletedusers, filepath.Join("users", "org", fmt.Sprintf("%s.yaml", username)))
 			fs.Remove(filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
 		} else {
 			// check if user changed
@@ -457,7 +457,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, us
 				if err != nil {
 					return nil, nil, err
 				}
-				updatedusers = append(updatedusers, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
+				updatedusers = append(updatedusers, filepath.Join("users", "org", fmt.Sprintf("%s.yaml", username)))
 			}
 
 			delete(newOrgUsers, username)
@@ -477,12 +477,12 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, us
 		if err != nil {
 			return nil, nil, err
 		}
-		updatedusers = append(updatedusers, filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
+		updatedusers = append(updatedusers, filepath.Join("users", "org", fmt.Sprintf("%s.yaml", username)))
 	}
 	return deletedusers, updatedusers, nil
 }
 
-func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, dryrun bool) error {
+func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool) error {
 	if g.repo == nil {
 		return fmt.Errorf("git repository not cloned")
 	}
@@ -517,6 +517,11 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 	teamschanged, err := entity.ReadAndAdjustTeamDirectory(fs, filepath.Join(rootDir, "teams"), g.users)
 	if err != nil {
 		return err
+	}
+
+	// check if we have too many changesets
+	if len(teamschanged)+len(deletedusers)+len(addedusers) > repoconfig.MaxChangesets {
+		return fmt.Errorf("too many changesets (%d) to commit. Please increase max_changesets in goliac.yaml", len(teamschanged)+len(deletedusers)+len(addedusers))
 	}
 
 	//
@@ -570,7 +575,15 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 			return err
 		}
 
-		err = g.repo.Push(&git.PushOptions{})
+		// Now push the tag to the remote repository
+		auth := &http.BasicAuth{
+			Username: "x-access-token", // This can be anything except an empty string
+			Password: accesstoken,
+		}
+
+		err = g.repo.Push(&git.PushOptions{
+			Auth: auth,
+		})
 
 		return err
 	}
