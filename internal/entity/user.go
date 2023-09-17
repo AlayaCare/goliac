@@ -109,7 +109,7 @@ func (u *User) Validate(filename string) error {
 	}
 
 	if u.Spec.GithubID == "" {
-		return fmt.Errorf("data.githubID is empty for user filename %s", filename)
+		return fmt.Errorf("spec.githubID is empty for user filename %s", filename)
 	}
 
 	return nil

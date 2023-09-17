@@ -279,11 +279,11 @@ func (g *GoliacImpl) UsersUpdate(repositoryUrl, branch string) error {
 		return fmt.Errorf("unable to read goliac.yaml config file: %v", err)
 	}
 
-	userplugin, found := engine.GetUserSyncPlugin(g.repoconfig.UserSync.Plugin)
+	userplugin, found := engine.GetUserSyncPlugin(repoconfig.UserSync.Plugin)
 	if !found {
-		return fmt.Errorf("User Sync Plugin %s not found", g.repoconfig.UserSync.Plugin)
+		return fmt.Errorf("User Sync Plugin %s not found", repoconfig.UserSync.Plugin)
 	}
 
-	err = g.local.SyncUsersAndTeams(repoconfig, userplugin, false)
+	err = g.local.SyncUsersAndTeams(repoconfig, userplugin, accessToken, false)
 	return err
 }

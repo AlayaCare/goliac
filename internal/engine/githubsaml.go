@@ -7,6 +7,7 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
+	"github.com/sirupsen/logrus"
 )
 
 const listUsersFromGithubOrgSaml = `
@@ -102,6 +103,14 @@ func LoadUsersFromGithubOrgSaml(client github.GitHubClient) (map[string]*entity.
 		}
 
 		for _, c := range gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.Edges {
+			if c.Node.SamlIdentity.NameId == "" {
+				logrus.Debugf("Skipping user with empty NameId: %s", c.Node.User.Login)
+				continue
+			}
+			if c.Node.User.Login == "" {
+				logrus.Debugf("Skipping user with empty login: %s", c.Node.SamlIdentity.NameId)
+				continue
+			}
 			user := &entity.User{}
 			user.ApiVersion = "v1"
 			user.Kind = "User"
