@@ -110,7 +110,7 @@ type GoliacMock struct {
 func (g *GoliacMock) Apply(dryrun bool, repo string, branch string, forceresync bool) error {
 	return nil
 }
-func (g *GoliacMock) UsersUpdate(repositoryUrl, branch string) error {
+func (g *GoliacMock) UsersUpdate(repositoryUrl, branch string, dryrun bool, force bool) error {
 	return nil
 }
 func (g *GoliacMock) FlushCache() {
