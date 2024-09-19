@@ -170,7 +170,7 @@ export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
 ./goliac plan https://github.com/goliac-project/teams main
 ```
 
-and you can apply the change "manaully"
+and you can apply the change "manually"
 
 ```
 export GOLIAC_GITHUB_APP_ID=355525
@@ -178,7 +178,7 @@ export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
 
-./goliac plan https://github.com/goliac-project/teams apply
+./goliac apply https://github.com/goliac-project/teams main
 ```
 
 If it works for you, you can put in place the goliac service to fetch and apply automatically (like every 10 minute). See below
