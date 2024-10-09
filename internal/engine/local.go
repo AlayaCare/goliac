@@ -50,6 +50,8 @@ type GoliacLocalGit interface {
 	LoadAndValidate() ([]error, []entity.Warning)
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
 	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string) error
+	// whenever repos are not deleted but archived
+	ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error
 	// whenever the users list is changing, reload users and teams, and commit them
 	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) error
 	Close()
@@ -312,6 +314,83 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string) string {
 	}
 
 	return codeowners
+}
+
+func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error {
+	if g.repo == nil {
+		return fmt.Errorf("git repository not cloned")
+	}
+	w, err := g.repo.Worktree()
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(path.Join(w.Filesystem.Root(), "archived"), 0755)
+	if err != nil {
+		return err
+	}
+
+	for _, reponame := range reposToArchiveList {
+		repo := entity.Repository{}
+		repo.ApiVersion = "v1"
+		repo.Kind = "Repository"
+		repo.Name = reponame
+
+		filename := path.Join(w.Filesystem.Root(), "archived", reponame+".yaml")
+		file, err := os.Create(filename)
+		if err != nil {
+			return fmt.Errorf("Not able to create file %s: %v", filename, err)
+		}
+		defer file.Close()
+
+		encoder := yaml.NewEncoder(file)
+		encoder.SetIndent(2)
+		err = encoder.Encode(&repo)
+		if err != nil {
+			return fmt.Errorf("Not able to write to file %s: %v", filename, err)
+		}
+
+		_, err = w.Add(path.Join("archived", reponame+".yaml"))
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = w.Commit("moving deleted repositories as archived", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "Goliac",
+			Email: config.Config.GoliacEmail,
+			When:  time.Now(),
+		},
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// Get the HEAD reference
+	headRef, err := g.repo.Head()
+	if err != nil {
+		return err
+	}
+
+	refSpec := fmt.Sprintf("%s:refs/heads/%s", headRef.Name(), branch)
+	err = g.repo.Push(&git.PushOptions{
+		RemoteName: "origin",
+		Auth: &http.BasicAuth{
+			Username: "x-access-token", // This can be anything except an empty string
+			Password: accesstoken,
+		},
+		Force:    true,
+		RefSpecs: []goconfig.RefSpec{goconfig.RefSpec(refSpec)},
+	})
+
+	if err != nil {
+		return fmt.Errorf("Error pushing to remote: %v", err)
+	}
+
+	// push the tagname
+	return g.PushTag(tagname, headRef.Hash(), accesstoken)
 }
 
 /*

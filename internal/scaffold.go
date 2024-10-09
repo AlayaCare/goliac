@@ -305,6 +305,7 @@ rulesets:
     ruleset: default
 
 max_changesets: 50
+archive_on_delete: true
 
 destructive_operations:
   repositories: false
