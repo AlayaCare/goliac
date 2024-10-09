@@ -22,7 +22,7 @@ const (
  * GoliacReconciliator is here to sync the local state to the remote state
  */
 type GoliacReconciliator interface {
-	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, dryrun bool) error
+	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, dryrun bool, reposToArchive map[string]*GithubRepoComparable) error
 }
 
 type GoliacReconciliatorImpl struct {
@@ -37,7 +37,7 @@ func NewGoliacReconciliatorImpl(executor ReconciliatorExecutor, repoconfig *conf
 	}
 }
 
-func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, dryrun bool) error {
+func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, dryrun bool, reposToArchive map[string]*GithubRepoComparable) error {
 	rremote := NewMutableGoliacRemoteImpl(remote)
 	r.Begin(ctx, dryrun)
 	err := r.reconciliateUsers(ctx, local, rremote, dryrun)
@@ -52,7 +52,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 		return err
 	}
 
-	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, dryrun)
+	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, dryrun, reposToArchive)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
 		return err
@@ -208,8 +208,9 @@ type GithubRepoComparable struct {
 
 /*
  * This function sync repositories and team's repositories permissions
+ * It returns the list of deleted repos that must not be deleted but archived
  */
-func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, dryrun bool) error {
+func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, dryrun bool, toArchive map[string]*GithubRepoComparable) error {
 	ghRepos := remote.Repositories()
 	rRepos := make(map[string]*GithubRepoComparable)
 	for k, v := range ghRepos {
@@ -327,15 +328,6 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		return true
 	}
 
-	onAdded := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) {
-		// CREATE repository
-		r.CreateRepository(ctx, dryrun, remote, reponame, reponame, lRepo.Writers, lRepo.Readers, lRepo.IsPublic)
-	}
-
-	onRemoved := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) {
-		r.DeleteRepository(ctx, dryrun, remote, reponame)
-	}
-
 	onChanged := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) {
 		// reconciliate repositories public/private
 		if lRepo.IsPublic != rRepo.IsPublic {
@@ -408,6 +400,31 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
+	}
+
+	onAdded := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) {
+		// CREATE repository
+
+		// if the repo was just archived in a previous commit and we "resume it"
+		if aRepo, ok := toArchive[reponame]; ok {
+			delete(toArchive, reponame)
+			r.UpdateRepositoryUpdateArchived(ctx, dryrun, remote, reponame, false)
+			onChanged(reponame, aRepo, rRepo)
+		} else {
+			r.CreateRepository(ctx, dryrun, remote, reponame, reponame, lRepo.Writers, lRepo.Readers, lRepo.IsPublic)
+		}
+	}
+
+	onRemoved := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) {
+		// if the repository is not archived and we want to archive on delete...
+		if !rRepo.IsArchived && r.repoconfig.ArchiveOnDelete {
+			r.UpdateRepositoryUpdateArchived(ctx, dryrun, remote, reponame, true)
+			toArchive[reponame] = rRepo
+		} else {
+			if _, ok := toArchive[reponame]; !ok {
+				r.DeleteRepository(ctx, dryrun, remote, reponame)
+			}
+		}
 	}
 
 	CompareEntities(lRepos, rRepos, compareRepos, onAdded, onRemoved, onChanged)

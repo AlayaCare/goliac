@@ -190,6 +190,8 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 		}
 	}
 
+	reposToArchive := make(map[string]*engine.GithubRepoComparable)
+
 	commits, err := g.local.ListCommitsFromTag(GOLIAC_GIT_TAG)
 	// if we can get commits
 	if err != nil {
@@ -198,7 +200,7 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 
 		ctx := context.TODO()
 
-		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun)
+		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 		if err != nil {
 			return fmt.Errorf("Error when reconciliating: %v", err)
 		}
@@ -216,7 +218,7 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 			ctx = context.WithValue(context.TODO(), engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
 		}
 
-		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun)
+		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 		if err != nil {
 			return fmt.Errorf("Error when reconciliating: %v", err)
 		}
@@ -235,7 +237,7 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 				reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
 				ctx := context.WithValue(context.TODO(), engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
-				err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun)
+				err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 				if err != nil {
 					return fmt.Errorf("Error when reconciliating: %v", err)
 				}
@@ -254,6 +256,18 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 	accessToken, err := g.githubClient.GetAccessToken()
 	if err != nil {
 		return err
+	}
+
+	// if we have repos to create as archived
+	if len(reposToArchive) > 0 && !dryrun {
+		reposToArchiveList := make([]string, 0)
+		for reponame := range reposToArchive {
+			reposToArchiveList = append(reposToArchiveList, reponame)
+		}
+		err = g.local.ArchiveRepos(reposToArchiveList, accessToken, branch, GOLIAC_GIT_TAG)
+		if err != nil {
+			return fmt.Errorf("Error when archiving repos: %v", err)
+		}
 	}
 	err = g.local.UpdateAndCommitCodeOwners(g.repoconfig, dryrun, accessToken, branch, GOLIAC_GIT_TAG)
 	if err != nil {

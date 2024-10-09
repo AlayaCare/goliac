@@ -18,6 +18,7 @@ type RepositoryConfig struct {
 		Plugin string `yaml:"plugin"`
 		Path   string `yaml:"path"`
 	}
+	ArchiveOnDelete       bool `yaml:"archive_on_delete"`
 	DestructiveOperations struct {
 		AllowDestructiveRepositories bool `yaml:"repositories"`
 		AllowDestructiveTeams        bool `yaml:"teams"`
@@ -34,6 +35,7 @@ func (rc *RepositoryConfig) UnmarshalYAML(value *yaml.Node) error {
 	x.MaxChangesets = 50
 	x.GithubConcurrentThreads = 4
 	x.UserSync.Plugin = "noop"
+	x.ArchiveOnDelete = true
 
 	if err := value.Decode(x); err != nil {
 		return err
