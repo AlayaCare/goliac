@@ -31,6 +31,8 @@ RUN useradd --uid 1000 --gid 0 goliac && \
     chmod g=u /app
 USER 1000:0
 
+ENV GOLIAC_SERVER_HOST=0.0.0.0
+ENV GOLIAC_SERVER_PORT=18000
 EXPOSE 18000
 
 ENTRYPOINT ["./goliac"]
