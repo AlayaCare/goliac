@@ -595,6 +595,13 @@ func (g *GoliacServerImpl) serveApply(forceresync bool) (error, bool) {
 	repo := config.Config.ServerGitRepository
 	branch := config.Config.ServerGitBranch
 
+	if repo == "" {
+		return fmt.Errorf("GOLIAC_SERVER_GIT_REPOSITORY env variable not set"), false
+	}
+	if branch == "" {
+		return fmt.Errorf("GOLIAC_SERVER_GIT_BRANCH env variable not set"), false
+	}
+
 	// we are ready (to give local state, and to sync with remote)
 	g.ready = true
 
