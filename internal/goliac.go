@@ -190,6 +190,8 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 		}
 	}
 
+	// if the repo was just archived in a previous commit and we "resume it"
+	// so we keep a track of all repos that we want to archive until the end of the process
 	reposToArchive := make(map[string]*engine.GithubRepoComparable)
 
 	commits, err := g.local.ListCommitsFromTag(GOLIAC_GIT_TAG)
