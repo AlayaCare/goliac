@@ -409,6 +409,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		if aRepo, ok := toArchive[reponame]; ok {
 			delete(toArchive, reponame)
 			r.UpdateRepositoryUpdateArchived(ctx, dryrun, remote, reponame, false)
+			// calling onChanged to update the repository permissions
 			onChanged(reponame, aRepo, rRepo)
 		} else {
 			r.CreateRepository(ctx, dryrun, remote, reponame, reponame, lRepo.Writers, lRepo.Readers, lRepo.IsPublic)
@@ -416,14 +417,16 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	}
 
 	onRemoved := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) {
-		// if the repository is not archived and we want to archive on delete...
-		if !rRepo.IsArchived && r.repoconfig.ArchiveOnDelete {
-			r.UpdateRepositoryUpdateArchived(ctx, dryrun, remote, reponame, true)
-			toArchive[reponame] = rRepo
-		} else {
-			if _, ok := toArchive[reponame]; !ok {
-				r.DeleteRepository(ctx, dryrun, remote, reponame)
+		// here we have a repository that is not listed in the teams repository.
+		// we should call DeleteRepository (that will delete if AllowDestructiveRepositories is on).
+		// but if we have ArchiveOnDelete...
+		if r.repoconfig.ArchiveOnDelete {
+			if r.repoconfig.DestructiveOperations.AllowDestructiveRepositories {
+				r.UpdateRepositoryUpdateArchived(ctx, dryrun, remote, reponame, true)
+				toArchive[reponame] = rRepo
 			}
+		} else {
+			r.DeleteRepository(ctx, dryrun, remote, reponame)
 		}
 	}
 
