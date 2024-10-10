@@ -331,18 +331,18 @@ name: Validate structure
 on: [pull_request]
 
 jobs:
-	build:
-		name: validate
-		runs-on: ubuntu-latest
-		steps:
-			- uses: actions/checkout@v3
+  build:
+    name: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
-			- name: Verify
-			uses: addnab/docker-run-action@v3
-			with:
-				image: ghcr.io/nzin/goliac
-				options: -v ${{ github.workspace }}:/work 
-				run: /app/goliac verify /work
+      - name: Verify
+        uses: addnab/docker-run-action@v3
+        with:
+          image: ghcr.io/nzin/goliac
+          options: -v ${{ github.workspace }}:/work 
+          run: /app/goliac verify /work
 `
 	if err := writeFile(path.Join(rootpath, ".github", "workflows", "pr.yaml"), []byte(workflow), fs); err != nil {
 		return err
