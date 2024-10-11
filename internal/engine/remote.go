@@ -1764,5 +1764,6 @@ func (g *GoliacRemoteImpl) Begin(dryrun bool) {
 }
 func (g *GoliacRemoteImpl) Rollback(dryrun bool, err error) {
 }
-func (g *GoliacRemoteImpl) Commit(dryrun bool) {
+func (g *GoliacRemoteImpl) Commit(dryrun bool) error {
+	return nil
 }

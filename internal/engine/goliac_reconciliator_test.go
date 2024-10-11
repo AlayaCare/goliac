@@ -227,7 +227,8 @@ func (r *ReconciliatorListenerRecorder) Begin(dryrun bool) {
 }
 func (r *ReconciliatorListenerRecorder) Rollback(dryrun bool, err error) {
 }
-func (r *ReconciliatorListenerRecorder) Commit(dryrun bool) {
+func (r *ReconciliatorListenerRecorder) Commit(dryrun bool) error {
+	return nil
 }
 
 func TestReconciliation(t *testing.T) {

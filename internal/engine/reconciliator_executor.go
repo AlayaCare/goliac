@@ -25,5 +25,5 @@ type ReconciliatorExecutor interface {
 
 	Begin(dryrun bool)
 	Rollback(dryrun bool, err error)
-	Commit(dryrun bool)
+	Commit(dryrun bool) error
 }

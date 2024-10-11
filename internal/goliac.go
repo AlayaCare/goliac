@@ -226,6 +226,7 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 		}
 	} else {
 		// we have 1 or more commits to apply
+		var lastErr error
 		for _, commit := range commits {
 			if err := g.local.CheckoutCommit(commit); err == nil {
 				errs, _ := g.local.LoadAndValidate()
@@ -241,9 +242,14 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 				ctx := context.WithValue(context.TODO(), engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
 				err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 				if err != nil {
-					return fmt.Errorf("Error when reconciliating: %v", err)
+					// we keep the last error and continue
+					// to see if the next commit can be applied without error
+					// (like if we reached the max changesets, but the next commit will fix it)
+					lastErr = fmt.Errorf("error when reconciliating: %v", err)
+				} else {
+					lastErr = nil
 				}
-				if !dryrun {
+				if !dryrun && err == nil {
 					accessToken, err := g.githubClient.GetAccessToken()
 					if err != nil {
 						return err
@@ -253,6 +259,9 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 			} else {
 				logrus.Errorf("Not able to checkout commit %s", commit.Hash.String())
 			}
+		}
+		if lastErr != nil {
+			return lastErr
 		}
 	}
 	accessToken, err := g.githubClient.GetAccessToken()
