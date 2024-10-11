@@ -1,8 +1,9 @@
 package internal
 
 import (
+	"fmt"
+
 	"github.com/Alayacare/goliac/internal/engine"
-	"github.com/sirupsen/logrus"
 )
 
 /**
@@ -209,15 +210,15 @@ func (g *GithubBatchExecutor) Begin(dryrun bool) {
 func (g *GithubBatchExecutor) Rollback(dryrun bool, err error) {
 	g.commands = make([]GithubCommand, 0)
 }
-func (g *GithubBatchExecutor) Commit(dryrun bool) {
+func (g *GithubBatchExecutor) Commit(dryrun bool) error {
 	if len(g.commands) > g.maxChangesets {
-		logrus.Errorf("More than %d changesets to apply (total of %d), this is suspicious. Aborting", g.maxChangesets, len(g.commands))
-		return
+		return fmt.Errorf("More than %d changesets to apply (total of %d), this is suspicious. Aborting", g.maxChangesets, len(g.commands))
 	}
 	for _, c := range g.commands {
 		c.Apply()
 	}
 	g.commands = make([]GithubCommand, 0)
+	return nil
 }
 
 type GithubCommandAddUserToOrg struct {

@@ -502,8 +502,10 @@ func (g *GoliacServerImpl) Serve() {
 					} else {
 						now := time.Now()
 						g.lastSyncTime = &now
+						previousError := g.lastSyncError
 						g.lastSyncError = err
-						if err != nil {
+						// log the error only if it's a new one
+						if err != nil && (previousError == nil || err.Error() != previousError.Error()) {
 							logrus.Error(err)
 						}
 						g.syncInterval = config.Config.ServerApplyInterval

@@ -66,9 +66,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 		}
 	}
 
-	r.Commit(ctx, dryrun)
-
-	return nil
+	return r.Commit(ctx, dryrun)
 }
 
 /*
@@ -751,9 +749,10 @@ func (r *GoliacReconciliatorImpl) Rollback(ctx context.Context, dryrun bool, err
 		r.executor.Rollback(dryrun, err)
 	}
 }
-func (r *GoliacReconciliatorImpl) Commit(ctx context.Context, dryrun bool) {
+func (r *GoliacReconciliatorImpl) Commit(ctx context.Context, dryrun bool) error {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun}).Debugf("reconciliation commit")
 	if r.executor != nil {
-		r.executor.Commit(dryrun)
+		return r.executor.Commit(dryrun)
 	}
+	return nil
 }
