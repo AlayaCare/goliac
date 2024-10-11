@@ -202,9 +202,11 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_SERVER_APPLY_INTERVAL     | 600         | How often (seconds) Goliac try to apply |
 | GOLIAC_SERVER_GIT_REPOSITORY     |             | teams repo name in your organization |
 | GOLIAC_SERVER_GIT_BRANCH         | main        | teams repo default branch name to use |
-| GOLIAC_SERVER_HOST               |localhost    | useful to put it to `0.0.0.0` |
+| GOLIAC_SERVER_HOST               |localhost    | it is set as `0.0.0.0` in the Dockerfile |
 | GOLIAC_SERVER_PORT               | 18000       |                            |
 | GOLIAC_SERVER_GIT_BRANCH_PROTECTION_REQUIRED_CHECK | validate | ci check to enforce when evaluating a PR (used for CI mode) |
+| GOLIAC_MAX_CHANGESETS_OVERRIDE    | false          | if you need to override the `max_changesets` setting in the `goliac.yaml` file. Useful in particular using the `goliac apply` CLI  |
+
 then you just need to start it with
 
 ```
@@ -217,6 +219,98 @@ You can connect (eventually) to the UI for some statistic to `http://GOLIAC_SERV
 
 ```
 docker run -ti -v `pwd`/goliac-project-app.2023-07-03.private-key.pem:/app/private-key.pem -e GOLIAC_GITHUB_APP_ID=355525 -e GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=/app/private-key.pem -e GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project -e GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams -e GOLIAC_SERVER_HOST=0.0.0.0 -p 18000:18000 ghcr.io/nzin/goliac serve
+```
+
+### Using kubernetes
+
+You can deploy the goliac server in a kubernetes cluster. You can use the `k8s/goliac-deployment.yaml` file as a template.
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goliac
+  namespace: goliac
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: goliac
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: goliac
+    spec:
+      containers:
+        - args:
+            - serve
+          env:
+            - name: GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE
+              value: /etc/goliac/github-app-private-key.pem
+            - name: GOLIAC_LOGRUS_LEVEL
+              value: warning
+            - name: GOLIAC_SERVER_GIT_REPOSITORY
+              value: 'https://github.com/goliac-project/teams'
+          envFrom:
+            - secretRef:
+                name: goliac-secrets
+          image: ghcr.io/nzin/goliac
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/v1/liveness
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: backend
+          ports:
+            - containerPort: 18000
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/v1/readiness
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          volumeMounts:
+            - mountPath: /etc/goliac
+              name: goliac-secrets
+              readOnly: true
+      volumes:
+        - name: goliac-secrets
+          secret:
+            secretName: goliac-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: goliac
+  namespace: goliac
+spec:
+  ports:
+    - name: http
+      port: 18000
+      protocol: TCP
+      targetPort: http
+  selector:
+    app.kubernetes.io/name: goliac
+  type: ClusterIP
 ```
 
 ## Syncing Users from an external source
