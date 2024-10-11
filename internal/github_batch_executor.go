@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 
+	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/engine"
 )
 
@@ -211,8 +212,8 @@ func (g *GithubBatchExecutor) Rollback(dryrun bool, err error) {
 	g.commands = make([]GithubCommand, 0)
 }
 func (g *GithubBatchExecutor) Commit(dryrun bool) error {
-	if len(g.commands) > g.maxChangesets {
-		return fmt.Errorf("More than %d changesets to apply (total of %d), this is suspicious. Aborting", g.maxChangesets, len(g.commands))
+	if len(g.commands) > g.maxChangesets && !config.Config.MaxChangesetsOverride {
+		return fmt.Errorf("more than %d changesets to apply (total of %d), this is suspicious. Aborting", g.maxChangesets, len(g.commands))
 	}
 	for _, c := range g.commands {
 		c.Apply()

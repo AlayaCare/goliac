@@ -24,6 +24,9 @@ var Config = struct {
 	// the name of the CI validating each PR on the teams repsotiry. See scaffold.go for the Github action
 	ServerGitBranchProtectionRequiredCheck string `env:"GOLIAC_SERVER_GIT_BRANCH_PROTECTION_REQUIRED_CHECK" envDefault:"validate"`
 
+	// MaxChangesetsOverride - override the max changesets limitation from the repository config
+	MaxChangesetsOverride bool `env:"GOLIAC_MAX_CHANGESETS_OVERRIDE" envDefault:"false"`
+
 	// Host - golang-skeleton server host
 	SwaggerHost string `env:"GOLIAC_SERVER_HOST" envDefault:"localhost"`
 	// Port - golang-skeleton server port
