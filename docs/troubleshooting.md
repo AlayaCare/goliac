@@ -24,6 +24,8 @@ export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=github-app-private-key.pem
 GOLIAC_MAX_CHANGESETS_OVERRIDE=true ./goliac apply https://github.com/goliac-project/teams main
 ```
 
+Note: it is possible that Goliac will be a bit confused after your force changes. You will certainly need to restart Goliac (app/kubernetes pod) just after running this command,
+
 ## How to bypass Goliac for a specific repository
 
 If you want to force merge a PR without Goliac validation, you will need to disable Golac for this specific repository temporarily.
