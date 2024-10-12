@@ -1,9 +1,18 @@
 # Why Goliac
 
-Goliac is a tool to help you manage your Github Organization (repos/teams/users) in a friendly way
-- for your security team (enforcing some security rules globally, reducing the number of Github adminstrators, and passing compliance audits)
-- for your developpers (it is a developer self-serve tool)
-- without having to rely on your IT departement each time a team needs a new repository
+Goliac can improve your Github organization management in several ways:
+- cost
+- security
+- developer friendly
+
+## Cost
+
+Goliac is a free opensource project. You can install it on your own infrastructure, and it is designed to be run easily into a kubernetes environment.
+
+A comparable solution is to use Terraform (and a git repository) to achieve almost the same result, except that
+- if you are using Terraform Cloud, you will have to pay for each resource you manage
+- with terraform, you still need to centrally managed all operations via your IT team, which can be a bottleneck, and also less flexible
+
 
 ## Security friendly
 
@@ -12,13 +21,13 @@ Goliac allows your company to pass security compliance audit by:
 - allowing users to manage their team and the repositories they own (and only them)
 - bringing auditing of who has done what in 2 places:
   - via a git history of a git repository
-  - via logs of Goliac service
+  - via logs of Goliac service (but you need to have a good log management system in place)
 - via a [GitOps](https://www.redhat.com/en/topics/devops/what-is-gitops) approach: i.e. via a clear directory structure stored into a git repository
 
 ## Developer friendly
 
-Once a team of developer has been created, the team can
-- manage their resources (i.e. their team's member and their repositories defintion) autonomously
+Once a team of developers has been created, the team can
+- manage their resources (i.e. their team's member and their repositories defintion) autonomously (and so without having to rely on your IT departement each time a team needs a change)
 - via **simple** yaml files. You dont need to learn a new specific definition langage.
 - but restricted by global policies defined previously by the security team. For example you can specifiy a organization-wide policy asking for peer-review across all Github repositories, before any Pull Request being merged. Or you can ask a specific CI test to pass for all Github repositories, or a specific subset of Github repositoties
 

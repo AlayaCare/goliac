@@ -213,7 +213,7 @@ func (g *GithubBatchExecutor) Rollback(dryrun bool, err error) {
 }
 func (g *GithubBatchExecutor) Commit(dryrun bool) error {
 	if len(g.commands) > g.maxChangesets && !config.Config.MaxChangesetsOverride {
-		return fmt.Errorf("more than %d changesets to apply (total of %d), this is suspicious. Aborting", g.maxChangesets, len(g.commands))
+		return fmt.Errorf("more than %d changesets to apply (total of %d), this is suspicious. Aborting (see Goliac troubleshooting guide for help)", g.maxChangesets, len(g.commands))
 	}
 	for _, c := range g.commands {
 		c.Apply()
