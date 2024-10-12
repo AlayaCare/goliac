@@ -13,6 +13,7 @@ Goliac (Github Organization Leveraged by Infrastructure As Code), is a tool to m
 - [why Goliac](docs/why_goliac.md)
 - [Insallation guide](docs/installation.md)
 - [How to sync (users) from external](docs/installation.md#syncing-users-from-an-external-source)
+- [Troubleshooting guide](docs/troubleshooting.md)
 
 ## For regular users
 
