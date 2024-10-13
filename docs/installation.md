@@ -193,21 +193,21 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_LOGRUS_LEVEL              | info        | debug,info,warning or error |
 | GOLIAC_LOGRUS_FORMAT             | text        | text or json                |
 | GOLIAC_GITHUB_SERVER             | https://api.github.com |                  |
-| GOLIAC_GITHUB_APP_ORGANIZATION   |             | name of your github org     |
-| GOLIAC_GITHUB_APP_ID             |             | app id of Goliac Github App |
-| GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE |           | path to private key       |
+| GOLIAC_GITHUB_APP_ORGANIZATION   |             | (mandatory) name of your github org     |
+| GOLIAC_GITHUB_APP_ID             |             | (mandatory) app id of Goliac Github App |
+| GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE |           | (mandatory) path to private key       |
 | GOLIAC_EMAIL                     | goliac@alayacare.com | author name used by Goliac to commit (Codeowners) |
 | GOLIAC_GITHUB_CONCURRENT_THREADS | 1           | You can increase, like '4' |
 | GOLIAC_GITHUB_CACHE_TTL          |  86400      | Github remote cache seconds retention |
 | GOLIAC_SERVER_APPLY_INTERVAL     | 600         | How often (seconds) Goliac try to apply |
-| GOLIAC_SERVER_GIT_REPOSITORY     |             | teams repo name in your organization |
+| GOLIAC_SERVER_GIT_REPOSITORY     |             | (mandatory) teams repo name in your organization |
 | GOLIAC_SERVER_GIT_BRANCH         | main        | teams repo default branch name to use |
 | GOLIAC_SERVER_HOST               |localhost    | it is set as `0.0.0.0` in the Dockerfile |
 | GOLIAC_SERVER_PORT               | 18000       |                            |
 | GOLIAC_SERVER_GIT_BRANCH_PROTECTION_REQUIRED_CHECK | validate | ci check to enforce when evaluating a PR (used for CI mode) |
 | GOLIAC_MAX_CHANGESETS_OVERRIDE    | false          | if you need to override the `max_changesets` setting in the `goliac.yaml` file. Useful in particular using the `goliac apply` CLI  |
-| GOLIAC_SLACK_TOKEN                |               | Slack token to send notification |
-| GOLIAC_SLACK_CHANNEL              |               | Slack channel to send notification |
+| GOLIAC_SLACK_TOKEN                |               | (optional) Slack token to send notification (ususally error messages if any) |
+| GOLIAC_SLACK_CHANNEL              |               | (optional) Slack channel to send notification |
 
 then you just need to start it with
 
