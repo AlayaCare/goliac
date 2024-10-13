@@ -16,8 +16,8 @@
               :default-sort="{ prop: 'name', order: 'descending' }"
           >
               <el-table-column prop="name" align="left" label="Repository name" sortable />
-              <el-table-column prop="public" align="left" label="Public" />
-              <el-table-column prop="archived" align="left" label="Archived" />
+              <el-table-column prop="public" align="left" label="Public" sortable />
+              <el-table-column prop="archived" align="left" label="Archived" sortable />
           </el-table>
         </el-row>
       </el-col>
