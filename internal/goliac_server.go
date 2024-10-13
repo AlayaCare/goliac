@@ -449,19 +449,7 @@ func (g *GoliacServerImpl) PostFlushCache(app.PostFlushCacheParams) middleware.R
 
 func (g *GoliacServerImpl) PostResync(app.PostResyncParams) middleware.Responder {
 	go func() {
-		err, applied := g.serveApply(true)
-		if !applied && err == nil {
-			// the run was skipped
-			g.syncInterval = config.Config.ServerApplyInterval
-		} else {
-			now := time.Now()
-			g.lastSyncTime = &now
-			g.lastSyncError = err
-			if err != nil {
-				logrus.Error(err)
-			}
-			g.syncInterval = config.Config.ServerApplyInterval
-		}
+		g.triggerApply(true)
 	}()
 	return app.NewPostResyncOK()
 }
@@ -498,25 +486,8 @@ func (g *GoliacServerImpl) Serve() {
 				g.syncInterval--
 				time.Sleep(1 * time.Second)
 				if g.syncInterval <= 0 {
-					// Do some work here
-					err, applied := g.serveApply(false)
-					if !applied && err == nil {
-						// the run was skipped
-						g.syncInterval = config.Config.ServerApplyInterval
-					} else {
-						now := time.Now()
-						g.lastSyncTime = &now
-						previousError := g.lastSyncError
-						g.lastSyncError = err
-						// log the error only if it's a new one
-						if err != nil && (previousError == nil || err.Error() != previousError.Error()) {
-							logrus.Error(err)
-							if err := g.notificationService.SendNotification(fmt.Sprintf("Goliac error when syncing: %s", err)); err != nil {
-								logrus.Error(err)
-							}
-						}
-						g.syncInterval = config.Config.ServerApplyInterval
-					}
+					// we want to sync
+					g.triggerApply(false)
 				}
 			}
 		}
@@ -530,6 +501,33 @@ func (g *GoliacServerImpl) Serve() {
 
 	close(stopCh)
 	wg.Wait()
+}
+
+/*
+ * triggerApply will trigger the apply process (by calling serveApply())
+ * inside serverApply, it will check if the lobby is free
+ * - if the lobby is free, it will start the apply process
+ * - if the lobby is busy, it will do nothing
+ */
+func (g *GoliacServerImpl) triggerApply(forceresync bool) {
+	err, applied := g.serveApply(forceresync)
+	if !applied && err == nil {
+		// the run was skipped
+		g.syncInterval = config.Config.ServerApplyInterval
+	} else {
+		now := time.Now()
+		g.lastSyncTime = &now
+		previousError := g.lastSyncError
+		g.lastSyncError = err
+		// log the error only if it's a new one
+		if err != nil && (previousError == nil || err.Error() != previousError.Error()) {
+			logrus.Error(err)
+			if err := g.notificationService.SendNotification(fmt.Sprintf("Goliac error when syncing: %s", err)); err != nil {
+				logrus.Error(err)
+			}
+		}
+		g.syncInterval = config.Config.ServerApplyInterval
+	}
 }
 
 func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
