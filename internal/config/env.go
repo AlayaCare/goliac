@@ -52,4 +52,8 @@ var Config = struct {
 	// UI path  => localhost:18000/foo"
 	// API path => localhost:18000/foo/api/v1"
 	WebPrefix string `env:"GOLIAC_WEB_PREFIX" envDefault:""`
+
+	// to receive slack notifications on errors
+	SlackToken   string `env:"GOLIAC_SLACK_TOKEN" envDefault:""`
+	SlackChannel string `env:"GOLIAC_SLACK_CHANNEL" envDefault:""`
 }{}

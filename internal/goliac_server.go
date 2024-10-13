@@ -10,6 +10,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/notification"
 	"github.com/Alayacare/goliac/swagger_gen/models"
 	"github.com/Alayacare/goliac/swagger_gen/restapi"
 	"github.com/Alayacare/goliac/swagger_gen/restapi/operations"
@@ -44,21 +45,24 @@ type GoliacServer interface {
 }
 
 type GoliacServerImpl struct {
-	goliac          Goliac
-	applyLobbyMutex sync.Mutex
-	applyLobbyCond  *sync.Cond
-	applyCurrent    bool
-	applyLobby      bool
-	ready           bool // when the server has finished to load the local configuration
-	lastSyncTime    *time.Time
-	lastSyncError   error
-	syncInterval    int64 // in seconds time remaining between 2 sync
+	goliac              Goliac
+	applyLobbyMutex     sync.Mutex
+	applyLobbyCond      *sync.Cond
+	applyCurrent        bool
+	applyLobby          bool
+	ready               bool // when the server has finished to load the local configuration
+	lastSyncTime        *time.Time
+	lastSyncError       error
+	syncInterval        int64 // in seconds time remaining between 2 sync
+	notificationService notification.NotificationService
 }
 
-func NewGoliacServer(goliac Goliac) GoliacServer {
+func NewGoliacServer(goliac Goliac, notificationService notification.NotificationService) GoliacServer {
+
 	server := GoliacServerImpl{
-		goliac: goliac,
-		ready:  false,
+		goliac:              goliac,
+		ready:               false,
+		notificationService: notificationService,
 	}
 	server.applyLobbyCond = sync.NewCond(&server.applyLobbyMutex)
 
@@ -507,6 +511,9 @@ func (g *GoliacServerImpl) Serve() {
 						// log the error only if it's a new one
 						if err != nil && (previousError == nil || err.Error() != previousError.Error()) {
 							logrus.Error(err)
+							if err := g.notificationService.SendNotification(fmt.Sprintf("Goliac error when syncing: %s", err)); err != nil {
+								logrus.Error(err)
+							}
 						}
 						g.syncInterval = config.Config.ServerApplyInterval
 					}
