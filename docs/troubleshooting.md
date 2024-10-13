@@ -5,7 +5,7 @@
 This error is happening if a changeset (a team's PR) introduce more than X changesets. This is a safety mechanism to avoid applying a huge number of changesets at once.
 
 If it is a legitimate change, you can
-- either create a new PR to reduce the number of changesets in the original PR to stay below the limit, Goliac will automatically apply the cumulative changesets.
+- either increase the `max_changesets` in the `goliac.yaml` file, but that's not the best approach.
 - or you can use the CLI to force apply the changesets. To do so, you can run the following command:
 
 ```bash

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal"
 	"github.com/Alayacare/goliac/internal/config"
+	"github.com/Alayacare/goliac/internal/notification"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -170,7 +171,13 @@ any changes from the teams Git repository to Github.`,
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			server := internal.NewGoliacServer(goliac)
+			notificationService := notification.NewNullNotificationService()
+			if config.Config.SlackToken != "" && config.Config.SlackChannel != "" {
+				slackService := notification.NewSlackNotificationService(config.Config.SlackToken, config.Config.SlackChannel)
+				notificationService = slackService
+			}
+
+			server := internal.NewGoliacServer(goliac, notificationService)
 			server.Serve()
 		},
 	}

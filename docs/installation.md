@@ -206,6 +206,8 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_SERVER_PORT               | 18000       |                            |
 | GOLIAC_SERVER_GIT_BRANCH_PROTECTION_REQUIRED_CHECK | validate | ci check to enforce when evaluating a PR (used for CI mode) |
 | GOLIAC_MAX_CHANGESETS_OVERRIDE    | false          | if you need to override the `max_changesets` setting in the `goliac.yaml` file. Useful in particular using the `goliac apply` CLI  |
+| GOLIAC_SLACK_TOKEN                |               | Slack token to send notification |
+| GOLIAC_SLACK_CHANNEL              |               | Slack channel to send notification |
 
 then you just need to start it with
 
