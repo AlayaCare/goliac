@@ -10,9 +10,8 @@ type ReconciliatorExecutor interface {
 	UpdateTeamRemoveMember(dryrun bool, teamslug string, username string)
 	DeleteTeam(dryrun bool, teamslug string)
 
-	CreateRepository(dryrun bool, reponame string, descrition string, writers []string, readers []string, public bool)
-	UpdateRepositoryUpdateArchived(dryrun bool, reponame string, archived bool)
-	UpdateRepositoryUpdatePrivate(dryrun bool, reponame string, private bool)
+	CreateRepository(dryrun bool, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool)
+	UpdateRepositoryUpdateBoolProperty(dryrun bool, reponame string, propertyName string, propertyValue bool)
 	UpdateRepositoryAddTeamAccess(dryrun bool, reponame string, teamslug string, permission string)    // permission can be "pull", "push", or "admin" which correspond to read, write, and admin access.
 	UpdateRepositoryUpdateTeamAccess(dryrun bool, reponame string, teamslug string, permission string) // permission can be "pull", "push", or "admin" which correspond to read, write, and admin access.
 	UpdateRepositoryRemoveTeamAccess(dryrun bool, reponame string, teamslug string)

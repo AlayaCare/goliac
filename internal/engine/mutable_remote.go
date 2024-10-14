@@ -136,11 +136,11 @@ func (m *MutableGoliacRemoteImpl) DeleteTeam(teamslug string) {
 		delete(m.teamRepos, teamslug)
 	}
 }
-func (m *MutableGoliacRemoteImpl) CreateRepository(reponame string, descrition string, writers []string, readers []string, public bool) {
+func (m *MutableGoliacRemoteImpl) CreateRepository(reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
 	r := GithubRepository{
-		Name:       reponame,
-		IsArchived: false,
-		IsPrivate:  !public,
+		Name:           reponame,
+		BoolProperties: boolProperties,
+		ExternalUsers:  map[string]string{},
 	}
 	m.repositories[reponame] = &r
 }
@@ -168,14 +168,18 @@ func (m *MutableGoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(reponame stri
 func (m *MutableGoliacRemoteImpl) DeleteRepository(reponame string) {
 	delete(m.repositories, reponame)
 }
-func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdatePrivate(reponame string, private bool) {
+
+/*
+UpdateRepositoryUpdateBoolProperty is used for
+- private
+- archived
+- allow_auto_merge
+- delete_branch_on_merge
+- allow_update_branch
+*/
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(reponame string, propertyName string, propertyValue bool) {
 	if r, ok := m.repositories[reponame]; ok {
-		r.IsPrivate = private
-	}
-}
-func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateArchived(reponame string, archived bool) {
-	if r, ok := m.repositories[reponame]; ok {
-		r.IsArchived = archived
+		r.BoolProperties[propertyName] = propertyValue
 	}
 }
 func (m *MutableGoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, collaboatorGithubId string, permission string) {

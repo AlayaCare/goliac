@@ -17,6 +17,9 @@ type Repository struct {
 		ExternalUserReaders []string `yaml:"externalUserReaders,omitempty"`
 		ExternalUserWriters []string `yaml:"externalUserWriters,omitempty"`
 		IsPublic            bool     `yaml:"public,omitempty"`
+		AllowAutoMerge      bool     `yaml:"allow_auto_merge,omitempty"`
+		DeleteBranchOnMerge bool     `yaml:"delete_branch_on_merge,omitempty"`
+		AllowUpdateBranch   bool     `yaml:"allow_update_branch,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner    *string `yaml:"owner,omitempty"`    // implicit. team name owning the repo (if any)

@@ -67,6 +67,9 @@ kind: Repository
 name: awesome-repository
 spec:
   public: true
+	allow_auto_merge: true
+	delete_branch_on_merge: true
+	allow_update_branch: true
   writers:
   - anotherteamA
   - anotherteamB
@@ -76,7 +79,10 @@ spec:
 ```
 
 In this last example:
-- the repository is now publci
+- the repository is now public
+- the repository allows auto merge
+- the repository will delete the branch on merge
+- the repository allows to update the branch
 - other teams have write (`anotherteamA`, `anotherteamB`) or read (`anotherteamC`, `anotherteamD`) access
 
 ### Archive a repository
