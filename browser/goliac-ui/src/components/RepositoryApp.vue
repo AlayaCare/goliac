@@ -22,6 +22,18 @@
                     <el-text>Archived : </el-text>
                     <el-text>{{ repository.archived}}</el-text>
                 </div>
+                <div class="flex-container">
+                    <el-text>Auto Merge Allowed : </el-text>
+                    <el-text>{{ repository.autoMergeAllowed}}</el-text>
+                </div>
+                <div class="flex-container">
+                    <el-text>Delete Branch on Merge : </el-text>
+                    <el-text>{{ repository.deleteBranchOnMerge}}</el-text>
+                </div>
+                <div class="flex-container">
+                    <el-text>Allow Update Branch : </el-text>
+                    <el-text>{{ repository.allowUpdateBranch}}</el-text>
+                </div>
             </el-card>
         </el-col>
     </el-row>  

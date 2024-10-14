@@ -187,7 +187,7 @@ func (r *ReconciliatorListenerRecorder) UpdateTeamRemoveMember(dryrun bool, team
 func (r *ReconciliatorListenerRecorder) DeleteTeam(dryrun bool, teamslug string) {
 	r.TeamDeleted[teamslug] = true
 }
-func (r *ReconciliatorListenerRecorder) CreateRepository(dryrun bool, reponame string, descrition string, writers []string, readers []string, public bool) {
+func (r *ReconciliatorListenerRecorder) CreateRepository(dryrun bool, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
 	r.RepositoryCreated[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
@@ -202,11 +202,8 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveTeamAccess(dryrun 
 func (r *ReconciliatorListenerRecorder) DeleteRepository(dryrun bool, reponame string) {
 	r.RepositoriesDeleted[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdatePrivate(dryrun bool, reponame string, private bool) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateBoolProperty(dryrun bool, reponame string, propertyName string, propertyValue bool) {
 	r.RepositoriesUpdatePrivate[reponame] = true
-}
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateArchived(dryrun bool, reponame string, archived bool) {
-	r.RepositoriesUpdateArchived[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(dryrun bool, reponame string, githubid string, permission string) {
 	r.RepositoriesSetExternalUser[githubid] = permission
@@ -685,7 +682,9 @@ func TestReconciliation(t *testing.T) {
 		}
 		remote.teams["existing"] = existing
 		rRepo := GithubRepository{
-			Name: "myrepo",
+			Name:           "myrepo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
 		}
 		remote.repos["myrepo"] = &rRepo
 
@@ -749,7 +748,9 @@ func TestReconciliation(t *testing.T) {
 		}
 		remote.teams["existing"] = existing
 		rRepo := GithubRepository{
-			Name: "myrepo",
+			Name:           "myrepo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
 		}
 		remote.repos["myrepo"] = &rRepo
 
@@ -824,7 +825,9 @@ func TestReconciliation(t *testing.T) {
 		remote.teams["existing"] = existing
 		remote.teams["reader"] = reader
 		rRepo := GithubRepository{
-			Name: "myrepo",
+			Name:           "myrepo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
 		}
 		remote.repos["myrepo"] = &rRepo
 
@@ -898,7 +901,9 @@ func TestReconciliation(t *testing.T) {
 		remote.teams["existing"] = existing
 		remote.teams["reader"] = reader
 		rRepo := GithubRepository{
-			Name: "myrepo",
+			Name:           "myrepo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
 		}
 		remote.repos["myrepo"] = &rRepo
 
@@ -965,7 +970,9 @@ func TestReconciliation(t *testing.T) {
 		}
 		remote.teams["existing"] = existing
 		rRepo := GithubRepository{
-			Name: "myrepo",
+			Name:           "myrepo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
 		}
 		remote.repos["myrepo"] = &rRepo
 
@@ -1033,7 +1040,9 @@ func TestReconciliation(t *testing.T) {
 		}
 		remote.teams["existing"] = existing
 		rRepo := GithubRepository{
-			Name: "myrepo",
+			Name:           "myrepo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
 		}
 		remote.repos["myrepo"] = &rRepo
 
@@ -1101,8 +1110,9 @@ func TestReconciliation(t *testing.T) {
 		}
 		remote.teams["existing"] = existing
 		rRepo := GithubRepository{
-			Name:          "myrepo",
-			ExternalUsers: make(map[string]string),
+			Name:           "myrepo",
+			ExternalUsers:  make(map[string]string),
+			BoolProperties: make(map[string]bool),
 		}
 		remote.repos["myrepo"] = &rRepo
 
@@ -1169,8 +1179,9 @@ func TestReconciliation(t *testing.T) {
 		}
 		remote.teams["existing"] = existing
 		rRepo := GithubRepository{
-			Name:          "myrepo",
-			ExternalUsers: make(map[string]string),
+			Name:           "myrepo",
+			ExternalUsers:  make(map[string]string),
+			BoolProperties: make(map[string]bool),
 		}
 		rRepo.ExternalUsers["outside1-githubid"] = "WRITE"
 		remote.repos["myrepo"] = &rRepo
@@ -1244,8 +1255,9 @@ func TestReconciliation(t *testing.T) {
 		}
 		remote.teams["existing"] = existing
 		rRepo := GithubRepository{
-			Name:          "myrepo",
-			ExternalUsers: make(map[string]string),
+			Name:           "myrepo",
+			ExternalUsers:  make(map[string]string),
+			BoolProperties: make(map[string]bool),
 		}
 		rRepo.ExternalUsers["outside1-githubid"] = "WRITE"
 		remote.repos["myrepo"] = &rRepo
@@ -1325,7 +1337,9 @@ func TestReconciliation(t *testing.T) {
 			appids:     make(map[string]int),
 		}
 		removing := &GithubRepository{
-			Name: "removing",
+			Name:           "removing",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
 		}
 		remote.repos["removing"] = removing
 
@@ -1360,7 +1374,9 @@ func TestReconciliation(t *testing.T) {
 			appids:     make(map[string]int),
 		}
 		removing := &GithubRepository{
-			Name: "removing",
+			Name:           "removing",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
 		}
 		remote.repos["removing"] = removing
 

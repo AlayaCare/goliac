@@ -20,11 +20,20 @@ import (
 // swagger:model repositoryDetails
 type RepositoryDetails struct {
 
+	// allow update branch
+	AllowUpdateBranch bool `json:"allowUpdateBranch"`
+
 	// archived
 	Archived bool `json:"archived"`
 
+	// auto merge allowed
+	AutoMergeAllowed bool `json:"autoMergeAllowed"`
+
 	// collaborators
 	Collaborators []*RepositoryDetailsCollaboratorsItems0 `json:"collaborators"`
+
+	// delete branch on merge
+	DeleteBranchOnMerge bool `json:"deleteBranchOnMerge"`
 
 	// name
 	Name string `json:"name,omitempty"`

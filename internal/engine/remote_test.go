@@ -408,10 +408,10 @@ func TestRemoteRepository(t *testing.T) {
 		repositories, _, err := remoteImpl.loadRepositories()
 		assert.Nil(t, err)
 		assert.Equal(t, 133, len(repositories))
-		assert.Equal(t, false, repositories["repo_1"].IsArchived)
-		assert.Equal(t, true, repositories["repo_3"].IsArchived)
-		assert.Equal(t, false, repositories["repo_1"].IsPrivate)
-		assert.Equal(t, true, repositories["repo_10"].IsPrivate)
+		assert.Equal(t, false, repositories["repo_1"].BoolProperties["archived"])
+		assert.Equal(t, true, repositories["repo_3"].BoolProperties["archived"])
+		assert.Equal(t, false, repositories["repo_1"].BoolProperties["private"])
+		assert.Equal(t, true, repositories["repo_10"].BoolProperties["private"])
 	})
 	t.Run("happy path: load remote teams", func(t *testing.T) {
 		// MockGithubClient doesn't support concurrent access

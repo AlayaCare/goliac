@@ -95,15 +95,15 @@ func (g *GithubBatchExecutor) DeleteTeam(dryrun bool, teamslug string) {
 	})
 }
 
-func (g *GithubBatchExecutor) CreateRepository(dryrun bool, reponame string, description string, writers []string, readers []string, public bool) {
+func (g *GithubBatchExecutor) CreateRepository(dryrun bool, reponame string, description string, writers []string, readers []string, boolProperties map[string]bool) {
 	g.commands = append(g.commands, &GithubCommandCreateRepository{
-		client:      g.client,
-		dryrun:      dryrun,
-		reponame:    reponame,
-		description: description,
-		readers:     readers,
-		writers:     writers,
-		public:      public,
+		client:         g.client,
+		dryrun:         dryrun,
+		reponame:       reponame,
+		description:    description,
+		readers:        readers,
+		writers:        writers,
+		boolProperties: boolProperties,
 	})
 }
 
@@ -136,21 +136,13 @@ func (g *GithubBatchExecutor) UpdateRepositoryRemoveTeamAccess(dryrun bool, repo
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryUpdatePrivate(dryrun bool, reponame string, private bool) {
-	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdatePrivate{
-		client:   g.client,
-		dryrun:   dryrun,
-		reponame: reponame,
-		private:  private,
-	})
-}
-
-func (g *GithubBatchExecutor) UpdateRepositoryUpdateArchived(dryrun bool, reponame string, archived bool) {
-	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdateArchived{
-		client:   g.client,
-		dryrun:   dryrun,
-		reponame: reponame,
-		archived: archived,
+func (g *GithubBatchExecutor) UpdateRepositoryUpdateBoolProperty(dryrun bool, reponame string, propertyName string, propertyValue bool) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdateBoolProperty{
+		client:        g.client,
+		dryrun:        dryrun,
+		reponame:      reponame,
+		propertyName:  propertyName,
+		propertyValue: propertyValue,
 	})
 }
 
@@ -233,17 +225,17 @@ func (g *GithubCommandAddUserToOrg) Apply() {
 }
 
 type GithubCommandCreateRepository struct {
-	client      engine.ReconciliatorExecutor
-	dryrun      bool
-	reponame    string
-	description string
-	writers     []string
-	readers     []string
-	public      bool
+	client         engine.ReconciliatorExecutor
+	dryrun         bool
+	reponame       string
+	description    string
+	writers        []string
+	readers        []string
+	boolProperties map[string]bool
 }
 
 func (g *GithubCommandCreateRepository) Apply() {
-	g.client.CreateRepository(g.dryrun, g.reponame, g.description, g.writers, g.readers, g.public)
+	g.client.CreateRepository(g.dryrun, g.reponame, g.description, g.writers, g.readers, g.boolProperties)
 }
 
 type GithubCommandCreateTeam struct {
@@ -323,17 +315,6 @@ func (g *GithubCommandUpdateRepositoryUpdateTeamAccess) Apply() {
 	g.client.UpdateRepositoryUpdateTeamAccess(g.dryrun, g.reponame, g.teamslug, g.permission)
 }
 
-type GithubCommandUpdateRepositoryUpdateArchived struct {
-	client   engine.ReconciliatorExecutor
-	dryrun   bool
-	reponame string
-	archived bool
-}
-
-func (g *GithubCommandUpdateRepositoryUpdateArchived) Apply() {
-	g.client.UpdateRepositoryUpdateArchived(g.dryrun, g.reponame, g.archived)
-}
-
 type GithubCommandUpdateRepositorySetExternalUser struct {
 	client     engine.ReconciliatorExecutor
 	dryrun     bool
@@ -357,15 +338,16 @@ func (g *GithubCommandUpdateRepositoryRemoveExternalUser) Apply() {
 	g.client.UpdateRepositoryRemoveExternalUser(g.dryrun, g.reponame, g.githubid)
 }
 
-type GithubCommandUpdateRepositoryUpdatePrivate struct {
-	client   engine.ReconciliatorExecutor
-	dryrun   bool
-	reponame string
-	private  bool
+type GithubCommandUpdateRepositoryUpdateBoolProperty struct {
+	client        engine.ReconciliatorExecutor
+	dryrun        bool
+	reponame      string
+	propertyName  string
+	propertyValue bool
 }
 
-func (g *GithubCommandUpdateRepositoryUpdatePrivate) Apply() {
-	g.client.UpdateRepositoryUpdatePrivate(g.dryrun, g.reponame, g.private)
+func (g *GithubCommandUpdateRepositoryUpdateBoolProperty) Apply() {
+	g.client.UpdateRepositoryUpdateBoolProperty(g.dryrun, g.reponame, g.propertyName, g.propertyValue)
 }
 
 type GithubCommandUpdateTeamAddMember struct {

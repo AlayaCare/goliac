@@ -414,7 +414,22 @@ func init() {
     "repository": {
       "type": "object",
       "properties": {
+        "allowUpdateBranch": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
         "archived": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "autoMergeAllowed": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "deleteBranchOnMerge": {
           "type": "boolean",
           "x-isnullable": false,
           "x-omitempty": false
@@ -433,7 +448,17 @@ func init() {
     "repositoryDetails": {
       "type": "object",
       "properties": {
+        "allowUpdateBranch": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
         "archived": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "autoMergeAllowed": {
           "type": "boolean",
           "x-isnullable": false,
           "x-omitempty": false
@@ -453,6 +478,11 @@ func init() {
               }
             }
           }
+        },
+        "deleteBranchOnMerge": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
         },
         "name": {
           "type": "string",
@@ -1116,7 +1146,22 @@ func init() {
     "repository": {
       "type": "object",
       "properties": {
+        "allowUpdateBranch": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
         "archived": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "autoMergeAllowed": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "deleteBranchOnMerge": {
           "type": "boolean",
           "x-isnullable": false,
           "x-omitempty": false
@@ -1135,7 +1180,17 @@ func init() {
     "repositoryDetails": {
       "type": "object",
       "properties": {
+        "allowUpdateBranch": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
         "archived": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
+        },
+        "autoMergeAllowed": {
           "type": "boolean",
           "x-isnullable": false,
           "x-omitempty": false
@@ -1145,6 +1200,11 @@ func init() {
           "items": {
             "$ref": "#/definitions/RepositoryDetailsCollaboratorsItems0"
           }
+        },
+        "deleteBranchOnMerge": {
+          "type": "boolean",
+          "x-isnullable": false,
+          "x-omitempty": false
         },
         "name": {
           "type": "string",

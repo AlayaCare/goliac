@@ -112,6 +112,18 @@ definitions:
         type: boolean
         x-isnullable: false
         x-omitempty: false
+      autoMergeAllowed:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
+      deleteBranchOnMerge:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
+      allowUpdateBranch:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
       archived:
         type: boolean
         x-isnullable: false
@@ -134,6 +146,18 @@ definitions:
         x-isnullable: false
         x-omitempty: false
       archived:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
+      autoMergeAllowed:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
+      deleteBranchOnMerge:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
+      allowUpdateBranch:
         type: boolean
         x-isnullable: false
         x-omitempty: false

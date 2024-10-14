@@ -44,12 +44,11 @@ type GoliacRemoteExecutor interface {
 }
 
 type GithubRepository struct {
-	Name          string
-	Id            int
-	RefId         string
-	IsArchived    bool
-	IsPrivate     bool
-	ExternalUsers map[string]string // [githubid]permission
+	Name           string
+	Id             int
+	RefId          string
+	BoolProperties map[string]bool   // archived, private, allow_auto_merge, delete_branch_on_merge, allow_update_branch
+	ExternalUsers  map[string]string // [githubid]permission
 }
 
 type GithubTeam struct {
@@ -364,6 +363,9 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
 		  databaseId
           isArchived
           isPrivate
+		  autoMergeAllowed
+          deleteBranchOnMerge
+          allowUpdateBranch
           collaborators(affiliation: OUTSIDE, first: 100) {
             edges {
               node {
@@ -388,12 +390,15 @@ type GraplQLRepositories struct {
 		Organization struct {
 			Repositories struct {
 				Nodes []struct {
-					Name          string
-					Id            string
-					DatabaseId    int
-					IsArchived    bool
-					IsPrivate     bool
-					Collaborators struct {
+					Name                string
+					Id                  string
+					DatabaseId          int
+					IsArchived          bool
+					IsPrivate           bool
+					AutoMergeAllowed    bool
+					DeleteBranchOnMerge bool
+					AllowUpdateBranch   bool
+					Collaborators       struct {
 						Edges []struct {
 							Node struct {
 								Login string
@@ -450,11 +455,16 @@ func (g *GoliacRemoteImpl) loadRepositories() (map[string]*GithubRepository, map
 
 		for _, c := range gResult.Data.Organization.Repositories.Nodes {
 			repo := &GithubRepository{
-				Name:          c.Name,
-				Id:            c.DatabaseId,
-				RefId:         c.Id,
-				IsArchived:    c.IsArchived,
-				IsPrivate:     c.IsPrivate,
+				Name:  c.Name,
+				Id:    c.DatabaseId,
+				RefId: c.Id,
+				BoolProperties: map[string]bool{
+					"archived":               c.IsArchived,
+					"private":                c.IsPrivate,
+					"allow_auto_merge":       c.AutoMergeAllowed,
+					"delete_branch_on_merge": c.DeleteBranchOnMerge,
+					"allow_update_branch":    c.AllowUpdateBranch,
+				},
 				ExternalUsers: make(map[string]string),
 			}
 			for _, collaborator := range c.Collaborators.Edges {
@@ -1498,16 +1508,33 @@ type CreateRepositoryResponse struct {
 	NodeId string `json:"node_id"`
 }
 
-func (g *GoliacRemoteImpl) CreateRepository(dryrun bool, reponame string, description string, writers []string, readers []string, public bool) {
+/*
+boolProperties are:
+- private
+- archived
+- allow_auto_merge
+- delete_branch_on_merge
+- allow_update_branch
+- ...
+*/
+func (g *GoliacRemoteImpl) CreateRepository(dryrun bool, reponame string, description string, writers []string, readers []string, boolProperties map[string]bool) {
 	repoId := 0
 	repoRefId := reponame
 	// create repository
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#create-an-organization-repository
 	if !dryrun {
+		props := map[string]interface{}{
+			"name":        reponame,
+			"description": description,
+		}
+		for k, v := range boolProperties {
+			props[k] = v
+		}
+
 		body, err := g.client.CallRestAPI(
 			fmt.Sprintf("/orgs/%s/repos", config.Config.GithubAppOrganization),
 			"POST",
-			map[string]interface{}{"name": reponame, "description": description, "private": !public},
+			props,
 		)
 		if err != nil {
 			logrus.Errorf("failed to create repository: %v. %s", err, string(body))
@@ -1527,11 +1554,10 @@ func (g *GoliacRemoteImpl) CreateRepository(dryrun bool, reponame string, descri
 
 	// update the repositories list
 	newRepo := &GithubRepository{
-		Name:       reponame,
-		Id:         repoId,
-		RefId:      repoRefId,
-		IsArchived: false,
-		IsPrivate:  !public,
+		Name:           reponame,
+		Id:             repoId,
+		RefId:          repoRefId,
+		BoolProperties: boolProperties,
 	}
 	g.repositories[reponame] = newRepo
 	g.repositoriesByRefId[repoRefId] = newRepo
@@ -1664,38 +1690,29 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(dryrun bool, reponam
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdatePrivate(dryrun bool, reponame string, private bool) {
+/*
+Used for
+- private
+- allow_auto_merge
+- delete_branch_on_merge
+- allow_update_branch
+- archived
+*/
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(dryrun bool, reponame string, propertyName string, propertyValue bool) {
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
 			fmt.Sprintf("repos/%s/%s", config.Config.GithubAppOrganization, reponame),
 			"PATCH",
-			map[string]interface{}{"private": private},
+			map[string]interface{}{propertyName: propertyValue},
 		)
 		if err != nil {
-			logrus.Errorf("failed to update repository private setting: %v. %s", err, string(body))
+			logrus.Errorf("failed to update repository %s setting: %v. %s", propertyName, err, string(body))
 		}
 	}
 
 	if repo, ok := g.repositories[reponame]; ok {
-		repo.IsPrivate = private
-	}
-}
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateArchived(dryrun bool, reponame string, archived bool) {
-	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
-	if !dryrun {
-		body, err := g.client.CallRestAPI(
-			fmt.Sprintf("repos/%s/%s", config.Config.GithubAppOrganization, reponame),
-			"PATCH",
-			map[string]interface{}{"archived": archived},
-		)
-		if err != nil {
-			logrus.Errorf("failed to update repository archive setting: %v. %s", err, string(body))
-		}
-	}
-
-	if repo, ok := g.repositories[reponame]; ok {
-		repo.IsArchived = archived
+		repo.BoolProperties[propertyName] = propertyValue
 	}
 }
 

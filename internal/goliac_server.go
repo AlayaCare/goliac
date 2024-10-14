@@ -138,11 +138,14 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 	}
 
 	repositoryDetails := models.RepositoryDetails{
-		Name:          repository.Name,
-		Public:        repository.Spec.IsPublic,
-		Archived:      repository.Archived,
-		Teams:         teams,
-		Collaborators: collaborators,
+		Name:                repository.Name,
+		Public:              repository.Spec.IsPublic,
+		AutoMergeAllowed:    repository.Spec.AllowAutoMerge,
+		DeleteBranchOnMerge: repository.Spec.DeleteBranchOnMerge,
+		AllowUpdateBranch:   repository.Spec.AllowUpdateBranch,
+		Archived:            repository.Archived,
+		Teams:               teams,
+		Collaborators:       collaborators,
 	}
 
 	return app.NewGetRepositoryOK().WithPayload(&repositoryDetails)
@@ -195,9 +198,12 @@ func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responde
 	repositories := make([]*models.Repository, 0, len(repos))
 	for reponame, repo := range repos {
 		r := models.Repository{
-			Name:     reponame,
-			Archived: repo.Archived,
-			Public:   repo.Spec.IsPublic,
+			Name:                reponame,
+			Archived:            repo.Archived,
+			Public:              repo.Spec.IsPublic,
+			AutoMergeAllowed:    repo.Spec.AllowAutoMerge,
+			DeleteBranchOnMerge: repo.Spec.DeleteBranchOnMerge,
+			AllowUpdateBranch:   repo.Spec.AllowUpdateBranch,
 		}
 		repositories = append(repositories, &r)
 	}

@@ -196,8 +196,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 }
 
 type GithubRepoComparable struct {
-	IsPublic            bool
-	IsArchived          bool
+	BoolProperties      map[string]bool
 	Writers             []string
 	Readers             []string
 	ExternalUserReaders []string // githubids
@@ -213,12 +212,14 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	rRepos := make(map[string]*GithubRepoComparable)
 	for k, v := range ghRepos {
 		repo := &GithubRepoComparable{
-			IsPublic:            !v.IsPrivate,
-			IsArchived:          v.IsArchived,
+			BoolProperties:      map[string]bool{},
 			Writers:             []string{},
 			Readers:             []string{},
 			ExternalUserReaders: []string{},
 			ExternalUserWriters: []string{},
+		}
+		for pk, pv := range v.BoolProperties {
+			repo.BoolProperties[pk] = pv
 		}
 
 		for cGithubid, cPermission := range v.ExternalUsers {
@@ -288,8 +289,13 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		}
 
 		lRepos[slug.Make(reponame)] = &GithubRepoComparable{
-			IsPublic:            lRepo.Spec.IsPublic,
-			IsArchived:          lRepo.Archived,
+			BoolProperties: map[string]bool{
+				"private":                !lRepo.Spec.IsPublic,
+				"archived":               lRepo.Archived,
+				"allow_auto_merge":       lRepo.Spec.AllowAutoMerge,
+				"delete_branch_on_merge": lRepo.Spec.DeleteBranchOnMerge,
+				"allow_update_branch":    lRepo.Spec.AllowUpdateBranch,
+			},
 			Readers:             readers,
 			Writers:             writers,
 			ExternalUserReaders: eReaders,
@@ -300,11 +306,10 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	// now we compare local (slugTeams) and remote (rTeams)
 
 	compareRepos := func(lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) bool {
-		if lRepo.IsArchived != rRepo.IsArchived {
-			return false
-		}
-		if lRepo.IsPublic != rRepo.IsPublic {
-			return false
+		for lk, lv := range lRepo.BoolProperties {
+			if rv, ok := rRepo.BoolProperties[lk]; !ok || rv != lv {
+				return false
+			}
 		}
 
 		if res, _, _ := entity.StringArrayEquivalent(lRepo.Readers, rRepo.Readers); !res {
@@ -327,16 +332,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	}
 
 	onChanged := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) {
-		// reconciliate repositories public/private
-		if lRepo.IsPublic != rRepo.IsPublic {
-			// UPDATE private repository
-			r.UpdateRepositoryUpdatePrivate(ctx, dryrun, remote, reponame, !lRepo.IsPublic)
-		}
-
-		// reconciliate repositories archived
-		if lRepo.IsArchived != rRepo.IsArchived {
-			// UPDATE archived repository
-			r.UpdateRepositoryUpdateArchived(ctx, dryrun, remote, reponame, lRepo.IsArchived)
+		// reconciliate repositories boolean properties
+		for lk, lv := range lRepo.BoolProperties {
+			if rv, ok := rRepo.BoolProperties[lk]; !ok || rv != lv {
+				r.UpdateRepositoryUpdateBoolProperty(ctx, dryrun, remote, reponame, lk, lv)
+			}
 		}
 
 		if res, readToRemove, readToAdd := entity.StringArrayEquivalent(lRepo.Readers, rRepo.Readers); !res {
@@ -406,11 +406,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		// if the repo was just archived in a previous commit and we "resume it"
 		if aRepo, ok := toArchive[reponame]; ok {
 			delete(toArchive, reponame)
-			r.UpdateRepositoryUpdateArchived(ctx, dryrun, remote, reponame, false)
+			r.UpdateRepositoryUpdateBoolProperty(ctx, dryrun, remote, reponame, "archived", false)
 			// calling onChanged to update the repository permissions
 			onChanged(reponame, aRepo, rRepo)
 		} else {
-			r.CreateRepository(ctx, dryrun, remote, reponame, reponame, lRepo.Writers, lRepo.Readers, lRepo.IsPublic)
+			r.CreateRepository(ctx, dryrun, remote, reponame, reponame, lRepo.Writers, lRepo.Readers, lRepo.BoolProperties)
 		}
 	}
 
@@ -420,7 +420,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		// but if we have ArchiveOnDelete...
 		if r.repoconfig.ArchiveOnDelete {
 			if r.repoconfig.DestructiveOperations.AllowDestructiveRepositories {
-				r.UpdateRepositoryUpdateArchived(ctx, dryrun, remote, reponame, true)
+				r.UpdateRepositoryUpdateBoolProperty(ctx, dryrun, remote, reponame, "archived", true)
 				toArchive[reponame] = rRepo
 			}
 		} else {
@@ -602,15 +602,15 @@ func (r *GoliacReconciliatorImpl) DeleteTeam(ctx context.Context, dryrun bool, r
 		}
 	}
 }
-func (r *GoliacReconciliatorImpl) CreateRepository(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, descrition string, writers []string, readers []string, public bool) {
+func (r *GoliacReconciliatorImpl) CreateRepository(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
 	author := "unknown"
 	if a := ctx.Value(KeyAuthor); a != nil {
 		author = a.(string)
 	}
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "create_repository"}).Infof("repositoryname: %s, readers: %s, writers: %s, public: %v", reponame, strings.Join(readers, ","), strings.Join(writers, ","), public)
-	remote.CreateRepository(reponame, reponame, writers, readers, public)
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "create_repository"}).Infof("repositoryname: %s, readers: %s, writers: %s, boolProperties: %v", reponame, strings.Join(readers, ","), strings.Join(writers, ","), boolProperties)
+	remote.CreateRepository(reponame, reponame, writers, readers, boolProperties)
 	if r.executor != nil {
-		r.executor.CreateRepository(dryrun, reponame, reponame, writers, readers, public)
+		r.executor.CreateRepository(dryrun, reponame, reponame, writers, readers, boolProperties)
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, teamslug string, permission string) {
@@ -661,26 +661,15 @@ func (r *GoliacReconciliatorImpl) DeleteRepository(ctx context.Context, dryrun b
 		}
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdatePrivate(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, private bool) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue bool) {
 	author := "unknown"
 	if a := ctx.Value(KeyAuthor); a != nil {
 		author = a.(string)
 	}
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_update_private"}).Infof("repositoryname: %s private:%v", reponame, private)
-	remote.UpdateRepositoryUpdatePrivate(reponame, private)
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_update_bool_property"}).Infof("repositoryname: %s %s:%v", reponame, propertyName, propertyValue)
+	remote.UpdateRepositoryUpdateBoolProperty(reponame, propertyName, propertyValue)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryUpdatePrivate(dryrun, reponame, private)
-	}
-}
-func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateArchived(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, archived bool) {
-	author := "unknown"
-	if a := ctx.Value(KeyAuthor); a != nil {
-		author = a.(string)
-	}
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_update_archived"}).Infof("repositoryname: %s archived:%v", reponame, archived)
-	remote.UpdateRepositoryUpdateArchived(reponame, archived)
-	if r.executor != nil {
-		r.executor.UpdateRepositoryUpdateArchived(dryrun, reponame, archived)
+		r.executor.UpdateRepositoryUpdateBoolProperty(dryrun, reponame, propertyName, propertyValue)
 	}
 }
 func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
