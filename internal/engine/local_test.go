@@ -12,8 +12,13 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/go-git/go-billy/v5/util"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/cache"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/transport/client"
+	"github.com/go-git/go-git/v5/plumbing/transport/server"
+	"github.com/go-git/go-git/v5/storage/filesystem"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/stretchr/testify/assert"
 )
@@ -229,5 +234,267 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		_, _, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ErroreUserSync{}, "/tmp/goliac")
 
 		assert.NotNil(t, err)
+	})
+}
+
+func createEmptyTeamRepo(src billy.Filesystem) (*git.Repository, error) {
+	masterStorer := filesystem.NewStorage(src, cache.NewObjectLRUDefault())
+
+	// Create a fake bare repository
+	repo, err := git.Init(masterStorer, src)
+	if err != nil {
+		return nil, err
+	}
+
+	//
+	// Create a new file in the working directory
+	//
+
+	// goliac.yaml
+	err = util.WriteFile(src, "goliac.yaml", []byte(`
+admin_team: github-admins
+
+rulesets:
+  - pattern: .*
+    ruleset: default
+
+max_changesets: 50
+archive_on_delete: true
+
+destructive_operations:
+  repositories: false
+  teams: false
+  users: false
+  rulesets: false
+
+usersync:
+  plugin: noop
+`), 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create users
+	err = src.MkdirAll("users/org", 0755)
+	if err != nil {
+		return nil, err
+	}
+	err = util.WriteFile(src, "users/org/admin.yaml", []byte(`
+apiVersion: v1
+kind: User
+name: admin
+spec:
+  githubID: admin
+`), 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create teams
+	err = src.MkdirAll("teams/github-admins", 0755)
+	if err != nil {
+		return nil, err
+	}
+	err = util.WriteFile(src, "teams/github-admins/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: github-admins
+spec:
+  owners:
+  - admin
+`), 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create repositories
+	err = util.WriteFile(src, "teams/github-admins/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+`), 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	// commit
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return nil, err
+	}
+	_, err = worktree.Add(".")
+	if err != nil {
+		return nil, err
+	}
+	hash, err := worktree.Commit("Initial commit", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "Goliac",
+			Email: "goliac@example.com",
+			When:  time.Now(),
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// tag as v0.1.0
+	_, err = repo.CreateTag("v0.1.0", hash, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// let's add a new commit after
+	err = util.WriteFile(src, "teams/github-admins/repo2.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo2
+`), 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	// commit
+	worktree, err = repo.Worktree()
+	if err != nil {
+		return nil, err
+	}
+	_, err = worktree.Add(".")
+	if err != nil {
+		return nil, err
+	}
+	_, err = worktree.Commit("add another repo", &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  "Goliac",
+			Email: "goliac@example.com",
+			When:  time.Now(),
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return repo, nil
+}
+
+func helperCreateAndClone(root billy.Filesystem, src billy.Filesystem, target billy.Filesystem) (*git.Repository, *git.Repository, error) {
+	repo, err := createEmptyTeamRepo(src)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	//
+	// trying to clone it
+	//
+
+	loader := server.NewFilesystemLoader(root)
+	client.InstallProtocol("inmemory", server.NewClient(loader))
+
+	dotGit, err := target.Chroot(".git")
+	if err != nil {
+		return nil, nil, err
+	}
+	storer := filesystem.NewStorage(dotGit, cache.NewObjectLRUDefault())
+
+	clonedRepo, err := git.Clone(storer, target, &git.CloneOptions{
+		URL:      "inmemory:///src",
+		Progress: nil,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return repo, clonedRepo, nil
+}
+
+func TestPushTag(t *testing.T) {
+	t.Run("push a tag into an upstream git repository", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+		//
+		// push tag
+		//
+		g := GoliacLocalImpl{
+			teams:         map[string]*entity.Team{},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
+
+		// create a commit
+		utils.WriteFile(target, "test.txt", []byte(`test`), 0644)
+		w, err := clonedRepo.Worktree()
+		assert.Nil(t, err)
+		_, err = w.Add(".")
+		assert.Nil(t, err)
+
+		hash, err := w.Commit("new commit", &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "Goliac",
+				Email: config.Config.GoliacEmail,
+				When:  time.Now(),
+			},
+		})
+		assert.Nil(t, err)
+
+		err = g.PushTag("v1.0.0", hash, "none")
+		assert.Nil(t, err)
+
+		// check the tag
+		tag, err := clonedRepo.Tag("v1.0.0")
+		assert.Nil(t, err)
+		assert.NotNil(t, tag)
+
+		// read tag on the master repository
+		tag, err = repo.Tag("v1.0.0")
+		assert.Nil(t, err)
+		assert.NotNil(t, tag)
+	})
+}
+
+func TestBasicGitops(t *testing.T) {
+	t.Run("clone", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+	})
+
+	t.Run("CheckoutCommit", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+		// get commits
+		g := GoliacLocalImpl{
+			teams:         map[string]*entity.Team{},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
+
+		commits, err := g.ListCommitsFromTag("v0.1.0")
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(commits))
+
 	})
 }

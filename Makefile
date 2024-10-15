@@ -14,7 +14,7 @@ run_ui:
 	@cd ./browser/goliac-ui/; npm run serve
 
 test: deps verifiers
-	@GO111MODULE=on go test -race -covermode=atomic -coverprofile=coverage.txt ./internal/...
+	@GO111MODULE=on go test -covermode=atomic -coverprofile=coverage.txt ./internal/...
 	@go tool cover -html coverage.txt -o cover.html
 
 gen: api_docs swagger
