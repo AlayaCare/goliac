@@ -6,7 +6,8 @@ import (
 
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/spf13/afero"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
@@ -145,7 +146,7 @@ func TestScaffoldUnit(t *testing.T) {
 
 	// happy path
 	t.Run("happy path: test users no SAML", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		// MockGithubClient doesn't support concurrent access
 
 		scaffold := &Scaffold{
@@ -157,13 +158,13 @@ func TestScaffoldUnit(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 4, len(users))
 
-		found, err := afero.Exists(fs, "/users/org/githubid1.yaml")
+		found, err := utils.Exists(fs, "/users/org/githubid1.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, true, found)
 	})
 
 	t.Run("happy path: test users SAML", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		// MockGithubClient doesn't support concurrent access
 
 		scaffold := &Scaffold{
@@ -175,13 +176,13 @@ func TestScaffoldUnit(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(users))
 
-		found, err := afero.Exists(fs, "/users/org/user1@company.com.yaml")
+		found, err := utils.Exists(fs, "/users/org/user1@company.com.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, true, found)
 	})
 
 	t.Run("happy path: test rulesets", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		// MockGithubClient doesn't support concurrent access
 
 		scaffold := &Scaffold{
@@ -192,13 +193,13 @@ func TestScaffoldUnit(t *testing.T) {
 		err := scaffold.generateRuleset(fs, "/rulesets")
 		assert.Nil(t, err)
 
-		found, err := afero.Exists(fs, "/rulesets/default.yaml")
+		found, err := utils.Exists(fs, "/rulesets/default.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, true, found)
 	})
 
 	t.Run("happy path: test goliac.conf", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		// MockGithubClient doesn't support concurrent access
 
 		scaffold := &Scaffold{
@@ -209,13 +210,13 @@ func TestScaffoldUnit(t *testing.T) {
 		err := scaffold.generateGoliacConf(fs, "/", "admin")
 		assert.Nil(t, err)
 
-		found, err := afero.Exists(fs, "/goliac.yaml")
+		found, err := utils.Exists(fs, "/goliac.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, true, found)
 	})
 
 	t.Run("happy path: test github action", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		// MockGithubClient doesn't support concurrent access
 
 		scaffold := &Scaffold{
@@ -226,7 +227,7 @@ func TestScaffoldUnit(t *testing.T) {
 		err := scaffold.generateGithubAction(fs, "/")
 		assert.Nil(t, err)
 
-		found, err := afero.Exists(fs, "/.github/workflows/pr.yaml")
+		found, err := utils.Exists(fs, "/.github/workflows/pr.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, true, found)
 	})
@@ -234,7 +235,7 @@ func TestScaffoldUnit(t *testing.T) {
 func TestScaffoldFull(t *testing.T) {
 
 	t.Run("happy path: test teams and repos without SAML", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		// MockGithubClient doesn't support concurrent access
 
 		scaffold := &Scaffold{
@@ -250,17 +251,17 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, true, foundAdmin)
 
-		found, err := afero.Exists(fs, "/teams/admin/team.yaml")
+		found, err := utils.Exists(fs, "/teams/admin/team.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, true, found)
 
-		found, err = afero.Exists(fs, "/teams/regular/repo1.yaml")
+		found, err = utils.Exists(fs, "/teams/regular/repo1.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, true, found)
 	})
 
 	t.Run("happy path: test teams and repos with SAML", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		// MockGithubClient doesn't support concurrent access
 
 		scaffold := &Scaffold{
@@ -276,15 +277,15 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, true, foundAdmin)
 
-		found, err := afero.Exists(fs, "/teams/admin/team.yaml")
+		found, err := utils.Exists(fs, "/teams/admin/team.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, true, found)
 
-		found, err = afero.Exists(fs, "/teams/regular/repo1.yaml")
+		found, err = utils.Exists(fs, "/teams/regular/repo1.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, true, found)
 
-		regularTeam, err := afero.ReadFile(fs, "/teams/regular/team.yaml")
+		regularTeam, err := utils.ReadFile(fs, "/teams/regular/team.yaml")
 		assert.Nil(t, err)
 
 		var at entity.Team
@@ -293,7 +294,7 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Equal(t, "regular", at.Name)
 		assert.Equal(t, 2, len(at.Spec.Owners)) // githubid2,githubid3
 
-		repo1, err := afero.ReadFile(fs, "/teams/regular/repo1.yaml")
+		repo1, err := utils.ReadFile(fs, "/teams/regular/repo1.yaml")
 		assert.Nil(t, err)
 
 		var r1 entity.Repository
@@ -302,7 +303,7 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Equal(t, "repo1", r1.Name)
 		assert.Equal(t, 0, len(r1.Spec.Writers)) // regular -> not counted
 
-		repo2, err := afero.ReadFile(fs, "/teams/admin/repo2.yaml")
+		repo2, err := utils.ReadFile(fs, "/teams/admin/repo2.yaml")
 		assert.Nil(t, err)
 
 		var r2 entity.Repository

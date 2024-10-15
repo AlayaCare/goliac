@@ -5,7 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/afero"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,8 +22,8 @@ type Team struct {
  * NewTeam reads a file and returns a Team object
  * The next step is to validate the Team object using the Validate method
  */
-func NewTeam(fs afero.Fs, filename string) (*Team, error) {
-	filecontent, err := afero.ReadFile(fs, filename)
+func NewTeam(fs billy.Filesystem, filename string) (*Team, error) {
+	filecontent, err := utils.ReadFile(fs, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -42,12 +43,12 @@ func NewTeam(fs afero.Fs, filename string) (*Team, error) {
  * - a slice of errors that must stop the validation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadTeamDirectory(fs afero.Fs, dirname string, users map[string]*User) (map[string]*Team, []error, []Warning) {
+func ReadTeamDirectory(fs billy.Filesystem, dirname string, users map[string]*User) (map[string]*Team, []error, []Warning) {
 	errors := []error{}
 	warning := []Warning{}
 	teams := make(map[string]*Team)
 
-	exist, err := afero.Exists(fs, dirname)
+	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
 		errors = append(errors, err)
 		return teams, errors, warning
@@ -57,7 +58,7 @@ func ReadTeamDirectory(fs afero.Fs, dirname string, users map[string]*User) (map
 	}
 
 	// Parse all the teams in the dirname directory
-	entries, err := afero.ReadDir(fs, dirname)
+	entries, err := fs.ReadDir(dirname)
 	if err != nil {
 		errors = append(errors, err)
 		return nil, errors, warning
@@ -143,10 +144,10 @@ func (t *Team) Validate(dirname string, users map[string]*User) (error, []Warnin
  * Returns:
  * - a list of (team's) file changes (to commit to Github)
  */
-func ReadAndAdjustTeamDirectory(fs afero.Fs, dirname string, users map[string]*User) ([]string, error) {
+func ReadAndAdjustTeamDirectory(fs billy.Filesystem, dirname string, users map[string]*User) ([]string, error) {
 	teamschanged := []string{}
 
-	exist, err := afero.Exists(fs, dirname)
+	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
 		return teamschanged, err
 	}
@@ -155,7 +156,7 @@ func ReadAndAdjustTeamDirectory(fs afero.Fs, dirname string, users map[string]*U
 	}
 
 	// Parse all the teams in the dirname directory
-	entries, err := afero.ReadDir(fs, dirname)
+	entries, err := fs.ReadDir(dirname)
 	if err != nil {
 		return teamschanged, err
 	}
@@ -181,7 +182,7 @@ func ReadAndAdjustTeamDirectory(fs afero.Fs, dirname string, users map[string]*U
 
 // Update is telling if the team needs to be adjust (and the team's definition was changed on disk),
 // based on the list of (still) existing users
-func (t *Team) Update(fs afero.Fs, filename string, users map[string]*User) (bool, error) {
+func (t *Team) Update(fs billy.Filesystem, filename string, users map[string]*User) (bool, error) {
 	changed := false
 	owners := make([]string, 0)
 	for _, owner := range t.Spec.Owners {

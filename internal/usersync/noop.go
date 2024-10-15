@@ -6,16 +6,17 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/spf13/afero"
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/osfs"
 )
 
 type UserSyncPluginNoop struct {
-	Fs afero.Fs
+	Fs billy.Filesystem
 }
 
 func NewUserSyncPluginNoop() engine.UserSyncPlugin {
 	return &UserSyncPluginNoop{
-		Fs: afero.NewOsFs(),
+		Fs: osfs.New("/"),
 	}
 }
 

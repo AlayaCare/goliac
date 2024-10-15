@@ -1,7 +1,8 @@
 package entity
 
 import (
-	"github.com/spf13/afero"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5"
 	"gopkg.in/yaml.v3"
 )
 
@@ -17,8 +18,8 @@ type Entity struct {
  * parseEntity is a generic function that is used to parse any JSON file
  * and discover the apiVersion and kind of the file.
  */
-func parseEntity(fs afero.Fs, filename string) (*Entity, error) {
-	filecontent, err := afero.ReadFile(fs, filename)
+func parseEntity(fs billy.Filesystem, filename string) (*Entity, error) {
+	filecontent, err := utils.ReadFile(fs, filename)
 	if err != nil {
 		return nil, err
 	}

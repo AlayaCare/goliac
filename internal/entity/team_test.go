@@ -3,14 +3,16 @@ package entity
 import (
 	"testing"
 
-	"github.com/spf13/afero"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
 
-func fixtureCreateUser(t *testing.T, fs afero.Fs) {
-	fs.Mkdir("users", 0755)
-	err := afero.WriteFile(fs, "users/user1.yaml", []byte(`
+func fixtureCreateUser(t *testing.T, fs billy.Filesystem) {
+	fs.MkdirAll("users", 0755)
+	err := utils.WriteFile(fs, "users/user1.yaml", []byte(`
 apiVersion: v1
 kind: User
 name: user1
@@ -19,7 +21,7 @@ spec:
 `), 0644)
 	assert.Nil(t, err)
 
-	err = afero.WriteFile(fs, "users/user2.yaml", []byte(`
+	err = utils.WriteFile(fs, "users/user2.yaml", []byte(`
 apiVersion: v1
 kind: User
 name: user2
@@ -28,7 +30,7 @@ spec:
 `), 0644)
 	assert.Nil(t, err)
 
-	fs.Mkdir("teams", 0755)
+	fs.MkdirAll("teams", 0755)
 }
 
 func TestTeam(t *testing.T) {
@@ -36,11 +38,11 @@ func TestTeam(t *testing.T) {
 	// happy path
 	t.Run("happy path", func(t *testing.T) {
 		// create a new user
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		fixtureCreateUser(t, fs)
-		fs.Mkdir("teams/team1", 0755)
+		fs.MkdirAll("teams/team1", 0755)
 
-		err := afero.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
 apiVersion: v1
 kind: Team
 name: team1
@@ -63,11 +65,11 @@ spec:
 
 	t.Run("happy path without enough owners", func(t *testing.T) {
 		// create a new user
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		fixtureCreateUser(t, fs)
-		fs.Mkdir("teams/team1", 0755)
+		fs.MkdirAll("teams/team1", 0755)
 
-		err := afero.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
 apiVersion: v1
 kind: Team
 name: team1
@@ -89,7 +91,7 @@ spec:
 
 	t.Run("not happy path: not team directory", func(t *testing.T) {
 		// create a new user
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 
 		_, errs, warns := ReadTeamDirectory(fs, "teams", map[string]*User{})
 		assert.Equal(t, len(errs), 0)
@@ -98,11 +100,11 @@ spec:
 
 	t.Run("not happy path: wrong username", func(t *testing.T) {
 		// create a new user
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		fixtureCreateUser(t, fs)
-		fs.Mkdir("teams/team1", 0755)
+		fs.MkdirAll("teams/team1", 0755)
 
-		err := afero.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
 apiVersion: v1
 kind: Team
 name: team1
@@ -125,11 +127,11 @@ spec:
 
 	t.Run("not happy path: missing specs", func(t *testing.T) {
 		// create a new user
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		fixtureCreateUser(t, fs)
-		fs.Mkdir("teams/team1", 0755)
+		fs.MkdirAll("teams/team1", 0755)
 
-		err := afero.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
 apiVersion: v2
 kind: Foo
 name: team2
@@ -159,7 +161,7 @@ func TestAdjustTeam(t *testing.T) {
 			u.Spec.GithubID = username
 			users[username] = &u
 		}
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		changed, err := team.Update(fs, "/teams/ateam/team.yaml", users)
 
 		assert.Nil(t, err)
@@ -176,13 +178,13 @@ func TestAdjustTeam(t *testing.T) {
 			u.Spec.GithubID = username
 			users[username] = &u
 		}
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		changed, err := team.Update(fs, "/teams/ateam/team.yaml", users)
 
 		assert.Nil(t, err)
 		assert.True(t, changed)
 
-		f, err := afero.ReadFile(fs, "/teams/ateam/team.yaml")
+		f, err := utils.ReadFile(fs, "/teams/ateam/team.yaml")
 		assert.Nil(t, err)
 
 		var checkTeam Team
@@ -196,7 +198,7 @@ func TestAdjustTeam(t *testing.T) {
 
 func TestReadAndAdjustTeam(t *testing.T) {
 	t.Run("happy path: no team, no problem", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		users := make(map[string]*User)
 
 		changed, err := ReadAndAdjustTeamDirectory(fs, "/teams", users)
@@ -205,7 +207,7 @@ func TestReadAndAdjustTeam(t *testing.T) {
 	})
 
 	t.Run("happy path: no change ", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		users := make(map[string]*User)
 		for _, username := range []string{"owner1", "owner2", "owner3", "owner3", "member1", "member2", "member3", "member4"} {
 			u := User{}
@@ -214,7 +216,7 @@ func TestReadAndAdjustTeam(t *testing.T) {
 			users[username] = &u
 		}
 
-		err := afero.WriteFile(fs, "/teams/ateam/team.yaml", []byte(`
+		err := utils.WriteFile(fs, "/teams/ateam/team.yaml", []byte(`
 apiVersion: v1
 kind: Team
 name: ateam
@@ -232,7 +234,7 @@ spec:
 		assert.Equal(t, 0, len(changed))
 	})
 	t.Run("not happy path: missing member ", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		users := make(map[string]*User)
 		for _, username := range []string{"owner1", "owner2", "owner3", "owner3", "member1", "member2"} {
 			u := User{}
@@ -241,7 +243,7 @@ spec:
 			users[username] = &u
 		}
 
-		err := afero.WriteFile(fs, "/teams/ateam/team.yaml", []byte(`
+		err := utils.WriteFile(fs, "/teams/ateam/team.yaml", []byte(`
 apiVersion: v1
 kind: Team
 name: ateam

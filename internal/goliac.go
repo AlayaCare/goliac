@@ -13,8 +13,8 @@ import (
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
 	"github.com/Alayacare/goliac/internal/usersync"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 )
 
 const (
@@ -119,7 +119,7 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(repositoryUrl, branch str
 		errs, warns = g.local.LoadAndValidate()
 	} else {
 		// Local
-		fs := afero.NewOsFs()
+		fs := osfs.New("/")
 		errs, warns = g.local.LoadAndValidateLocal(fs, repositoryUrl)
 	}
 

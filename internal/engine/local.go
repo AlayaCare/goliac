@@ -13,6 +13,8 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	goconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -21,7 +23,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -57,7 +58,7 @@ type GoliacLocalGit interface {
 	Close()
 
 	// Load and Validate from a local directory
-	LoadAndValidateLocal(fs afero.Fs, path string) ([]error, []entity.Warning)
+	LoadAndValidateLocal(fs billy.Filesystem, path string) ([]error, []entity.Warning)
 }
 
 type GoliacLocalResources interface {
@@ -500,7 +501,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
  * - collect the difference
  * - returns deleted users, and add/updated users
  */
-func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, userplugin UserSyncPlugin, rootDir string) ([]string, []string, error) {
+func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesystem, userplugin UserSyncPlugin, rootDir string) ([]string, []string, error) {
 	orgUsers, errs, _ := entity.ReadUserDirectory(fs, filepath.Join(rootDir, "users", "org"))
 	if len(errs) > 0 {
 		return nil, nil, fmt.Errorf("cannot load org users (for example: %v)", errs[0])
@@ -578,7 +579,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 	//
 
 	// Parse all the users in the <orgDirectory>/org-users directory
-	fs := afero.NewOsFs()
+	fs := osfs.New("/")
 	deletedusers, addedusers, err := syncUsersViaUserPlugin(repoconfig, fs, userplugin, rootDir)
 	if err != nil {
 		return err
@@ -680,7 +681,7 @@ func (g *GoliacLocalImpl) LoadAndValidate() ([]error, []entity.Warning) {
 	}
 
 	// read the organization files
-	fs := afero.NewOsFs()
+	fs := osfs.New("/")
 
 	w, err := g.repo.Worktree()
 	if err != nil {
@@ -692,7 +693,7 @@ func (g *GoliacLocalImpl) LoadAndValidate() ([]error, []entity.Warning) {
 	return errs, warns
 }
 
-func (g *GoliacLocalImpl) loadUsers(fs afero.Fs, orgDirectory string) ([]error, []entity.Warning) {
+func (g *GoliacLocalImpl) loadUsers(fs billy.Filesystem, orgDirectory string) ([]error, []entity.Warning) {
 	errors := []error{}
 	warnings := []entity.Warning{}
 
@@ -735,7 +736,7 @@ func (g *GoliacLocalImpl) loadUsers(fs afero.Fs, orgDirectory string) ([]error, 
  * - a slice of errors that must stop the vlidation process
  * - a slice of warning that must not stop the validation process
  */
-func (g *GoliacLocalImpl) LoadAndValidateLocal(fs afero.Fs, orgDirectory string) ([]error, []entity.Warning) {
+func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem, orgDirectory string) ([]error, []entity.Warning) {
 	errors, warnings := g.loadUsers(fs, orgDirectory)
 
 	if len(errors) > 0 {

@@ -7,7 +7,7 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/spf13/afero"
+	"github.com/go-git/go-billy/v5/osfs"
 )
 
 type UserSyncPluginShellScript struct{}
@@ -23,7 +23,7 @@ func (p *UserSyncPluginShellScript) UpdateUsers(repoconfig *config.RepositoryCon
 		return nil, err
 	}
 
-	fs := afero.NewOsFs()
+	fs := osfs.New("/")
 
 	users, errs, _ := entity.ReadUserDirectory(fs, orguserdirrectorypath)
 	if len(errs) > 0 {

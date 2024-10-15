@@ -3,7 +3,8 @@ package entity
 import (
 	"testing"
 
-	"github.com/spf13/afero"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,9 +13,9 @@ func TestUser(t *testing.T) {
 	// happy path
 	t.Run("happy path", func(t *testing.T) {
 		// create a new user
-		fs := afero.NewMemMapFs()
-		fs.Mkdir("users", 0755)
-		err := afero.WriteFile(fs, "users/user1.yaml", []byte(`
+		fs := memfs.New()
+		fs.MkdirAll("users", 0755)
+		err := utils.WriteFile(fs, "users/user1.yaml", []byte(`
 apiVersion: v1
 kind: User
 name: user1
@@ -34,9 +35,9 @@ spec:
 
 	t.Run("happy path: with --- separator", func(t *testing.T) {
 		// create a new user starting with "---"
-		fs := afero.NewMemMapFs()
-		fs.Mkdir("users", 0755)
-		err := afero.WriteFile(fs, "users/user1.yaml", []byte(`---
+		fs := memfs.New()
+		fs.MkdirAll("users", 0755)
+		err := utils.WriteFile(fs, "users/user1.yaml", []byte(`---
 apiVersion: v1
 kind: User
 name: user1
@@ -56,7 +57,7 @@ spec:
 
 	t.Run("not happy path: no users directory", func(t *testing.T) {
 		// create a new user starting with "---"
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		_, errs, warns := ReadUserDirectory(fs, "users")
 		assert.Equal(t, len(errs), 0)
 		assert.Equal(t, len(warns), 0)
@@ -64,9 +65,9 @@ spec:
 
 	t.Run("not happy path: missing metadata", func(t *testing.T) {
 		// create a new user starting with "---"
-		fs := afero.NewMemMapFs()
-		fs.Mkdir("users", 0755)
-		err := afero.WriteFile(fs, "users/user1.yaml", []byte(`---
+		fs := memfs.New()
+		fs.MkdirAll("users", 0755)
+		err := utils.WriteFile(fs, "users/user1.yaml", []byte(`---
 apiVersion: v1
 kind: User
 spec:

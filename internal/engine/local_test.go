@@ -2,27 +2,30 @@ package engine
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/spf13/afero"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"github.com/stretchr/testify/assert"
 )
 
-func createBasicStructure(fs afero.Fs, path string) error {
+func createBasicStructure(fs billy.Filesystem, path string) error {
 	// Create a fake repository
 	err := fs.MkdirAll(path, 0755)
 	if err != nil {
 		return err
 	}
 
-	err = afero.WriteFile(fs, filepath.Join(path, "goliac.yaml"), []byte(`
+	err = utils.WriteFile(fs, filepath.Join(path, "goliac.yaml"), []byte(`
 `), 0644)
 	if err != nil {
 		return err
@@ -33,7 +36,7 @@ func createBasicStructure(fs afero.Fs, path string) error {
 		return err
 	}
 
-	err = afero.WriteFile(fs, filepath.Join(path, "users/org/user1.yaml"), []byte(`
+	err = utils.WriteFile(fs, filepath.Join(path, "users/org/user1.yaml"), []byte(`
 apiVersion: v1
 kind: User
 name: user1
@@ -44,7 +47,7 @@ spec:
 		return err
 	}
 
-	err = afero.WriteFile(fs, filepath.Join(path, "users/org/user2.yaml"), []byte(`
+	err = utils.WriteFile(fs, filepath.Join(path, "users/org/user2.yaml"), []byte(`
 apiVersion: v1
 kind: User
 name: user2
@@ -61,7 +64,7 @@ spec:
 		return err
 	}
 
-	err = afero.WriteFile(fs, filepath.Join(path, "teams/team1/team.yaml"), []byte(`
+	err = utils.WriteFile(fs, filepath.Join(path, "teams/team1/team.yaml"), []byte(`
 apiVersion: v1
 kind: Team
 name: team1
@@ -75,7 +78,7 @@ spec:
 	}
 
 	// Create repositories
-	err = afero.WriteFile(fs, filepath.Join(path, "projects/repo1.yaml"), []byte(`
+	err = utils.WriteFile(fs, filepath.Join(path, "projects/repo1.yaml"), []byte(`
 apiVersion: v1
 kind: Repository
 name: repo1
@@ -90,7 +93,7 @@ func TestRepository(t *testing.T) {
 
 	// happy path
 	t.Run("happy path: local directory", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		createBasicStructure(fs, "/tmp/goliac")
 		g := NewGoliacLocalImpl()
 		errs, warns := g.LoadAndValidateLocal(fs, "/tmp/goliac")
@@ -100,16 +103,14 @@ func TestRepository(t *testing.T) {
 	})
 
 	t.Run("happy path: local repository", func(t *testing.T) {
-		tmpDirectory, err := os.MkdirTemp("", "goliac")
-		assert.Nil(t, err)
-		defer os.RemoveAll(tmpDirectory)
+		fs := memfs.New()
+		storer := memory.NewStorage()
 
 		// Initializes a new repository
-		r, err := git.PlainInit(tmpDirectory, false)
+		r, err := git.Init(storer, fs)
 		assert.Nil(t, err)
 
-		fs := afero.NewOsFs()
-		createBasicStructure(fs, tmpDirectory)
+		createBasicStructure(fs, "/")
 		w, err := r.Worktree()
 		assert.Nil(t, err)
 		_, err = w.Add(".")
@@ -176,12 +177,12 @@ func (p *ErroreUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, orguse
 }
 
 type UserSyncPluginNoop struct {
-	Fs afero.Fs
+	Fs billy.Filesystem
 }
 
 func NewUserSyncPluginNoop() UserSyncPlugin {
 	return &UserSyncPluginNoop{
-		Fs: afero.NewOsFs(),
+		Fs: osfs.New("/"),
 	}
 }
 
@@ -197,7 +198,7 @@ func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, or
 func TestSyncUsersViaUserPlugin(t *testing.T) {
 
 	t.Run("happy path: noop", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		createBasicStructure(fs, "/tmp/goliac")
 
 		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &UserSyncPluginNoop{
@@ -210,7 +211,7 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 	})
 
 	t.Run("happy path: replcae with foobar", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		createBasicStructure(fs, "/tmp/goliac")
 
 		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ScrambleUserSync{}, "/tmp/goliac")
@@ -222,7 +223,7 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		assert.Equal(t, "users/org/foobar.yaml", added[1])
 	})
 	t.Run("not happy path: dealing with usersync error", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		createBasicStructure(fs, "/tmp/goliac")
 
 		_, _, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ErroreUserSync{}, "/tmp/goliac")

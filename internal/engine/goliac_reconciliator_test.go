@@ -7,10 +7,10 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/gosimple/slug"
-	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,7 +43,7 @@ func (m *GoliacLocalMock) LoadRepoConfig() (error, *config.RepositoryConfig) {
 func (m *GoliacLocalMock) LoadAndValidate() ([]error, []entity.Warning) {
 	return nil, nil
 }
-func (m *GoliacLocalMock) LoadAndValidateLocal(fs afero.Fs, path string) ([]error, []entity.Warning) {
+func (m *GoliacLocalMock) LoadAndValidateLocal(fs billy.Filesystem, path string) ([]error, []entity.Warning) {
 	return nil, nil
 }
 func (m *GoliacLocalMock) Teams() map[string]*entity.Team {

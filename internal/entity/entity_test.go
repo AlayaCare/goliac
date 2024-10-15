@@ -3,7 +3,8 @@ package entity
 import (
 	"testing"
 
-	"github.com/spf13/afero"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,8 +12,8 @@ func TestEntity(t *testing.T) {
 
 	// happy path
 	t.Run("happy path", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
-		err := afero.WriteFile(fs, "foobar.yaml", []byte(`
+		fs := memfs.New()
+		err := utils.WriteFile(fs, "foobar.yaml", []byte(`
 apiVersion: v1
 kind: FooBar
 name: name
@@ -28,15 +29,15 @@ name: name
 	})
 
 	t.Run("not happy path: file does not exist", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		e, err := parseEntity(fs, "foobar.yaml")
 		assert.NotNil(t, err)
 		assert.Nil(t, e)
 	})
 
 	t.Run("not happy path: wrong yaml", func(t *testing.T) {
-		fs := afero.NewMemMapFs()
-		err := afero.WriteFile(fs, "foobar.yaml", []byte(`
+		fs := memfs.New()
+		err := utils.WriteFile(fs, "foobar.yaml", []byte(`
 apiVersion: v1
 kind: FooBar
 name:
