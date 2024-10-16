@@ -110,7 +110,7 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(repositoryUrl, branch str
 		if err != nil {
 			return fmt.Errorf("unable to clone: %v", err)
 		}
-		err, repoconfig := g.local.LoadRepoConfig()
+		repoconfig, err := g.local.LoadRepoConfig()
 		if err != nil {
 			return fmt.Errorf("unable to read goliac.yaml config file: %v", err)
 		}
@@ -119,8 +119,8 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(repositoryUrl, branch str
 		errs, warns = g.local.LoadAndValidate()
 	} else {
 		// Local
-		fs := osfs.New("/")
-		errs, warns = g.local.LoadAndValidateLocal(fs, repositoryUrl)
+		fs := osfs.New(repositoryUrl)
+		errs, warns = g.local.LoadAndValidateLocal(fs)
 	}
 
 	for _, warn := range warns {
@@ -299,7 +299,7 @@ func (g *GoliacImpl) UsersUpdate(repositoryUrl, branch string, dryrun bool, forc
 	}
 	defer g.local.Close()
 
-	err, repoconfig := g.local.LoadRepoConfig()
+	repoconfig, err := g.local.LoadRepoConfig()
 	if err != nil {
 		return fmt.Errorf("unable to read goliac.yaml config file: %v", err)
 	}

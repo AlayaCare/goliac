@@ -37,13 +37,13 @@ func (m *GoliacLocalMock) CheckoutCommit(commit *object.Commit) error {
 func (m *GoliacLocalMock) PushTag(tagname string, hash plumbing.Hash, accesstoken string) error {
 	return nil
 }
-func (m *GoliacLocalMock) LoadRepoConfig() (error, *config.RepositoryConfig) {
-	return nil, &config.RepositoryConfig{}
+func (m *GoliacLocalMock) LoadRepoConfig() (*config.RepositoryConfig, error) {
+	return &config.RepositoryConfig{}, nil
 }
 func (m *GoliacLocalMock) LoadAndValidate() ([]error, []entity.Warning) {
 	return nil, nil
 }
-func (m *GoliacLocalMock) LoadAndValidateLocal(fs billy.Filesystem, path string) ([]error, []entity.Warning) {
+func (m *GoliacLocalMock) LoadAndValidateLocal(fs billy.Filesystem) ([]error, []entity.Warning) {
 	return nil, nil
 }
 func (m *GoliacLocalMock) Teams() map[string]*entity.Team {

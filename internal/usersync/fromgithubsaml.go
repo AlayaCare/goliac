@@ -7,6 +7,7 @@ import (
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
+	"github.com/go-git/go-billy/v5"
 )
 
 /*
@@ -25,12 +26,12 @@ func NewUserSyncPluginFromGithubSaml(client github.GitHubClient) engine.UserSync
 	}
 }
 
-func (p *UserSyncPluginFromGithubSaml) UpdateUsers(repoconfig *config.RepositoryConfig, orguserdirrectorypath string) (map[string]*entity.User, error) {
+func (p *UserSyncPluginFromGithubSaml) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
 
 	users, err := engine.LoadUsersFromGithubOrgSaml(p.client)
 
 	if len(users) == 0 {
-		return nil, fmt.Errorf("Not able to find any SAML identities")
+		return nil, fmt.Errorf("not able to find any SAML identities")
 	}
 
 	return users, err

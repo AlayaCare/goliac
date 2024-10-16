@@ -32,8 +32,8 @@ func NewGoliacLightImpl() (GoliacLight, error) {
 }
 
 func (g *GoliacLightImpl) Validate(path string) error {
-	fs := osfs.New("/")
-	errs, warns := g.local.LoadAndValidateLocal(fs, path)
+	fs := osfs.New(path)
+	errs, warns := g.local.LoadAndValidateLocal(fs)
 
 	for _, warn := range warns {
 		logrus.Warn(warn)

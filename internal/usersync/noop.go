@@ -7,7 +7,6 @@ import (
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/osfs"
 )
 
 type UserSyncPluginNoop struct {
@@ -15,13 +14,12 @@ type UserSyncPluginNoop struct {
 }
 
 func NewUserSyncPluginNoop() engine.UserSyncPlugin {
-	return &UserSyncPluginNoop{
-		Fs: osfs.New("/"),
-	}
+	return &UserSyncPluginNoop{}
 }
 
-func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, orguserdirrectorypath string) (map[string]*entity.User, error) {
-	users, errs, _ := entity.ReadUserDirectory(p.Fs, orguserdirrectorypath)
+func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
+
+	users, errs, _ := entity.ReadUserDirectory(fs, orguserdirrectorypath)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("cannot load org users (for example: %v)", errs[0])
 	}

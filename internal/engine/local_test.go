@@ -2,7 +2,6 @@ package engine
 
 import (
 	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
-	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-billy/v5/util"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -24,25 +22,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createBasicStructure(fs billy.Filesystem, path string) error {
-	// Create a fake repository
-	err := fs.MkdirAll(path, 0755)
-	if err != nil {
-		return err
-	}
-
-	err = utils.WriteFile(fs, filepath.Join(path, "goliac.yaml"), []byte(`
+func createBasicStructure(fs billy.Filesystem) error {
+	err := utils.WriteFile(fs, "goliac.yaml", []byte(`
 `), 0644)
 	if err != nil {
 		return err
 	}
 	// Create users
-	err = fs.MkdirAll(filepath.Join(path, "users/org"), 0755)
+	err = fs.MkdirAll("users/org", 0755)
 	if err != nil {
 		return err
 	}
 
-	err = utils.WriteFile(fs, filepath.Join(path, "users/org/user1.yaml"), []byte(`
+	err = utils.WriteFile(fs, "users/org/user1.yaml", []byte(`
 apiVersion: v1
 kind: User
 name: user1
@@ -53,7 +45,7 @@ spec:
 		return err
 	}
 
-	err = utils.WriteFile(fs, filepath.Join(path, "users/org/user2.yaml"), []byte(`
+	err = utils.WriteFile(fs, "users/org/user2.yaml", []byte(`
 apiVersion: v1
 kind: User
 name: user2
@@ -65,12 +57,12 @@ spec:
 	}
 
 	// Create teams
-	err = fs.MkdirAll(filepath.Join(path, "teams/team1"), 0755)
+	err = fs.MkdirAll("teams/team1", 0755)
 	if err != nil {
 		return err
 	}
 
-	err = utils.WriteFile(fs, filepath.Join(path, "teams/team1/team.yaml"), []byte(`
+	err = utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
 apiVersion: v1
 kind: Team
 name: team1
@@ -84,7 +76,7 @@ spec:
 	}
 
 	// Create repositories
-	err = utils.WriteFile(fs, filepath.Join(path, "projects/repo1.yaml"), []byte(`
+	err = utils.WriteFile(fs, "projects/repo1.yaml", []byte(`
 apiVersion: v1
 kind: Repository
 name: repo1
@@ -100,9 +92,9 @@ func TestRepository(t *testing.T) {
 	// happy path
 	t.Run("happy path: local directory", func(t *testing.T) {
 		fs := memfs.New()
-		createBasicStructure(fs, "/tmp/goliac")
+		createBasicStructure(fs)
 		g := NewGoliacLocalImpl()
-		errs, warns := g.LoadAndValidateLocal(fs, "/tmp/goliac")
+		errs, warns := g.LoadAndValidateLocal(fs)
 
 		assert.Equal(t, 0, len(errs))
 		assert.Equal(t, 0, len(warns))
@@ -116,7 +108,7 @@ func TestRepository(t *testing.T) {
 		r, err := git.Init(storer, fs)
 		assert.Nil(t, err)
 
-		createBasicStructure(fs, "/")
+		createBasicStructure(fs)
 		w, err := r.Worktree()
 		assert.Nil(t, err)
 		_, err = w.Add(".")
@@ -153,7 +145,7 @@ func TestRepository(t *testing.T) {
 type ScrambleUserSync struct {
 }
 
-func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, orguserdirrectorypath string) (map[string]*entity.User, error) {
+func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
 	users := make(map[string]*entity.User)
 
 	// added
@@ -178,22 +170,18 @@ func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, orgu
 type ErroreUserSync struct {
 }
 
-func (p *ErroreUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, orguserdirrectorypath string) (map[string]*entity.User, error) {
+func (p *ErroreUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
 	return nil, fmt.Errorf("unknown error")
 }
 
-type UserSyncPluginNoop struct {
-	Fs billy.Filesystem
-}
+type UserSyncPluginNoop struct{}
 
 func NewUserSyncPluginNoop() UserSyncPlugin {
-	return &UserSyncPluginNoop{
-		Fs: osfs.New("/"),
-	}
+	return &UserSyncPluginNoop{}
 }
 
-func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, orguserdirrectorypath string) (map[string]*entity.User, error) {
-	users, errs, _ := entity.ReadUserDirectory(p.Fs, orguserdirrectorypath)
+func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
+	users, errs, _ := entity.ReadUserDirectory(fs, orguserdirrectorypath)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("cannot load org users (for example: %v)", errs[0])
 	}
@@ -205,11 +193,9 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 
 	t.Run("happy path: noop", func(t *testing.T) {
 		fs := memfs.New()
-		createBasicStructure(fs, "/tmp/goliac")
+		createBasicStructure(fs)
 
-		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &UserSyncPluginNoop{
-			Fs: fs,
-		}, "/tmp/goliac")
+		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &UserSyncPluginNoop{})
 
 		assert.Nil(t, err)
 		assert.Equal(t, 0, len(removed))
@@ -218,9 +204,9 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 
 	t.Run("happy path: replcae with foobar", func(t *testing.T) {
 		fs := memfs.New()
-		createBasicStructure(fs, "/tmp/goliac")
+		createBasicStructure(fs)
 
-		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ScrambleUserSync{}, "/tmp/goliac")
+		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ScrambleUserSync{})
 
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(removed))
@@ -230,9 +216,9 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 	})
 	t.Run("not happy path: dealing with usersync error", func(t *testing.T) {
 		fs := memfs.New()
-		createBasicStructure(fs, "/tmp/goliac")
+		createBasicStructure(fs)
 
-		_, _, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ErroreUserSync{}, "/tmp/goliac")
+		_, _, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ErroreUserSync{})
 
 		assert.NotNil(t, err)
 	})
@@ -519,13 +505,11 @@ func TestBasicGitops(t *testing.T) {
 			// If the tag is lightweight, the reference points directly to the commit
 			commit1, err := repo.CommitObject(tagRef.Hash())
 			assert.Nil(t, err)
-			fmt.Println("commit1", commit1)
 			commit = commit1
 		} else {
 			// If the tag is annotated, resolve the commit it points to
 			commit2, err := tagObject.Commit()
 			assert.Nil(t, err)
-			fmt.Println("commit2", commit2)
 			commit = commit2
 		}
 
@@ -597,13 +581,13 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		files, err := target.ReadDir("/")
-		assert.Nil(t, err)
-		for _, file := range files {
-			fmt.Println(file.Name())
-		}
+		// files, err := target.ReadDir("/")
+		// assert.Nil(t, err)
+		// for _, file := range files {
+		// 	fmt.Println(file.Name())
+		// }
 
-		err, goliacConfig := g.LoadRepoConfig()
+		goliacConfig, err := g.LoadRepoConfig()
 		assert.Nil(t, err)
 		assert.NotNil(t, goliacConfig)
 		assert.Equal(t, "github-admins", goliacConfig.AdminTeam)
@@ -649,7 +633,9 @@ func TestBasicGitops(t *testing.T) {
 		// check the content of the CODEOWNERS file
 		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @/github-admins\n/teams/github-admins/* @/github-admins-owners @/github-admins\n", content)
 	})
+}
 
+func TestGoliacLocalImpl(t *testing.T) {
 	t.Run("ArchiveRepos", func(t *testing.T) {
 		rootfs := memfs.New()
 		src, _ := rootfs.Chroot("/src")
@@ -708,7 +694,7 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		err, goliacConfig := g.LoadRepoConfig()
+		goliacConfig, err := g.LoadRepoConfig()
 		assert.Nil(t, err)
 		assert.NotNil(t, goliacConfig)
 
@@ -721,4 +707,62 @@ func TestBasicGitops(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @/github-admins\n/teams/github-admins/* @/github-admins-owners @/github-admins\n", string(content))
 	})
+
+	t.Run("SyncUsersAndTeams", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+		// get commits
+		g := GoliacLocalImpl{
+			teams:         map[string]*entity.Team{},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
+
+		goliacConfig, err := g.LoadRepoConfig()
+		assert.Nil(t, err)
+		assert.NotNil(t, goliacConfig)
+
+		mockUserPlugin := &UserSyncPluginMock{}
+
+		// sync users and teams
+		err = g.SyncUsersAndTeams(goliacConfig, mockUserPlugin, "none", false, false)
+		assert.Nil(t, err)
+
+		// there should be a new user: foobar
+		// check the content of the 'users/org/foobar.yaml' file
+		content, err := utils.ReadFile(target, "users/org/foobar.yaml")
+		assert.Nil(t, err)
+		assert.Equal(t, "apiVersion: v1\nkind: User\nname: foobar\nspec:\n  githubID: foobar\n", string(content))
+	})
+}
+
+type UserSyncPluginMock struct {
+}
+
+func (us *UserSyncPluginMock) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
+	// let's return the current one (admin) + a new one
+	users := make(map[string]*entity.User)
+	users["admin"] = &entity.User{}
+	users["admin"].ApiVersion = "v1"
+	users["admin"].Kind = "User"
+	users["admin"].Name = "admin"
+	users["admin"].Spec.GithubID = "admin"
+
+	users["foobar"] = &entity.User{}
+	users["foobar"].ApiVersion = "v1"
+	users["foobar"].Kind = "User"
+	users["foobar"].Name = "foobar"
+	users["foobar"].Spec.GithubID = "foobar"
+
+	return users, nil
 }
