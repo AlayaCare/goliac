@@ -25,6 +25,7 @@ func ReadFile(fs billy.Filesystem, path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 	return io.ReadAll(file)
 }
 

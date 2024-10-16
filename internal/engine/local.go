@@ -13,6 +13,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
@@ -282,13 +283,8 @@ func (g *GoliacLocalImpl) LoadRepoConfig() (error, *config.RepositoryConfig) {
 	}
 
 	var repoconfig config.RepositoryConfig
-	file, err := os.Open(path.Join(w.Filesystem.Root(), "goliac.yaml"))
-	if err != nil {
-		return fmt.Errorf("not able to open the /goliac.yaml configuration file: %v", err), nil
-	}
-	defer file.Close()
 
-	content, err := io.ReadAll(file)
+	content, err := utils.ReadFile(w.Filesystem, "goliac.yaml")
 	if err != nil {
 		return fmt.Errorf("not able to find the /goliac.yaml configuration file: %v", err), nil
 	}
@@ -326,7 +322,7 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 		return err
 	}
 
-	err = os.MkdirAll(path.Join(w.Filesystem.Root(), "archived"), 0755)
+	err = w.Filesystem.MkdirAll("archived", 0755)
 	if err != nil {
 		return err
 	}
@@ -337,10 +333,10 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 		repo.Kind = "Repository"
 		repo.Name = reponame
 
-		filename := path.Join(w.Filesystem.Root(), "archived", reponame+".yaml")
-		file, err := os.Create(filename)
+		filename := path.Join("archived", reponame+".yaml")
+		file, err := w.Filesystem.Create(filename)
 		if err != nil {
-			return fmt.Errorf("Not able to create file %s: %v", filename, err)
+			return fmt.Errorf("not able to create file %s: %v", filename, err)
 		}
 		defer file.Close()
 
@@ -348,10 +344,10 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 		encoder.SetIndent(2)
 		err = encoder.Encode(&repo)
 		if err != nil {
-			return fmt.Errorf("Not able to write to file %s: %v", filename, err)
+			return fmt.Errorf("not able to write to file %s: %v", filename, err)
 		}
 
-		_, err = w.Add(path.Join("archived", reponame+".yaml"))
+		_, err = w.Add(filename)
 		if err != nil {
 			return err
 		}
@@ -387,7 +383,7 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 	})
 
 	if err != nil {
-		return fmt.Errorf("Error pushing to remote: %v", err)
+		return fmt.Errorf("error pushing to remote: %v", err)
 	}
 
 	// push the tagname
@@ -407,15 +403,15 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 		return err
 	}
 
-	err = os.MkdirAll(path.Join(w.Filesystem.Root(), ".github"), 0755)
+	err = w.Filesystem.MkdirAll(".github", 0755)
 	if err != nil {
 		return err
 	}
 
-	codeownerpath := path.Join(w.Filesystem.Root(), ".github", "CODEOWNERS")
+	codeownerpath := path.Join(".github", "CODEOWNERS")
 	var content []byte
 
-	info, err := os.Stat(codeownerpath)
+	info, err := w.Filesystem.Stat(codeownerpath)
 	if err == nil && !info.IsDir() {
 		file, err := os.Open(codeownerpath)
 		if err != nil {
@@ -425,7 +421,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 
 		content, err = io.ReadAll(file)
 		if err != nil {
-			return fmt.Errorf("Not able to open .github/CODEOWNERS file: %v", err)
+			return fmt.Errorf("not able to open .github/CODEOWNERS file: %v", err)
 		}
 	} else {
 		content = []byte("")
@@ -445,9 +441,12 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 			return err
 		}
 
-		os.WriteFile(path.Join(w.Filesystem.Root(), ".github", "CODEOWNERS"), []byte(newContent), 0644)
+		err = utils.WriteFile(w.Filesystem, codeownerpath, []byte(newContent), 0644)
+		if err != nil {
+			return err
+		}
 
-		_, err = w.Add(path.Join(".github", "CODEOWNERS"))
+		_, err = w.Add(codeownerpath)
 		if err != nil {
 			return err
 		}
@@ -476,7 +475,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 		})
 
 		if err != nil {
-			return fmt.Errorf("Error pushing to remote: %v", err)
+			return fmt.Errorf("error pushing to remote: %v", err)
 		}
 	}
 

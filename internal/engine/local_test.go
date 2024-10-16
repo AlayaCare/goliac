@@ -14,6 +14,7 @@ import (
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-billy/v5/util"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/cache"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/client"
@@ -496,5 +497,228 @@ func TestBasicGitops(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(commits))
 
+		//
+		// checkout the commit
+		//
+		err = g.CheckoutCommit(commits[0])
+		assert.Nil(t, err)
+
+		// check the number of files in the 'teams/github-admins' directory
+		files, err := target.ReadDir("teams/github-admins")
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(files))
+
+		//
+		// checkout v0.1.0
+		//
+		tagRef, err := clonedRepo.Tag("v0.1.0")
+		assert.Nil(t, err)
+		tagObject, err := repo.TagObject(tagRef.Hash())
+		var commit *object.Commit
+		if err == plumbing.ErrObjectNotFound {
+			// If the tag is lightweight, the reference points directly to the commit
+			commit1, err := repo.CommitObject(tagRef.Hash())
+			assert.Nil(t, err)
+			fmt.Println("commit1", commit1)
+			commit = commit1
+		} else {
+			// If the tag is annotated, resolve the commit it points to
+			commit2, err := tagObject.Commit()
+			assert.Nil(t, err)
+			fmt.Println("commit2", commit2)
+			commit = commit2
+		}
+
+		err = g.CheckoutCommit(commit)
+		assert.Nil(t, err)
+		files, err = target.ReadDir("teams/github-admins")
+		assert.Nil(t, err)
+		assert.Equal(t, 2, len(files))
+
+		//
+		// checkout again the latest commit
+		//
+		err = g.CheckoutCommit(commits[0])
+		assert.Nil(t, err)
+
+		// check the number of files in the 'teams/github-admins' directory
+		files, err = target.ReadDir("teams/github-admins")
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(files))
+	})
+
+	t.Run("CheckoutCommit", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+		// get commits
+		g := GoliacLocalImpl{
+			teams:         map[string]*entity.Team{},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
+
+		head, err := g.GetHeadCommit()
+		assert.Nil(t, err)
+
+		err = g.CheckoutCommit(head)
+		assert.Nil(t, err)
+		files, err := target.ReadDir("teams/github-admins")
+		assert.Nil(t, err)
+		assert.Equal(t, 3, len(files)) // it should be 3 because we have 3 files in the 'teams/github-admins' directory
+	})
+
+	t.Run("LoadRepoConfig", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+		// get commits
+		g := GoliacLocalImpl{
+			teams:         map[string]*entity.Team{},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
+
+		files, err := target.ReadDir("/")
+		assert.Nil(t, err)
+		for _, file := range files {
+			fmt.Println(file.Name())
+		}
+
+		err, goliacConfig := g.LoadRepoConfig()
+		assert.Nil(t, err)
+		assert.NotNil(t, goliacConfig)
+		assert.Equal(t, "github-admins", goliacConfig.AdminTeam)
+		assert.Equal(t, 50, goliacConfig.MaxChangesets)
+		assert.Equal(t, true, goliacConfig.ArchiveOnDelete)
+		assert.Equal(t, false, goliacConfig.DestructiveOperations.AllowDestructiveRepositories)
+		assert.Equal(t, false, goliacConfig.DestructiveOperations.AllowDestructiveTeams)
+		assert.Equal(t, false, goliacConfig.DestructiveOperations.AllowDestructiveUsers)
+		assert.Equal(t, false, goliacConfig.DestructiveOperations.AllowDestructiveRulesets)
+		assert.Equal(t, "noop", goliacConfig.UserSync.Plugin)
+	})
+
+	t.Run("codeowners_regenerate", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+		// get commits
+		adminTeam := entity.Team{}
+		adminTeam.ApiVersion = "v1"
+		adminTeam.Kind = "Team"
+		adminTeam.Name = "github-admins"
+		adminTeam.Spec.Owners = []string{"admin"}
+
+		g := GoliacLocalImpl{
+			teams: map[string]*entity.Team{
+				"github-admins": &adminTeam,
+			},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
+
+		content := g.codeowners_regenerate("github-admins")
+
+		// check the content of the CODEOWNERS file
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @/github-admins\n/teams/github-admins/* @/github-admins-owners @/github-admins\n", content)
+	})
+
+	t.Run("ArchiveRepos", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+		// get commits
+		g := GoliacLocalImpl{
+			teams:         map[string]*entity.Team{},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
+
+		// archive the repository 'repo1'
+		err = g.ArchiveRepos([]string{"repo1"}, "none", "main", "foobar")
+		assert.Nil(t, err)
+
+		// check the content of the 'archived/repo1.yaml' file
+		content, err := utils.ReadFile(target, "archived/repo1.yaml")
+		assert.Nil(t, err)
+		assert.Equal(t, "apiVersion: v1\nkind: Repository\nname: repo1\n", string(content))
+	})
+
+	t.Run("UpdateAndCommitCodeOwners", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+		// get commits
+		adminTeam := entity.Team{}
+		adminTeam.ApiVersion = "v1"
+		adminTeam.Kind = "Team"
+		adminTeam.Name = "github-admins"
+		adminTeam.Spec.Owners = []string{"admin"}
+
+		g := GoliacLocalImpl{
+			teams: map[string]*entity.Team{
+				"github-admins": &adminTeam,
+			},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
+
+		err, goliacConfig := g.LoadRepoConfig()
+		assert.Nil(t, err)
+		assert.NotNil(t, goliacConfig)
+
+		// update and commit the CODEOWNERS file
+		err = g.UpdateAndCommitCodeOwners(goliacConfig, false, "none", "main", "foobar")
+		assert.Nil(t, err)
+
+		// check the content of the CODEOWNERS file
+		content, err := utils.ReadFile(target, ".github/CODEOWNERS")
+		assert.Nil(t, err)
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @/github-admins\n/teams/github-admins/* @/github-admins-owners @/github-admins\n", string(content))
 	})
 }
