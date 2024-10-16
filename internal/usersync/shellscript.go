@@ -3,11 +3,12 @@ package usersync
 import (
 	"fmt"
 	"os/exec"
+	"path"
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/spf13/afero"
+	"github.com/go-git/go-billy/v5"
 )
 
 type UserSyncPluginShellScript struct{}
@@ -16,14 +17,12 @@ func NewUserSyncPluginShellScript() engine.UserSyncPlugin {
 	return &UserSyncPluginShellScript{}
 }
 
-func (p *UserSyncPluginShellScript) UpdateUsers(repoconfig *config.RepositoryConfig, orguserdirrectorypath string) (map[string]*entity.User, error) {
-	cmd := exec.Command(repoconfig.UserSync.Path, orguserdirrectorypath)
+func (p *UserSyncPluginShellScript) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
+	cmd := exec.Command(repoconfig.UserSync.Path, path.Join(fs.Root(), orguserdirrectorypath))
 	_, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
 	}
-
-	fs := afero.NewOsFs()
 
 	users, errs, _ := entity.ReadUserDirectory(fs, orguserdirrectorypath)
 	if len(errs) > 0 {

@@ -9,8 +9,10 @@ import (
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,18 +49,18 @@ func NewScaffold() (*Scaffold, error) {
  * Generate will generate a full teams directory structure compatible with Goliac
  */
 func (s *Scaffold) Generate(rootpath string, adminteam string) error {
-	fs := afero.NewOsFs()
+	fs := osfs.New("/")
 	if err := s.remote.Load(true); err != nil {
 		logrus.Warnf("Not able to load all information from Github: %v, but I will try to continue", err)
 	}
 	return s.generate(fs, rootpath, adminteam)
 }
 
-func (s *Scaffold) generate(fs afero.Fs, rootpath string, adminteam string) error {
-	fs.RemoveAll(path.Join(rootpath, "users"))
-	fs.RemoveAll(path.Join(rootpath, "teams"))
-	fs.RemoveAll(path.Join(rootpath, "rulesets"))
-	fs.RemoveAll(path.Join(rootpath, "archived"))
+func (s *Scaffold) generate(fs billy.Filesystem, rootpath string, adminteam string) error {
+	utils.RemoveAll(fs, path.Join(rootpath, "users"))
+	utils.RemoveAll(fs, path.Join(rootpath, "teams"))
+	utils.RemoveAll(fs, path.Join(rootpath, "rulesets"))
+	utils.RemoveAll(fs, path.Join(rootpath, "archived"))
 
 	fs.MkdirAll(path.Join(rootpath, "archived"), 0755)
 	fs.MkdirAll(path.Join(rootpath, "rulesets"), 0755)
@@ -97,7 +99,7 @@ func (s *Scaffold) generate(fs afero.Fs, rootpath string, adminteam string) erro
 	return nil
 }
 
-func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[string]string, adminteam string) (error, bool) {
+func (s *Scaffold) generateTeams(fs billy.Filesystem, teamspath string, usermap map[string]string, adminteam string) (error, bool) {
 	adminTeamFound := false
 
 	teamsRepositories := s.remote.TeamRepositories()
@@ -234,7 +236,7 @@ func (s *Scaffold) generateTeams(fs afero.Fs, teamspath string, usermap map[stri
 /*
  * Returns a map[<githubid>]<username>
  */
-func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]string, error) {
+func (s *Scaffold) generateUsers(fs billy.Filesystem, userspath string) (map[string]string, error) {
 	fs.MkdirAll(path.Join(userspath, "protected"), 0755)
 	fs.MkdirAll(path.Join(userspath, "org"), 0755)
 	fs.MkdirAll(path.Join(userspath, "external"), 0755)
@@ -271,7 +273,7 @@ func (s *Scaffold) generateUsers(fs afero.Fs, userspath string) (map[string]stri
 	return usermap, nil
 }
 
-func (s *Scaffold) generateRuleset(fs afero.Fs, rulesetspath string) error {
+func (s *Scaffold) generateRuleset(fs billy.Filesystem, rulesetspath string) error {
 	ruleset := `apiVersion: v1
 kind: Ruleset
 name: default
@@ -296,7 +298,7 @@ spec:
 
 }
 
-func (s *Scaffold) generateGoliacConf(fs afero.Fs, rootpath string, adminteam string) error {
+func (s *Scaffold) generateGoliacConf(fs billy.Filesystem, rootpath string, adminteam string) error {
 	conf := fmt.Sprintf(`
 admin_team: %s
 
@@ -322,7 +324,7 @@ usersync:
 	return nil
 }
 
-func (s *Scaffold) generateGithubAction(fs afero.Fs, rootpath string) error {
+func (s *Scaffold) generateGithubAction(fs billy.Filesystem, rootpath string) error {
 	fs.MkdirAll(path.Join(rootpath, ".github", "workflows"), 0755)
 
 	workflow := `
@@ -350,7 +352,7 @@ jobs:
 	return nil
 }
 
-func (s *Scaffold) generateReadme(fs afero.Fs, rootpath string) error {
+func (s *Scaffold) generateReadme(fs billy.Filesystem, rootpath string) error {
 	readme := `
 # teams
 
@@ -425,7 +427,7 @@ You can archive a repository, by a PR that move the yaml repository file into th
 }
 
 // helper function to write a yaml file (with 2 spaces indentation)
-func writeYamlFile(filename string, in interface{}, fs afero.Fs) error {
+func writeYamlFile(filename string, in interface{}, fs billy.Filesystem) error {
 	file, err := fs.Create(filename)
 	if err != nil {
 		return fmt.Errorf("Not able to create file %s: %v", filename, err)
@@ -442,7 +444,7 @@ func writeYamlFile(filename string, in interface{}, fs afero.Fs) error {
 }
 
 // helper function to write a file
-func writeFile(filename string, content []byte, fs afero.Fs) error {
+func writeFile(filename string, content []byte, fs billy.Filesystem) error {
 	file, err := fs.Create(filename)
 	if err != nil {
 		return fmt.Errorf("Not able to create file %s: %v", filename, err)

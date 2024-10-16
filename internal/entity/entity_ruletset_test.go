@@ -3,13 +3,15 @@ package entity
 import (
 	"testing"
 
-	"github.com/spf13/afero"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/stretchr/testify/assert"
 )
 
-func fixtureCreateRuleSet(t *testing.T, fs afero.Fs) {
-	fs.Mkdir("rulesets", 0755)
-	err := afero.WriteFile(fs, "rulesets/ruleset1.yaml", []byte(`
+func fixtureCreateRuleSet(t *testing.T, fs billy.Filesystem) {
+	fs.MkdirAll("rulesets", 0755)
+	err := utils.WriteFile(fs, "rulesets/ruleset1.yaml", []byte(`
 apiVersion: v1
 kind: Ruleset
 name: ruleset1
@@ -29,7 +31,7 @@ spec:
 `), 0644)
 	assert.Nil(t, err)
 
-	err = afero.WriteFile(fs, "rulesets/ruleset2.yaml", []byte(`
+	err = utils.WriteFile(fs, "rulesets/ruleset2.yaml", []byte(`
 apiVersion: v1
 kind: Ruleset
 name: ruleset2
@@ -57,7 +59,7 @@ func TestRuleset(t *testing.T) {
 	// happy path
 	t.Run("happy path", func(t *testing.T) {
 		// create a new user
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		fixtureCreateRuleSet(t, fs)
 
 		rulesets, errs, warns := ReadRuleSetDirectory(fs, "rulesets")
@@ -74,7 +76,7 @@ func TestRulesetParametersComparison(t *testing.T) {
 	// happy path
 	t.Run("happy path", func(t *testing.T) {
 		// create a new user
-		fs := afero.NewMemMapFs()
+		fs := memfs.New()
 		fixtureCreateRuleSet(t, fs)
 
 		rulesets, errs, warns := ReadRuleSetDirectory(fs, "rulesets")

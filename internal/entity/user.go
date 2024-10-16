@@ -5,7 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/afero"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5"
 	"gopkg.in/yaml.v3"
 )
 
@@ -20,8 +21,8 @@ type User struct {
  * NewUser reads a file and returns a User object
  * The next step is to validate the User object using the Validate method
  */
-func NewUser(fs afero.Fs, filename string) (*User, error) {
-	filecontent, err := afero.ReadFile(fs, filename)
+func NewUser(fs billy.Filesystem, filename string) (*User, error) {
+	filecontent, err := utils.ReadFile(fs, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -41,12 +42,12 @@ func NewUser(fs afero.Fs, filename string) (*User, error) {
  * - a slice of errors that must stop the vlidation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadUserDirectory(fs afero.Fs, dirname string) (map[string]*User, []error, []Warning) {
+func ReadUserDirectory(fs billy.Filesystem, dirname string) (map[string]*User, []error, []Warning) {
 	errors := []error{}
 	warning := []Warning{}
 	users := make(map[string]*User)
 
-	exist, err := afero.Exists(fs, dirname)
+	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
 		errors = append(errors, err)
 		return users, errors, warning
@@ -56,7 +57,7 @@ func ReadUserDirectory(fs afero.Fs, dirname string) (map[string]*User, []error, 
 	}
 
 	// Parse all the users in the dirname directory
-	entries, err := afero.ReadDir(fs, dirname)
+	entries, err := fs.ReadDir(dirname)
 	if err != nil {
 		errors = append(errors, err)
 		return users, errors, warning

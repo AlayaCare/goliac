@@ -5,7 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/afero"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5"
 	"gopkg.in/yaml.v3"
 )
 
@@ -29,8 +30,8 @@ type Repository struct {
  * NewRepository reads a file and returns a Repository object
  * The next step is to validate the Repository object using the Validate method
  */
-func NewRepository(fs afero.Fs, filename string) (*Repository, error) {
-	filecontent, err := afero.ReadFile(fs, filename)
+func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
+	filecontent, err := utils.ReadFile(fs, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -51,19 +52,19 @@ func NewRepository(fs afero.Fs, filename string) (*Repository, error) {
  * - a slice of errors that must stop the validation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, teams map[string]*Team, externalUsers map[string]*User) (map[string]*Repository, []error, []Warning) {
+func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname string, teams map[string]*Team, externalUsers map[string]*User) (map[string]*Repository, []error, []Warning) {
 	errors := []error{}
 	warning := []Warning{}
 	repos := make(map[string]*Repository)
 
 	// archived dir
-	exist, err := afero.Exists(fs, archivedDirname)
+	exist, err := utils.Exists(fs, archivedDirname)
 	if err != nil {
 		errors = append(errors, err)
 		return repos, errors, warning
 	}
 	if exist {
-		entries, err := afero.ReadDir(fs, archivedDirname)
+		entries, err := fs.ReadDir(archivedDirname)
 		if err != nil {
 			errors = append(errors, err)
 			return nil, errors, warning
@@ -95,7 +96,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 		}
 	}
 	// regular teams dir
-	exist, err = afero.Exists(fs, teamDirname)
+	exist, err = utils.Exists(fs, teamDirname)
 	if err != nil {
 		errors = append(errors, err)
 		return repos, errors, warning
@@ -105,7 +106,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 	}
 
 	// Parse all the repositories in the teamDirname directory
-	entries, err := afero.ReadDir(fs, teamDirname)
+	entries, err := fs.ReadDir(teamDirname)
 	if err != nil {
 		errors = append(errors, err)
 		return nil, errors, warning
@@ -113,7 +114,7 @@ func ReadRepositories(fs afero.Fs, archivedDirname string, teamDirname string, t
 
 	for _, team := range entries {
 		if team.IsDir() {
-			subentries, err := afero.ReadDir(fs, filepath.Join(teamDirname, team.Name()))
+			subentries, err := fs.ReadDir(filepath.Join(teamDirname, team.Name()))
 			if err != nil {
 				errors = append(errors, err)
 				continue

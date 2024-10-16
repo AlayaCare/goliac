@@ -13,6 +13,8 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5"
 	goconfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -21,7 +23,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 	"gopkg.in/yaml.v3"
 )
 
@@ -44,7 +45,7 @@ type GoliacLocalGit interface {
 	CheckoutCommit(commit *object.Commit) error
 	PushTag(tagname string, hash plumbing.Hash, accesstoken string) error
 
-	LoadRepoConfig() (error, *config.RepositoryConfig)
+	LoadRepoConfig() (*config.RepositoryConfig, error)
 
 	// Load and Validate from a github repository
 	LoadAndValidate() ([]error, []entity.Warning)
@@ -57,7 +58,7 @@ type GoliacLocalGit interface {
 	Close()
 
 	// Load and Validate from a local directory
-	LoadAndValidateLocal(fs afero.Fs, path string) ([]error, []entity.Warning)
+	LoadAndValidateLocal(fs billy.Filesystem) ([]error, []entity.Warning)
 }
 
 type GoliacLocalResources interface {
@@ -271,32 +272,27 @@ func (g *GoliacLocalImpl) Close() {
 	g.repo = nil
 }
 
-func (g *GoliacLocalImpl) LoadRepoConfig() (error, *config.RepositoryConfig) {
+func (g *GoliacLocalImpl) LoadRepoConfig() (*config.RepositoryConfig, error) {
 	if g.repo == nil {
-		return fmt.Errorf("git repository not cloned"), nil
+		return nil, fmt.Errorf("git repository not cloned")
 	}
 	w, err := g.repo.Worktree()
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	var repoconfig config.RepositoryConfig
-	file, err := os.Open(path.Join(w.Filesystem.Root(), "goliac.yaml"))
-	if err != nil {
-		return fmt.Errorf("not able to open the /goliac.yaml configuration file: %v", err), nil
-	}
-	defer file.Close()
 
-	content, err := io.ReadAll(file)
+	content, err := utils.ReadFile(w.Filesystem, "goliac.yaml")
 	if err != nil {
-		return fmt.Errorf("not able to find the /goliac.yaml configuration file: %v", err), nil
+		return nil, fmt.Errorf("not able to find the /goliac.yaml configuration file: %v", err)
 	}
 	err = yaml.Unmarshal(content, &repoconfig)
 	if err != nil {
-		return fmt.Errorf("not able to unmarshall the /goliac.yaml configuration file: %v", err), nil
+		return nil, fmt.Errorf("not able to unmarshall the /goliac.yaml configuration file: %v", err)
 	}
 
-	return nil, &repoconfig
+	return &repoconfig, nil
 }
 
 func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string) string {
@@ -325,7 +321,7 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 		return err
 	}
 
-	err = os.MkdirAll(path.Join(w.Filesystem.Root(), "archived"), 0755)
+	err = w.Filesystem.MkdirAll("archived", 0755)
 	if err != nil {
 		return err
 	}
@@ -336,10 +332,10 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 		repo.Kind = "Repository"
 		repo.Name = reponame
 
-		filename := path.Join(w.Filesystem.Root(), "archived", reponame+".yaml")
-		file, err := os.Create(filename)
+		filename := path.Join("archived", reponame+".yaml")
+		file, err := w.Filesystem.Create(filename)
 		if err != nil {
-			return fmt.Errorf("Not able to create file %s: %v", filename, err)
+			return fmt.Errorf("not able to create file %s: %v", filename, err)
 		}
 		defer file.Close()
 
@@ -347,10 +343,10 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 		encoder.SetIndent(2)
 		err = encoder.Encode(&repo)
 		if err != nil {
-			return fmt.Errorf("Not able to write to file %s: %v", filename, err)
+			return fmt.Errorf("not able to write to file %s: %v", filename, err)
 		}
 
-		_, err = w.Add(path.Join("archived", reponame+".yaml"))
+		_, err = w.Add(filename)
 		if err != nil {
 			return err
 		}
@@ -386,7 +382,7 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 	})
 
 	if err != nil {
-		return fmt.Errorf("Error pushing to remote: %v", err)
+		return fmt.Errorf("error pushing to remote: %v", err)
 	}
 
 	// push the tagname
@@ -406,17 +402,17 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 		return err
 	}
 
-	err = os.MkdirAll(path.Join(w.Filesystem.Root(), ".github"), 0755)
+	err = w.Filesystem.MkdirAll(".github", 0755)
 	if err != nil {
 		return err
 	}
 
-	codeownerpath := path.Join(w.Filesystem.Root(), ".github", "CODEOWNERS")
+	codeownerpath := path.Join(".github", "CODEOWNERS")
 	var content []byte
 
-	info, err := os.Stat(codeownerpath)
+	info, err := w.Filesystem.Stat(codeownerpath)
 	if err == nil && !info.IsDir() {
-		file, err := os.Open(codeownerpath)
+		file, err := w.Filesystem.Open(codeownerpath)
 		if err != nil {
 			return fmt.Errorf("not able to open .github/CODEOWNERS file: %v", err)
 		}
@@ -424,7 +420,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 
 		content, err = io.ReadAll(file)
 		if err != nil {
-			return fmt.Errorf("Not able to open .github/CODEOWNERS file: %v", err)
+			return fmt.Errorf("not able to open .github/CODEOWNERS file: %v", err)
 		}
 	} else {
 		content = []byte("")
@@ -444,9 +440,12 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 			return err
 		}
 
-		os.WriteFile(path.Join(w.Filesystem.Root(), ".github", "CODEOWNERS"), []byte(newContent), 0644)
+		err = utils.WriteFile(w.Filesystem, codeownerpath, []byte(newContent), 0644)
+		if err != nil {
+			return err
+		}
 
-		_, err = w.Add(path.Join(".github", "CODEOWNERS"))
+		_, err = w.Add(codeownerpath)
 		if err != nil {
 			return err
 		}
@@ -475,7 +474,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 		})
 
 		if err != nil {
-			return fmt.Errorf("Error pushing to remote: %v", err)
+			return fmt.Errorf("error pushing to remote: %v", err)
 		}
 	}
 
@@ -500,14 +499,15 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
  * - collect the difference
  * - returns deleted users, and add/updated users
  */
-func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, userplugin UserSyncPlugin, rootDir string) ([]string, []string, error) {
-	orgUsers, errs, _ := entity.ReadUserDirectory(fs, filepath.Join(rootDir, "users", "org"))
+func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesystem, userplugin UserSyncPlugin) ([]string, []string, error) {
+	usersOrgPath := filepath.Join("users", "org")
+	orgUsers, errs, _ := entity.ReadUserDirectory(fs, usersOrgPath)
 	if len(errs) > 0 {
 		return nil, nil, fmt.Errorf("cannot load org users (for example: %v)", errs[0])
 	}
 
 	// use usersync to update the users
-	newOrgUsers, err := userplugin.UpdateUsers(repoconfig, filepath.Join(rootDir, "users", "org"))
+	newOrgUsers, err := userplugin.UpdateUsers(repoconfig, fs, usersOrgPath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -518,13 +518,13 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, us
 	for username, user := range orgUsers {
 		if newuser, ok := newOrgUsers[username]; !ok {
 			// deleted user
-			deletedusers = append(deletedusers, filepath.Join("users", "org", fmt.Sprintf("%s.yaml", username)))
-			fs.Remove(filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
+			deletedusers = append(deletedusers, filepath.Join(usersOrgPath, fmt.Sprintf("%s.yaml", username)))
+			fs.Remove(filepath.Join(usersOrgPath, fmt.Sprintf("%s.yaml", username)))
 		} else {
 			// check if user changed
 			if !newuser.Equals(user) {
 				// changed user
-				file, err := fs.Create(filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
+				file, err := fs.Create(filepath.Join(usersOrgPath, fmt.Sprintf("%s.yaml", username)))
 				if err != nil {
 					return nil, nil, err
 				}
@@ -536,7 +536,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, us
 				if err != nil {
 					return nil, nil, err
 				}
-				updatedusers = append(updatedusers, filepath.Join("users", "org", fmt.Sprintf("%s.yaml", username)))
+				updatedusers = append(updatedusers, filepath.Join(usersOrgPath, fmt.Sprintf("%s.yaml", username)))
 			}
 
 			delete(newOrgUsers, username)
@@ -544,7 +544,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, us
 	}
 	for username, user := range newOrgUsers {
 		// new user
-		file, err := fs.Create(filepath.Join(rootDir, "users", "org", fmt.Sprintf("%s.yaml", username)))
+		file, err := fs.Create(filepath.Join(usersOrgPath, fmt.Sprintf("%s.yaml", username)))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -556,7 +556,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs afero.Fs, us
 		if err != nil {
 			return nil, nil, err
 		}
-		updatedusers = append(updatedusers, filepath.Join("users", "org", fmt.Sprintf("%s.yaml", username)))
+		updatedusers = append(updatedusers, filepath.Join(usersOrgPath, fmt.Sprintf("%s.yaml", username)))
 	}
 	return deletedusers, updatedusers, nil
 }
@@ -578,8 +578,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 	//
 
 	// Parse all the users in the <orgDirectory>/org-users directory
-	fs := afero.NewOsFs()
-	deletedusers, addedusers, err := syncUsersViaUserPlugin(repoconfig, fs, userplugin, rootDir)
+	deletedusers, addedusers, err := syncUsersViaUserPlugin(repoconfig, w.Filesystem, userplugin)
 	if err != nil {
 		return err
 	}
@@ -588,12 +587,12 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 	// let's update teams
 	//
 
-	errors, _ := g.loadUsers(fs, rootDir)
+	errors, _ := g.loadUsers(w.Filesystem)
 	if len(errors) > 0 {
 		return fmt.Errorf("cannot read users (for example: %v)", errors[0])
 	}
 
-	teamschanged, err := entity.ReadAndAdjustTeamDirectory(fs, filepath.Join(rootDir, "teams"), g.users)
+	teamschanged, err := entity.ReadAndAdjustTeamDirectory(w.Filesystem, filepath.Join(rootDir, "teams"), g.users)
 	if err != nil {
 		return err
 	}
@@ -676,34 +675,32 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
  */
 func (g *GoliacLocalImpl) LoadAndValidate() ([]error, []entity.Warning) {
 	if g.repo == nil {
-		return []error{fmt.Errorf("The repository has not been cloned. Did you called .Clone()?")}, []entity.Warning{}
+		return []error{fmt.Errorf("the repository has not been cloned. Did you called .Clone()?")}, []entity.Warning{}
 	}
 
 	// read the organization files
-	fs := afero.NewOsFs()
 
 	w, err := g.repo.Worktree()
 	if err != nil {
 		return []error{err}, []entity.Warning{}
 	}
-	rootDir := w.Filesystem.Root()
-	errs, warns := g.LoadAndValidateLocal(fs, rootDir)
+	errs, warns := g.LoadAndValidateLocal(w.Filesystem)
 
 	return errs, warns
 }
 
-func (g *GoliacLocalImpl) loadUsers(fs afero.Fs, orgDirectory string) ([]error, []entity.Warning) {
+func (g *GoliacLocalImpl) loadUsers(fs billy.Filesystem) ([]error, []entity.Warning) {
 	errors := []error{}
 	warnings := []entity.Warning{}
 
 	// Parse all the users in the <orgDirectory>/protected-users directory
-	protectedUsers, errs, warns := entity.ReadUserDirectory(fs, filepath.Join(orgDirectory, "users", "protected"))
+	protectedUsers, errs, warns := entity.ReadUserDirectory(fs, filepath.Join("users", "protected"))
 	errors = append(errors, errs...)
 	warnings = append(warnings, warns...)
 	g.users = protectedUsers
 
 	// Parse all the users in the <orgDirectory>/org-users directory
-	orgUsers, errs, warns := entity.ReadUserDirectory(fs, filepath.Join(orgDirectory, "users", "org"))
+	orgUsers, errs, warns := entity.ReadUserDirectory(fs, filepath.Join("users", "org"))
 	errors = append(errors, errs...)
 	warnings = append(warnings, warns...)
 
@@ -717,12 +714,12 @@ func (g *GoliacLocalImpl) loadUsers(fs afero.Fs, orgDirectory string) ([]error, 
 	}
 
 	// Parse all the users in the <orgDirectory>/external-users directory
-	externalUsers, errs, warns := entity.ReadUserDirectory(fs, filepath.Join(orgDirectory, "users", "external"))
+	externalUsers, errs, warns := entity.ReadUserDirectory(fs, filepath.Join("users", "external"))
 	errors = append(errors, errs...)
 	warnings = append(warnings, warns...)
 	g.externalUsers = externalUsers
 
-	rulesets, errs, warns := entity.ReadRuleSetDirectory(fs, filepath.Join(orgDirectory, "rulesets"))
+	rulesets, errs, warns := entity.ReadRuleSetDirectory(fs, filepath.Join("rulesets"))
 	errors = append(errors, errs...)
 	warnings = append(warnings, warns...)
 	g.rulesets = rulesets
@@ -735,26 +732,26 @@ func (g *GoliacLocalImpl) loadUsers(fs afero.Fs, orgDirectory string) ([]error, 
  * - a slice of errors that must stop the vlidation process
  * - a slice of warning that must not stop the validation process
  */
-func (g *GoliacLocalImpl) LoadAndValidateLocal(fs afero.Fs, orgDirectory string) ([]error, []entity.Warning) {
-	errors, warnings := g.loadUsers(fs, orgDirectory)
+func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem) ([]error, []entity.Warning) {
+	errors, warnings := g.loadUsers(fs)
 
 	if len(errors) > 0 {
 		return errors, warnings
 	}
 
 	// Parse all the teams in the <orgDirectory>/teams directory
-	teams, errs, warns := entity.ReadTeamDirectory(fs, filepath.Join(orgDirectory, "teams"), g.users)
+	teams, errs, warns := entity.ReadTeamDirectory(fs, "teams", g.users)
 	errors = append(errors, errs...)
 	warnings = append(warnings, warns...)
 	g.teams = teams
 
 	// Parse all repositories in the <orgDirectory>/teams/<teamname> directories
-	repos, errs, warns := entity.ReadRepositories(fs, filepath.Join(orgDirectory, "archived"), filepath.Join(orgDirectory, "teams"), g.teams, g.externalUsers)
+	repos, errs, warns := entity.ReadRepositories(fs, "archived", "teams", g.teams, g.externalUsers)
 	errors = append(errors, errs...)
 	warnings = append(warnings, warns...)
 	g.repositories = repos
 
-	rulesets, errs, warns := entity.ReadRuleSetDirectory(fs, filepath.Join(orgDirectory, "rulesets"))
+	rulesets, errs, warns := entity.ReadRuleSetDirectory(fs, "rulesets")
 	errors = append(errors, errs...)
 	warnings = append(warnings, warns...)
 	g.rulesets = rulesets

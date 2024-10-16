@@ -5,8 +5,8 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/engine"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/afero"
 )
 
 /*
@@ -32,8 +32,8 @@ func NewGoliacLightImpl() (GoliacLight, error) {
 }
 
 func (g *GoliacLightImpl) Validate(path string) error {
-	fs := afero.NewOsFs()
-	errs, warns := g.local.LoadAndValidateLocal(fs, path)
+	fs := osfs.New(path)
+	errs, warns := g.local.LoadAndValidateLocal(fs)
 
 	for _, warn := range warns {
 		logrus.Warn(warn)

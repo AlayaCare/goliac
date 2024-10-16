@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/spf13/afero"
+	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/go-git/go-billy/v5"
 	"gopkg.in/yaml.v3"
 )
 
@@ -82,8 +83,8 @@ type RuleSet struct {
  * NewRuleSet reads a file and returns a RuleSet object
  * The next step is to validate the RuleSet object using the Validate method
  */
-func NewRuleSet(fs afero.Fs, filename string) (*RuleSet, error) {
-	filecontent, err := afero.ReadFile(fs, filename)
+func NewRuleSet(fs billy.Filesystem, filename string) (*RuleSet, error) {
+	filecontent, err := utils.ReadFile(fs, filename)
 	if err != nil {
 		return nil, err
 	}
@@ -103,12 +104,12 @@ func NewRuleSet(fs afero.Fs, filename string) (*RuleSet, error) {
  * - a slice of errors that must stop the validation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadRuleSetDirectory(fs afero.Fs, dirname string) (map[string]*RuleSet, []error, []Warning) {
+func ReadRuleSetDirectory(fs billy.Filesystem, dirname string) (map[string]*RuleSet, []error, []Warning) {
 	errors := []error{}
 	warning := []Warning{}
 	rulesets := make(map[string]*RuleSet)
 
-	exist, err := afero.Exists(fs, dirname)
+	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
 		errors = append(errors, err)
 		return rulesets, errors, warning
@@ -118,7 +119,7 @@ func ReadRuleSetDirectory(fs afero.Fs, dirname string) (map[string]*RuleSet, []e
 	}
 
 	// Parse all the rulesets in the dirname directory
-	entries, err := afero.ReadDir(fs, dirname)
+	entries, err := fs.ReadDir(dirname)
 	if err != nil {
 		errors = append(errors, err)
 		return rulesets, errors, warning
