@@ -350,6 +350,13 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 		if err != nil {
 			return err
 		}
+
+		// last, if the repository was not present in Goliac (it was removed from Goliac
+		// but still present in Github, and we want to archive it), we must add it back
+		// to the list of repositories we manage
+		if _, ok := g.repositories[reponame]; !ok {
+			g.repositories[reponame] = &repo
+		}
 	}
 
 	_, err = w.Commit("moving deleted repositories as archived", &git.CommitOptions{
