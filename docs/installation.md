@@ -344,3 +344,44 @@ name: alice
 spec:
   githubID: alice-myorg
 ```
+
+### Slack integration
+
+If you want to be notified of sync process issues, you can create a Slack application, and configure the `GOLIAC_SLACK_TOKEN` and `GOLIAC_SLACK_CHANNEL` environment variables.
+
+To create a Slack application, you can go to https://api.slack.com/apps, and `Create New App`, you can use the following yaml manifest (when asked to import a manifest):
+
+```yaml
+display_information:
+  name: Goliac
+  description: Github Organization Leveraged by Infrastructure As Code
+  background_color: "#616161"
+  long_description: "https://github.com/AlayaCare/goliac\r
+
+    \r
+
+    Goliac (Github Organization Leveraged by Infrastructure As Code), is a tool to manage your Github Organization (users/teams/repositories) via yaml manifests files structured in a Github repository\r
+
+    this IAC Github repositories can be updated by teams from your organization, but only the repositories they owns\r
+
+    all repositories rules are enforced via a central configuration that only the IT/security team can update (if you are using Github Enterprise)\r
+
+    a Github App watching this repository and applying any changes"
+features:
+  bot_user:
+    display_name: Goliac
+    always_online: false
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+settings:
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
+```
+
+You need to
+- install the application into your workspace. (You can do it by clicking on the `Install App` button)
+-  to set the 2 environments variables (`GOLIAC_SLACK_TOKEN` and `GOLIAC_SLACK_CHANNEL`) with the token and the channel name.
+-  to invite the bot to the channel.

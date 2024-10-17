@@ -1,6 +1,6 @@
 # ![Goliac](docs/images/logo_small.png) Goliac
 
-Goliac (Github Organization Leveraged by Infrastructure As Code), is a tool to manage your Github Organization (users/teams/repositories) via
+Goliac (Github Organization Leveraged by Infrastructure As Code), is a collaborative tool to manage your Github Organization (users/teams/repositories) via
 - yaml manifests files structured in a Github repository
 - this IAC Github repositories can be updated by teams from your organization, but only the repositories they owns
 - all repositories rules are enforced via a central configuration that only the IT/security team can update (if you are using Github Enterprise)
