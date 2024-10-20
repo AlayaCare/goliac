@@ -1,7 +1,7 @@
 ######################################
 # Prepare npm_builder
 ######################################
-FROM node:16 as npm_builder
+FROM node:20 as npm_builder
 WORKDIR /app
 ADD . .
 RUN make build_ui
