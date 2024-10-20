@@ -56,6 +56,12 @@ var Config = struct {
 	// to receive slack notifications on errors
 	SlackToken   string `env:"GOLIAC_SLACK_TOKEN" envDefault:""`
 	SlackChannel string `env:"GOLIAC_SLACK_CHANNEL" envDefault:""`
+
+	// to receive Github main branch merge webhook events on the /webhook endpoint
+	GithubWebhookSecret        string `env:"GOLIAC_GITHUB_WEBHOOK_SECRET" envDefault:""`
+	GithubWebhookDedicatedHost string `env:"GOLIAC_GITHUB_WEBHOOK_HOST" envDefault:"0.0.0.0"`
+	GithubWebhookDedicatedPort int    `env:"GOLIAC_GITHUB_WEBHOOK_PORT" envDefault:"18001"`
+	GithubWebhookPath          string `env:"GOLIAC_GITHUB_WEBHOOK_PATH" envDefault:"/webhook"`
 }{}
 
 // to be overrided at build time with

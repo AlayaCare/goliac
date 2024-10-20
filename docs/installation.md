@@ -208,7 +208,10 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_MAX_CHANGESETS_OVERRIDE    | false          | if you need to override the `max_changesets` setting in the `goliac.yaml` file. Useful in particular using the `goliac apply` CLI  |
 | GOLIAC_SLACK_TOKEN                |               | (optional) Slack token to send notification (ususally error messages if any) |
 | GOLIAC_SLACK_CHANNEL              |               | (optional) Slack channel to send notification |
-
+| GOLIAC_GITHUB_WEBHOOK_HOST        | 0.0.0.0       | (optional) Hostname to listen to Github webhook |
+| GOLIAC_GITHUB_WEBHOOK_PORT        | 18001         | (optional) Port to listen to Github webhook |
+| GOLIAC_GITHUB_WEBHOOK_SECRET      |               | (optional) Secret to validate Github webhook |
+| GOLIAC_GITHUB_WEBHOOK_PATH        | /webhook      | (optional) Path to listen to Github webhook |
 then you just need to start it with
 
 ```
@@ -345,7 +348,7 @@ spec:
   githubID: alice-myorg
 ```
 
-### Slack integration
+## Slack integration
 
 If you want to be notified of sync process issues, you can create a Slack application, and configure the `GOLIAC_SLACK_TOKEN` and `GOLIAC_SLACK_CHANNEL` environment variables.
 
@@ -385,3 +388,17 @@ You need to
 - install the application into your workspace. (You can do it by clicking on the `Install App` button)
 -  to set the 2 environments variables (`GOLIAC_SLACK_TOKEN` and `GOLIAC_SLACK_CHANNEL`) with the token and the channel name.
 -  to invite the bot to the channel.
+
+## Github webhook
+
+By default Goliac works by polling the state of the teams Github repository (by default every 10 minutes).
+ But you can configure a webhook to be notified of changes in your Github organization.
+
+To do so, you need to update the Github App configuration:
+- enable the active Webhook
+- set a webhook secret
+- set the webhook URL to be able to reach `http://GOLIAC_SERVER_HOST:GOLIAC_SERVER_PORT/webhook`
+
+And you need to configure the Goliac server with
+- the `GOLIAC_GITHUB_WEBHOOK_SECRET` environment variable.
+- optionally the `GOLIAC_GITHUB_WEBHOOK_HOST` (`0.0.0.0` by default) and `GOLIAC_GITHUB_WEBHOOK_PORT`  (`18001` by default) environment variables.
