@@ -270,6 +270,8 @@ definitions:
       nbRepos:
         type: integer
         x-omitempty: false
+      version:
+        type: string
 
   # Default Error
   error:

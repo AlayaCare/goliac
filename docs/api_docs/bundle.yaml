@@ -443,6 +443,8 @@ definitions:
       nbRepos:
         type: integer
         x-omitempty: false
+      version:
+        type: string
   error:
     type: object
     required:

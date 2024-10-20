@@ -1,10 +1,11 @@
+GIT_VERSION ?= v0.1.0
 
 all: deps gen build build_ui
 
 rebuild: gen build
 
 build:
-	@GO111MODULE=on go build -o goliac ./cmd/goliac
+	@GO111MODULE=on go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${GIT_VERSION}" -o goliac ./cmd/goliac
 
 build_ui:
 	@echo "Building Goliac UI ..."

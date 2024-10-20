@@ -39,6 +39,14 @@
             <el-button @click="flushcache">Flush cache</el-button>
         </div>
       </el-row>  
+      <el-row>
+        <el-divider />
+      </el-row>
+      <el-row>
+        <div class="flex-container">
+            <el-text>Build version: {{ version }}</el-text>
+        </div>
+      </el-row>
     </el-col>
   </el-row>
 </template>
@@ -63,6 +71,7 @@
       return {
         flushcacheVisible: false,
         statusTable: [],
+        version: "",
       };
     },
     created() {
@@ -72,6 +81,7 @@
         getStatus() {
             Axios.get(`${API_URL}/status`).then(response => {
                 let status = response.data;
+                this.version = status.version;
                 this.statusTable = [
                     {
                         key: "Last Sync",

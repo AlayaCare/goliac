@@ -536,6 +536,9 @@ func init() {
         "nbUsersExternal": {
           "type": "integer",
           "x-omitempty": false
+        },
+        "version": {
+          "type": "string"
         }
       }
     },
@@ -1248,6 +1251,9 @@ func init() {
         "nbUsersExternal": {
           "type": "integer",
           "x-omitempty": false
+        },
+        "version": {
+          "type": "string"
         }
       }
     },

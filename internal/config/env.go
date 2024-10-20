@@ -57,3 +57,7 @@ var Config = struct {
 	SlackToken   string `env:"GOLIAC_SLACK_TOKEN" envDefault:""`
 	SlackChannel string `env:"GOLIAC_SLACK_CHANNEL" envDefault:""`
 }{}
+
+// to be overrided at build time with
+// go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=...
+var GoliacBuildVersion = "unknown"
