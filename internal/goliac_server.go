@@ -478,6 +478,34 @@ func (g *GoliacServerImpl) Serve() {
 		}
 	}()
 
+	// start the webhook server
+	if config.Config.GithubWebhookDedicatedPort == config.Config.SwaggerPort {
+		logrus.Warn("Github webhook server port is the same as the Swagger port, the webhook server will not be started")
+	}
+
+	var webhookserver GithubWebhookServer
+	if config.Config.GithubWebhookDedicatedHost != "" &&
+		config.Config.GithubWebhookDedicatedPort != 0 &&
+		config.Config.GithubWebhookPath != "" &&
+		config.Config.GithubWebhookSecret != "" &&
+		config.Config.GithubWebhookDedicatedPort != config.Config.SwaggerPort {
+		webhookserver = NewGithubWebhookServerImpl(
+			config.Config.GithubWebhookDedicatedHost,
+			config.Config.GithubWebhookDedicatedPort,
+			config.Config.GithubWebhookPath,
+			config.Config.GithubWebhookSecret,
+			config.Config.ServerGitBranch, func() {
+				g.triggerApply(false)
+			},
+		)
+		go func() {
+			if err := webhookserver.Start(); err != nil {
+				logrus.Fatal(err)
+				close(stopCh)
+			}
+		}()
+	}
+
 	logrus.Info("Server started")
 	// Start the goroutine
 	wg.Add(1)
@@ -488,6 +516,9 @@ func (g *GoliacServerImpl) Serve() {
 			select {
 			case <-stopCh:
 				restserver.Shutdown()
+				if webhookserver != nil {
+					webhookserver.Shutdown()
+				}
 				return
 			default:
 				g.syncInterval--
