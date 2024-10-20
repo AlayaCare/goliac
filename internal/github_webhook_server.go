@@ -45,6 +45,7 @@ func NewGithubWebhookServerImpl(httpaddr string, httpport int, webhookPath strin
 		webhookSecret:        secret,
 		server:               nil,
 		mainBranch:           mainBranch,
+		callback:             callback,
 	}
 }
 
