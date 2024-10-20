@@ -72,14 +72,6 @@ func (s *GithubWebhookServerImpl) Shutdown() error {
 	return s.server.Shutdown(ctx)
 }
 
-type PullRequest struct {
-	Action string `json:"action"`
-	Merged bool   `json:"merged"`
-	Base   struct {
-		Ref string `json:"ref"`
-	} `json:"base"`
-}
-
 type PushEvent struct {
 	Ref string `json:"ref"`
 }
@@ -130,25 +122,23 @@ func (s *GithubWebhookServerImpl) WebhookHandler(w http.ResponseWriter, r *http.
 	// https://docs.github.com/en/webhooks/webhook-events-and-payloads
 	switch eventType {
 	case "ping":
-		s.handlePingEvent(w, r)
+		s.handlePingEvent(w)
 	case "push":
-		s.handlePushEvent(w, r)
-	case "pull_request":
-		s.handlePullRequestEvent(w, r)
+		s.handlePushEvent(w, body)
 	default:
-		fmt.Fprintf(w, "Event type %s not supported", eventType)
+		logrus.Debugf("Event type %s not supported", eventType)
+		w.WriteHeader(http.StatusOK)
 	}
 }
 
-func (s *GithubWebhookServerImpl) handlePingEvent(w http.ResponseWriter, r *http.Request) {
+func (s *GithubWebhookServerImpl) handlePingEvent(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (s *GithubWebhookServerImpl) handlePushEvent(w http.ResponseWriter, r *http.Request) {
+func (s *GithubWebhookServerImpl) handlePushEvent(w http.ResponseWriter, body []byte) {
 	var pushEvent PushEvent
 
-	// Parse the request body into the PushEvent struct
-	err := json.NewDecoder(r.Body).Decode(&pushEvent)
+	err := json.Unmarshal(body, &pushEvent)
 	if err != nil {
 		http.Error(w, "Failed to parse push event", http.StatusBadRequest)
 		return
@@ -157,24 +147,8 @@ func (s *GithubWebhookServerImpl) handlePushEvent(w http.ResponseWriter, r *http
 	// Check if the push is to the main branch
 	if pushEvent.Ref == fmt.Sprintf("refs/heads/%s", s.mainBranch) {
 		s.callback()
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func (s *GithubWebhookServerImpl) handlePullRequestEvent(w http.ResponseWriter, r *http.Request) {
-	var prEvent PullRequest
-
-	// Parse the request body into the PullRequest struct
-	err := json.NewDecoder(r.Body).Decode(&prEvent)
-	if err != nil {
-		http.Error(w, "Failed to parse pull request event", http.StatusBadRequest)
-		return
-	}
-
-	// Check if the pull request was merged into the main branch
-	if prEvent.Action == "closed" && prEvent.Merged && prEvent.Base.Ref == s.mainBranch {
-		s.callback()
+	} else {
+		http.Error(w, "Parse push event: wrong branch", http.StatusBadRequest)
 	}
 
 	w.WriteHeader(http.StatusOK)
