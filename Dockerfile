@@ -10,7 +10,9 @@ RUN make build_ui
 # Prepare go_builder
 ######################################
 FROM golang:1.20-bullseye as go_builder
-ARG GITHUB_REF=v0.1.0
+
+# GITHUB_REF is the current Gihhub tag
+ARG GITHUB_REF=unknown
 ENV GIT_VERSION=${GITHUB_REF}
 WORKDIR /app
 ADD . .
