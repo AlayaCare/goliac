@@ -455,9 +455,7 @@ func (g *GoliacServerImpl) PostFlushCache(app.PostFlushCacheParams) middleware.R
 }
 
 func (g *GoliacServerImpl) PostResync(app.PostResyncParams) middleware.Responder {
-	go func() {
-		g.triggerApply(true)
-	}()
+	go g.triggerApply(true)
 	return app.NewPostResyncOK()
 }
 
@@ -495,7 +493,8 @@ func (g *GoliacServerImpl) Serve() {
 			config.Config.GithubWebhookPath,
 			config.Config.GithubWebhookSecret,
 			config.Config.ServerGitBranch, func() {
-				g.triggerApply(false)
+				// let's start the apply process asynchrounously
+				go g.triggerApply(false)
 			},
 		)
 		go func() {
