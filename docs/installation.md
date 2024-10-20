@@ -395,9 +395,12 @@ By default Goliac works by polling the state of the teams Github repository (by 
  But you can configure a webhook to be notified of changes in your Github organization.
 
 To do so, you need to update the Github App configuration:
-- enable the active Webhook
-- set a webhook secret
-- set the webhook URL to be able to reach `http://GOLIAC_SERVER_HOST:GOLIAC_SERVER_PORT/webhook`
+- in General:
+  - enable the active Webhook
+  - set a webhook secret
+  - set the webhook URL to be able to reach `http://GOLIAC_SERVER_HOST:GOLIAC_SERVER_PORT/webhook`
+- in Permissions & events
+  - Subscribe to events: `Push`
 
 And you need to configure the Goliac server with
 - the `GOLIAC_GITHUB_WEBHOOK_SECRET` environment variable.

@@ -129,6 +129,8 @@ func (s *GithubWebhookServerImpl) WebhookHandler(w http.ResponseWriter, r *http.
 
 	// https://docs.github.com/en/webhooks/webhook-events-and-payloads
 	switch eventType {
+	case "ping":
+		s.handlePingEvent(w, r)
 	case "push":
 		s.handlePushEvent(w, r)
 	case "pull_request":
@@ -136,6 +138,10 @@ func (s *GithubWebhookServerImpl) WebhookHandler(w http.ResponseWriter, r *http.
 	default:
 		fmt.Fprintf(w, "Event type %s not supported", eventType)
 	}
+}
+
+func (s *GithubWebhookServerImpl) handlePingEvent(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *GithubWebhookServerImpl) handlePushEvent(w http.ResponseWriter, r *http.Request) {
