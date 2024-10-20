@@ -42,3 +42,5 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true
         tags: ghcr.io/${{ steps.lower-repo.outputs.repository }}:latest,ghcr.io/${{ steps.lower-repo.outputs.repository }}:${{ github.ref_name }}
+        build-args: |
+          GITHUB_REF=${{ github.ref_name }}

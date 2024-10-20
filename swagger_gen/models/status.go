@@ -37,6 +37,9 @@ type Status struct {
 
 	// nb users external
 	NbUsersExternal int64 `json:"nbUsersExternal"`
+
+	// version
+	Version string `json:"version,omitempty"`
 }
 
 // Validate validates this status

@@ -138,11 +138,6 @@ func (m *RepositoryDetails) contextValidateCollaborators(ctx context.Context, fo
 	for i := 0; i < len(m.Collaborators); i++ {
 
 		if m.Collaborators[i] != nil {
-
-			if swag.IsZero(m.Collaborators[i]) { // not required
-				return nil
-			}
-
 			if err := m.Collaborators[i].ContextValidate(ctx, formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
 					return ve.ValidateName("collaborators" + "." + strconv.Itoa(i))
@@ -163,11 +158,6 @@ func (m *RepositoryDetails) contextValidateTeams(ctx context.Context, formats st
 	for i := 0; i < len(m.Teams); i++ {
 
 		if m.Teams[i] != nil {
-
-			if swag.IsZero(m.Teams[i]) { // not required
-				return nil
-			}
-
 			if err := m.Teams[i].ContextValidate(ctx, formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
 					return ve.ValidateName("teams" + "." + strconv.Itoa(i))

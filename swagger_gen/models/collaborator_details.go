@@ -85,11 +85,6 @@ func (m *CollaboratorDetails) contextValidateRepositories(ctx context.Context, f
 	for i := 0; i < len(m.Repositories); i++ {
 
 		if m.Repositories[i] != nil {
-
-			if swag.IsZero(m.Repositories[i]) { // not required
-				return nil
-			}
-
 			if err := m.Repositories[i].ContextValidate(ctx, formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
 					return ve.ValidateName("repositories" + "." + strconv.Itoa(i))

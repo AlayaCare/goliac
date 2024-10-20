@@ -425,6 +425,7 @@ func (g *GoliacServerImpl) GetStatus(app.GetStatusParams) middleware.Responder {
 		NbTeams:         int64(len(g.goliac.GetLocal().Teams())),
 		NbUsers:         int64(len(g.goliac.GetLocal().Users())),
 		NbUsersExternal: int64(len(g.goliac.GetLocal().ExternalUsers())),
+		Version:         config.GoliacBuildVersion,
 	}
 	if g.lastSyncError != nil {
 		s.LastSyncError = g.lastSyncError.Error()

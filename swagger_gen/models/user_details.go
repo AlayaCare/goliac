@@ -122,11 +122,6 @@ func (m *UserDetails) contextValidateRepositories(ctx context.Context, formats s
 	for i := 0; i < len(m.Repositories); i++ {
 
 		if m.Repositories[i] != nil {
-
-			if swag.IsZero(m.Repositories[i]) { // not required
-				return nil
-			}
-
 			if err := m.Repositories[i].ContextValidate(ctx, formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
 					return ve.ValidateName("repositories" + "." + strconv.Itoa(i))
@@ -147,11 +142,6 @@ func (m *UserDetails) contextValidateTeams(ctx context.Context, formats strfmt.R
 	for i := 0; i < len(m.Teams); i++ {
 
 		if m.Teams[i] != nil {
-
-			if swag.IsZero(m.Teams[i]) { // not required
-				return nil
-			}
-
 			if err := m.Teams[i].ContextValidate(ctx, formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
 					return ve.ValidateName("teams" + "." + strconv.Itoa(i))
