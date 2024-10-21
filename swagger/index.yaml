@@ -272,6 +272,14 @@ definitions:
         x-omitempty: false
       version:
         type: string
+      detailedErrors:
+        type: array
+        items:
+          type: string
+      detailedWarnings:
+        type: array
+        items:
+          type: string
 
   # Default Error
   error:

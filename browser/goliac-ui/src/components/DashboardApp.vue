@@ -19,6 +19,35 @@
 
         </el-table>
       </el-row>
+      <el-row v-if="detailedErrors.length > 0 || detailedWarnings.length > 0">
+        <el-divider />
+      </el-row>
+      <el-row v-if="detailedErrors.length > 0">
+        <el-table
+            :data="detailedErrors"
+            :stripe="true"
+            :highlight-current-row="false"
+        >
+            <el-table-column prop="Errors" align="left" label="Errors">
+                <template #default="{row}">
+                    <span>{{ row }}</span>
+                </template>
+            </el-table-column>
+        </el-table>
+      </el-row>
+      <el-row v-if="detailedWarnings.length > 0">
+        <el-table
+            :data="detailedWarnings"
+            :stripe="true"
+            :highlight-current-row="false"
+        >
+            <el-table-column prop="Warnings" align="left" label="Warnings">
+                <template #default="{row}">
+                    <span>{{ row }}</span>
+                </template>
+            </el-table-column>
+        </el-table>
+      </el-row>
       <el-row>
         <el-divider />
       </el-row>
@@ -38,7 +67,7 @@
             <span> &nbsp; </span>
             <el-button @click="flushcache">Flush cache</el-button>
         </div>
-      </el-row>  
+      </el-row>
       <el-row>
         <el-divider />
       </el-row>
@@ -71,6 +100,8 @@
       return {
         flushcacheVisible: false,
         statusTable: [],
+        detailedErrors: [],
+        detailedWarnings: [],
         version: "",
       };
     },
@@ -82,6 +113,8 @@
             Axios.get(`${API_URL}/status`).then(response => {
                 let status = response.data;
                 this.version = status.version;
+                this.detailedErrors = status.detailedErrors;
+                this.detailedWarnings = status.detailedWarnings;
                 this.statusTable = [
                     {
                         key: "Last Sync",

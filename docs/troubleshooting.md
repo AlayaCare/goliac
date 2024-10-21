@@ -40,3 +40,10 @@ To do so, as a Gitbub admin, you can go to
 Note:
 - When Goliac will run (and its cache expires), it will put back the ruleset. Usually the cache is set to 86400 seconds (ie 1 day).
 - if you want to re-apply the ruleset quickly (when you have finished with your emergency chage), you can go to the Goliac UI and click on the `Flush cache` button, and then click on the `Re-Sync` button.
+
+## How to resolve "not enough owners for team filename XXX" warning
+
+This error is happening if a team does not have enough owners.
+Indeed a team must have at least 2 owners to be able to review and merge PRs (and the only owner cannot approve its own PRs).
+
+As an admin you should add more owners to the team.
