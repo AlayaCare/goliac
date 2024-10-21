@@ -160,6 +160,11 @@ func (m *TeamDetails) contextValidateMembers(ctx context.Context, formats strfmt
 	for i := 0; i < len(m.Members); i++ {
 
 		if m.Members[i] != nil {
+
+			if swag.IsZero(m.Members[i]) { // not required
+				return nil
+			}
+
 			if err := m.Members[i].ContextValidate(ctx, formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
 					return ve.ValidateName("members" + "." + strconv.Itoa(i))
@@ -180,6 +185,11 @@ func (m *TeamDetails) contextValidateOwners(ctx context.Context, formats strfmt.
 	for i := 0; i < len(m.Owners); i++ {
 
 		if m.Owners[i] != nil {
+
+			if swag.IsZero(m.Owners[i]) { // not required
+				return nil
+			}
+
 			if err := m.Owners[i].ContextValidate(ctx, formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
 					return ve.ValidateName("owners" + "." + strconv.Itoa(i))
@@ -200,6 +210,11 @@ func (m *TeamDetails) contextValidateRepositories(ctx context.Context, formats s
 	for i := 0; i < len(m.Repositories); i++ {
 
 		if m.Repositories[i] != nil {
+
+			if swag.IsZero(m.Repositories[i]) { // not required
+				return nil
+			}
+
 			if err := m.Repositories[i].ContextValidate(ctx, formats); err != nil {
 				if ve, ok := err.(*errors.Validation); ok {
 					return ve.ValidateName("repositories" + "." + strconv.Itoa(i))

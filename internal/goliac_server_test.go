@@ -107,8 +107,8 @@ type GoliacMock struct {
 	local engine.GoliacLocalResources
 }
 
-func (g *GoliacMock) Apply(dryrun bool, repo string, branch string, forceresync bool) error {
-	return nil
+func (g *GoliacMock) Apply(dryrun bool, repo string, branch string, forceresync bool) (error, []error, []entity.Warning) {
+	return nil, nil, nil
 }
 func (g *GoliacMock) UsersUpdate(repositoryUrl, branch string, dryrun bool, force bool) error {
 	return nil

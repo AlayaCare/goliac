@@ -514,6 +514,18 @@ func init() {
     "status": {
       "type": "object",
       "properties": {
+        "detailedErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detailedWarnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "lastSyncError": {
           "type": "string"
         },
@@ -1229,6 +1241,18 @@ func init() {
     "status": {
       "type": "object",
       "properties": {
+        "detailedErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detailedWarnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "lastSyncError": {
           "type": "string"
         },

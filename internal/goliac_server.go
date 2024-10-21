@@ -53,6 +53,8 @@ type GoliacServerImpl struct {
 	ready               bool // when the server has finished to load the local configuration
 	lastSyncTime        *time.Time
 	lastSyncError       error
+	detailedErrors      []error
+	detailedWarnings    []entity.Warning
 	syncInterval        int64 // in seconds time remaining between 2 sync
 	notificationService notification.NotificationService
 }
@@ -419,16 +421,28 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 
 func (g *GoliacServerImpl) GetStatus(app.GetStatusParams) middleware.Responder {
 	s := models.Status{
-		LastSyncError:   "",
-		LastSyncTime:    "N/A",
-		NbRepos:         int64(len(g.goliac.GetLocal().Repositories())),
-		NbTeams:         int64(len(g.goliac.GetLocal().Teams())),
-		NbUsers:         int64(len(g.goliac.GetLocal().Users())),
-		NbUsersExternal: int64(len(g.goliac.GetLocal().ExternalUsers())),
-		Version:         config.GoliacBuildVersion,
+		LastSyncError:    "",
+		LastSyncTime:     "N/A",
+		NbRepos:          int64(len(g.goliac.GetLocal().Repositories())),
+		NbTeams:          int64(len(g.goliac.GetLocal().Teams())),
+		NbUsers:          int64(len(g.goliac.GetLocal().Users())),
+		NbUsersExternal:  int64(len(g.goliac.GetLocal().ExternalUsers())),
+		Version:          config.GoliacBuildVersion,
+		DetailedErrors:   make([]string, 0),
+		DetailedWarnings: make([]string, 0),
 	}
 	if g.lastSyncError != nil {
 		s.LastSyncError = g.lastSyncError.Error()
+	}
+	if g.detailedErrors != nil {
+		for _, err := range g.detailedErrors {
+			s.DetailedErrors = append(s.DetailedErrors, err.Error())
+		}
+	}
+	if g.detailedWarnings != nil {
+		for _, warn := range g.detailedWarnings {
+			s.DetailedWarnings = append(s.DetailedWarnings, warn.Error())
+		}
 	}
 	if g.lastSyncTime != nil {
 		s.LastSyncTime = g.lastSyncTime.UTC().Format("2006-01-02T15:04:05")
@@ -547,7 +561,7 @@ func (g *GoliacServerImpl) Serve() {
  * - if the lobby is busy, it will do nothing
  */
 func (g *GoliacServerImpl) triggerApply(forceresync bool) {
-	err, applied := g.serveApply(forceresync)
+	err, errs, warns, applied := g.serveApply(forceresync)
 	if !applied && err == nil {
 		// the run was skipped
 		g.syncInterval = config.Config.ServerApplyInterval
@@ -556,6 +570,8 @@ func (g *GoliacServerImpl) triggerApply(forceresync bool) {
 		g.lastSyncTime = &now
 		previousError := g.lastSyncError
 		g.lastSyncError = err
+		g.detailedErrors = errs
+		g.detailedWarnings = warns
 		// log the error only if it's a new one
 		if err != nil && (previousError == nil || err.Error() != previousError.Error()) {
 			logrus.Error(err)
@@ -604,14 +620,14 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	return server, nil
 }
 
-func (g *GoliacServerImpl) serveApply(forceresync bool) (error, bool) {
+func (g *GoliacServerImpl) serveApply(forceresync bool) (error, []error, []entity.Warning, bool) {
 	// we want to run ApplyToGithub
 	// and queue one new run (the lobby) if a new run is asked
 	g.applyLobbyMutex.Lock()
 	// we already have a current run, and another waiting in the lobby
 	if g.applyLobby {
 		g.applyLobbyMutex.Unlock()
-		return nil, false
+		return nil, nil, nil, false
 	}
 
 	if !g.applyCurrent {
@@ -640,18 +656,18 @@ func (g *GoliacServerImpl) serveApply(forceresync bool) (error, bool) {
 	branch := config.Config.ServerGitBranch
 
 	if repo == "" {
-		return fmt.Errorf("GOLIAC_SERVER_GIT_REPOSITORY env variable not set"), false
+		return fmt.Errorf("GOLIAC_SERVER_GIT_REPOSITORY env variable not set"), nil, nil, false
 	}
 	if branch == "" {
-		return fmt.Errorf("GOLIAC_SERVER_GIT_BRANCH env variable not set"), false
+		return fmt.Errorf("GOLIAC_SERVER_GIT_BRANCH env variable not set"), nil, nil, false
 	}
 
 	// we are ready (to give local state, and to sync with remote)
 	g.ready = true
 
-	err := g.goliac.Apply(false, repo, branch, forceresync)
+	err, errs, warns := g.goliac.Apply(false, repo, branch, forceresync)
 	if err != nil {
-		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), false
+		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), errs, warns, false
 	}
-	return nil, true
+	return nil, errs, warns, true
 }

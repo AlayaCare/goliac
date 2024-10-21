@@ -26,8 +26,9 @@ const (
  * It is used to load and validate a goliac repository and apply it to github.
  */
 type Goliac interface {
-	// will run and apply the reconciliation
-	Apply(dryrun bool, repositoryUrl, branch string, forcesync bool) error
+	// will run and apply the reconciliation,
+	// it returns an error if something went wrong, and a detailed list of errors and warnings
+	Apply(dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning)
 
 	// will clone run the user-plugin to sync users, and will commit to the team repository
 	UsersUpdate(repositoryUrl, branch string, dryrun bool, force bool) error
@@ -77,42 +78,42 @@ func (g *GoliacImpl) FlushCache() {
 	g.remote.FlushCache()
 }
 
-func (g *GoliacImpl) Apply(dryrun bool, repositoryUrl, branch string, forcesync bool) error {
-	err := g.loadAndValidateGoliacOrganization(repositoryUrl, branch)
+func (g *GoliacImpl) Apply(dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning) {
+	err, errs, warns := g.loadAndValidateGoliacOrganization(repositoryUrl, branch)
 	defer g.local.Close()
 	if err != nil {
-		return fmt.Errorf("failed to load and validate: %s", err)
+		return fmt.Errorf("failed to load and validate: %s", err), errs, warns
 	}
 	u, err := url.Parse(repositoryUrl)
 	if err != nil {
-		return fmt.Errorf("failed to parse %s: %v", repositoryUrl, err)
+		return fmt.Errorf("failed to parse %s: %v", repositoryUrl, err), errs, warns
 	}
 
 	teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
 
 	err = g.applyToGithub(dryrun, teamsreponame, branch, forcesync)
 	if err != nil {
-		return err
+		return err, errs, warns
 	}
-	return nil
+	return nil, errs, warns
 }
 
-func (g *GoliacImpl) loadAndValidateGoliacOrganization(repositoryUrl, branch string) error {
+func (g *GoliacImpl) loadAndValidateGoliacOrganization(repositoryUrl, branch string) (error, []error, []entity.Warning) {
 	var errs []error
 	var warns []entity.Warning
 	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") {
 		accessToken, err := g.githubClient.GetAccessToken()
 		if err != nil {
-			return err
+			return err, nil, nil
 		}
 
 		err = g.local.Clone(accessToken, repositoryUrl, branch)
 		if err != nil {
-			return fmt.Errorf("unable to clone: %v", err)
+			return fmt.Errorf("unable to clone: %v", err), nil, nil
 		}
 		repoconfig, err := g.local.LoadRepoConfig()
 		if err != nil {
-			return fmt.Errorf("unable to read goliac.yaml config file: %v", err)
+			return fmt.Errorf("unable to read goliac.yaml config file: %v", err), nil, nil
 		}
 		g.repoconfig = repoconfig
 
@@ -130,10 +131,10 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(repositoryUrl, branch str
 		for _, err := range errs {
 			logrus.Error(err)
 		}
-		return fmt.Errorf("Not able to load and validate the goliac organization: see logs")
+		return fmt.Errorf("not able to load and validate the goliac organization: see logs"), errs, warns
 	}
 
-	return nil
+	return nil, errs, warns
 }
 
 /*

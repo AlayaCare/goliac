@@ -60,7 +60,7 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			err = goliac.Apply(true, repo, branch, true)
+			err, _, _ = goliac.Apply(true, repo, branch, true)
 			if err != nil {
 				logrus.Errorf("Failed to plan: %v", err)
 			}
@@ -93,7 +93,7 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			err = goliac.Apply(false, repo, branch, true)
+			err, _, _ = goliac.Apply(false, repo, branch, true)
 			if err != nil {
 				logrus.Errorf("Failed to apply: %v", err)
 			}

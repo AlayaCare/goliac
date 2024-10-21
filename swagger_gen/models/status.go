@@ -19,6 +19,12 @@ import (
 // swagger:model status
 type Status struct {
 
+	// detailed errors
+	DetailedErrors []string `json:"detailedErrors"`
+
+	// detailed warnings
+	DetailedWarnings []string `json:"detailedWarnings"`
+
 	// last sync error
 	LastSyncError string `json:"lastSyncError,omitempty"`
 
