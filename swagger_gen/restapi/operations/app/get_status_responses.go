@@ -17,7 +17,7 @@ import (
 const GetStatusOKCode int = 200
 
 /*
-GetStatusOK get Goliac statistics
+GetStatusOK get Goliac status
 
 swagger:response getStatusOK
 */

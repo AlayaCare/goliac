@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -36,7 +37,8 @@ func TestQueryGraphQLAPI(t *testing.T) {
 
 	// Call the function and check the result
 	query := `query { user(login: "octocat") { name } }`
-	result, err := client.QueryGraphQLAPI(query, nil)
+	ctx := context.TODO()
+	result, err := client.QueryGraphQLAPI(ctx, query, nil)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}

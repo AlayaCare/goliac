@@ -8,16 +8,30 @@
   <el-row>
     <el-col :span="20" :offset="2">
       <el-row>
-        <el-table
-            :data="statusTable"
-            :stripe="true"
-            :highlight-current-row="false"
-            :default-sort="{ prop: 'title', order: 'descending' }"
-        >
-            <el-table-column width="150" prop="key" align="left" label="Key" sortable />
-            <el-table-column prop="value" align="left" label="Value" />
-
-        </el-table>
+        <el-tabs class="full-width-tabs" v-model="activeName">
+          <el-tab-pane label="Status" name="first">
+            <el-table
+              :data="statusTable"
+              :stripe="true"
+              :highlight-current-row="false"
+              :default-sort="{ prop: 'title', order: 'descending' }"
+            >
+              <el-table-column width="250" prop="key" align="left" label="Key" sortable />
+              <el-table-column prop="value" align="left" label="Value" />
+            </el-table>
+          </el-tab-pane>
+          <el-tab-pane label="Statistics" name="second">
+            <el-table
+              :data="statisticsTable"
+              :stripe="true"
+              :highlight-current-row="false"
+              :default-sort="{ prop: 'title', order: 'descending' }"
+            >
+              <el-table-column width="250" prop="key" align="left" label="Key" sortable />
+              <el-table-column prop="value" align="left" label="Value" />
+            </el-table>
+          </el-tab-pane>
+        </el-tabs>
       </el-row>
       <el-row v-if="detailedErrors.length > 0 || detailedWarnings.length > 0">
         <el-divider />
@@ -100,17 +114,51 @@
       return {
         flushcacheVisible: false,
         statusTable: [],
+        statisticsTable: [],
         detailedErrors: [],
         detailedWarnings: [],
         version: "",
+        activeName: "first",
       };
     },
     created() {
       this.getStatus()
+      this.getStatistics()
     },
     methods: {
+      getStatistics() {
+          Axios.get(`${API_URL}/statistics`).then(response => {
+                let statistics = response.data;
+                this.statisticsTable = [
+                    {
+                        key: "Last Duration to Apply",
+                        value: statistics.lastTimeToApply,
+                    },
+                    {
+                        key: "Lat Number of Github API Calls",
+                        value: statistics.lastGithubApiCalls,
+                    },
+                    {
+                      key: "Last Number of Github API Throttled",
+                        value: statistics.lastGithubThrottled,
+                    },
+                    {
+                        key: "Max Duration to Apply",
+                        value: statistics.maxTimeToApply,
+                    },
+                    {
+                        key: "Max Github API Calls per apply",
+                        value: statistics.maxGithubApiCalls,
+                    },
+                    {
+                      key: "Max Github API Throttled per apply",
+                        value: statistics.maxGithubThrottled,
+                    },
+                ]
+          }, handleErr.bind(this));
+        },
         getStatus() {
-            Axios.get(`${API_URL}/status`).then(response => {
+          Axios.get(`${API_URL}/status`).then(response => {
                 let status = response.data;
                 this.version = status.version;
                 this.detailedErrors = status.detailedErrors;
@@ -141,8 +189,7 @@
                         value: status.nbRepos
                     },
                 ]
-        }, handleErr.bind(this));
-
+          }, handleErr.bind(this));
         },
         flushcache() {
           Axios.post(`${API_URL}/flushcache`,{}).then(() => {
@@ -163,3 +210,9 @@
     }
   };
 </script>
+
+<style scoped>
+.full-width-tabs {
+  width: 100%; /* or a specific width like 80vw or 1200px */
+}
+</style>

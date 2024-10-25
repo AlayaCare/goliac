@@ -50,6 +50,8 @@ paths:
     $ref: ./repositories.yaml
   /repositories/{repositoryID}:
     $ref: ./repository.yaml
+  /statistics:
+    $ref: ./statistics.yaml
 
 definitions:
 
@@ -280,6 +282,27 @@ definitions:
         type: array
         items:
           type: string
+  
+  statistics:
+    properties:
+      lastTimeToApply:
+        type: string
+        x-omitempty: false
+      lastGithubApiCalls:
+        type: integer
+        x-omitempty: false
+      lastGithubThrottled:
+        type: integer
+        x-omitempty: false
+      maxTimeToApply:
+        type: string
+        x-omitempty: false
+      maxGithubApiCalls:
+        type: integer
+        x-omitempty: false
+      maxGithubThrottled:
+        type: integer
+        x-omitempty: false
 
   # Default Error
   error:

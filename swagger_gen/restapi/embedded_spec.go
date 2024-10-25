@@ -233,16 +233,39 @@ func init() {
         }
       }
     },
-    "/status": {
+    "/statistics": {
       "get": {
         "description": "Get different statistics on Goliac",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getStatitics",
+        "responses": {
+          "200": {
+            "description": "get Goliac statistics",
+            "schema": {
+              "$ref": "#/definitions/statistics"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "description": "Get different status on Goliac",
         "tags": [
           "app"
         ],
         "operationId": "getStatus",
         "responses": {
           "200": {
-            "description": "get Goliac statistics",
+            "description": "get Goliac status",
             "schema": {
               "$ref": "#/definitions/status"
             }
@@ -508,6 +531,34 @@ func init() {
               }
             }
           }
+        }
+      }
+    },
+    "statistics": {
+      "properties": {
+        "lastGithubApiCalls": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "lastGithubThrottled": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "lastTimeToApply": {
+          "type": "string",
+          "x-omitempty": false
+        },
+        "maxGithubApiCalls": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "maxGithubThrottled": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "maxTimeToApply": {
+          "type": "string",
+          "x-omitempty": false
         }
       }
     },
@@ -918,16 +969,39 @@ func init() {
         }
       }
     },
-    "/status": {
+    "/statistics": {
       "get": {
         "description": "Get different statistics on Goliac",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getStatitics",
+        "responses": {
+          "200": {
+            "description": "get Goliac statistics",
+            "schema": {
+              "$ref": "#/definitions/statistics"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "description": "Get different status on Goliac",
         "tags": [
           "app"
         ],
         "operationId": "getStatus",
         "responses": {
           "200": {
-            "description": "get Goliac statistics",
+            "description": "get Goliac status",
             "schema": {
               "$ref": "#/definitions/status"
             }
@@ -1235,6 +1309,34 @@ func init() {
           "items": {
             "$ref": "#/definitions/RepositoryDetailsTeamsItems0"
           }
+        }
+      }
+    },
+    "statistics": {
+      "properties": {
+        "lastGithubApiCalls": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "lastGithubThrottled": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "lastTimeToApply": {
+          "type": "string",
+          "x-omitempty": false
+        },
+        "maxGithubApiCalls": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "maxGithubThrottled": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "maxTimeToApply": {
+          "type": "string",
+          "x-omitempty": false
         }
       }
     },

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"strings"
@@ -37,10 +38,11 @@ func NewScaffold() (*Scaffold, error) {
 
 	remote := engine.NewGoliacRemoteImpl(githubClient)
 
+	ctx := context.Background()
 	return &Scaffold{
 		remote: remote,
 		loadUsersFromGithubOrgSaml: func() (map[string]*entity.User, error) {
-			return engine.LoadUsersFromGithubOrgSaml(githubClient)
+			return engine.LoadUsersFromGithubOrgSaml(ctx, githubClient)
 		},
 	}, nil
 }
@@ -50,13 +52,14 @@ func NewScaffold() (*Scaffold, error) {
  */
 func (s *Scaffold) Generate(rootpath string, adminteam string) error {
 	fs := osfs.New("/")
-	if err := s.remote.Load(true); err != nil {
+	ctx := context.Background()
+	if err := s.remote.Load(ctx, true); err != nil {
 		logrus.Warnf("Not able to load all information from Github: %v, but I will try to continue", err)
 	}
-	return s.generate(fs, rootpath, adminteam)
+	return s.generate(ctx, fs, rootpath, adminteam)
 }
 
-func (s *Scaffold) generate(fs billy.Filesystem, rootpath string, adminteam string) error {
+func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, rootpath string, adminteam string) error {
 	utils.RemoveAll(fs, path.Join(rootpath, "users"))
 	utils.RemoveAll(fs, path.Join(rootpath, "teams"))
 	utils.RemoveAll(fs, path.Join(rootpath, "rulesets"))
@@ -66,12 +69,12 @@ func (s *Scaffold) generate(fs billy.Filesystem, rootpath string, adminteam stri
 	fs.MkdirAll(path.Join(rootpath, "rulesets"), 0755)
 	fs.MkdirAll(path.Join(rootpath, "teams"), 0755)
 
-	usermap, err := s.generateUsers(fs, path.Join(rootpath, "users"))
+	usermap, err := s.generateUsers(ctx, fs, path.Join(rootpath, "users"))
 	if err != nil {
 		return fmt.Errorf("Error creaing the users directory: %v", err)
 	}
 
-	err, foundAdmin := s.generateTeams(fs, path.Join(rootpath, "teams"), usermap, adminteam)
+	err, foundAdmin := s.generateTeams(ctx, fs, path.Join(rootpath, "teams"), usermap, adminteam)
 	if err != nil {
 		return fmt.Errorf("Error creating the teams directory: %v", err)
 	}
@@ -99,11 +102,11 @@ func (s *Scaffold) generate(fs billy.Filesystem, rootpath string, adminteam stri
 	return nil
 }
 
-func (s *Scaffold) generateTeams(fs billy.Filesystem, teamspath string, usermap map[string]string, adminteam string) (error, bool) {
+func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teamspath string, usermap map[string]string, adminteam string) (error, bool) {
 	adminTeamFound := false
 
-	teamsRepositories := s.remote.TeamRepositories()
-	teams := s.remote.Teams()
+	teamsRepositories := s.remote.TeamRepositories(ctx)
+	teams := s.remote.Teams(ctx)
 
 	// to ensure only one owner
 	repoAdmin := make(map[string]string)
@@ -144,7 +147,7 @@ func (s *Scaffold) generateTeams(fs billy.Filesystem, teamspath string, usermap 
 
 	countOrphaned := 0
 	// orphan repos should go to the admin team
-	for repo := range s.remote.Repositories() {
+	for repo := range s.remote.Repositories(ctx) {
 		logrus.Debugf("repo %s is orphaned, attaching it to the admin (%s) team", repo, adminteam)
 		if _, ok := repoAdmin[repo]; !ok {
 			repoAdmin[repo] = adminteam
@@ -236,7 +239,7 @@ func (s *Scaffold) generateTeams(fs billy.Filesystem, teamspath string, usermap 
 /*
  * Returns a map[<githubid>]<username>
  */
-func (s *Scaffold) generateUsers(fs billy.Filesystem, userspath string) (map[string]string, error) {
+func (s *Scaffold) generateUsers(ctx context.Context, fs billy.Filesystem, userspath string) (map[string]string, error) {
 	fs.MkdirAll(path.Join(userspath, "protected"), 0755)
 	fs.MkdirAll(path.Join(userspath, "org"), 0755)
 	fs.MkdirAll(path.Join(userspath, "external"), 0755)
@@ -256,7 +259,7 @@ func (s *Scaffold) generateUsers(fs billy.Filesystem, userspath string) (map[str
 	} else {
 		// fail back on github id
 		logrus.Debug("SAML integration disabled")
-		for githubid := range s.remote.Users() {
+		for githubid := range s.remote.Users(ctx) {
 			usermap[githubid] = githubid
 			user := entity.User{}
 			user.ApiVersion = "v1"

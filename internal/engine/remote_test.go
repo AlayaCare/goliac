@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -359,7 +360,7 @@ func (m *MockGithubClient) GetAppSlug() string {
 	return "mock-github-client"
 }
 
-func (m *MockGithubClient) QueryGraphQLAPI(query string, variables map[string]interface{}) ([]byte, error) {
+func (m *MockGithubClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
 
 	doc, err := parser.ParseQuery(&ast.Source{Input: query})
 
@@ -389,10 +390,10 @@ func (m *MockGithubClient) QueryGraphQLAPI(query string, variables map[string]in
 	return j, nil
 }
 
-func (m *MockGithubClient) CallRestAPI(endpoint, method string, body map[string]interface{}) ([]byte, error) {
+func (m *MockGithubClient) CallRestAPI(ctx context.Context, endpoint, method string, body map[string]interface{}) ([]byte, error) {
 	return nil, nil
 }
-func (m *MockGithubClient) GetAccessToken() (string, error) {
+func (m *MockGithubClient) GetAccessToken(ctx context.Context) (string, error) {
 	return "", nil
 }
 
@@ -405,7 +406,8 @@ func TestRemoteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
 
-		repositories, _, err := remoteImpl.loadRepositories()
+		ctx := context.TODO()
+		repositories, _, err := remoteImpl.loadRepositories(ctx)
 		assert.Nil(t, err)
 		assert.Equal(t, 133, len(repositories))
 		assert.Equal(t, false, repositories["repo_1"].BoolProperties["archived"])
@@ -419,7 +421,8 @@ func TestRemoteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
 
-		teams, _, err := remoteImpl.loadTeams()
+		ctx := context.TODO()
+		teams, _, err := remoteImpl.loadTeams(ctx)
 		assert.Nil(t, err)
 		assert.Equal(t, 122, len(teams))
 		assert.Equal(t, "team_1", teams["slug-1"].Name)
@@ -431,7 +434,8 @@ func TestRemoteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
 
-		repos, err := remoteImpl.loadTeamRepos("team-1")
+		ctx := context.TODO()
+		repos, err := remoteImpl.loadTeamRepos(ctx, "team-1")
 		assert.Nil(t, err)
 		assert.Equal(t, 2, len(repos))
 		assert.Equal(t, "push", repos["repo_0"].Permission)
@@ -443,7 +447,8 @@ func TestRemoteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(&client)
 
-		err := remoteImpl.Load(false)
+		ctx := context.TODO()
+		err := remoteImpl.Load(ctx, false)
 		assert.Nil(t, err)
 		assert.Equal(t, 122, len(remoteImpl.teams))
 		assert.Equal(t, 2, len(remoteImpl.teamRepos["slug-1"]))
@@ -455,13 +460,13 @@ type GitHubClientIsEnterpriseMock struct {
 	err     error
 }
 
-func (g *GitHubClientIsEnterpriseMock) QueryGraphQLAPI(query string, variables map[string]interface{}) ([]byte, error) {
+func (g *GitHubClientIsEnterpriseMock) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
 	return []byte(""), nil
 }
-func (g *GitHubClientIsEnterpriseMock) CallRestAPI(endpoint, method string, body map[string]interface{}) ([]byte, error) {
+func (g *GitHubClientIsEnterpriseMock) CallRestAPI(ctx context.Context, endpoint, method string, body map[string]interface{}) ([]byte, error) {
 	return g.results[endpoint], g.err
 }
-func (g *GitHubClientIsEnterpriseMock) GetAccessToken() (string, error) {
+func (g *GitHubClientIsEnterpriseMock) GetAccessToken(ctx context.Context) (string, error) {
 	return "", nil
 }
 func (g *GitHubClientIsEnterpriseMock) GetAppSlug() string {
@@ -520,7 +525,8 @@ func TestIsEnterprise(t *testing.T) {
 		}
 
 		for _, set := range tests {
-			res := isEnterprise("foobar", set.mock)
+			ctx := context.TODO()
+			res := isEnterprise(ctx, "foobar", set.mock)
 
 			assert.Equal(t, set.expected, res)
 
@@ -567,7 +573,8 @@ func TestIsEnterprise(t *testing.T) {
 		}
 
 		for _, set := range tests {
-			res := isEnterprise("foobar", set.mock)
+			ctx := context.TODO()
+			res := isEnterprise(ctx, "foobar", set.mock)
 
 			assert.Equal(t, set.expected, res)
 

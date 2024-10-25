@@ -2,6 +2,7 @@ package github
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,14 +14,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Alayacare/goliac/internal/config"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 )
 
 type GitHubClient interface {
-	QueryGraphQLAPI(query string, variables map[string]interface{}) ([]byte, error)
-	CallRestAPI(endpoint, method string, body map[string]interface{}) ([]byte, error)
-	GetAccessToken() (string, error)
+	QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error)
+	CallRestAPI(ctx context.Context, endpoint, method string, body map[string]interface{}) ([]byte, error)
+	GetAccessToken(ctx context.Context) (string, error)
 	GetAppSlug() string
 }
 
@@ -51,7 +53,7 @@ func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, erro
 			return nil, err
 		}
 
-		accessToken, expiresAt, err := t.client.getAccessTokenForInstallation(token)
+		accessToken, expiresAt, err := t.client.getAccessTokenForInstallation(req.Context(), token)
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +184,7 @@ type GraphQLRequest struct {
  * }
  * responseBody, err := client.QueryGraphQLAPI(query, variables)
  */
-func (client *GitHubClientImpl) QueryGraphQLAPI(query string, variables map[string]interface{}) ([]byte, error) {
+func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
 	body, err := json.Marshal(GraphQLRequest{
 		Query:     query,
 		Variables: variables,
@@ -191,12 +193,18 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(query string, variables map[stri
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", client.gitHubServer+"/graphql", bytes.NewBuffer(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", client.gitHubServer+"/graphql", bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+
+	stats := ctx.Value(config.ContextKeyStatistics)
+	if stats != nil {
+		goliacStats := stats.(*config.GoliacStatistics)
+		goliacStats.GithubApiCalls++
+	}
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
@@ -205,13 +213,18 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(query string, variables map[stri
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusTooManyRequests {
+		if stats != nil {
+			goliacStats := stats.(*config.GoliacStatistics)
+			goliacStats.GithubThrottled++
+		}
+
 		// We're being rate limited. Get the reset time from the headers.
 		if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
 			return nil, err
 		}
 
 		// Retry the request.
-		return client.QueryGraphQLAPI(query, variables)
+		return client.QueryGraphQLAPI(ctx, query, variables)
 	} else {
 		responseBody, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -235,7 +248,7 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(query string, variables map[stri
  * }
  * responseBody, err := client.CallRestAPIWithBody("orgs/my-org/repos", "POST", body)
  */
-func (client *GitHubClientImpl) CallRestAPI(endpoint, method string, body map[string]interface{}) ([]byte, error) {
+func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, method string, body map[string]interface{}) ([]byte, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -248,7 +261,14 @@ func (client *GitHubClientImpl) CallRestAPI(endpoint, method string, body map[st
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(method, urlpath, bodyReader)
+
+	stats := ctx.Value(config.ContextKeyStatistics)
+	if stats != nil {
+		goliacStats := stats.(*config.GoliacStatistics)
+		goliacStats.GithubApiCalls++
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, urlpath, bodyReader)
 	if err != nil {
 		return nil, err
 	}
@@ -262,13 +282,18 @@ func (client *GitHubClientImpl) CallRestAPI(endpoint, method string, body map[st
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusTooManyRequests {
+		if stats != nil {
+			goliacStats := stats.(*config.GoliacStatistics)
+			goliacStats.GithubThrottled++
+		}
+
 		// We're being rate limited. Get the reset time from the headers.
 		if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
 			return nil, err
 		}
 
 		// Retry the request.
-		return client.CallRestAPI(endpoint, method, body)
+		return client.CallRestAPI(ctx, endpoint, method, body)
 	} else {
 		responseBody, err := io.ReadAll(resp.Body)
 		if err != nil {
@@ -308,14 +333,20 @@ type AccessTokenResponse struct {
 	Token string `json:"token"`
 }
 
-func (client *GitHubClientImpl) getAccessTokenForInstallation(jwt string) (string, time.Time, error) {
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/app/installations/%d/access_tokens", client.gitHubServer, client.installationID), nil)
+func (client *GitHubClientImpl) getAccessTokenForInstallation(ctx context.Context, jwt string) (string, time.Time, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/app/installations/%d/access_tokens", client.gitHubServer, client.installationID), nil)
 	if err != nil {
 		return "", time.Now(), err
 	}
 
 	req.Header.Add("Authorization", "Bearer "+jwt)
 	req.Header.Add("Accept", "application/vnd.github.machine-man-preview+json")
+
+	stats := ctx.Value(config.ContextKeyStatistics)
+	if stats != nil {
+		goliacStats := stats.(*config.GoliacStatistics)
+		goliacStats.GithubApiCalls++
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -354,7 +385,7 @@ func (client *GitHubClientImpl) getAccessTokenForInstallation(jwt string) (strin
  *		Password: accessToken,
  *	},
  */
-func (client *GitHubClientImpl) GetAccessToken() (string, error) {
+func (client *GitHubClientImpl) GetAccessToken(ctx context.Context) (string, error) {
 	logrus.Debugf("GetAccessToken(): client.tokenExpiration: %v", client.tokenExpiration)
 
 	if client.accessToken != "" && client.tokenExpiration.After(time.Now()) {
@@ -366,7 +397,7 @@ func (client *GitHubClientImpl) GetAccessToken() (string, error) {
 		return "", err
 	}
 
-	accessToken, expiration, err := client.getAccessTokenForInstallation(jwt)
+	accessToken, expiration, err := client.getAccessTokenForInstallation(ctx, jwt)
 	if err != nil {
 		return "", err
 	}

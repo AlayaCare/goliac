@@ -63,6 +63,9 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		AppGetRepositoryHandler: app.GetRepositoryHandlerFunc(func(params app.GetRepositoryParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetRepository has not yet been implemented")
 		}),
+		AppGetStatiticsHandler: app.GetStatiticsHandlerFunc(func(params app.GetStatiticsParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetStatitics has not yet been implemented")
+		}),
 		AppGetStatusHandler: app.GetStatusHandlerFunc(func(params app.GetStatusParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetStatus has not yet been implemented")
 		}),
@@ -133,6 +136,8 @@ type GoliacAPI struct {
 	AppGetRepositoriesHandler app.GetRepositoriesHandler
 	// AppGetRepositoryHandler sets the operation handler for the get repository operation
 	AppGetRepositoryHandler app.GetRepositoryHandler
+	// AppGetStatiticsHandler sets the operation handler for the get statitics operation
+	AppGetStatiticsHandler app.GetStatiticsHandler
 	// AppGetStatusHandler sets the operation handler for the get status operation
 	AppGetStatusHandler app.GetStatusHandler
 	// AppGetTeamHandler sets the operation handler for the get team operation
@@ -241,6 +246,9 @@ func (o *GoliacAPI) Validate() error {
 	}
 	if o.AppGetRepositoryHandler == nil {
 		unregistered = append(unregistered, "app.GetRepositoryHandler")
+	}
+	if o.AppGetStatiticsHandler == nil {
+		unregistered = append(unregistered, "app.GetStatiticsHandler")
 	}
 	if o.AppGetStatusHandler == nil {
 		unregistered = append(unregistered, "app.GetStatusHandler")
@@ -375,6 +383,10 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/repositories/{repositoryID}"] = app.NewGetRepository(o.context, o.AppGetRepositoryHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/statistics"] = app.NewGetStatitics(o.context, o.AppGetStatiticsHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}

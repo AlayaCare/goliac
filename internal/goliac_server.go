@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -42,6 +43,7 @@ type GoliacServer interface {
 	GetTeam(app.GetTeamParams) middleware.Responder
 	GetRepositories(app.GetRepositoriesParams) middleware.Responder
 	GetRepository(app.GetRepositoryParams) middleware.Responder
+	GetStatistics(app.GetStatiticsParams) middleware.Responder
 }
 
 type GoliacServerImpl struct {
@@ -57,6 +59,10 @@ type GoliacServerImpl struct {
 	detailedWarnings    []entity.Warning
 	syncInterval        int64 // in seconds time remaining between 2 sync
 	notificationService notification.NotificationService
+	lastStatistics      config.GoliacStatistics
+	maxStatistics       config.GoliacStatistics
+	lastTimeToApply     time.Duration
+	maxTimeToApply      time.Duration
 }
 
 func NewGoliacServer(goliac Goliac, notificationService notification.NotificationService) GoliacServer {
@@ -69,6 +75,17 @@ func NewGoliacServer(goliac Goliac, notificationService notification.Notificatio
 	server.applyLobbyCond = sync.NewCond(&server.applyLobbyMutex)
 
 	return &server
+}
+
+func (g *GoliacServerImpl) GetStatistics(app.GetStatiticsParams) middleware.Responder {
+	return app.NewGetStatiticsOK().WithPayload(&models.Statistics{
+		LastTimeToApply:     g.lastTimeToApply.Truncate(time.Second).String(),
+		LastGithubAPICalls:  int64(g.lastStatistics.GithubApiCalls),
+		LastGithubThrottled: int64(g.lastStatistics.GithubThrottled),
+		MaxTimeToApply:      g.maxTimeToApply.Truncate(time.Second).String(),
+		MaxGithubAPICalls:   int64(g.maxStatistics.GithubApiCalls),
+		MaxGithubThrottled:  int64(g.maxStatistics.GithubThrottled),
+	})
 }
 
 func (g *GoliacServerImpl) GetRepositories(app.GetRepositoriesParams) middleware.Responder {
@@ -600,6 +617,7 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.AppPostFlushCacheHandler = app.PostFlushCacheHandlerFunc(g.PostFlushCache)
 	api.AppPostResyncHandler = app.PostResyncHandlerFunc(g.PostResync)
 	api.AppGetStatusHandler = app.GetStatusHandlerFunc(g.GetStatus)
+	api.AppGetStatiticsHandler = app.GetStatiticsHandlerFunc(g.GetStatistics)
 
 	api.AppGetUsersHandler = app.GetUsersHandlerFunc(g.GetUsers)
 	api.AppGetUserHandler = app.GetUserHandlerFunc(g.GetUser)
@@ -665,9 +683,30 @@ func (g *GoliacServerImpl) serveApply(forceresync bool) (error, []error, []entit
 	// we are ready (to give local state, and to sync with remote)
 	g.ready = true
 
-	err, errs, warns := g.goliac.Apply(false, repo, branch, forceresync)
+	startTime := time.Now()
+	stats := config.GoliacStatistics{}
+	ctx := context.WithValue(context.Background(), config.ContextKeyStatistics, &stats)
+
+	err, errs, warns := g.goliac.Apply(ctx, false, repo, branch, forceresync)
 	if err != nil {
 		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), errs, warns, false
 	}
+	endTime := time.Now()
+	g.lastTimeToApply = endTime.Sub(startTime)
+	g.lastStatistics.GithubApiCalls = stats.GithubApiCalls
+	g.lastStatistics.GithubThrottled = stats.GithubThrottled
+
+	if g.lastTimeToApply > g.maxTimeToApply {
+		g.maxTimeToApply = g.lastTimeToApply
+	}
+
+	if stats.GithubApiCalls > g.maxStatistics.GithubApiCalls {
+		g.maxStatistics.GithubApiCalls = stats.GithubApiCalls
+	}
+
+	if stats.GithubThrottled > g.maxStatistics.GithubThrottled {
+		g.maxStatistics.GithubThrottled = stats.GithubThrottled
+	}
+
 	return nil, errs, warns, true
 }

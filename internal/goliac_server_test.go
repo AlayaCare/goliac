@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -107,10 +108,10 @@ type GoliacMock struct {
 	local engine.GoliacLocalResources
 }
 
-func (g *GoliacMock) Apply(dryrun bool, repo string, branch string, forceresync bool) (error, []error, []entity.Warning) {
+func (g *GoliacMock) Apply(ctx context.Context, dryrun bool, repo string, branch string, forceresync bool) (error, []error, []entity.Warning) {
 	return nil, nil, nil
 }
-func (g *GoliacMock) UsersUpdate(repositoryUrl, branch string, dryrun bool, force bool) error {
+func (g *GoliacMock) UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) error {
 	return nil
 }
 func (g *GoliacMock) FlushCache() {

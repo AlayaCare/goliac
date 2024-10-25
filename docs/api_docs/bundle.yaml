@@ -84,10 +84,10 @@ paths:
       tags:
         - app
       operationId: getStatus
-      description: Get different statistics on Goliac
+      description: Get different status on Goliac
       responses:
         '200':
-          description: get Goliac statistics
+          description: get Goliac status
           schema:
             $ref: '#/definitions/status'
         default:
@@ -238,6 +238,21 @@ paths:
           description: get repository details especially teams that have access
           schema:
             $ref: '#/definitions/repositoryDetails'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
+  /statistics:
+    get:
+      tags:
+        - app
+      operationId: getStatitics
+      description: Get different statistics on Goliac
+      responses:
+        '200':
+          description: get Goliac statistics
+          schema:
+            $ref: '#/definitions/statistics'
         default:
           description: generic error response
           schema:
@@ -453,6 +468,26 @@ definitions:
         type: array
         items:
           type: string
+  statistics:
+    properties:
+      lastTimeToApply:
+        type: string
+        x-omitempty: false
+      lastGithubApiCalls:
+        type: integer
+        x-omitempty: false
+      lastGithubThrottled:
+        type: integer
+        x-omitempty: false
+      maxTimeToApply:
+        type: string
+        x-omitempty: false
+      maxGithubApiCalls:
+        type: integer
+        x-omitempty: false
+      maxGithubThrottled:
+        type: integer
+        x-omitempty: false
   error:
     type: object
     required:
