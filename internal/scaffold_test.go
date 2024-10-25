@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -19,30 +20,30 @@ type ScaffoldGoliacRemoteMock struct {
 	teamsRepos map[string]map[string]*engine.GithubTeamRepo
 }
 
-func (s *ScaffoldGoliacRemoteMock) Load(continueOnError bool) error {
+func (s *ScaffoldGoliacRemoteMock) Load(ctx context.Context, continueOnError bool) error {
 	return nil
 }
 func (s *ScaffoldGoliacRemoteMock) FlushCache() {
 }
-func (s *ScaffoldGoliacRemoteMock) Users() map[string]string {
+func (s *ScaffoldGoliacRemoteMock) Users(ctx context.Context) map[string]string {
 	return s.users
 }
-func (s *ScaffoldGoliacRemoteMock) TeamSlugByName() map[string]string {
+func (s *ScaffoldGoliacRemoteMock) TeamSlugByName(ctx context.Context) map[string]string {
 	return nil
 }
-func (s *ScaffoldGoliacRemoteMock) Teams() map[string]*engine.GithubTeam {
+func (s *ScaffoldGoliacRemoteMock) Teams(ctx context.Context) map[string]*engine.GithubTeam {
 	return s.teams
 }
-func (s *ScaffoldGoliacRemoteMock) Repositories() map[string]*engine.GithubRepository {
+func (s *ScaffoldGoliacRemoteMock) Repositories(ctx context.Context) map[string]*engine.GithubRepository {
 	return s.repos
 }
-func (s *ScaffoldGoliacRemoteMock) TeamRepositories() map[string]map[string]*engine.GithubTeamRepo {
+func (s *ScaffoldGoliacRemoteMock) TeamRepositories(ctx context.Context) map[string]map[string]*engine.GithubTeamRepo {
 	return s.teamsRepos
 }
-func (s *ScaffoldGoliacRemoteMock) RuleSets() map[string]*engine.GithubRuleSet {
+func (s *ScaffoldGoliacRemoteMock) RuleSets(ctx context.Context) map[string]*engine.GithubRuleSet {
 	return nil
 }
-func (s *ScaffoldGoliacRemoteMock) AppIds() map[string]int {
+func (s *ScaffoldGoliacRemoteMock) AppIds(ctx context.Context) map[string]int {
 	return nil
 }
 func (s *ScaffoldGoliacRemoteMock) IsEnterprise() bool {
@@ -154,7 +155,8 @@ func TestScaffoldUnit(t *testing.T) {
 			loadUsersFromGithubOrgSaml: NoLoadGithubSamlUsersMock,
 		}
 
-		users, err := scaffold.generateUsers(fs, "/users")
+		ctx := context.TODO()
+		users, err := scaffold.generateUsers(ctx, fs, "/users")
 		assert.Nil(t, err)
 		assert.Equal(t, 4, len(users))
 
@@ -172,7 +174,8 @@ func TestScaffoldUnit(t *testing.T) {
 			loadUsersFromGithubOrgSaml: LoadGithubSamlUsersMock,
 		}
 
-		users, err := scaffold.generateUsers(fs, "/users")
+		ctx := context.TODO()
+		users, err := scaffold.generateUsers(ctx, fs, "/users")
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(users))
 
@@ -243,11 +246,12 @@ func TestScaffoldFull(t *testing.T) {
 			loadUsersFromGithubOrgSaml: NoLoadGithubSamlUsersMock,
 		}
 
-		users, err := scaffold.generateUsers(fs, "/users")
+		ctx := context.TODO()
+		users, err := scaffold.generateUsers(ctx, fs, "/users")
 		assert.Nil(t, err)
 		assert.Equal(t, 4, len(users))
 
-		err, foundAdmin := scaffold.generateTeams(fs, "/teams", users, "admin")
+		err, foundAdmin := scaffold.generateTeams(ctx, fs, "/teams", users, "admin")
 		assert.Nil(t, err)
 		assert.Equal(t, true, foundAdmin)
 
@@ -269,11 +273,12 @@ func TestScaffoldFull(t *testing.T) {
 			loadUsersFromGithubOrgSaml: LoadGithubSamlUsersMock,
 		}
 
-		users, err := scaffold.generateUsers(fs, "/users")
+		ctx := context.TODO()
+		users, err := scaffold.generateUsers(ctx, fs, "/users")
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(users))
 
-		err, foundAdmin := scaffold.generateTeams(fs, "/teams", users, "admin")
+		err, foundAdmin := scaffold.generateTeams(ctx, fs, "/teams", users, "admin")
 		assert.Nil(t, err)
 		assert.Equal(t, true, foundAdmin)
 

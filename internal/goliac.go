@@ -28,10 +28,10 @@ const (
 type Goliac interface {
 	// will run and apply the reconciliation,
 	// it returns an error if something went wrong, and a detailed list of errors and warnings
-	Apply(dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning)
+	Apply(ctx context.Context, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning)
 
 	// will clone run the user-plugin to sync users, and will commit to the team repository
-	UsersUpdate(repositoryUrl, branch string, dryrun bool, force bool) error
+	UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) error
 
 	// flush remote cache
 	FlushCache()
@@ -78,8 +78,8 @@ func (g *GoliacImpl) FlushCache() {
 	g.remote.FlushCache()
 }
 
-func (g *GoliacImpl) Apply(dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning) {
-	err, errs, warns := g.loadAndValidateGoliacOrganization(repositoryUrl, branch)
+func (g *GoliacImpl) Apply(ctx context.Context, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning) {
+	err, errs, warns := g.loadAndValidateGoliacOrganization(ctx, repositoryUrl, branch)
 	defer g.local.Close()
 	if err != nil {
 		return fmt.Errorf("failed to load and validate: %s", err), errs, warns
@@ -91,18 +91,18 @@ func (g *GoliacImpl) Apply(dryrun bool, repositoryUrl, branch string, forcesync 
 
 	teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
 
-	err = g.applyToGithub(dryrun, teamsreponame, branch, forcesync)
+	err = g.applyToGithub(ctx, dryrun, teamsreponame, branch, forcesync)
 	if err != nil {
 		return err, errs, warns
 	}
 	return nil, errs, warns
 }
 
-func (g *GoliacImpl) loadAndValidateGoliacOrganization(repositoryUrl, branch string) (error, []error, []entity.Warning) {
+func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, repositoryUrl, branch string) (error, []error, []entity.Warning) {
 	var errs []error
 	var warns []entity.Warning
 	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") {
-		accessToken, err := g.githubClient.GetAccessToken()
+		accessToken, err := g.githubClient.GetAccessToken(ctx)
 		if err != nil {
 			return err, nil, nil
 		}
@@ -142,8 +142,8 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(repositoryUrl, branch str
  * we must ensure that the "squqsh and merge" option is the only option.
  * Else we may append to apply commits that are part of a PR, but wasn't the final PR commit state
  */
-func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(teamreponame string, branchname string) error {
-	_, err := g.githubClient.CallRestAPI(fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, teamreponame), "PATCH",
+func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamreponame string, branchname string) error {
+	_, err := g.githubClient.CallRestAPI(ctx, fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, teamreponame), "PATCH",
 		map[string]interface{}{
 			"allow_merge_commit": false,
 			"allow_rebase_merge": false,
@@ -159,7 +159,7 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(teamreponame string, branchname
 	if config.Config.ServerGitBranchProtectionRequiredCheck != "" {
 		contexts = append(contexts, config.Config.ServerGitBranchProtectionRequiredCheck)
 	}
-	_, err = g.githubClient.CallRestAPI(fmt.Sprintf("/repos/%s/%s/branches/%s/protection", config.Config.GithubAppOrganization, teamreponame, branchname), "PUT",
+	_, err = g.githubClient.CallRestAPI(ctx, fmt.Sprintf("/repos/%s/%s/branches/%s/protection", config.Config.GithubAppOrganization, teamreponame, branchname), "PUT",
 		map[string]interface{}{
 			"required_status_checks": map[string]interface{}{
 				"strict":   true,     // // This ensures branches are up to date before merging
@@ -178,14 +178,14 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(teamreponame string, branchname
 	return err
 }
 
-func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch string, forceresync bool) error {
-	err := g.remote.Load(false)
+func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, teamreponame string, branch string, forceresync bool) error {
+	err := g.remote.Load(ctx, false)
 	if err != nil {
 		return fmt.Errorf("Error when fetching data from Github: %v", err)
 	}
 
 	if !dryrun {
-		err := g.forceSquashMergeOnTeamsRepo(teamreponame, branch)
+		err := g.forceSquashMergeOnTeamsRepo(ctx, teamreponame, branch)
 		if err != nil {
 			logrus.Errorf("Error when ensuring PR on %s repo can only be done via squash and merge: %v", teamreponame, err)
 		}
@@ -201,8 +201,6 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 		ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
 		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
-		ctx := context.TODO()
-
 		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 		if err != nil {
 			return fmt.Errorf("Error when reconciliating: %v", err)
@@ -215,10 +213,8 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 		commit, err := g.local.GetHeadCommit()
 
-		ctx := context.TODO()
-
 		if err == nil {
-			ctx = context.WithValue(context.TODO(), engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
+			ctx = context.WithValue(ctx, engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
 		}
 
 		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
@@ -240,7 +236,7 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 				ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
 				reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
-				ctx := context.WithValue(context.TODO(), engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
+				ctx := context.WithValue(ctx, engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
 				err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 				if err != nil {
 					// we keep the last error and continue
@@ -251,7 +247,7 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 					lastErr = nil
 				}
 				if !dryrun && err == nil {
-					accessToken, err := g.githubClient.GetAccessToken()
+					accessToken, err := g.githubClient.GetAccessToken(ctx)
 					if err != nil {
 						return err
 					}
@@ -265,7 +261,7 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 			return lastErr
 		}
 	}
-	accessToken, err := g.githubClient.GetAccessToken()
+	accessToken, err := g.githubClient.GetAccessToken(ctx)
 	if err != nil {
 		return err
 	}
@@ -288,8 +284,8 @@ func (g *GoliacImpl) applyToGithub(dryrun bool, teamreponame string, branch stri
 	return nil
 }
 
-func (g *GoliacImpl) UsersUpdate(repositoryUrl, branch string, dryrun bool, force bool) error {
-	accessToken, err := g.githubClient.GetAccessToken()
+func (g *GoliacImpl) UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) error {
+	accessToken, err := g.githubClient.GetAccessToken(ctx)
 	if err != nil {
 		return err
 	}

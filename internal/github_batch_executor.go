@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Alayacare/goliac/internal/config"
@@ -12,7 +13,7 @@ import (
  * object, so we can regroup all of them to apply (or cancel) them in batch
  */
 type GithubCommand interface {
-	Apply()
+	Apply(ctx context.Context)
 }
 
 /*
@@ -41,7 +42,7 @@ func NewGithubBatchExecutor(client engine.ReconciliatorExecutor, maxChangesets i
 	return &gal
 }
 
-func (g *GithubBatchExecutor) AddUserToOrg(dryrun bool, ghuserid string) {
+func (g *GithubBatchExecutor) AddUserToOrg(ctx context.Context, dryrun bool, ghuserid string) {
 	g.commands = append(g.commands, &GithubCommandAddUserToOrg{
 		client:   g.client,
 		dryrun:   dryrun,
@@ -49,7 +50,7 @@ func (g *GithubBatchExecutor) AddUserToOrg(dryrun bool, ghuserid string) {
 	})
 }
 
-func (g *GithubBatchExecutor) RemoveUserFromOrg(dryrun bool, ghuserid string) {
+func (g *GithubBatchExecutor) RemoveUserFromOrg(ctx context.Context, dryrun bool, ghuserid string) {
 	g.commands = append(g.commands, &GithubCommandAddUserToOrg{
 		client:   g.client,
 		dryrun:   dryrun,
@@ -57,7 +58,7 @@ func (g *GithubBatchExecutor) RemoveUserFromOrg(dryrun bool, ghuserid string) {
 	})
 }
 
-func (g *GithubBatchExecutor) CreateTeam(dryrun bool, teamname string, description string, members []string) {
+func (g *GithubBatchExecutor) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, members []string) {
 	g.commands = append(g.commands, &GithubCommandCreateTeam{
 		client:      g.client,
 		dryrun:      dryrun,
@@ -68,7 +69,7 @@ func (g *GithubBatchExecutor) CreateTeam(dryrun bool, teamname string, descripti
 }
 
 // role = member or maintainer (usually we use member)
-func (g *GithubBatchExecutor) UpdateTeamAddMember(dryrun bool, teamslug string, username string, role string) {
+func (g *GithubBatchExecutor) UpdateTeamAddMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
 	g.commands = append(g.commands, &GithubCommandUpdateTeamAddMember{
 		client:   g.client,
 		dryrun:   dryrun,
@@ -78,7 +79,7 @@ func (g *GithubBatchExecutor) UpdateTeamAddMember(dryrun bool, teamslug string, 
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateTeamRemoveMember(dryrun bool, teamslug string, username string) {
+func (g *GithubBatchExecutor) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string) {
 	g.commands = append(g.commands, &GithubCommandUpdateTeamRemoveMember{
 		client:   g.client,
 		dryrun:   dryrun,
@@ -87,7 +88,7 @@ func (g *GithubBatchExecutor) UpdateTeamRemoveMember(dryrun bool, teamslug strin
 	})
 }
 
-func (g *GithubBatchExecutor) DeleteTeam(dryrun bool, teamslug string) {
+func (g *GithubBatchExecutor) DeleteTeam(ctx context.Context, dryrun bool, teamslug string) {
 	g.commands = append(g.commands, &GithubCommandDeleteTeam{
 		client:   g.client,
 		dryrun:   dryrun,
@@ -95,7 +96,7 @@ func (g *GithubBatchExecutor) DeleteTeam(dryrun bool, teamslug string) {
 	})
 }
 
-func (g *GithubBatchExecutor) CreateRepository(dryrun bool, reponame string, description string, writers []string, readers []string, boolProperties map[string]bool) {
+func (g *GithubBatchExecutor) CreateRepository(ctx context.Context, dryrun bool, reponame string, description string, writers []string, readers []string, boolProperties map[string]bool) {
 	g.commands = append(g.commands, &GithubCommandCreateRepository{
 		client:         g.client,
 		dryrun:         dryrun,
@@ -107,7 +108,7 @@ func (g *GithubBatchExecutor) CreateRepository(dryrun bool, reponame string, des
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryAddTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
+func (g *GithubBatchExecutor) UpdateRepositoryAddTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryAddTeamAccess{
 		client:     g.client,
 		dryrun:     dryrun,
@@ -117,7 +118,7 @@ func (g *GithubBatchExecutor) UpdateRepositoryAddTeamAccess(dryrun bool, reponam
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryUpdateTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
+func (g *GithubBatchExecutor) UpdateRepositoryUpdateTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdateTeamAccess{
 		client:     g.client,
 		dryrun:     dryrun,
@@ -127,7 +128,7 @@ func (g *GithubBatchExecutor) UpdateRepositoryUpdateTeamAccess(dryrun bool, repo
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryRemoveTeamAccess(dryrun bool, reponame string, teamslug string) {
+func (g *GithubBatchExecutor) UpdateRepositoryRemoveTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryRemoveTeamAccess{
 		client:   g.client,
 		dryrun:   dryrun,
@@ -136,7 +137,7 @@ func (g *GithubBatchExecutor) UpdateRepositoryRemoveTeamAccess(dryrun bool, repo
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryUpdateBoolProperty(dryrun bool, reponame string, propertyName string, propertyValue bool) {
+func (g *GithubBatchExecutor) UpdateRepositoryUpdateBoolProperty(ctx context.Context, dryrun bool, reponame string, propertyName string, propertyValue bool) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdateBoolProperty{
 		client:        g.client,
 		dryrun:        dryrun,
@@ -146,7 +147,7 @@ func (g *GithubBatchExecutor) UpdateRepositoryUpdateBoolProperty(dryrun bool, re
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositorySetExternalUser(dryrun bool, reponame string, githubid string, permission string) {
+func (g *GithubBatchExecutor) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string, permission string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositorySetExternalUser{
 		client:     g.client,
 		dryrun:     dryrun,
@@ -156,7 +157,7 @@ func (g *GithubBatchExecutor) UpdateRepositorySetExternalUser(dryrun bool, repon
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryRemoveExternalUser(dryrun bool, reponame string, githubid string) {
+func (g *GithubBatchExecutor) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryRemoveExternalUser{
 		client:   g.client,
 		dryrun:   dryrun,
@@ -165,7 +166,7 @@ func (g *GithubBatchExecutor) UpdateRepositoryRemoveExternalUser(dryrun bool, re
 	})
 }
 
-func (g *GithubBatchExecutor) DeleteRepository(dryrun bool, reponame string) {
+func (g *GithubBatchExecutor) DeleteRepository(ctx context.Context, dryrun bool, reponame string) {
 	g.commands = append(g.commands, &GithubCommandDeleteRepository{
 		client:   g.client,
 		dryrun:   dryrun,
@@ -173,7 +174,7 @@ func (g *GithubBatchExecutor) DeleteRepository(dryrun bool, reponame string) {
 	})
 }
 
-func (g *GithubBatchExecutor) AddRuleset(dryrun bool, ruleset *engine.GithubRuleSet) {
+func (g *GithubBatchExecutor) AddRuleset(ctx context.Context, dryrun bool, ruleset *engine.GithubRuleSet) {
 	g.commands = append(g.commands, &GithubCommandAddRuletset{
 		client:  g.client,
 		dryrun:  dryrun,
@@ -181,7 +182,7 @@ func (g *GithubBatchExecutor) AddRuleset(dryrun bool, ruleset *engine.GithubRule
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRuleset(dryrun bool, ruleset *engine.GithubRuleSet) {
+func (g *GithubBatchExecutor) UpdateRuleset(ctx context.Context, dryrun bool, ruleset *engine.GithubRuleSet) {
 	g.commands = append(g.commands, &GithubCommandUpdateRuletset{
 		client:  g.client,
 		dryrun:  dryrun,
@@ -189,7 +190,7 @@ func (g *GithubBatchExecutor) UpdateRuleset(dryrun bool, ruleset *engine.GithubR
 	})
 }
 
-func (g *GithubBatchExecutor) DeleteRuleset(dryrun bool, rulesetid int) {
+func (g *GithubBatchExecutor) DeleteRuleset(ctx context.Context, dryrun bool, rulesetid int) {
 	g.commands = append(g.commands, &GithubCommandDeleteRuletset{
 		client:    g.client,
 		dryrun:    dryrun,
@@ -203,12 +204,12 @@ func (g *GithubBatchExecutor) Begin(dryrun bool) {
 func (g *GithubBatchExecutor) Rollback(dryrun bool, err error) {
 	g.commands = make([]GithubCommand, 0)
 }
-func (g *GithubBatchExecutor) Commit(dryrun bool) error {
+func (g *GithubBatchExecutor) Commit(ctx context.Context, dryrun bool) error {
 	if len(g.commands) > g.maxChangesets && !config.Config.MaxChangesetsOverride {
 		return fmt.Errorf("more than %d changesets to apply (total of %d), this is suspicious. Aborting (see Goliac troubleshooting guide for help)", g.maxChangesets, len(g.commands))
 	}
 	for _, c := range g.commands {
-		c.Apply()
+		c.Apply(ctx)
 	}
 	g.commands = make([]GithubCommand, 0)
 	return nil
@@ -220,8 +221,8 @@ type GithubCommandAddUserToOrg struct {
 	ghuserid string
 }
 
-func (g *GithubCommandAddUserToOrg) Apply() {
-	g.client.AddUserToOrg(g.dryrun, g.ghuserid)
+func (g *GithubCommandAddUserToOrg) Apply(ctx context.Context) {
+	g.client.AddUserToOrg(ctx, g.dryrun, g.ghuserid)
 }
 
 type GithubCommandCreateRepository struct {
@@ -234,8 +235,8 @@ type GithubCommandCreateRepository struct {
 	boolProperties map[string]bool
 }
 
-func (g *GithubCommandCreateRepository) Apply() {
-	g.client.CreateRepository(g.dryrun, g.reponame, g.description, g.writers, g.readers, g.boolProperties)
+func (g *GithubCommandCreateRepository) Apply(ctx context.Context) {
+	g.client.CreateRepository(ctx, g.dryrun, g.reponame, g.description, g.writers, g.readers, g.boolProperties)
 }
 
 type GithubCommandCreateTeam struct {
@@ -246,8 +247,8 @@ type GithubCommandCreateTeam struct {
 	members     []string
 }
 
-func (g *GithubCommandCreateTeam) Apply() {
-	g.client.CreateTeam(g.dryrun, g.teamname, g.description, g.members)
+func (g *GithubCommandCreateTeam) Apply(ctx context.Context) {
+	g.client.CreateTeam(ctx, g.dryrun, g.teamname, g.description, g.members)
 }
 
 type GithubCommandDeleteRepository struct {
@@ -256,8 +257,8 @@ type GithubCommandDeleteRepository struct {
 	reponame string
 }
 
-func (g *GithubCommandDeleteRepository) Apply() {
-	g.client.DeleteRepository(g.dryrun, g.reponame)
+func (g *GithubCommandDeleteRepository) Apply(ctx context.Context) {
+	g.client.DeleteRepository(ctx, g.dryrun, g.reponame)
 }
 
 type GithubCommandDeleteTeam struct {
@@ -266,8 +267,8 @@ type GithubCommandDeleteTeam struct {
 	teamslug string
 }
 
-func (g *GithubCommandDeleteTeam) Apply() {
-	g.client.DeleteTeam(g.dryrun, g.teamslug)
+func (g *GithubCommandDeleteTeam) Apply(ctx context.Context) {
+	g.client.DeleteTeam(ctx, g.dryrun, g.teamslug)
 }
 
 type GithubCommandRemoveUserFromOrg struct {
@@ -276,8 +277,8 @@ type GithubCommandRemoveUserFromOrg struct {
 	ghuserid string
 }
 
-func (g *GithubCommandRemoveUserFromOrg) Apply() {
-	g.client.RemoveUserFromOrg(g.dryrun, g.ghuserid)
+func (g *GithubCommandRemoveUserFromOrg) Apply(ctx context.Context) {
+	g.client.RemoveUserFromOrg(ctx, g.dryrun, g.ghuserid)
 }
 
 type GithubCommandUpdateRepositoryRemoveTeamAccess struct {
@@ -287,8 +288,8 @@ type GithubCommandUpdateRepositoryRemoveTeamAccess struct {
 	teamslug string
 }
 
-func (g *GithubCommandUpdateRepositoryRemoveTeamAccess) Apply() {
-	g.client.UpdateRepositoryRemoveTeamAccess(g.dryrun, g.reponame, g.teamslug)
+func (g *GithubCommandUpdateRepositoryRemoveTeamAccess) Apply(ctx context.Context) {
+	g.client.UpdateRepositoryRemoveTeamAccess(ctx, g.dryrun, g.reponame, g.teamslug)
 }
 
 type GithubCommandUpdateRepositoryAddTeamAccess struct {
@@ -299,8 +300,8 @@ type GithubCommandUpdateRepositoryAddTeamAccess struct {
 	permission string
 }
 
-func (g *GithubCommandUpdateRepositoryAddTeamAccess) Apply() {
-	g.client.UpdateRepositoryAddTeamAccess(g.dryrun, g.reponame, g.teamslug, g.permission)
+func (g *GithubCommandUpdateRepositoryAddTeamAccess) Apply(ctx context.Context) {
+	g.client.UpdateRepositoryAddTeamAccess(ctx, g.dryrun, g.reponame, g.teamslug, g.permission)
 }
 
 type GithubCommandUpdateRepositoryUpdateTeamAccess struct {
@@ -311,8 +312,8 @@ type GithubCommandUpdateRepositoryUpdateTeamAccess struct {
 	permission string
 }
 
-func (g *GithubCommandUpdateRepositoryUpdateTeamAccess) Apply() {
-	g.client.UpdateRepositoryUpdateTeamAccess(g.dryrun, g.reponame, g.teamslug, g.permission)
+func (g *GithubCommandUpdateRepositoryUpdateTeamAccess) Apply(ctx context.Context) {
+	g.client.UpdateRepositoryUpdateTeamAccess(ctx, g.dryrun, g.reponame, g.teamslug, g.permission)
 }
 
 type GithubCommandUpdateRepositorySetExternalUser struct {
@@ -323,8 +324,8 @@ type GithubCommandUpdateRepositorySetExternalUser struct {
 	permission string
 }
 
-func (g *GithubCommandUpdateRepositorySetExternalUser) Apply() {
-	g.client.UpdateRepositorySetExternalUser(g.dryrun, g.reponame, g.githubid, g.permission)
+func (g *GithubCommandUpdateRepositorySetExternalUser) Apply(ctx context.Context) {
+	g.client.UpdateRepositorySetExternalUser(ctx, g.dryrun, g.reponame, g.githubid, g.permission)
 }
 
 type GithubCommandUpdateRepositoryRemoveExternalUser struct {
@@ -334,8 +335,8 @@ type GithubCommandUpdateRepositoryRemoveExternalUser struct {
 	githubid string
 }
 
-func (g *GithubCommandUpdateRepositoryRemoveExternalUser) Apply() {
-	g.client.UpdateRepositoryRemoveExternalUser(g.dryrun, g.reponame, g.githubid)
+func (g *GithubCommandUpdateRepositoryRemoveExternalUser) Apply(ctx context.Context) {
+	g.client.UpdateRepositoryRemoveExternalUser(ctx, g.dryrun, g.reponame, g.githubid)
 }
 
 type GithubCommandUpdateRepositoryUpdateBoolProperty struct {
@@ -346,8 +347,8 @@ type GithubCommandUpdateRepositoryUpdateBoolProperty struct {
 	propertyValue bool
 }
 
-func (g *GithubCommandUpdateRepositoryUpdateBoolProperty) Apply() {
-	g.client.UpdateRepositoryUpdateBoolProperty(g.dryrun, g.reponame, g.propertyName, g.propertyValue)
+func (g *GithubCommandUpdateRepositoryUpdateBoolProperty) Apply(ctx context.Context) {
+	g.client.UpdateRepositoryUpdateBoolProperty(ctx, g.dryrun, g.reponame, g.propertyName, g.propertyValue)
 }
 
 type GithubCommandUpdateTeamAddMember struct {
@@ -358,8 +359,8 @@ type GithubCommandUpdateTeamAddMember struct {
 	role     string
 }
 
-func (g *GithubCommandUpdateTeamAddMember) Apply() {
-	g.client.UpdateTeamAddMember(g.dryrun, g.teamslug, g.member, g.role)
+func (g *GithubCommandUpdateTeamAddMember) Apply(ctx context.Context) {
+	g.client.UpdateTeamAddMember(ctx, g.dryrun, g.teamslug, g.member, g.role)
 }
 
 type GithubCommandUpdateTeamRemoveMember struct {
@@ -369,8 +370,8 @@ type GithubCommandUpdateTeamRemoveMember struct {
 	member   string
 }
 
-func (g *GithubCommandUpdateTeamRemoveMember) Apply() {
-	g.client.UpdateTeamRemoveMember(g.dryrun, g.teamslug, g.member)
+func (g *GithubCommandUpdateTeamRemoveMember) Apply(ctx context.Context) {
+	g.client.UpdateTeamRemoveMember(ctx, g.dryrun, g.teamslug, g.member)
 }
 
 type GithubCommandAddRuletset struct {
@@ -379,8 +380,8 @@ type GithubCommandAddRuletset struct {
 	ruleset *engine.GithubRuleSet
 }
 
-func (g *GithubCommandAddRuletset) Apply() {
-	g.client.AddRuleset(g.dryrun, g.ruleset)
+func (g *GithubCommandAddRuletset) Apply(ctx context.Context) {
+	g.client.AddRuleset(ctx, g.dryrun, g.ruleset)
 }
 
 type GithubCommandUpdateRuletset struct {
@@ -389,8 +390,8 @@ type GithubCommandUpdateRuletset struct {
 	ruleset *engine.GithubRuleSet
 }
 
-func (g *GithubCommandUpdateRuletset) Apply() {
-	g.client.UpdateRuleset(g.dryrun, g.ruleset)
+func (g *GithubCommandUpdateRuletset) Apply(ctx context.Context) {
+	g.client.UpdateRuleset(ctx, g.dryrun, g.ruleset)
 }
 
 type GithubCommandDeleteRuletset struct {
@@ -399,6 +400,6 @@ type GithubCommandDeleteRuletset struct {
 	rulesetid int
 }
 
-func (g *GithubCommandDeleteRuletset) Apply() {
-	g.client.DeleteRuleset(g.dryrun, g.rulesetid)
+func (g *GithubCommandDeleteRuletset) Apply(ctx context.Context) {
+	g.client.DeleteRuleset(ctx, g.dryrun, g.rulesetid)
 }

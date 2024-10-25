@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -24,16 +25,16 @@ const FORLOOP_STOP = 100
  */
 type GoliacRemote interface {
 	// Load from a github repository. continueOnError is used for scaffolding
-	Load(continueOnError bool) error
+	Load(ctx context.Context, continueOnError bool) error
 	FlushCache()
 
-	Users() map[string]string
-	TeamSlugByName() map[string]string
-	Teams() map[string]*GithubTeam                           // the key is the team slug
-	Repositories() map[string]*GithubRepository              // the key is the repository name
-	TeamRepositories() map[string]map[string]*GithubTeamRepo // key is team slug, second key is repo name
-	RuleSets() map[string]*GithubRuleSet
-	AppIds() map[string]int
+	Users(ctx context.Context) map[string]string
+	TeamSlugByName(ctx context.Context) map[string]string
+	Teams(ctx context.Context) map[string]*GithubTeam                           // the key is the team slug
+	Repositories(ctx context.Context) map[string]*GithubRepository              // the key is the repository name
+	TeamRepositories(ctx context.Context) map[string]map[string]*GithubTeamRepo // key is team slug, second key is repo name
+	RuleSets(ctx context.Context) map[string]*GithubRuleSet
+	AppIds(ctx context.Context) map[string]int
 
 	IsEnterprise() bool // check if we are on an Enterprise version, or if we are on GHES 3.11+
 }
@@ -85,8 +86,8 @@ type GHESInfo struct {
 	InstalledVersion string `json:"installed_version"`
 }
 
-func getGHESVersion(client github.GitHubClient) (*GHESInfo, error) {
-	body, err := client.CallRestAPI("/api/v3", "GET", nil)
+func getGHESVersion(ctx context.Context, client github.GitHubClient) (*GHESInfo, error) {
+	body, err := client.CallRestAPI(ctx, "/api/v3", "GET", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -107,8 +108,8 @@ type OrgInfo struct {
 	} `json:"plan"`
 }
 
-func getOrgInfo(orgname string, client github.GitHubClient) (*OrgInfo, error) {
-	body, err := client.CallRestAPI("/orgs/"+orgname, "GET", nil)
+func getOrgInfo(ctx context.Context, orgname string, client github.GitHubClient) (*OrgInfo, error) {
+	body, err := client.CallRestAPI(ctx, "/orgs/"+orgname, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +123,9 @@ func getOrgInfo(orgname string, client github.GitHubClient) (*OrgInfo, error) {
 	return &info, nil
 }
 
-func isEnterprise(orgname string, client github.GitHubClient) bool {
+func isEnterprise(ctx context.Context, orgname string, client github.GitHubClient) bool {
 	// are we on Github Enteprise Server
-	if ghesInfo, err := getGHESVersion(client); err == nil {
+	if ghesInfo, err := getGHESVersion(ctx, client); err == nil {
 		logrus.Debugf("GHES versiob: %s", ghesInfo.InstalledVersion)
 		version3_11, err := version.NewVersion("3.11")
 		if err != nil {
@@ -137,7 +138,7 @@ func isEnterprise(orgname string, client github.GitHubClient) bool {
 		if ghesVersion.GreaterThanOrEqual(version3_11) {
 			return true
 		}
-	} else if info, err := getOrgInfo(orgname, client); err == nil {
+	} else if info, err := getOrgInfo(ctx, orgname, client); err == nil {
 		logrus.Debugf("Organization plan: %s", info.Plan.Name)
 		if info.Plan.Name == "enterprise" {
 			return true
@@ -147,6 +148,7 @@ func isEnterprise(orgname string, client github.GitHubClient) bool {
 }
 
 func NewGoliacRemoteImpl(client github.GitHubClient) *GoliacRemoteImpl {
+	ctx := context.Background()
 	return &GoliacRemoteImpl{
 		client:                client,
 		users:                 make(map[string]string),
@@ -163,7 +165,7 @@ func NewGoliacRemoteImpl(client github.GitHubClient) *GoliacRemoteImpl {
 		ttlExpireTeamsRepos:   time.Now(),
 		ttlExpireRulesets:     time.Now(),
 		ttlExpireAppIds:       time.Now(),
-		isEnterprise:          isEnterprise(config.Config.GithubAppOrganization, client),
+		isEnterprise:          isEnterprise(ctx, config.Config.GithubAppOrganization, client),
 	}
 }
 
@@ -180,9 +182,9 @@ func (g *GoliacRemoteImpl) FlushCache() {
 	g.ttlExpireAppIds = time.Now()
 }
 
-func (g *GoliacRemoteImpl) RuleSets() map[string]*GithubRuleSet {
+func (g *GoliacRemoteImpl) RuleSets(ctx context.Context) map[string]*GithubRuleSet {
 	if time.Now().After(g.ttlExpireRulesets) {
-		rulesets, err := g.loadRulesets()
+		rulesets, err := g.loadRulesets(ctx)
 		if err == nil {
 			g.rulesets = rulesets
 			g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
@@ -191,9 +193,9 @@ func (g *GoliacRemoteImpl) RuleSets() map[string]*GithubRuleSet {
 	return g.rulesets
 }
 
-func (g *GoliacRemoteImpl) AppIds() map[string]int {
+func (g *GoliacRemoteImpl) AppIds(ctx context.Context) map[string]int {
 	if time.Now().After(g.ttlExpireAppIds) {
-		appIds, err := g.loadAppIds()
+		appIds, err := g.loadAppIds(ctx)
 		if err == nil {
 			g.appIds = appIds
 			g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
@@ -202,9 +204,9 @@ func (g *GoliacRemoteImpl) AppIds() map[string]int {
 	return g.appIds
 }
 
-func (g *GoliacRemoteImpl) Users() map[string]string {
+func (g *GoliacRemoteImpl) Users(ctx context.Context) map[string]string {
 	if time.Now().After(g.ttlExpireUsers) {
-		users, err := g.loadOrgUsers()
+		users, err := g.loadOrgUsers(ctx)
 		if err == nil {
 			g.users = users
 			g.ttlExpireUsers = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
@@ -213,9 +215,9 @@ func (g *GoliacRemoteImpl) Users() map[string]string {
 	return g.users
 }
 
-func (g *GoliacRemoteImpl) TeamSlugByName() map[string]string {
+func (g *GoliacRemoteImpl) TeamSlugByName(ctx context.Context) map[string]string {
 	if time.Now().After(g.ttlExpireTeams) {
-		teams, teamSlugByName, err := g.loadTeams()
+		teams, teamSlugByName, err := g.loadTeams(ctx)
 		if err == nil {
 			g.teams = teams
 			g.teamSlugByName = teamSlugByName
@@ -225,9 +227,9 @@ func (g *GoliacRemoteImpl) TeamSlugByName() map[string]string {
 	return g.teamSlugByName
 }
 
-func (g *GoliacRemoteImpl) Teams() map[string]*GithubTeam {
+func (g *GoliacRemoteImpl) Teams(ctx context.Context) map[string]*GithubTeam {
 	if time.Now().After(g.ttlExpireTeams) {
-		teams, teamSlugByName, err := g.loadTeams()
+		teams, teamSlugByName, err := g.loadTeams(ctx)
 		if err == nil {
 			g.teams = teams
 			g.teamSlugByName = teamSlugByName
@@ -237,9 +239,9 @@ func (g *GoliacRemoteImpl) Teams() map[string]*GithubTeam {
 	return g.teams
 }
 
-func (g *GoliacRemoteImpl) Repositories() map[string]*GithubRepository {
+func (g *GoliacRemoteImpl) Repositories(ctx context.Context) map[string]*GithubRepository {
 	if time.Now().After(g.ttlExpireRepositories) {
-		repositories, repositoriesByRefIds, err := g.loadRepositories()
+		repositories, repositoriesByRefIds, err := g.loadRepositories(ctx)
 		if err == nil {
 			g.repositories = repositories
 			g.repositoriesByRefId = repositoriesByRefIds
@@ -249,16 +251,16 @@ func (g *GoliacRemoteImpl) Repositories() map[string]*GithubRepository {
 	return g.repositories
 }
 
-func (g *GoliacRemoteImpl) TeamRepositories() map[string]map[string]*GithubTeamRepo {
+func (g *GoliacRemoteImpl) TeamRepositories(ctx context.Context) map[string]map[string]*GithubTeamRepo {
 	if time.Now().After(g.ttlExpireTeamsRepos) {
 		if config.Config.GithubConcurrentThreads <= 1 {
-			teamsrepos, err := g.loadTeamReposNonConcurrently()
+			teamsrepos, err := g.loadTeamReposNonConcurrently(ctx)
 			if err == nil {
 				g.teamRepos = teamsrepos
 				g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 			}
 		} else {
-			teamsrepos, err := g.loadTeamReposConcurrently(config.Config.GithubConcurrentThreads)
+			teamsrepos, err := g.loadTeamReposConcurrently(ctx, config.Config.GithubConcurrentThreads)
 			if err == nil {
 				g.teamRepos = teamsrepos
 				g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
@@ -310,7 +312,7 @@ type GraplQLUsers struct {
 	} `json:"errors"`
 }
 
-func (g *GoliacRemoteImpl) loadOrgUsers() (map[string]string, error) {
+func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string, error) {
 	logrus.Debug("loading orgUsers")
 	users := make(map[string]string)
 
@@ -321,7 +323,7 @@ func (g *GoliacRemoteImpl) loadOrgUsers() (map[string]string, error) {
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(listAllOrgMembers, variables)
+		data, err := g.client.QueryGraphQLAPI(ctx, listAllOrgMembers, variables)
 		if err != nil {
 			return users, err
 		}
@@ -425,7 +427,7 @@ type GraplQLRepositories struct {
 	} `json:"errors"`
 }
 
-func (g *GoliacRemoteImpl) loadRepositories() (map[string]*GithubRepository, map[string]*GithubRepository, error) {
+func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*GithubRepository, map[string]*GithubRepository, error) {
 	logrus.Debug("loading repositories")
 	repositories := make(map[string]*GithubRepository)
 	repositoriesByRefId := make(map[string]*GithubRepository)
@@ -438,7 +440,7 @@ func (g *GoliacRemoteImpl) loadRepositories() (map[string]*GithubRepository, map
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(listAllReposInOrg, variables)
+		data, err := g.client.QueryGraphQLAPI(ctx, listAllReposInOrg, variables)
 		if err != nil {
 			return repositories, repositoriesByRefId, err
 		}
@@ -583,7 +585,7 @@ type GraplQLTeamsRepos struct {
 	} `json:"errors"`
 }
 
-func (g *GoliacRemoteImpl) loadAppIds() (map[string]int, error) {
+func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, error) {
 	logrus.Debug("loading appIds")
 	type Installation struct {
 		TotalClount   int `json:"total_count"`
@@ -595,7 +597,7 @@ func (g *GoliacRemoteImpl) loadAppIds() (map[string]int, error) {
 		} `json:"installations"`
 	}
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/orgs?apiVersion=2022-11-28#list-app-installations-for-an-organization
-	body, err := g.client.CallRestAPI(fmt.Sprintf("/orgs/%s/installations", config.Config.GithubAppOrganization),
+	body, err := g.client.CallRestAPI(ctx, fmt.Sprintf("/orgs/%s/installations", config.Config.GithubAppOrganization),
 		"GET",
 		nil)
 
@@ -617,11 +619,11 @@ func (g *GoliacRemoteImpl) loadAppIds() (map[string]int, error) {
 	return appIds, nil
 }
 
-func (g *GoliacRemoteImpl) Load(continueOnError bool) error {
+func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error {
 	var retErr error
 
 	if time.Now().After(g.ttlExpireRulesets) {
-		rulesets, err := g.loadRulesets()
+		rulesets, err := g.loadRulesets(ctx)
 		if err != nil {
 			if !continueOnError {
 				return err
@@ -634,7 +636,7 @@ func (g *GoliacRemoteImpl) Load(continueOnError bool) error {
 	}
 
 	if time.Now().After(g.ttlExpireAppIds) {
-		appIds, err := g.loadAppIds()
+		appIds, err := g.loadAppIds(ctx)
 		if err != nil {
 			if !continueOnError {
 				return err
@@ -647,7 +649,7 @@ func (g *GoliacRemoteImpl) Load(continueOnError bool) error {
 	}
 
 	if time.Now().After(g.ttlExpireUsers) {
-		users, err := g.loadOrgUsers()
+		users, err := g.loadOrgUsers(ctx)
 		if err != nil {
 			if !continueOnError {
 				return err
@@ -660,7 +662,7 @@ func (g *GoliacRemoteImpl) Load(continueOnError bool) error {
 	}
 
 	if time.Now().After(g.ttlExpireRepositories) {
-		repositories, repositoriesByRefId, err := g.loadRepositories()
+		repositories, repositoriesByRefId, err := g.loadRepositories(ctx)
 		if err != nil {
 			if !continueOnError {
 				return err
@@ -674,7 +676,7 @@ func (g *GoliacRemoteImpl) Load(continueOnError bool) error {
 	}
 
 	if time.Now().After(g.ttlExpireTeams) {
-		teams, teamSlugByName, err := g.loadTeams()
+		teams, teamSlugByName, err := g.loadTeams(ctx)
 		if err != nil {
 			if !continueOnError {
 				return err
@@ -689,7 +691,7 @@ func (g *GoliacRemoteImpl) Load(continueOnError bool) error {
 
 	if time.Now().After(g.ttlExpireTeamsRepos) {
 		if config.Config.GithubConcurrentThreads <= 1 {
-			teamsrepos, err := g.loadTeamReposNonConcurrently()
+			teamsrepos, err := g.loadTeamReposNonConcurrently(ctx)
 			if err != nil {
 				if !continueOnError {
 					return err
@@ -699,7 +701,7 @@ func (g *GoliacRemoteImpl) Load(continueOnError bool) error {
 			}
 			g.teamRepos = teamsrepos
 		} else {
-			teamsrepos, err := g.loadTeamReposConcurrently(config.Config.GithubConcurrentThreads)
+			teamsrepos, err := g.loadTeamReposConcurrently(ctx, config.Config.GithubConcurrentThreads)
 			if err != nil {
 				if !continueOnError {
 					return err
@@ -719,12 +721,12 @@ func (g *GoliacRemoteImpl) Load(continueOnError bool) error {
 	return retErr
 }
 
-func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently() (map[string]map[string]*GithubTeamRepo, error) {
+func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently(ctx context.Context) (map[string]map[string]*GithubTeamRepo, error) {
 	logrus.Debug("loading teamReposNonConcurrently")
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
 
 	for teamSlug := range g.teams {
-		repos, err := g.loadTeamRepos(teamSlug)
+		repos, err := g.loadTeamRepos(ctx, teamSlug)
 		if err != nil {
 			return teamRepos, err
 		}
@@ -733,7 +735,7 @@ func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently() (map[string]map[string
 	return teamRepos, nil
 }
 
-func (g *GoliacRemoteImpl) loadTeamReposConcurrently(maxGoroutines int64) (map[string]map[string]*GithubTeamRepo, error) {
+func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGoroutines int64) (map[string]map[string]*GithubTeamRepo, error) {
 	logrus.Debug("loading teamReposConcurrently")
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
 
@@ -753,7 +755,7 @@ func (g *GoliacRemoteImpl) loadTeamReposConcurrently(maxGoroutines int64) (map[s
 		go func() {
 			defer wg.Done()
 			for slug := range teamsChan {
-				repos, err := g.loadTeamRepos(slug)
+				repos, err := g.loadTeamRepos(ctx, slug)
 				if err != nil {
 					// Try to report the error
 					select {
@@ -794,7 +796,7 @@ func (g *GoliacRemoteImpl) loadTeamReposConcurrently(maxGoroutines int64) (map[s
 	return teamRepos, nil
 }
 
-func (g *GoliacRemoteImpl) loadTeamRepos(teamSlug string) (map[string]*GithubTeamRepo, error) {
+func (g *GoliacRemoteImpl) loadTeamRepos(ctx context.Context, teamSlug string) (map[string]*GithubTeamRepo, error) {
 	variables := make(map[string]interface{})
 	variables["orgLogin"] = config.Config.GithubAppOrganization
 	variables["teamSlug"] = teamSlug
@@ -805,7 +807,7 @@ func (g *GoliacRemoteImpl) loadTeamRepos(teamSlug string) (map[string]*GithubTea
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(listAllTeamsReposInOrg, variables)
+		data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamsReposInOrg, variables)
 		if err != nil {
 			return nil, err
 		}
@@ -889,7 +891,7 @@ type GraplQLTeamMembers struct {
 	} `json:"errors"`
 }
 
-func (g *GoliacRemoteImpl) loadTeams() (map[string]*GithubTeam, map[string]string, error) {
+func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTeam, map[string]string, error) {
 	logrus.Debug("loading teams")
 	teams := make(map[string]*GithubTeam)
 	teamSlugByName := make(map[string]string)
@@ -901,7 +903,7 @@ func (g *GoliacRemoteImpl) loadTeams() (map[string]*GithubTeam, map[string]strin
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(listAllTeamsInOrg, variables)
+		data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamsInOrg, variables)
 		if err != nil {
 			return teams, teamSlugByName, err
 		}
@@ -943,7 +945,7 @@ func (g *GoliacRemoteImpl) loadTeams() (map[string]*GithubTeam, map[string]strin
 		hasNextPage := true
 		count := 0
 		for hasNextPage {
-			data, err := g.client.QueryGraphQLAPI(listAllTeamMembersInOrg, variables)
+			data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamMembersInOrg, variables)
 			if err != nil {
 				return teams, teamSlugByName, err
 			}
@@ -1167,7 +1169,7 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRulset(src *GraphQLGithubRuleSet) 
 	return &ruleset
 }
 
-func (g *GoliacRemoteImpl) loadRulesets() (map[string]*GithubRuleSet, error) {
+func (g *GoliacRemoteImpl) loadRulesets(ctx context.Context) (map[string]*GithubRuleSet, error) {
 	logrus.Debug("loading rulesets")
 	variables := make(map[string]interface{})
 	variables["orgLogin"] = config.Config.GithubAppOrganization
@@ -1178,7 +1180,7 @@ func (g *GoliacRemoteImpl) loadRulesets() (map[string]*GithubRuleSet, error) {
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(listRulesets, variables)
+		data, err := g.client.QueryGraphQLAPI(ctx, listRulesets, variables)
 		if err != nil {
 			return rulesets, err
 		}
@@ -1281,12 +1283,13 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 	return payload
 }
 
-func (g *GoliacRemoteImpl) AddRuleset(dryrun bool, ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
 	// add ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#create-an-organization-repository-ruleset
 
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/rulesets", config.Config.GithubAppOrganization),
 			"POST",
 			g.prepareRuleset(ruleset),
@@ -1299,12 +1302,13 @@ func (g *GoliacRemoteImpl) AddRuleset(dryrun bool, ruleset *GithubRuleSet) {
 	g.rulesets[ruleset.Name] = ruleset
 }
 
-func (g *GoliacRemoteImpl) UpdateRuleset(dryrun bool, ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
 	// add ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#update-an-organization-repository-ruleset
 
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/rulesets/%d", config.Config.GithubAppOrganization, ruleset.Id),
 			"PUT",
 			g.prepareRuleset(ruleset),
@@ -1317,12 +1321,13 @@ func (g *GoliacRemoteImpl) UpdateRuleset(dryrun bool, ruleset *GithubRuleSet) {
 	g.rulesets[ruleset.Name] = ruleset
 }
 
-func (g *GoliacRemoteImpl) DeleteRuleset(dryrun bool, rulesetid int) {
+func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, dryrun bool, rulesetid int) {
 	// remove ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#delete-an-organization-repository-ruleset
 
 	if !dryrun {
 		_, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/rulesets/%d", config.Config.GithubAppOrganization, rulesetid),
 			"DELETE",
 			nil,
@@ -1340,11 +1345,12 @@ func (g *GoliacRemoteImpl) DeleteRuleset(dryrun bool, rulesetid int) {
 	}
 }
 
-func (g *GoliacRemoteImpl) AddUserToOrg(dryrun bool, ghuserid string) {
+func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, dryrun bool, ghuserid string) {
 	// add member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/memberships/%s", config.Config.GithubAppOrganization, ghuserid),
 			"PUT",
 			map[string]interface{}{"role": "member"},
@@ -1357,11 +1363,12 @@ func (g *GoliacRemoteImpl) AddUserToOrg(dryrun bool, ghuserid string) {
 	g.users[ghuserid] = ghuserid
 }
 
-func (g *GoliacRemoteImpl) RemoveUserFromOrg(dryrun bool, ghuserid string) {
+func (g *GoliacRemoteImpl) RemoveUserFromOrg(ctx context.Context, dryrun bool, ghuserid string) {
 	// remove member
 	// https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#remove-organization-membership-for-a-user
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/memberships/%s", config.Config.GithubAppOrganization, ghuserid),
 			"DELETE",
 			nil,
@@ -1379,12 +1386,13 @@ type CreateTeamResponse struct {
 	Slug string
 }
 
-func (g *GoliacRemoteImpl) CreateTeam(dryrun bool, teamname string, description string, members []string) {
+func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, members []string) {
 	slugname := slug.Make(teamname)
 	// create team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/teams", config.Config.GithubAppOrganization),
 			"POST",
 			map[string]interface{}{"name": teamname, "description": description, "privacy": "closed"},
@@ -1404,6 +1412,7 @@ func (g *GoliacRemoteImpl) CreateTeam(dryrun bool, teamname string, description 
 		for _, member := range members {
 			// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
 			body, err := g.client.CallRestAPI(
+				ctx,
 				fmt.Sprintf("orgs/%s/teams/%s/memberships/%s", config.Config.GithubAppOrganization, res.Slug, member),
 				"PUT",
 				map[string]interface{}{"role": "member"},
@@ -1425,10 +1434,11 @@ func (g *GoliacRemoteImpl) CreateTeam(dryrun bool, teamname string, description 
 }
 
 // role = member or maintainer (usually we use member)
-func (g *GoliacRemoteImpl) UpdateTeamAddMember(dryrun bool, teamslug string, username string, role string) {
+func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
 	// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/teams/%s/memberships/%s", config.Config.GithubAppOrganization, teamslug, username),
 			"PUT",
 			map[string]interface{}{"role": role},
@@ -1453,10 +1463,11 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(dryrun bool, teamslug string, use
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(dryrun bool, teamslug string, username string) {
+func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string) {
 	// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("orgs/%s/teams/%s/memberships/%s", config.Config.GithubAppOrganization, teamslug, username),
 			"DELETE",
 			nil,
@@ -1481,11 +1492,12 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(dryrun bool, teamslug string, 
 	}
 }
 
-func (g *GoliacRemoteImpl) DeleteTeam(dryrun bool, teamslug string) {
+func (g *GoliacRemoteImpl) DeleteTeam(ctx context.Context, dryrun bool, teamslug string) {
 	// delete team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#delete-a-team
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/teams/%s", config.Config.GithubAppOrganization, teamslug),
 			"DELETE",
 			nil,
@@ -1517,7 +1529,7 @@ boolProperties are:
 - allow_update_branch
 - ...
 */
-func (g *GoliacRemoteImpl) CreateRepository(dryrun bool, reponame string, description string, writers []string, readers []string, boolProperties map[string]bool) {
+func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, dryrun bool, reponame string, description string, writers []string, readers []string, boolProperties map[string]bool) {
 	repoId := 0
 	repoRefId := reponame
 	// create repository
@@ -1532,6 +1544,7 @@ func (g *GoliacRemoteImpl) CreateRepository(dryrun bool, reponame string, descri
 		}
 
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/repos", config.Config.GithubAppOrganization),
 			"POST",
 			props,
@@ -1567,6 +1580,7 @@ func (g *GoliacRemoteImpl) CreateRepository(dryrun bool, reponame string, descri
 		// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#add-or-update-team-repository-permissions
 		if !dryrun {
 			body, err := g.client.CallRestAPI(
+				ctx,
 				fmt.Sprintf("orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, reader, config.Config.GithubAppOrganization, reponame),
 				"PUT",
 				map[string]interface{}{"permission": "pull"},
@@ -1591,6 +1605,7 @@ func (g *GoliacRemoteImpl) CreateRepository(dryrun bool, reponame string, descri
 		// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#add-or-update-team-repository-permissions
 		if !dryrun {
 			body, err := g.client.CallRestAPI(
+				ctx,
 				fmt.Sprintf("orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, writer, config.Config.GithubAppOrganization, reponame),
 				"PUT",
 				map[string]interface{}{"permission": "push"},
@@ -1612,11 +1627,12 @@ func (g *GoliacRemoteImpl) CreateRepository(dryrun bool, reponame string, descri
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
 	// update member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#add-or-update-team-repository-permissions
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, teamslug, config.Config.GithubAppOrganization, reponame),
 			"PUT",
 			map[string]interface{}{"permission": permission},
@@ -1641,11 +1657,12 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(dryrun bool, reponame s
 	g.teamRepos[teamslug] = teamsRepos
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
 	// update member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#add-or-update-team-repository-permissions
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, teamslug, config.Config.GithubAppOrganization, reponame),
 			"PUT",
 			map[string]interface{}{"permission": permission},
@@ -1670,11 +1687,12 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(dryrun bool, reponam
 	g.teamRepos[teamslug] = teamsRepos
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(dryrun bool, reponame string, teamslug string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string) {
 	// delete member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#remove-a-repository-from-a-team
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("orgs/%s/teams/%s/repos/%s/%s", config.Config.GithubAppOrganization, teamslug, config.Config.GithubAppOrganization, reponame),
 			"DELETE",
 			nil,
@@ -1698,10 +1716,11 @@ Used for
 - allow_update_branch
 - archived
 */
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(dryrun bool, reponame string, propertyName string, propertyValue bool) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Context, dryrun bool, reponame string, propertyName string, propertyValue bool) {
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("repos/%s/%s", config.Config.GithubAppOrganization, reponame),
 			"PATCH",
 			map[string]interface{}{propertyName: propertyValue},
@@ -1716,10 +1735,11 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(dryrun bool, repon
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(dryrun bool, reponame string, githubid string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string, permission string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#add-a-repository-collaborator
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("repos/%s/%s/collaborators/%s", config.Config.GithubAppOrganization, reponame, githubid),
 			"PUT",
 			map[string]interface{}{"permission": permission},
@@ -1738,10 +1758,11 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(dryrun bool, reponame
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(dryrun bool, reponame string, githubid string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#remove-a-repository-collaborator
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("repos/%s/%s/collaborators/%s", config.Config.GithubAppOrganization, reponame, githubid),
 			"DELETE",
 			nil,
@@ -1756,11 +1777,12 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(dryrun bool, repon
 	}
 }
 
-func (g *GoliacRemoteImpl) DeleteRepository(dryrun bool, reponame string) {
+func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, dryrun bool, reponame string) {
 	// delete repo
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#delete-a-repository
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
+			ctx,
 			fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, reponame),
 			"DELETE",
 			nil,
@@ -1781,6 +1803,6 @@ func (g *GoliacRemoteImpl) Begin(dryrun bool) {
 }
 func (g *GoliacRemoteImpl) Rollback(dryrun bool, err error) {
 }
-func (g *GoliacRemoteImpl) Commit(dryrun bool) error {
+func (g *GoliacRemoteImpl) Commit(ctx context.Context, dryrun bool) error {
 	return nil
 }

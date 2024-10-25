@@ -1,6 +1,10 @@
 package engine
 
-import "github.com/gosimple/slug"
+import (
+	"context"
+
+	"github.com/gosimple/slug"
+)
 
 /*
  * MutableGoliacRemoteImpl is used by GoliacReconciliatorImpl to update
@@ -17,29 +21,29 @@ type MutableGoliacRemoteImpl struct {
 	appIds         map[string]int
 }
 
-func NewMutableGoliacRemoteImpl(remote GoliacRemote) *MutableGoliacRemoteImpl {
+func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacRemote) *MutableGoliacRemoteImpl {
 	rUsers := make(map[string]string)
-	for k, v := range remote.Users() {
+	for k, v := range remote.Users(ctx) {
 		rUsers[k] = v
 	}
 	rTeamSlugByName := make(map[string]string)
-	for k, v := range remote.TeamSlugByName() {
+	for k, v := range remote.TeamSlugByName(ctx) {
 		rTeamSlugByName[k] = v
 	}
 	rTeams := make(map[string]*GithubTeam)
-	for k, v := range remote.Teams() {
+	for k, v := range remote.Teams(ctx) {
 		ght := *v
 		rTeams[k] = &ght
 	}
 
 	rRepositories := make(map[string]*GithubRepository)
-	for k, v := range remote.Repositories() {
+	for k, v := range remote.Repositories(ctx) {
 		ghr := *v
 		rRepositories[k] = &ghr
 	}
 
 	rTeamRepositories := make(map[string]map[string]*GithubTeamRepo)
-	for k1, v1 := range remote.TeamRepositories() {
+	for k1, v1 := range remote.TeamRepositories(ctx) {
 		repos := make(map[string]*GithubTeamRepo)
 		for k2, v2 := range v1 {
 			gtr := *v2
@@ -49,12 +53,12 @@ func NewMutableGoliacRemoteImpl(remote GoliacRemote) *MutableGoliacRemoteImpl {
 	}
 
 	rulesets := make(map[string]*GithubRuleSet)
-	for k, v := range remote.RuleSets() {
+	for k, v := range remote.RuleSets(ctx) {
 		rulesets[k] = v
 	}
 
 	appids := make(map[string]int)
-	for k, v := range remote.AppIds() {
+	for k, v := range remote.AppIds(ctx) {
 		appids[k] = v
 	}
 

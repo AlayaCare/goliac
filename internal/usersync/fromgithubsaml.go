@@ -1,6 +1,7 @@
 package usersync
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Alayacare/goliac/internal/config"
@@ -28,7 +29,8 @@ func NewUserSyncPluginFromGithubSaml(client github.GitHubClient) engine.UserSync
 
 func (p *UserSyncPluginFromGithubSaml) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
 
-	users, err := engine.LoadUsersFromGithubOrgSaml(p.client)
+	ctx := context.Background()
+	users, err := engine.LoadUsersFromGithubOrgSaml(ctx, p.client)
 
 	if len(users) == 0 {
 		return nil, fmt.Errorf("not able to find any SAML identities")

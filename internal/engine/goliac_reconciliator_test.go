@@ -83,7 +83,7 @@ type GoliacRemoteMock struct {
 	appids     map[string]int
 }
 
-func (m *GoliacRemoteMock) Load(continueOnError bool) error {
+func (m *GoliacRemoteMock) Load(ctx context.Context, continueOnError bool) error {
 	return nil
 }
 func (m *GoliacRemoteMock) IsEnterprise() bool {
@@ -92,33 +92,33 @@ func (m *GoliacRemoteMock) IsEnterprise() bool {
 func (m *GoliacRemoteMock) FlushCache() {
 
 }
-func (m *GoliacRemoteMock) RuleSets() map[string]*GithubRuleSet {
+func (m *GoliacRemoteMock) RuleSets(ctx context.Context) map[string]*GithubRuleSet {
 	return m.rulesets
 }
-func (m *GoliacRemoteMock) Users() map[string]string {
+func (m *GoliacRemoteMock) Users(ctx context.Context) map[string]string {
 	return m.users
 }
 
-func (m *GoliacRemoteMock) TeamSlugByName() map[string]string {
+func (m *GoliacRemoteMock) TeamSlugByName(ctx context.Context) map[string]string {
 	slugs := make(map[string]string)
 	for _, v := range m.teams {
 		slugs[v.Name] = slug.Make(v.Name)
 	}
 	return slugs
 }
-func (m *GoliacRemoteMock) Teams() map[string]*GithubTeam {
+func (m *GoliacRemoteMock) Teams(ctx context.Context) map[string]*GithubTeam {
 	return m.teams
 }
-func (m *GoliacRemoteMock) Repositories() map[string]*GithubRepository {
+func (m *GoliacRemoteMock) Repositories(ctx context.Context) map[string]*GithubRepository {
 	return m.repos
 }
-func (m *GoliacRemoteMock) RepositoriesByRefId() map[string]*GithubRepository {
+func (m *GoliacRemoteMock) RepositoriesByRefId(ctx context.Context) map[string]*GithubRepository {
 	return make(map[string]*GithubRepository)
 }
-func (m *GoliacRemoteMock) TeamRepositories() map[string]map[string]*GithubTeamRepo {
+func (m *GoliacRemoteMock) TeamRepositories(ctx context.Context) map[string]map[string]*GithubTeamRepo {
 	return m.teamsrepos
 }
-func (m *GoliacRemoteMock) AppIds() map[string]int {
+func (m *GoliacRemoteMock) AppIds(ctx context.Context) map[string]int {
 	return m.appids
 }
 
@@ -169,62 +169,62 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 	}
 	return &r
 }
-func (r *ReconciliatorListenerRecorder) AddUserToOrg(dryrun bool, ghuserid string) {
+func (r *ReconciliatorListenerRecorder) AddUserToOrg(ctx context.Context, dryrun bool, ghuserid string) {
 	r.UsersCreated[ghuserid] = ghuserid
 }
-func (r *ReconciliatorListenerRecorder) RemoveUserFromOrg(dryrun bool, ghuserid string) {
+func (r *ReconciliatorListenerRecorder) RemoveUserFromOrg(ctx context.Context, dryrun bool, ghuserid string) {
 	r.UsersRemoved[ghuserid] = ghuserid
 }
-func (r *ReconciliatorListenerRecorder) CreateTeam(dryrun bool, teamname string, description string, members []string) {
+func (r *ReconciliatorListenerRecorder) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, members []string) {
 	r.TeamsCreated[teamname] = append(r.TeamsCreated[teamname], members...)
 }
-func (r *ReconciliatorListenerRecorder) UpdateTeamAddMember(dryrun bool, teamslug string, username string, role string) {
+func (r *ReconciliatorListenerRecorder) UpdateTeamAddMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
 	r.TeamMemberAdded[teamslug] = append(r.TeamMemberAdded[teamslug], username)
 }
-func (r *ReconciliatorListenerRecorder) UpdateTeamRemoveMember(dryrun bool, teamslug string, username string) {
+func (r *ReconciliatorListenerRecorder) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string) {
 	r.TeamMemberRemoved[teamslug] = append(r.TeamMemberRemoved[teamslug], username)
 }
-func (r *ReconciliatorListenerRecorder) DeleteTeam(dryrun bool, teamslug string) {
+func (r *ReconciliatorListenerRecorder) DeleteTeam(ctx context.Context, dryrun bool, teamslug string) {
 	r.TeamDeleted[teamslug] = true
 }
-func (r *ReconciliatorListenerRecorder) CreateRepository(dryrun bool, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
+func (r *ReconciliatorListenerRecorder) CreateRepository(ctx context.Context, dryrun bool, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
 	r.RepositoryCreated[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
 	r.RepositoryTeamAdded[reponame] = append(r.RepositoryTeamAdded[reponame], teamslug)
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateTeamAccess(dryrun bool, reponame string, teamslug string, permission string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
 	r.RepositoryTeamUpdated[reponame] = append(r.RepositoryTeamUpdated[reponame], teamslug)
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveTeamAccess(dryrun bool, reponame string, teamslug string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string) {
 	r.RepositoryTeamRemoved[reponame] = append(r.RepositoryTeamRemoved[reponame], teamslug)
 }
-func (r *ReconciliatorListenerRecorder) DeleteRepository(dryrun bool, reponame string) {
+func (r *ReconciliatorListenerRecorder) DeleteRepository(ctx context.Context, dryrun bool, reponame string) {
 	r.RepositoriesDeleted[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateBoolProperty(dryrun bool, reponame string, propertyName string, propertyValue bool) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateBoolProperty(ctx context.Context, dryrun bool, reponame string, propertyName string, propertyValue bool) {
 	r.RepositoriesUpdatePrivate[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(dryrun bool, reponame string, githubid string, permission string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string, permission string) {
 	r.RepositoriesSetExternalUser[githubid] = permission
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveExternalUser(dryrun bool, reponame string, githubid string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
 	r.RepositoriesRemoveExternalUser[githubid] = true
 }
-func (r *ReconciliatorListenerRecorder) AddRuleset(dryrun bool, ruleset *GithubRuleSet) {
+func (r *ReconciliatorListenerRecorder) AddRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
 	r.RuleSetCreated[ruleset.Name] = ruleset
 }
-func (r *ReconciliatorListenerRecorder) UpdateRuleset(dryrun bool, ruleset *GithubRuleSet) {
+func (r *ReconciliatorListenerRecorder) UpdateRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
 	r.RuleSetUpdated[ruleset.Name] = ruleset
 }
-func (r *ReconciliatorListenerRecorder) DeleteRuleset(dryrun bool, rulesetid int) {
+func (r *ReconciliatorListenerRecorder) DeleteRuleset(ctx context.Context, dryrun bool, rulesetid int) {
 	r.RuleSetDeleted = append(r.RuleSetDeleted, rulesetid)
 }
 func (r *ReconciliatorListenerRecorder) Begin(dryrun bool) {
 }
 func (r *ReconciliatorListenerRecorder) Rollback(dryrun bool, err error) {
 }
-func (r *ReconciliatorListenerRecorder) Commit(dryrun bool) error {
+func (r *ReconciliatorListenerRecorder) Commit(ctx context.Context, dryrun bool) error {
 	return nil
 }
 
@@ -439,7 +439,8 @@ func TestReconciliation(t *testing.T) {
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
 
 		// 1 members added
-		assert.Equal(t, "exist-ing", remote.TeamSlugByName()["exist ing"])
+		ctx := context.TODO()
+		assert.Equal(t, "exist-ing", remote.TeamSlugByName(ctx)["exist ing"])
 		assert.Equal(t, 0, len(recorder.TeamsCreated))
 		assert.Equal(t, 1, len(recorder.TeamMemberAdded["exist-ing"]))
 	})

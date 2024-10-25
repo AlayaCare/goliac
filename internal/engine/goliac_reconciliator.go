@@ -38,7 +38,7 @@ func NewGoliacReconciliatorImpl(executor ReconciliatorExecutor, repoconfig *conf
 }
 
 func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, dryrun bool, reposToArchive map[string]*GithubRepoComparable) error {
-	rremote := NewMutableGoliacRemoteImpl(remote)
+	rremote := NewMutableGoliacRemoteImpl(ctx, remote)
 	r.Begin(ctx, dryrun)
 	err := r.reconciliateUsers(ctx, local, rremote, dryrun)
 	if err != nil {
@@ -538,7 +538,7 @@ func (r *GoliacReconciliatorImpl) AddUserToOrg(ctx context.Context, dryrun bool,
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "add_user_to_org"}).Infof("ghusername: %s", ghuserid)
 	remote.AddUserToOrg(ghuserid)
 	if r.executor != nil {
-		r.executor.AddUserToOrg(dryrun, ghuserid)
+		r.executor.AddUserToOrg(ctx, dryrun, ghuserid)
 	}
 }
 
@@ -551,7 +551,7 @@ func (r *GoliacReconciliatorImpl) RemoveUserFromOrg(ctx context.Context, dryrun 
 	remote.RemoveUserFromOrg(ghuserid)
 	if r.executor != nil {
 		if r.repoconfig.DestructiveOperations.AllowDestructiveUsers {
-			r.executor.RemoveUserFromOrg(dryrun, ghuserid)
+			r.executor.RemoveUserFromOrg(ctx, dryrun, ghuserid)
 		}
 	}
 }
@@ -564,7 +564,7 @@ func (r *GoliacReconciliatorImpl) CreateTeam(ctx context.Context, dryrun bool, r
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "create_team"}).Infof("teamname: %s, members: %s", teamname, strings.Join(members, ","))
 	remote.CreateTeam(teamname, description, members)
 	if r.executor != nil {
-		r.executor.CreateTeam(dryrun, teamname, description, members)
+		r.executor.CreateTeam(ctx, dryrun, teamname, description, members)
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateTeamAddMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, username string, role string) {
@@ -575,7 +575,7 @@ func (r *GoliacReconciliatorImpl) UpdateTeamAddMember(ctx context.Context, dryru
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_team_add_member"}).Infof("teamslug: %s, username: %s, role: %s", teamslug, username, role)
 	remote.UpdateTeamAddMember(teamslug, username, "member")
 	if r.executor != nil {
-		r.executor.UpdateTeamAddMember(dryrun, teamslug, username, "member")
+		r.executor.UpdateTeamAddMember(ctx, dryrun, teamslug, username, "member")
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, username string) {
@@ -586,7 +586,7 @@ func (r *GoliacReconciliatorImpl) UpdateTeamRemoveMember(ctx context.Context, dr
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_team_remove_member"}).Infof("teamslug: %s, username: %s", teamslug, username)
 	remote.UpdateTeamRemoveMember(teamslug, username)
 	if r.executor != nil {
-		r.executor.UpdateTeamRemoveMember(dryrun, teamslug, username)
+		r.executor.UpdateTeamRemoveMember(ctx, dryrun, teamslug, username)
 	}
 }
 func (r *GoliacReconciliatorImpl) DeleteTeam(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string) {
@@ -598,7 +598,7 @@ func (r *GoliacReconciliatorImpl) DeleteTeam(ctx context.Context, dryrun bool, r
 		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "delete_team"}).Infof("teamslug: %s", teamslug)
 		remote.DeleteTeam(teamslug)
 		if r.executor != nil {
-			r.executor.DeleteTeam(dryrun, teamslug)
+			r.executor.DeleteTeam(ctx, dryrun, teamslug)
 		}
 	}
 }
@@ -610,7 +610,7 @@ func (r *GoliacReconciliatorImpl) CreateRepository(ctx context.Context, dryrun b
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "create_repository"}).Infof("repositoryname: %s, readers: %s, writers: %s, boolProperties: %v", reponame, strings.Join(readers, ","), strings.Join(writers, ","), boolProperties)
 	remote.CreateRepository(reponame, reponame, writers, readers, boolProperties)
 	if r.executor != nil {
-		r.executor.CreateRepository(dryrun, reponame, reponame, writers, readers, boolProperties)
+		r.executor.CreateRepository(ctx, dryrun, reponame, reponame, writers, readers, boolProperties)
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, teamslug string, permission string) {
@@ -621,7 +621,7 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryAddTeamAccess(ctx context.Cont
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_add_team"}).Infof("repositoryname: %s, teamslug: %s, permission: %s", reponame, teamslug, permission)
 	remote.UpdateRepositoryAddTeamAccess(reponame, teamslug, permission)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryAddTeamAccess(dryrun, reponame, teamslug, permission)
+		r.executor.UpdateRepositoryAddTeamAccess(ctx, dryrun, reponame, teamslug, permission)
 	}
 }
 
@@ -633,7 +633,7 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateTeamAccess(ctx context.C
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_update_team"}).Infof("repositoryname: %s, teamslug:%s, permission: %s", reponame, teamslug, permission)
 	remote.UpdateRepositoryUpdateTeamAccess(reponame, teamslug, permission)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryUpdateTeamAccess(dryrun, reponame, teamslug, permission)
+		r.executor.UpdateRepositoryUpdateTeamAccess(ctx, dryrun, reponame, teamslug, permission)
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, teamslug string) {
@@ -644,7 +644,7 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveTeamAccess(ctx context.C
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_remove_team"}).Infof("repositoryname: %s, teamslug:%s", reponame, teamslug)
 	remote.UpdateRepositoryRemoveTeamAccess(reponame, teamslug)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryRemoveTeamAccess(dryrun, reponame, teamslug)
+		r.executor.UpdateRepositoryRemoveTeamAccess(ctx, dryrun, reponame, teamslug)
 	}
 }
 
@@ -657,7 +657,7 @@ func (r *GoliacReconciliatorImpl) DeleteRepository(ctx context.Context, dryrun b
 		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "delete_repository"}).Infof("repositoryname: %s", reponame)
 		remote.DeleteRepository(reponame)
 		if r.executor != nil {
-			r.executor.DeleteRepository(dryrun, reponame)
+			r.executor.DeleteRepository(ctx, dryrun, reponame)
 		}
 	}
 }
@@ -669,7 +669,7 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateBoolProperty(ctx context
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_update_bool_property"}).Infof("repositoryname: %s %s:%v", reponame, propertyName, propertyValue)
 	remote.UpdateRepositoryUpdateBoolProperty(reponame, propertyName, propertyValue)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryUpdateBoolProperty(dryrun, reponame, propertyName, propertyValue)
+		r.executor.UpdateRepositoryUpdateBoolProperty(ctx, dryrun, reponame, propertyName, propertyValue)
 	}
 }
 func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
@@ -679,7 +679,7 @@ func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, dryrun bool, r
 	}
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "add_ruleset"}).Infof("ruleset: %s (id: %d) enforcement: %s", ruleset.Name, ruleset.Id, ruleset.Enforcement)
 	if r.executor != nil {
-		r.executor.AddRuleset(dryrun, ruleset)
+		r.executor.AddRuleset(ctx, dryrun, ruleset)
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
@@ -689,7 +689,7 @@ func (r *GoliacReconciliatorImpl) UpdateRuleset(ctx context.Context, dryrun bool
 	}
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_ruleset"}).Infof("ruleset: %s (id: %d) enforcement: %s", ruleset.Name, ruleset.Id, ruleset.Enforcement)
 	if r.executor != nil {
-		r.executor.UpdateRuleset(dryrun, ruleset)
+		r.executor.UpdateRuleset(ctx, dryrun, ruleset)
 	}
 }
 func (r *GoliacReconciliatorImpl) DeleteRuleset(ctx context.Context, dryrun bool, rulesetid int) {
@@ -700,7 +700,7 @@ func (r *GoliacReconciliatorImpl) DeleteRuleset(ctx context.Context, dryrun bool
 	if r.repoconfig.DestructiveOperations.AllowDestructiveRulesets {
 		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "delete_ruleset"}).Infof("ruleset id:%d", rulesetid)
 		if r.executor != nil {
-			r.executor.DeleteRuleset(dryrun, rulesetid)
+			r.executor.DeleteRuleset(ctx, dryrun, rulesetid)
 		}
 	}
 }
@@ -712,7 +712,7 @@ func (r *GoliacReconciliatorImpl) UpdateRepositorySetExternalUser(ctx context.Co
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_set_external_user"}).Infof("repositoryname: %s collaborator:%s permission:%s", reponame, collaboatorGithubId, permission)
 	remote.UpdateRepositorySetExternalUser(reponame, collaboatorGithubId, permission)
 	if r.executor != nil {
-		r.executor.UpdateRepositorySetExternalUser(dryrun, reponame, collaboatorGithubId, permission)
+		r.executor.UpdateRepositorySetExternalUser(ctx, dryrun, reponame, collaboatorGithubId, permission)
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string) {
@@ -723,7 +723,7 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveExternalUser(ctx context
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_repository_remove_external_user"}).Infof("repositoryname: %s collaborator:%s", reponame, collaboatorGithubId)
 	remote.UpdateRepositoryRemoveExternalUser(reponame, collaboatorGithubId)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryRemoveExternalUser(dryrun, reponame, collaboatorGithubId)
+		r.executor.UpdateRepositoryRemoveExternalUser(ctx, dryrun, reponame, collaboatorGithubId)
 	}
 }
 func (r *GoliacReconciliatorImpl) Begin(ctx context.Context, dryrun bool) {
@@ -741,7 +741,7 @@ func (r *GoliacReconciliatorImpl) Rollback(ctx context.Context, dryrun bool, err
 func (r *GoliacReconciliatorImpl) Commit(ctx context.Context, dryrun bool) error {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun}).Debugf("reconciliation commit")
 	if r.executor != nil {
-		return r.executor.Commit(dryrun)
+		return r.executor.Commit(ctx, dryrun)
 	}
 	return nil
 }

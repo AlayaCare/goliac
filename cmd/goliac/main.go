@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -60,7 +61,8 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			err, _, _ = goliac.Apply(true, repo, branch, true)
+			ctx := context.Background()
+			err, _, _ = goliac.Apply(ctx, true, repo, branch, true)
 			if err != nil {
 				logrus.Errorf("Failed to plan: %v", err)
 			}
@@ -93,7 +95,9 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			err, _, _ = goliac.Apply(false, repo, branch, true)
+
+			ctx := context.Background()
+			err, _, _ = goliac.Apply(ctx, false, repo, branch, true)
 			if err != nil {
 				logrus.Errorf("Failed to apply: %v", err)
 			}
@@ -128,7 +132,8 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			err = goliac.UsersUpdate(repo, branch, dryrunParameter, forceParameter)
+			ctx := context.Background()
+			err = goliac.UsersUpdate(ctx, repo, branch, dryrunParameter, forceParameter)
 			if err != nil {
 				logrus.Fatalf("failed to update and commit teams: %s", err)
 			}

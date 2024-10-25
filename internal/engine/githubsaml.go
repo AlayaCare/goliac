@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -77,7 +78,7 @@ type GraplQLUsersFromGithubOrgSaml struct {
 /*
  * This function works only for Github organization that have the Entreprise plan ANAD use SAML integration
  */
-func LoadUsersFromGithubOrgSaml(client github.GitHubClient) (map[string]*entity.User, error) {
+func LoadUsersFromGithubOrgSaml(ctx context.Context, client github.GitHubClient) (map[string]*entity.User, error) {
 	users := make(map[string]*entity.User)
 
 	variables := make(map[string]interface{})
@@ -87,7 +88,7 @@ func LoadUsersFromGithubOrgSaml(client github.GitHubClient) (map[string]*entity.
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := client.QueryGraphQLAPI(listUsersFromGithubOrgSaml, variables)
+		data, err := client.QueryGraphQLAPI(ctx, listUsersFromGithubOrgSaml, variables)
 		if err != nil {
 			return users, err
 		}

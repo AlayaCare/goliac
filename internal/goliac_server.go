@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -45,18 +46,20 @@ type GoliacServer interface {
 }
 
 type GoliacServerImpl struct {
-	goliac              Goliac
-	applyLobbyMutex     sync.Mutex
-	applyLobbyCond      *sync.Cond
-	applyCurrent        bool
-	applyLobby          bool
-	ready               bool // when the server has finished to load the local configuration
-	lastSyncTime        *time.Time
-	lastSyncError       error
-	detailedErrors      []error
-	detailedWarnings    []entity.Warning
-	syncInterval        int64 // in seconds time remaining between 2 sync
-	notificationService notification.NotificationService
+	goliac                Goliac
+	applyLobbyMutex       sync.Mutex
+	applyLobbyCond        *sync.Cond
+	applyCurrent          bool
+	applyLobby            bool
+	ready                 bool // when the server has finished to load the local configuration
+	lastSyncTime          *time.Time
+	lastSyncError         error
+	detailedErrors        []error
+	detailedWarnings      []entity.Warning
+	syncInterval          int64 // in seconds time remaining between 2 sync
+	notificationService   notification.NotificationService
+	statistics            config.GoliacStatistics
+	statisticsTimeToApply time.Duration
 }
 
 func NewGoliacServer(goliac Goliac, notificationService notification.NotificationService) GoliacServer {
@@ -665,9 +668,18 @@ func (g *GoliacServerImpl) serveApply(forceresync bool) (error, []error, []entit
 	// we are ready (to give local state, and to sync with remote)
 	g.ready = true
 
-	err, errs, warns := g.goliac.Apply(false, repo, branch, forceresync)
+	startTime := time.Now()
+	stats := config.GoliacStatistics{}
+	ctx := context.WithValue(context.Background(), config.ContextKeyStatistics, &stats)
+
+	err, errs, warns := g.goliac.Apply(ctx, false, repo, branch, forceresync)
 	if err != nil {
 		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), errs, warns, false
 	}
+	endTime := time.Now()
+	g.statisticsTimeToApply = endTime.Sub(startTime)
+	g.statistics.GithubApiCalls = stats.GithubApiCalls
+	g.statistics.GithubThrottled = stats.GithubThrottled
+
 	return nil, errs, warns, true
 }
