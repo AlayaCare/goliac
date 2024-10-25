@@ -32,7 +32,7 @@ func NewGetStatus(ctx *middleware.Context, handler GetStatusHandler) *GetStatus 
 /*
 	GetStatus swagger:route GET /status app getStatus
 
-Get different statistics on Goliac
+Get different status on Goliac
 */
 type GetStatus struct {
 	Context *middleware.Context
