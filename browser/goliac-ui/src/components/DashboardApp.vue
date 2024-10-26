@@ -134,10 +134,19 @@
         activeTabName: "status",
       };
     },
-    created() {
+    mounted() {
       this.getStatus()
       this.getStatistics()
       this.getUnmanaged()
+
+      setInterval(() => {
+        this.getStatus()
+        this.getStatistics()
+        this.getUnmanaged()
+      }, 60000);
+    },
+    beforeUnmount() {
+      clearInterval(this.interval);
     },
     methods: {
       getUnmanaged() {
