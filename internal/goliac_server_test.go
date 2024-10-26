@@ -108,8 +108,15 @@ type GoliacMock struct {
 	local engine.GoliacLocalResources
 }
 
-func (g *GoliacMock) Apply(ctx context.Context, dryrun bool, repo string, branch string, forceresync bool) (error, []error, []entity.Warning) {
-	return nil, nil, nil
+func (g *GoliacMock) Apply(ctx context.Context, dryrun bool, repo string, branch string, forceresync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
+	unmanaged := &engine.UnmanagedResources{
+		Users:        make(map[string]bool),
+		Teams:        make(map[string]bool),
+		Repositories: make(map[string]bool),
+		RuleSets:     make(map[int]bool),
+	}
+	unmanaged.Users["unmanaged"] = true
+	return nil, nil, nil, unmanaged
 }
 func (g *GoliacMock) UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) error {
 	return nil

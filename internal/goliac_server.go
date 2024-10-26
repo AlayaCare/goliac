@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Alayacare/goliac/internal/config"
+	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/notification"
 	"github.com/Alayacare/goliac/swagger_gen/models"
@@ -44,6 +45,7 @@ type GoliacServer interface {
 	GetRepositories(app.GetRepositoriesParams) middleware.Responder
 	GetRepository(app.GetRepositoryParams) middleware.Responder
 	GetStatistics(app.GetStatiticsParams) middleware.Responder
+	GetUnmanaged(app.GetUnmanagedParams) middleware.Responder
 }
 
 type GoliacServerImpl struct {
@@ -63,6 +65,7 @@ type GoliacServerImpl struct {
 	maxStatistics       config.GoliacStatistics
 	lastTimeToApply     time.Duration
 	maxTimeToApply      time.Duration
+	lastUnmanaged       *engine.UnmanagedResources
 }
 
 func NewGoliacServer(goliac Goliac, notificationService notification.NotificationService) GoliacServer {
@@ -75,6 +78,35 @@ func NewGoliacServer(goliac Goliac, notificationService notification.Notificatio
 	server.applyLobbyCond = sync.NewCond(&server.applyLobbyMutex)
 
 	return &server
+}
+
+func (g *GoliacServerImpl) GetUnmanaged(app.GetUnmanagedParams) middleware.Responder {
+	if g.lastUnmanaged == nil {
+		return app.NewGetUnmanagedOK().WithPayload(&models.Unmanaged{})
+	} else {
+		repos := make([]string, 0, len(g.lastUnmanaged.Repositories))
+		for r := range g.lastUnmanaged.Repositories {
+			repos = append(repos, r)
+		}
+		teams := make([]string, 0, len(g.lastUnmanaged.Teams))
+		for t := range g.lastUnmanaged.Teams {
+			teams = append(teams, t)
+		}
+		users := make([]string, 0, len(g.lastUnmanaged.Users))
+		for u := range g.lastUnmanaged.Users {
+			users = append(users, u)
+		}
+		rulesets := make([]string, 0, len(g.lastUnmanaged.RuleSets))
+		for r := range g.lastUnmanaged.RuleSets {
+			rulesets = append(rulesets, fmt.Sprintf("%d", r))
+		}
+		return app.NewGetUnmanagedOK().WithPayload(&models.Unmanaged{
+			Repos:    repos,
+			Teams:    teams,
+			Users:    users,
+			Rulesets: rulesets,
+		})
+	}
 }
 
 func (g *GoliacServerImpl) GetStatistics(app.GetStatiticsParams) middleware.Responder {
@@ -618,6 +650,7 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.AppPostResyncHandler = app.PostResyncHandlerFunc(g.PostResync)
 	api.AppGetStatusHandler = app.GetStatusHandlerFunc(g.GetStatus)
 	api.AppGetStatiticsHandler = app.GetStatiticsHandlerFunc(g.GetStatistics)
+	api.AppGetUnmanagedHandler = app.GetUnmanagedHandlerFunc(g.GetUnmanaged)
 
 	api.AppGetUsersHandler = app.GetUsersHandlerFunc(g.GetUsers)
 	api.AppGetUserHandler = app.GetUserHandlerFunc(g.GetUser)
@@ -687,7 +720,7 @@ func (g *GoliacServerImpl) serveApply(forceresync bool) (error, []error, []entit
 	stats := config.GoliacStatistics{}
 	ctx := context.WithValue(context.Background(), config.ContextKeyStatistics, &stats)
 
-	err, errs, warns := g.goliac.Apply(ctx, false, repo, branch, forceresync)
+	err, errs, warns, unmanaged := g.goliac.Apply(ctx, false, repo, branch, forceresync)
 	if err != nil {
 		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), errs, warns, false
 	}
@@ -706,6 +739,10 @@ func (g *GoliacServerImpl) serveApply(forceresync bool) (error, []error, []entit
 
 	if stats.GithubThrottled > g.maxStatistics.GithubThrottled {
 		g.maxStatistics.GithubThrottled = stats.GithubThrottled
+	}
+
+	if unmanaged != nil {
+		g.lastUnmanaged = unmanaged
 	}
 
 	return nil, errs, warns, true

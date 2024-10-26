@@ -335,6 +335,29 @@ func init() {
         }
       }
     },
+    "/unmanaged": {
+      "get": {
+        "description": "Get unmanaged resources metrics",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getUnmanaged",
+        "responses": {
+          "200": {
+            "description": "get Goliac unmanaged resources metrics",
+            "schema": {
+              "$ref": "#/definitions/unmanaged"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/users": {
       "get": {
         "description": "Get all users",
@@ -689,6 +712,38 @@ func init() {
       "type": "array",
       "items": {
         "$ref": "#/definitions/team"
+      }
+    },
+    "unmanaged": {
+      "properties": {
+        "repos": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "rulesets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     },
     "user": {
@@ -1071,6 +1126,29 @@ func init() {
         }
       }
     },
+    "/unmanaged": {
+      "get": {
+        "description": "Get unmanaged resources metrics",
+        "tags": [
+          "app"
+        ],
+        "operationId": "getUnmanaged",
+        "responses": {
+          "200": {
+            "description": "get Goliac unmanaged resources metrics",
+            "schema": {
+              "$ref": "#/definitions/unmanaged"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/users": {
       "get": {
         "description": "Get all users",
@@ -1437,6 +1515,38 @@ func init() {
       "type": "array",
       "items": {
         "$ref": "#/definitions/team"
+      }
+    },
+    "unmanaged": {
+      "properties": {
+        "repos": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "rulesets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       }
     },
     "user": {
