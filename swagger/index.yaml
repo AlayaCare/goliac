@@ -52,6 +52,8 @@ paths:
     $ref: ./repository.yaml
   /statistics:
     $ref: ./statistics.yaml
+  /unmanaged:
+    $ref: ./unmanaged.yaml
 
 definitions:
 
@@ -304,6 +306,29 @@ definitions:
         type: integer
         x-omitempty: false
 
+  unmanaged:
+    properties:
+      users:
+        type: array
+        items:
+          type: string
+          minLength: 1
+      teams:
+        type: array
+        items:
+          type: string
+          minLength: 1
+      repos:
+        type: array
+        items:
+          type: string
+          minLength: 1
+      rulesets:
+        type: array
+        items:
+          type: string
+          minLength: 1
+      
   # Default Error
   error:
     type: object

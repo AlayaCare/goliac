@@ -75,6 +75,9 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		AppGetTeamsHandler: app.GetTeamsHandlerFunc(func(params app.GetTeamsParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetTeams has not yet been implemented")
 		}),
+		AppGetUnmanagedHandler: app.GetUnmanagedHandlerFunc(func(params app.GetUnmanagedParams) middleware.Responder {
+			return middleware.NotImplemented("operation app.GetUnmanaged has not yet been implemented")
+		}),
 		AppGetUserHandler: app.GetUserHandlerFunc(func(params app.GetUserParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetUser has not yet been implemented")
 		}),
@@ -144,6 +147,8 @@ type GoliacAPI struct {
 	AppGetTeamHandler app.GetTeamHandler
 	// AppGetTeamsHandler sets the operation handler for the get teams operation
 	AppGetTeamsHandler app.GetTeamsHandler
+	// AppGetUnmanagedHandler sets the operation handler for the get unmanaged operation
+	AppGetUnmanagedHandler app.GetUnmanagedHandler
 	// AppGetUserHandler sets the operation handler for the get user operation
 	AppGetUserHandler app.GetUserHandler
 	// AppGetUsersHandler sets the operation handler for the get users operation
@@ -258,6 +263,9 @@ func (o *GoliacAPI) Validate() error {
 	}
 	if o.AppGetTeamsHandler == nil {
 		unregistered = append(unregistered, "app.GetTeamsHandler")
+	}
+	if o.AppGetUnmanagedHandler == nil {
+		unregistered = append(unregistered, "app.GetUnmanagedHandler")
 	}
 	if o.AppGetUserHandler == nil {
 		unregistered = append(unregistered, "app.GetUserHandler")
@@ -399,6 +407,10 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/teams"] = app.NewGetTeams(o.context, o.AppGetTeamsHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/unmanaged"] = app.NewGetUnmanaged(o.context, o.AppGetUnmanagedHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}

@@ -8,8 +8,8 @@
   <el-row>
     <el-col :span="20" :offset="2">
       <el-row>
-        <el-tabs class="full-width-tabs" v-model="activeName">
-          <el-tab-pane label="Status" name="first">
+        <el-tabs class="full-width-tabs" v-model="activeTabName">
+          <el-tab-pane label="Status" name="status">
             <el-table
               :data="statusTable"
               :stripe="true"
@@ -20,7 +20,7 @@
               <el-table-column prop="value" align="left" label="Value" />
             </el-table>
           </el-tab-pane>
-          <el-tab-pane label="Statistics" name="second">
+          <el-tab-pane label="Statistics" name="statistics">
             <el-table
               :data="statisticsTable"
               :stripe="true"
@@ -29,6 +29,18 @@
             >
               <el-table-column width="250" prop="key" align="left" label="Key" sortable />
               <el-table-column prop="value" align="left" label="Value" />
+            </el-table>
+          </el-tab-pane>
+          <el-tab-pane label="Unmanaged" name="unmanaged">
+            <el-table
+              :data="unmanagedTable"
+              :stripe="true"
+              :highlight-current-row="false"
+              :default-sort="{ prop: 'title', order: 'descending' }"
+            >
+              <el-table-column width="150" prop="key" align="left" label="Key" sortable />
+              <el-table-column width="100" prop="nb" align="left" label="Nb" />
+              <el-table-column prop="values" align="left" label="Values" />
             </el-table>
           </el-tab-pane>
         </el-tabs>
@@ -115,17 +127,67 @@
         flushcacheVisible: false,
         statusTable: [],
         statisticsTable: [],
+        unmanagedTable: [],
         detailedErrors: [],
         detailedWarnings: [],
         version: "",
-        activeName: "first",
+        activeTabName: "status",
       };
     },
-    created() {
+    mounted() {
       this.getStatus()
       this.getStatistics()
+      this.getUnmanaged()
+
+      setInterval(() => {
+        this.getStatus()
+        this.getStatistics()
+        this.getUnmanaged()
+      }, 60000);
+    },
+    beforeUnmount() {
+      clearInterval(this.interval);
     },
     methods: {
+      getUnmanaged() {
+          Axios.get(`${API_URL}/unmanaged`).then(response => {
+                let unmanaged = response.data;
+                this.unmanagedTable = [
+                    {
+                        key: "Users",
+                        nb: unmanaged.users ? unmanaged.users.length : "unknown",
+                        values: unmanaged.users ? unmanaged.users.slice(0, 20).join(",") : "unknown",
+                    },
+                    {
+                        key: "Teams",
+                        nb: unmanaged.teams ? unmanaged.teams.length : "unknown",
+                        values: unmanaged.teams ? unmanaged.teams.slice(0, 20).join(",") : "unknown",
+                    },
+                    {
+                        key: "Repositories",
+                        nb: unmanaged.repos ? unmanaged.repos.length : "unknown",
+                        values: unmanaged.repos ? unmanaged.repos.slice(0, 20).join(",") : "unknown",
+                    },
+                    {
+                        key: "Rulesets",
+                        nb: unmanaged.rulesets ? unmanaged.rulesets.length : "unknown",
+                        values: unmanaged.rulesets ? unmanaged.rulesets.slice(0, 20).join(",") : "unknown",
+                    },
+                ]
+                if (unmanaged.users && unmanaged.users.length > 20) {
+                    this.unmanagedTable.users += ", ...";
+                }
+                if (unmanaged.teams && unmanaged.teams.length > 20) {
+                    this.unmanagedTable.teams += ", ...";
+                }
+                if (unmanaged.repos && unmanaged.repos.length > 20) {
+                    this.unmanagedTable.repos += ", ...";
+                }
+                if (unmanaged.rulesets && unmanaged.rulesets.length > 20) {
+                    this.unmanagedTable.rulesets += ", ...";
+                }
+          }, handleErr.bind(this));
+        },
       getStatistics() {
           Axios.get(`${API_URL}/statistics`).then(response => {
                 let statistics = response.data;

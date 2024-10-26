@@ -1,0 +1,14 @@
+get:
+  tags:
+    - app
+  operationId: getUnmanaged
+  description: Get unmanaged resources metrics
+  responses:
+    200:
+      description: get Goliac unmanaged resources metrics
+      schema:
+        $ref: "#/definitions/unmanaged"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

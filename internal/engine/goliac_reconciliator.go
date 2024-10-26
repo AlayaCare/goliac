@@ -18,61 +18,78 @@ const (
 	KeyAuthor key = "author"
 )
 
+type UnmanagedResources struct {
+	Users        map[string]bool
+	Teams        map[string]bool
+	Repositories map[string]bool
+	RuleSets     map[int]bool
+}
+
 /*
  * GoliacReconciliator is here to sync the local state to the remote state
  */
 type GoliacReconciliator interface {
-	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, dryrun bool, reposToArchive map[string]*GithubRepoComparable) error
+	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, dryrun bool, reposToArchive map[string]*GithubRepoComparable) (*UnmanagedResources, error)
 }
 
 type GoliacReconciliatorImpl struct {
 	executor   ReconciliatorExecutor
 	repoconfig *config.RepositoryConfig
+	unmanaged  *UnmanagedResources
 }
 
 func NewGoliacReconciliatorImpl(executor ReconciliatorExecutor, repoconfig *config.RepositoryConfig) GoliacReconciliator {
 	return &GoliacReconciliatorImpl{
 		executor:   executor,
 		repoconfig: repoconfig,
+		unmanaged:  nil,
 	}
 }
 
-func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, dryrun bool, reposToArchive map[string]*GithubRepoComparable) error {
+func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, dryrun bool, reposToArchive map[string]*GithubRepoComparable) (*UnmanagedResources, error) {
 	rremote := NewMutableGoliacRemoteImpl(ctx, remote)
 	r.Begin(ctx, dryrun)
-	err := r.reconciliateUsers(ctx, local, rremote, dryrun)
+	unmanaged := &UnmanagedResources{
+		Users:        make(map[string]bool),
+		Teams:        make(map[string]bool),
+		Repositories: make(map[string]bool),
+		RuleSets:     make(map[int]bool),
+	}
+	r.unmanaged = unmanaged
+
+	err := r.reconciliateUsers(ctx, local, rremote, dryrun, unmanaged)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
-		return err
+		return nil, err
 	}
 
 	err = r.reconciliateTeams(ctx, local, rremote, dryrun)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
-		return err
+		return nil, err
 	}
 
 	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, dryrun, reposToArchive)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
-		return err
+		return nil, err
 	}
 
 	if remote.IsEnterprise() {
 		err = r.reconciliateRulesets(ctx, local, rremote, r.repoconfig, dryrun)
 		if err != nil {
 			r.Rollback(ctx, dryrun, err)
-			return err
+			return nil, err
 		}
 	}
 
-	return r.Commit(ctx, dryrun)
+	return r.unmanaged, r.Commit(ctx, dryrun)
 }
 
 /*
  * This function sync teams and team's members
  */
-func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) error {
+func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool, unmanaged *UnmanagedResources) error {
 	ghUsers := remote.Users()
 
 	rUsers := make(map[string]string)
@@ -422,6 +439,8 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			if r.repoconfig.DestructiveOperations.AllowDestructiveRepositories {
 				r.UpdateRepositoryUpdateBoolProperty(ctx, dryrun, remote, reponame, "archived", true)
 				toArchive[reponame] = rRepo
+			} else {
+				r.unmanaged.Repositories[reponame] = true
 			}
 		} else {
 			r.DeleteRepository(ctx, dryrun, remote, reponame)
@@ -547,12 +566,14 @@ func (r *GoliacReconciliatorImpl) RemoveUserFromOrg(ctx context.Context, dryrun 
 	if a := ctx.Value(KeyAuthor); a != nil {
 		author = a.(string)
 	}
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "remove_user_from_org"}).Infof("ghusername: %s", ghuserid)
-	remote.RemoveUserFromOrg(ghuserid)
-	if r.executor != nil {
-		if r.repoconfig.DestructiveOperations.AllowDestructiveUsers {
+	if r.repoconfig.DestructiveOperations.AllowDestructiveUsers {
+		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "remove_user_from_org"}).Infof("ghusername: %s", ghuserid)
+		remote.RemoveUserFromOrg(ghuserid)
+		if r.executor != nil {
 			r.executor.RemoveUserFromOrg(ctx, dryrun, ghuserid)
 		}
+	} else {
+		r.unmanaged.Users[ghuserid] = true
 	}
 }
 
@@ -600,6 +621,8 @@ func (r *GoliacReconciliatorImpl) DeleteTeam(ctx context.Context, dryrun bool, r
 		if r.executor != nil {
 			r.executor.DeleteTeam(ctx, dryrun, teamslug)
 		}
+	} else {
+		r.unmanaged.Teams[teamslug] = true
 	}
 }
 func (r *GoliacReconciliatorImpl) CreateRepository(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
@@ -659,6 +682,8 @@ func (r *GoliacReconciliatorImpl) DeleteRepository(ctx context.Context, dryrun b
 		if r.executor != nil {
 			r.executor.DeleteRepository(ctx, dryrun, reponame)
 		}
+	} else {
+		r.unmanaged.Repositories[reponame] = true
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue bool) {
@@ -702,6 +727,8 @@ func (r *GoliacReconciliatorImpl) DeleteRuleset(ctx context.Context, dryrun bool
 		if r.executor != nil {
 			r.executor.DeleteRuleset(ctx, dryrun, rulesetid)
 		}
+	} else {
+		r.unmanaged.RuleSets[rulesetid] = true
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string, permission string) {

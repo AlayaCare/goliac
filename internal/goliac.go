@@ -28,7 +28,7 @@ const (
 type Goliac interface {
 	// will run and apply the reconciliation,
 	// it returns an error if something went wrong, and a detailed list of errors and warnings
-	Apply(ctx context.Context, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning)
+	Apply(ctx context.Context, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources)
 
 	// will clone run the user-plugin to sync users, and will commit to the team repository
 	UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) error
@@ -78,24 +78,24 @@ func (g *GoliacImpl) FlushCache() {
 	g.remote.FlushCache()
 }
 
-func (g *GoliacImpl) Apply(ctx context.Context, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning) {
+func (g *GoliacImpl) Apply(ctx context.Context, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
 	err, errs, warns := g.loadAndValidateGoliacOrganization(ctx, repositoryUrl, branch)
 	defer g.local.Close()
 	if err != nil {
-		return fmt.Errorf("failed to load and validate: %s", err), errs, warns
+		return fmt.Errorf("failed to load and validate: %s", err), errs, warns, nil
 	}
 	u, err := url.Parse(repositoryUrl)
 	if err != nil {
-		return fmt.Errorf("failed to parse %s: %v", repositoryUrl, err), errs, warns
+		return fmt.Errorf("failed to parse %s: %v", repositoryUrl, err), errs, warns, nil
 	}
 
 	teamsreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
 
-	err = g.applyToGithub(ctx, dryrun, teamsreponame, branch, forcesync)
+	unmanaged, err := g.applyToGithub(ctx, dryrun, teamsreponame, branch, forcesync)
 	if err != nil {
-		return err, errs, warns
+		return err, errs, warns, unmanaged
 	}
-	return nil, errs, warns
+	return nil, errs, warns, unmanaged
 }
 
 func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, repositoryUrl, branch string) (error, []error, []entity.Warning) {
@@ -178,22 +178,23 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 	return err
 }
 
-func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, teamreponame string, branch string, forceresync bool) error {
+func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, teamreponame string, branch string, forceresync bool) (*engine.UnmanagedResources, error) {
 	err := g.remote.Load(ctx, false)
 	if err != nil {
-		return fmt.Errorf("Error when fetching data from Github: %v", err)
+		return nil, fmt.Errorf("error when fetching data from Github: %v", err)
 	}
 
 	if !dryrun {
 		err := g.forceSquashMergeOnTeamsRepo(ctx, teamreponame, branch)
 		if err != nil {
-			logrus.Errorf("Error when ensuring PR on %s repo can only be done via squash and merge: %v", teamreponame, err)
+			logrus.Errorf("Error when ensuring PR on %s, repo can only be done via squash and merge: %v", teamreponame, err)
 		}
 	}
 
 	// if the repo was just archived in a previous commit and we "resume it"
 	// so we keep a track of all repos that we want to archive until the end of the process
 	reposToArchive := make(map[string]*engine.GithubRepoComparable)
+	var unmanaged *engine.UnmanagedResources
 
 	commits, err := g.local.ListCommitsFromTag(GOLIAC_GIT_TAG)
 	// if we can get commits
@@ -201,9 +202,9 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, teamreponam
 		ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
 		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
-		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
+		unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 		if err != nil {
-			return fmt.Errorf("Error when reconciliating: %v", err)
+			return unmanaged, fmt.Errorf("error when reconciliating: %v", err)
 		}
 		// if we resync, and dont have commits, let's resync the latest (HEAD) commit
 		// or if are not in enterprise mode and cannot guarrantee that PR commits are squashed
@@ -217,9 +218,9 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, teamreponam
 			ctx = context.WithValue(ctx, engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
 		}
 
-		err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
+		unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 		if err != nil {
-			return fmt.Errorf("Error when reconciliating: %v", err)
+			return unmanaged, fmt.Errorf("error when reconciliating: %v", err)
 		}
 	} else {
 		// we have 1 or more commits to apply
@@ -237,7 +238,7 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, teamreponam
 				reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 
 				ctx := context.WithValue(ctx, engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
-				err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
+				unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 				if err != nil {
 					// we keep the last error and continue
 					// to see if the next commit can be applied without error
@@ -249,7 +250,7 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, teamreponam
 				if !dryrun && err == nil {
 					accessToken, err := g.githubClient.GetAccessToken(ctx)
 					if err != nil {
-						return err
+						return unmanaged, err
 					}
 					g.local.PushTag(GOLIAC_GIT_TAG, commit.Hash, accessToken)
 				}
@@ -258,12 +259,12 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, teamreponam
 			}
 		}
 		if lastErr != nil {
-			return lastErr
+			return unmanaged, lastErr
 		}
 	}
 	accessToken, err := g.githubClient.GetAccessToken(ctx)
 	if err != nil {
-		return err
+		return unmanaged, err
 	}
 
 	// if we have repos to create as archived
@@ -274,14 +275,14 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, teamreponam
 		}
 		err = g.local.ArchiveRepos(reposToArchiveList, accessToken, branch, GOLIAC_GIT_TAG)
 		if err != nil {
-			return fmt.Errorf("Error when archiving repos: %v", err)
+			return unmanaged, fmt.Errorf("error when archiving repos: %v", err)
 		}
 	}
 	err = g.local.UpdateAndCommitCodeOwners(g.repoconfig, dryrun, accessToken, branch, GOLIAC_GIT_TAG)
 	if err != nil {
-		return fmt.Errorf("Error when updating and commiting: %v", err)
+		return unmanaged, fmt.Errorf("error when updating and commiting: %v", err)
 	}
-	return nil
+	return unmanaged, nil
 }
 
 func (g *GoliacImpl) UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) error {
