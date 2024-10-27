@@ -556,7 +556,8 @@ func (g *GoliacServerImpl) Serve() {
 			config.Config.GithubWebhookPath,
 			config.Config.GithubWebhookSecret,
 			config.Config.ServerGitBranch, func() {
-				// let's start the apply process asynchrounously
+				// when receiving a Github webhook event
+				// let's start the apply process asynchronously
 				go g.triggerApply(false)
 			},
 		)
@@ -587,7 +588,13 @@ func (g *GoliacServerImpl) Serve() {
 				time.Sleep(1 * time.Second)
 				if g.syncInterval <= 0 {
 					// we want to sync
-					g.triggerApply(false)
+					// if we just started, let's force sync
+					// otherwise, let's just sync
+					if g.lastUnmanaged == nil {
+						g.triggerApply(true)
+					} else {
+						g.triggerApply(false)
+					}
 				}
 			}
 		}
@@ -604,11 +611,15 @@ func (g *GoliacServerImpl) Serve() {
 }
 
 /*
- * triggerApply will trigger the apply process (by calling serveApply())
- * inside serverApply, it will check if the lobby is free
- * - if the lobby is free, it will start the apply process
- * - if the lobby is busy, it will do nothing
- */
+triggerApply will trigger the apply process (by calling serveApply())
+inside serverApply, it will check if the lobby is free
+- if the lobby is free, it will start the apply process
+- if the lobby is busy, it will do nothing
+
+forceResync will force the apply process to resync with the remote repository
+even if the last commit seems to have been applied (Goliac will in fact
+reapply the last commit, ie HEAD)
+*/
 func (g *GoliacServerImpl) triggerApply(forceresync bool) {
 	err, errs, warns, applied := g.serveApply(forceresync)
 	if !applied && err == nil {
@@ -671,6 +682,11 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	return server, nil
 }
 
+/*
+forceResync will force the apply process to resync with the remote repository
+even if the last commit seems to have been applied (Goliac will in fact
+reapply the last commit, ie HEAD)
+*/
 func (g *GoliacServerImpl) serveApply(forceresync bool) (error, []error, []entity.Warning, bool) {
 	// we want to run ApplyToGithub
 	// and queue one new run (the lobby) if a new run is asked
