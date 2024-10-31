@@ -587,14 +587,11 @@ func (g *GoliacServerImpl) Serve() {
 				g.syncInterval--
 				time.Sleep(1 * time.Second)
 				if g.syncInterval <= 0 {
-					// we want to sync
-					// if we just started, let's force sync
-					// otherwise, let's just sync
-					if g.lastUnmanaged == nil {
-						g.triggerApply(true)
-					} else {
-						g.triggerApply(false)
-					}
+					// we want to forceSync.
+					// because we want to reconciliate even if there
+					// is no new commit
+					// (and also it will populate the lastUnmanaged structure)
+					g.triggerApply(true)
 				}
 			}
 		}
