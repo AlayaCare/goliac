@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -51,52 +52,60 @@ func NewScaffold() (*Scaffold, error) {
  * Generate will generate a full teams directory structure compatible with Goliac
  */
 func (s *Scaffold) Generate(rootpath string, adminteam string) error {
-	fs := osfs.New("/")
+	if _, err := os.Stat(rootpath); os.IsNotExist(err) {
+		// Create the directory if it does not exist
+		err := os.MkdirAll(rootpath, 0755)
+		if err != nil {
+			return fmt.Errorf("error creating directory: %v", err)
+		}
+	}
+	fs := osfs.New(rootpath)
+
 	ctx := context.Background()
 	if err := s.remote.Load(ctx, true); err != nil {
 		logrus.Warnf("Not able to load all information from Github: %v, but I will try to continue", err)
 	}
-	return s.generate(ctx, fs, rootpath, adminteam)
+	return s.generate(ctx, fs, adminteam)
 }
 
-func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, rootpath string, adminteam string) error {
-	utils.RemoveAll(fs, path.Join(rootpath, "users"))
-	utils.RemoveAll(fs, path.Join(rootpath, "teams"))
-	utils.RemoveAll(fs, path.Join(rootpath, "rulesets"))
-	utils.RemoveAll(fs, path.Join(rootpath, "archived"))
+func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam string) error {
+	utils.RemoveAll(fs, "users")
+	utils.RemoveAll(fs, "teams")
+	utils.RemoveAll(fs, "rulesets")
+	utils.RemoveAll(fs, "archived")
 
-	fs.MkdirAll(path.Join(rootpath, "archived"), 0755)
-	fs.MkdirAll(path.Join(rootpath, "rulesets"), 0755)
-	fs.MkdirAll(path.Join(rootpath, "teams"), 0755)
+	fs.MkdirAll("archived", 0755)
+	fs.MkdirAll("rulesets", 0755)
+	fs.MkdirAll("teams", 0755)
 
-	usermap, err := s.generateUsers(ctx, fs, path.Join(rootpath, "users"))
+	usermap, err := s.generateUsers(ctx, fs, "users")
 	if err != nil {
-		return fmt.Errorf("Error creaing the users directory: %v", err)
+		return fmt.Errorf("error creaing the users directory: %v", err)
 	}
 
-	err, foundAdmin := s.generateTeams(ctx, fs, path.Join(rootpath, "teams"), usermap, adminteam)
+	err, foundAdmin := s.generateTeams(ctx, fs, "teams", usermap, adminteam)
 	if err != nil {
-		return fmt.Errorf("Error creating the teams directory: %v", err)
+		return fmt.Errorf("error creating the teams directory: %v", err)
 	}
 
-	if err := s.generateRuleset(fs, path.Join(rootpath, "rulesets")); err != nil {
-		return fmt.Errorf("Error creating the rulesets directory: %v", err)
+	if err := s.generateRuleset(fs, "rulesets"); err != nil {
+		return fmt.Errorf("error creating the rulesets directory: %v", err)
 	}
 
-	if err := s.generateGoliacConf(fs, rootpath, adminteam); err != nil {
-		return fmt.Errorf("Error creating the goliac.yaml file: %v", err)
+	if err := s.generateGoliacConf(fs, ".", adminteam); err != nil {
+		return fmt.Errorf("error creating the goliac.yaml file: %v", err)
 	}
 
-	if err := s.generateGithubAction(fs, rootpath); err != nil {
-		return fmt.Errorf("Error creating the .github/workflows/pr.yaml file: %v", err)
+	if err := s.generateGithubAction(fs, "."); err != nil {
+		return fmt.Errorf("error creating the .github/workflows/pr.yaml file: %v", err)
 	}
 
-	if err := s.generateReadme(fs, rootpath); err != nil {
-		return fmt.Errorf("Error creating the README.md file: %v", err)
+	if err := s.generateReadme(fs, "."); err != nil {
+		return fmt.Errorf("error creating the README.md file: %v", err)
 	}
 
 	if !foundAdmin {
-		return fmt.Errorf("The admin team '%s' was not found", adminteam)
+		return fmt.Errorf("the admin team '%s' was not found", adminteam)
 	}
 
 	return nil
@@ -433,7 +442,7 @@ You can archive a repository, by a PR that move the yaml repository file into th
 func writeYamlFile(filename string, in interface{}, fs billy.Filesystem) error {
 	file, err := fs.Create(filename)
 	if err != nil {
-		return fmt.Errorf("Not able to create file %s: %v", filename, err)
+		return fmt.Errorf("not able to create file %s: %v", filename, err)
 	}
 	defer file.Close()
 
@@ -441,7 +450,7 @@ func writeYamlFile(filename string, in interface{}, fs billy.Filesystem) error {
 	encoder.SetIndent(2)
 	err = encoder.Encode(in)
 	if err != nil {
-		return fmt.Errorf("Not able to write to file %s: %v", filename, err)
+		return fmt.Errorf("not able to write to file %s: %v", filename, err)
 	}
 	return nil
 }
@@ -450,13 +459,13 @@ func writeYamlFile(filename string, in interface{}, fs billy.Filesystem) error {
 func writeFile(filename string, content []byte, fs billy.Filesystem) error {
 	file, err := fs.Create(filename)
 	if err != nil {
-		return fmt.Errorf("Not able to create file %s: %v", filename, err)
+		return fmt.Errorf("not able to create file %s: %v", filename, err)
 	}
 	defer file.Close()
 
 	_, err = file.Write(content)
 	if err != nil {
-		return fmt.Errorf("Not able to write to file %s: %v", filename, err)
+		return fmt.Errorf("not able to write to file %s: %v", filename, err)
 	}
 	return nil
 }
