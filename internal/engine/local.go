@@ -144,7 +144,7 @@ func (g *GoliacLocalImpl) Clone(accesstoken, repositoryUrl, branch string) error
 		return err
 	}
 	err = w.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.ReferenceName("refs/remotes/origin/" + branch),
+		Branch: plumbing.NewBranchReferenceName(branch),
 	})
 	if err != nil {
 		return err
@@ -316,6 +316,30 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 	if g.repo == nil {
 		return fmt.Errorf("git repository not cloned")
 	}
+
+	// Get the HEAD reference
+	headRef, err := g.repo.Head()
+	if err != nil {
+		return err
+	}
+
+	if headRef.Name() != plumbing.NewBranchReferenceName(branch) {
+		// If not on main, check out the main branch
+		worktree, err := g.repo.Worktree()
+		if err != nil {
+			return err
+		}
+
+		err = worktree.Checkout(&git.CheckoutOptions{
+			Branch: plumbing.NewBranchReferenceName(branch),
+			Create: false,
+			Force:  true,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	w, err := g.repo.Worktree()
 	if err != nil {
 		return err
@@ -371,21 +395,12 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 		return err
 	}
 
-	// Get the HEAD reference
-	headRef, err := g.repo.Head()
-	if err != nil {
-		return err
-	}
-
-	refSpec := fmt.Sprintf("%s:refs/heads/%s", headRef.Name(), branch)
 	err = g.repo.Push(&git.PushOptions{
 		RemoteName: "origin",
 		Auth: &http.BasicAuth{
 			Username: "x-access-token", // This can be anything except an empty string
 			Password: accesstoken,
 		},
-		Force:    true,
-		RefSpecs: []goconfig.RefSpec{goconfig.RefSpec(refSpec)},
 	})
 
 	if err != nil {
@@ -447,6 +462,23 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 			return err
 		}
 
+		if headRef.Name() != plumbing.NewBranchReferenceName(branch) {
+			// If not on main, check out the main branch
+			worktree, err := g.repo.Worktree()
+			if err != nil {
+				return err
+			}
+
+			err = worktree.Checkout(&git.CheckoutOptions{
+				Branch: plumbing.NewBranchReferenceName(branch),
+				Create: false,
+				Force:  true,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
 		err = utils.WriteFile(w.Filesystem, codeownerpath, []byte(newContent), 0644)
 		if err != nil {
 			return err
@@ -469,15 +501,12 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 			return err
 		}
 
-		refSpec := fmt.Sprintf("%s:refs/heads/%s", headRef.Name(), branch)
 		err = g.repo.Push(&git.PushOptions{
 			RemoteName: "origin",
 			Auth: &http.BasicAuth{
 				Username: "x-access-token", // This can be anything except an empty string
 				Password: accesstoken,
 			},
-			Force:    true,
-			RefSpecs: []goconfig.RefSpec{goconfig.RefSpec(refSpec)},
 		})
 
 		if err != nil {
@@ -615,35 +644,43 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 	if len(teamschanged) > 0 || len(deletedusers) > 0 || len(addedusers) > 0 {
 
 		logrus.Info("some users and/or teams must be commited")
-		if dryrun {
-			return nil
-		}
 
 		for _, u := range deletedusers {
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "remove_user_from_repository"}).Infof("user: %s", u)
-			_, err = w.Remove(u)
-			if err != nil {
-				return err
+			if !dryrun {
+				_, err = w.Remove(u)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
 		for _, u := range addedusers {
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "add_user_to_repository"}).Infof("user: %s", u)
-			_, err = w.Add(u)
-			if err != nil {
-				return err
+			if !dryrun {
+				fmt.Println(u)
+				_, err = w.Add(u)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
 		for _, t := range teamschanged {
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "update_team_to_repository"}).Infof("team: %s", t)
-			_, err = w.Add(t)
-			if err != nil {
-				return err
+			if !dryrun {
+				_, err = w.Add(t)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
-		commit, err := w.Commit("update teams and users", &git.CommitOptions{
+		if dryrun {
+			return nil
+		}
+
+		_, err = w.Commit("update teams and users", &git.CommitOptions{
 			Author: &object.Signature{
 				Name:  "Goliac",
 				Email: config.Config.GoliacEmail,
@@ -655,11 +692,6 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 			return err
 		}
 
-		_, err = g.repo.CommitObject(commit)
-		if err != nil {
-			return err
-		}
-
 		// Now push the tag to the remote repository
 		auth := &http.BasicAuth{
 			Username: "x-access-token", // This can be anything except an empty string
@@ -667,7 +699,8 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		}
 
 		err = g.repo.Push(&git.PushOptions{
-			Auth: auth,
+			RemoteName: "origin",
+			Auth:       auth,
 		})
 
 		return err
