@@ -657,7 +657,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 		}
 
 		// archive the repository 'repo1'
-		err = g.ArchiveRepos([]string{"repo1"}, "none", "main", "foobar")
+		err = g.ArchiveRepos([]string{"repo1"}, "none", "master", "foobar")
 		assert.Nil(t, err)
 
 		// check the content of the 'archived/repo1.yaml' file
@@ -699,7 +699,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 		assert.NotNil(t, goliacConfig)
 
 		// update and commit the CODEOWNERS file
-		err = g.UpdateAndCommitCodeOwners(goliacConfig, false, "none", "main", "foobar")
+		err = g.UpdateAndCommitCodeOwners(goliacConfig, false, "none", "master", "foobar")
 		assert.Nil(t, err)
 
 		// check the content of the CODEOWNERS file
