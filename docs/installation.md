@@ -143,11 +143,10 @@ spec:
 
 ### Testing your IAC github repository
 
-Before commiting your new structure you can use `goliac verify` to test the validity:
+Before commiting your new structure you can use `goliac verify <path to teams repo>` to test the validity:
 
 ```
-cd teams
-goliac verify
+goliac verify teams/
 ```
 
 ### Applying manually
