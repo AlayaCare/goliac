@@ -11,7 +11,7 @@ Goliac (Github Organization Leveraged by Infrastructure As Code), is a collabora
 ## For Github admin
 
 - [why Goliac](docs/why_goliac.md)
-- [Insallation guide](docs/installation.md)
+- [Installation guide](docs/installation.md)
 - [How to sync (users) from external](docs/installation.md#syncing-users-from-an-external-source)
 - [Troubleshooting guide](docs/troubleshooting.md)
 
@@ -55,7 +55,7 @@ kind: Repository
 name: awesome-repository
 ```
 
-This will create a `awesome-repository` repository under your organization, that will be 
+This will create a `awesome-repository` repository under your organization, that will be
 - private by default
 - writable by all owners/members of this team (in our example `foobar`)
 

@@ -1,26 +1,32 @@
 # How to install and use
 
-You need to
-- create the Goliac Github App (and points to the server)
-- create the IAC github repository (with the Github actions associated) or clone the example repository
-- deploy the server somewhere (and configured it)
+You need to:
+- [1. create the Goliac GitHub App (and point it to the server)](#1-creating-the-goliac-github-app)
+- [2. create the IAC github repository (with the GitHub actions associated) or clone the example repository](#2-creating-the-iac-github-repository)
+- [3. deploy the server somewhere (and configure it)](#3-configure-the-goliac-server)
 
-## Creating the Goliac Githun App
+Optionally, you can:
+- [Sync Users from an external source](#optional-syncing-users-from-an-external-source)
+- [Add the Slack integration](#optional-slack-integration)
+- [Configure a GitHub webhook](#optional-github-webhook)
 
-In Github
+
+## 1. Creating the Goliac GitHub App
+
+In GitHub
 - Register new GitHub App
-  - in your profile settings, go to `Developer settings`/`Github Apps`
-  - Click on `New Github App`
+  - in your profile settings, go to `Developer settings`/`GitHub Apps`
+  - Click on `New GitHub App`
 - Give basic information:
-  - Github App  name can be `goliac-project-app` (it will be used in the rulesets later)
+  - GitHub App  name can be `goliac-project-app` (it will be used in the rulesets later)
   - Homepage URL can be `https://github.com/Alayacare/goliac`
   - Disable the active Webhook
 - Under Organization permissions
   - Give Read/Write access to `Administration`
   - Give Read/Write access to `Members`
 - Under Repository permissions
-  - Give Read/Write access to `Administration` 
-  - Give Read/Write access to `Repository Content` 
+  - Give Read/Write access to `Administration`
+  - Give Read/Write access to `Repository Content`
 - Where can this GitHub App be installed: `Only on this account`
 - And Create
 - then you must
@@ -29,23 +35,9 @@ In Github
 - Go to the left tab "Install App"
   - Click on "Install"
 
-## The goliac application
+## 2. Creating the IAC github repository
 
-By using the docker container (`ghcr.io/nzin/goliac`) or the standalone application, goliac comes with different commands
-
-| Command  | Description                                                                    |
-|----------|--------------------------------------------------------------------------------|
-| scaffold | help you bootstrap an IAC structure, based on your current Github organization |
-| verify   | check the validity of a local IAC structure. Used for the CI (for example)  to valiate a PR |
-| plan     | download a teams IAC repository, and show changes to apply                     |
-| apply    | download a teams IAC repository, and apply it to Github                        |
-| serve    | starts a server (and a UI) and apply automaticall every 10 minutes             |
-| syncusers| get the definition of users outside and put it back to the IAC structure       |
-
-
-## Creating the IAC github repository
-
-In your Github organization, you need to create a git repository. Usually it is called `teams`.
+In your GitHub organization, you need to create a git repository. Usually it is called `teams`.
 
 You have different way to initialize it.
 
@@ -100,30 +92,30 @@ export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 ./goliac scaffold teams admin
 ```
 
-The application will connect to your Github organization and will try to guess
+The application will connect to your GitHub organization and will try to guess
 - your users
 - your teams
 - the repos associated with your teams
 
 And it will create the corresponding structure
 
-## the goliac.yaml configuration file
+### the goliac.yaml configuration file
 
 To make Goliac working you can configure the `/goliac.yaml` file
 
 ```
-admin_team: admin # the name of the team (in the `/teams` directory ) that can admin this repository 
+admin_team: admin # the name of the team (in the `/teams` directory ) that can admin this repository
 everyone_team_enabled: false # if you want all members to have read access to all repositories
 
 rulesets:
   - pattern: .*
     ruleset: default
 
-max_changesets: 50 # protection measure: how many changes Goliac can do at once before considering that suspicious 
+max_changesets: 50 # protection measure: how many changes Goliac can do at once before considering that suspicious
 archive_on_delete: true # dont delete directly repository, but archive them first
 
 destructive_operations:
-  repositories: false # can Goliac remove repositories not listed in this repository 
+  repositories: false # can Goliac remove repositories not listed in this repository
   teams: false        # can Goliac remove teams not listed in this repository
   users: false        # can Goliac remove users not listed in this repository
   rulesets: false     # can Goliac remove rulesets not listed in this repository
@@ -135,12 +127,12 @@ apiVersion: v1
 kind: Ruleset
 name: default
 spec:
-  enforcement: evaluate # can be disable, active or evaluate 
+  enforcement: evaluate # can be disable, active or evaluate
   bypassapps:
     - appname: goliac-project-app
       mode: always # always or pull_request
   on:
-    include: 
+    include:
       - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
 
   rules:
@@ -149,16 +141,15 @@ spec:
         requiredApprovingReviewCount: 1
 ```
 
-## Testing your IAC github repository
+### Testing your IAC github repository
 
-Before commiting your new structure you can use `goliac verify` to test the validity:
+Before commiting your new structure you can use `goliac verify <path to teams repo>` to test the validity:
 
 ```
-cd teams
-goliac verify
+goliac verify teams/
 ```
 
-## Applying manually
+### Applying manually
 
 After merging your team IAC teams repository, you can begin to test and apply
 
@@ -184,7 +175,20 @@ export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
 
 If it works for you, you can put in place the goliac service to fetch and apply automatically (like every 10 minute). See below
 
-## Configure the Goliac server
+### The goliac application
+
+By using the docker container (`ghcr.io/nzin/goliac`) or the standalone application, goliac comes with different commands
+
+| Command  | Description                                                                    |
+|----------|--------------------------------------------------------------------------------|
+| scaffold | help you bootstrap an IAC structure, based on your current GitHub organization |
+| verify   | check the validity of a local IAC structure. Used for the CI (for example)  to valiate a PR |
+| plan     | download a teams IAC repository, and show changes to apply                     |
+| apply    | download a teams IAC repository, and apply it to GitHub                        |
+| serve    | starts a server (and a UI) and apply automaticall every 10 minutes             |
+| syncusers| get the definition of users outside and put it back to the IAC structure       |
+
+## 3. Configure the Goliac server
 
 You can run the goliac server as a service or a docker container. It needs several environment variables:
 
@@ -194,11 +198,11 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_LOGRUS_FORMAT             | text        | text or json                |
 | GOLIAC_GITHUB_SERVER             | https://api.github.com |                  |
 | GOLIAC_GITHUB_APP_ORGANIZATION   |             | (mandatory) name of your github org     |
-| GOLIAC_GITHUB_APP_ID             |             | (mandatory) app id of Goliac Github App |
+| GOLIAC_GITHUB_APP_ID             |             | (mandatory) app id of Goliac GitHub App |
 | GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE |           | (mandatory) path to private key       |
 | GOLIAC_EMAIL                     | goliac@alayacare.com | author name used by Goliac to commit (Codeowners) |
 | GOLIAC_GITHUB_CONCURRENT_THREADS | 1           | You can increase, like '4' |
-| GOLIAC_GITHUB_CACHE_TTL          |  86400      | Github remote cache seconds retention |
+| GOLIAC_GITHUB_CACHE_TTL          |  86400      | GitHub remote cache seconds retention |
 | GOLIAC_SERVER_APPLY_INTERVAL     | 600         | How often (seconds) Goliac try to apply |
 | GOLIAC_SERVER_GIT_REPOSITORY     |             | (mandatory) teams repo name in your organization |
 | GOLIAC_SERVER_GIT_BRANCH         | main        | teams repo default branch name to use |
@@ -208,10 +212,10 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_MAX_CHANGESETS_OVERRIDE    | false          | if you need to override the `max_changesets` setting in the `goliac.yaml` file. Useful in particular using the `goliac apply` CLI  |
 | GOLIAC_SLACK_TOKEN                |               | (optional) Slack token to send notification (ususally error messages if any) |
 | GOLIAC_SLACK_CHANNEL              |               | (optional) Slack channel to send notification |
-| GOLIAC_GITHUB_WEBHOOK_HOST        | 0.0.0.0       | (optional) Hostname to listen to Github webhook |
-| GOLIAC_GITHUB_WEBHOOK_PORT        | 18001         | (optional) Port to listen to Github webhook |
-| GOLIAC_GITHUB_WEBHOOK_SECRET      |               | (optional) Secret to validate Github webhook |
-| GOLIAC_GITHUB_WEBHOOK_PATH        | /webhook      | (optional) Path to listen to Github webhook |
+| GOLIAC_GITHUB_WEBHOOK_HOST        | 0.0.0.0       | (optional) Hostname to listen to GitHub webhook |
+| GOLIAC_GITHUB_WEBHOOK_PORT        | 18001         | (optional) Port to listen to GitHub webhook |
+| GOLIAC_GITHUB_WEBHOOK_SECRET      |               | (optional) Secret to validate GitHub webhook |
+| GOLIAC_GITHUB_WEBHOOK_PATH        | /webhook      | (optional) Path to listen to GitHub webhook |
 then you just need to start it with
 
 ```
@@ -318,16 +322,16 @@ spec:
   type: ClusterIP
 ```
 
-## Syncing Users from an external source
+## Optional: Syncing Users from an external source
 
 You can create/edit all your users manually in the `users/org/` directory. But often you are already managing your users from another source of thruth.
 
 Goliac can sync users from an external source, This is the `usersync` section in the `goliac.yaml` file. There are different plugins:
- 
+
 | Plugin name    | Description                                                               |
 |----------------|---------------------------------------------------------------------------|
 | noop           | Doing nothing (if you dont want to sync from an external source of truth) |
-| fromgithubsaml | If you are using Github Enterprise SAML integration                       |
+| fromgithubsaml | If you are using GitHub Enterprise SAML integration                       |
 | shellscript    | If you want an ad-hoc sync method, Goliac call the `usersync.path`        |
 
 What you need to do:
@@ -348,7 +352,7 @@ spec:
   githubID: alice-myorg
 ```
 
-## Slack integration
+## Optional: Slack integration
 
 If you want to be notified of sync process issues, you can create a Slack application, and configure the `GOLIAC_SLACK_TOKEN` and `GOLIAC_SLACK_CHANNEL` environment variables.
 
@@ -357,19 +361,19 @@ To create a Slack application, you can go to https://api.slack.com/apps, and `Cr
 ```yaml
 display_information:
   name: Goliac
-  description: Github Organization Leveraged by Infrastructure As Code
+  description: GitHub Organization Leveraged by Infrastructure As Code
   background_color: "#616161"
   long_description: "https://github.com/AlayaCare/goliac\r
 
     \r
 
-    Goliac (Github Organization Leveraged by Infrastructure As Code), is a tool to manage your Github Organization (users/teams/repositories) via yaml manifests files structured in a Github repository\r
+    Goliac (GitHub Organization Leveraged by Infrastructure As Code), is a tool to manage your GitHub Organization (users/teams/repositories) via yaml manifests files structured in a GitHub repository\r
 
-    this IAC Github repositories can be updated by teams from your organization, but only the repositories they owns\r
+    this IAC GitHub repositories can be updated by teams from your organization, but only the repositories they owns\r
 
-    all repositories rules are enforced via a central configuration that only the IT/security team can update (if you are using Github Enterprise)\r
+    all repositories rules are enforced via a central configuration that only the IT/security team can update (if you are using GitHub Enterprise)\r
 
-    a Github App watching this repository and applying any changes"
+    a GitHub App watching this repository and applying any changes"
 features:
   bot_user:
     display_name: Goliac
@@ -389,12 +393,12 @@ You need to
 -  to set the 2 environments variables (`GOLIAC_SLACK_TOKEN` and `GOLIAC_SLACK_CHANNEL`) with the token and the channel name.
 -  to invite the bot to the channel.
 
-## Github webhook
+## Optional: GitHub webhook
 
-By default Goliac works by polling the state of the teams Github repository (by default every 10 minutes).
- But you can configure a webhook to be notified of changes in your Github organization.
+By default Goliac works by polling the state of the teams GitHub repository (by default every 10 minutes).
+ But you can configure a webhook to be notified of changes in your GitHub organization.
 
-To do so, you need to update the Github App configuration:
+To do so, you need to update the GitHub App configuration:
 - in General:
   - enable the active Webhook
   - set a webhook secret
