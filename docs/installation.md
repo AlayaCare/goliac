@@ -66,7 +66,15 @@ You need the following structure:
    │ ├─ <reponame>.yaml
    │ ├─ <reponame>.yaml
    │  ...
-   ├─ <teaname>/
+   ├─ <teamame>/
+   │ ├─ <team.yaml
+   │ ├─ <reponame>.yaml
+   │ ├─ ...
+   │ └─ <subteamname>/
+   │   ├─ <team.yaml
+   │   ├─ <reponame>.yaml
+   │   ...
+   ├─ <teamame>/
    │ └─ team.yaml
    │ ...
    ...

@@ -132,6 +132,11 @@ func (m *MutableGoliacRemoteImpl) UpdateTeamRemoveMember(teamslug string, userna
 		}
 	}
 }
+func (m *MutableGoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, dryrun bool, teamslug string, parentTeam *int) {
+	if t, ok := m.teams[teamslug]; ok {
+		t.ParentTeam = parentTeam
+	}
+}
 func (m *MutableGoliacRemoteImpl) DeleteTeam(teamslug string) {
 	if t, ok := m.teams[teamslug]; ok {
 		teamname := t.Name

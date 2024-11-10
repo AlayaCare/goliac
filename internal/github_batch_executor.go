@@ -58,12 +58,13 @@ func (g *GithubBatchExecutor) RemoveUserFromOrg(ctx context.Context, dryrun bool
 	})
 }
 
-func (g *GithubBatchExecutor) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, members []string) {
+func (g *GithubBatchExecutor) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
 	g.commands = append(g.commands, &GithubCommandCreateTeam{
 		client:      g.client,
 		dryrun:      dryrun,
 		teamname:    teamname,
 		description: description,
+		parentTeam:  parentTeam,
 		members:     members,
 	})
 }
@@ -85,6 +86,15 @@ func (g *GithubBatchExecutor) UpdateTeamRemoveMember(ctx context.Context, dryrun
 		dryrun:   dryrun,
 		teamslug: teamslug,
 		member:   username,
+	})
+}
+
+func (g *GithubBatchExecutor) UpdateTeamSetParent(ctx context.Context, dryrun bool, teamslug string, parentTeam *int) {
+	g.commands = append(g.commands, &GithubCommandUpdateTeamSetParent{
+		client:     g.client,
+		dryrun:     dryrun,
+		teamslug:   teamslug,
+		parentTeam: parentTeam,
 	})
 }
 
@@ -244,11 +254,12 @@ type GithubCommandCreateTeam struct {
 	dryrun      bool
 	teamname    string
 	description string
+	parentTeam  *int
 	members     []string
 }
 
 func (g *GithubCommandCreateTeam) Apply(ctx context.Context) {
-	g.client.CreateTeam(ctx, g.dryrun, g.teamname, g.description, g.members)
+	g.client.CreateTeam(ctx, g.dryrun, g.teamname, g.description, g.parentTeam, g.members)
 }
 
 type GithubCommandDeleteRepository struct {
@@ -372,6 +383,17 @@ type GithubCommandUpdateTeamRemoveMember struct {
 
 func (g *GithubCommandUpdateTeamRemoveMember) Apply(ctx context.Context) {
 	g.client.UpdateTeamRemoveMember(ctx, g.dryrun, g.teamslug, g.member)
+}
+
+type GithubCommandUpdateTeamSetParent struct {
+	client     engine.ReconciliatorExecutor
+	dryrun     bool
+	teamslug   string
+	parentTeam *int
+}
+
+func (g *GithubCommandUpdateTeamSetParent) Apply(ctx context.Context) {
+	g.client.UpdateTeamSetParent(ctx, g.dryrun, g.teamslug, g.parentTeam)
 }
 
 type GithubCommandAddRuletset struct {

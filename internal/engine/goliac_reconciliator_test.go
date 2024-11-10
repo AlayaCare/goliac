@@ -129,6 +129,7 @@ type ReconciliatorListenerRecorder struct {
 	TeamsCreated      map[string][]string
 	TeamMemberAdded   map[string][]string
 	TeamMemberRemoved map[string][]string
+	TeamParentUpdated map[string]*int
 	TeamDeleted       map[string]bool
 
 	RepositoryCreated              map[string]bool
@@ -153,6 +154,7 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 		TeamsCreated:                   make(map[string][]string),
 		TeamMemberAdded:                make(map[string][]string),
 		TeamMemberRemoved:              make(map[string][]string),
+		TeamParentUpdated:              make(map[string]*int),
 		TeamDeleted:                    make(map[string]bool),
 		RepositoryCreated:              make(map[string]bool),
 		RepositoryTeamAdded:            make(map[string][]string),
@@ -175,7 +177,7 @@ func (r *ReconciliatorListenerRecorder) AddUserToOrg(ctx context.Context, dryrun
 func (r *ReconciliatorListenerRecorder) RemoveUserFromOrg(ctx context.Context, dryrun bool, ghuserid string) {
 	r.UsersRemoved[ghuserid] = ghuserid
 }
-func (r *ReconciliatorListenerRecorder) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, members []string) {
+func (r *ReconciliatorListenerRecorder) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
 	r.TeamsCreated[teamname] = append(r.TeamsCreated[teamname], members...)
 }
 func (r *ReconciliatorListenerRecorder) UpdateTeamAddMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
@@ -183,6 +185,9 @@ func (r *ReconciliatorListenerRecorder) UpdateTeamAddMember(ctx context.Context,
 }
 func (r *ReconciliatorListenerRecorder) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string) {
 	r.TeamMemberRemoved[teamslug] = append(r.TeamMemberRemoved[teamslug], username)
+}
+func (r *ReconciliatorListenerRecorder) UpdateTeamSetParent(ctx context.Context, dryrun bool, teamslug string, parentTeam *int) {
+	r.TeamParentUpdated[teamslug] = parentTeam
 }
 func (r *ReconciliatorListenerRecorder) DeleteTeam(ctx context.Context, dryrun bool, teamslug string) {
 	r.TeamDeleted[teamslug] = true
@@ -229,7 +234,6 @@ func (r *ReconciliatorListenerRecorder) Commit(ctx context.Context, dryrun bool)
 }
 
 func TestReconciliation(t *testing.T) {
-
 	t.Run("happy path: new team", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
@@ -270,6 +274,7 @@ func TestReconciliation(t *testing.T) {
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
 
 		// 2 members created
+		fmt.Println("**debug", recorder.TeamsCreated)
 		assert.Equal(t, 2, len(recorder.TeamsCreated["new"]))
 		assert.Equal(t, 1, len(recorder.TeamsCreated["new-owners"]))
 	})
@@ -377,6 +382,8 @@ func TestReconciliation(t *testing.T) {
 
 		// 1 members added
 		assert.Equal(t, 0, len(recorder.TeamsCreated))
+		fmt.Println("added", recorder.TeamMemberAdded)
+		fmt.Println("removed", recorder.TeamMemberRemoved)
 		assert.Equal(t, 1, len(recorder.TeamMemberAdded["existing"]))
 	})
 
@@ -526,6 +533,158 @@ func TestReconciliation(t *testing.T) {
 
 		// 1 team deleted
 		assert.Equal(t, 0, len(recorder.TeamDeleted))
+	})
+
+	t.Run("happy path: status quo: no new parent to a team", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		lParentTeam := &entity.Team{}
+		lParentTeam.Name = "parentTeam"
+		lParentTeam.Spec.Owners = []string{"existing_owner"}
+		lParentTeam.Spec.Members = []string{}
+		local.teams["parentTeam"] = lParentTeam
+
+		lChildTeam := &entity.Team{}
+		lChildTeam.Name = "childTeam"
+		lChildTeam.Spec.Owners = []string{"existing_owner"}
+		lChildTeam.Spec.Members = []string{}
+		local.teams["childTeam"] = lChildTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		parentTeam := &GithubTeam{
+			Name:    "parentTeam",
+			Slug:    "parentteam",
+			Members: []string{"existing_owner"},
+			Id:      1,
+		}
+
+		parentTeamOwners := &GithubTeam{
+			Name:    "parentteam-owners",
+			Slug:    "parentteam-owners",
+			Members: []string{"existing_owner"},
+			Id:      1,
+		}
+
+		childTeam := &GithubTeam{
+			Name:    "childTeam",
+			Slug:    "childteam",
+			Members: []string{"existing_owner"},
+			Id:      2,
+		}
+
+		childTeamOwners := &GithubTeam{
+			Name:    "childTeam-owners",
+			Slug:    "childteam-owners",
+			Members: []string{"existing_owner"},
+			Id:      2,
+		}
+
+		remote.teams["parentteam"] = parentTeam
+		remote.teams["parentteam-owners"] = parentTeamOwners
+		remote.teams["childteam"] = childTeam
+		remote.teams["childteam-owners"] = childTeamOwners
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+
+		// 0 parent updated
+		assert.Equal(t, 0, len(recorder.TeamParentUpdated))
+	})
+
+	t.Run("happy path: add parent to a team", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		lParentTeam := &entity.Team{}
+		lParentTeam.Name = "parentTeam"
+		lParentTeam.Spec.Owners = []string{"existing_owner"}
+		lParentTeam.Spec.Members = []string{}
+		local.teams["parentTeam"] = lParentTeam
+
+		lChildTeam := &entity.Team{}
+		lChildTeam.Name = "childTeam"
+		lChildTeam.Spec.Owners = []string{"existing_owner"}
+		lChildTeam.Spec.Members = []string{}
+		// let's put the child under the parent
+		parent := "parentTeam"
+		lChildTeam.ParentTeam = &parent
+
+		local.teams["childTeam"] = lChildTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		parentTeam := &GithubTeam{
+			Name:    "parentTeam",
+			Slug:    "parentteam",
+			Members: []string{"existing_owner"},
+			Id:      1,
+		}
+
+		parentTeamOwners := &GithubTeam{
+			Name:    "parentteam-owners",
+			Slug:    "parentteam-owners",
+			Members: []string{"existing_owner"},
+			Id:      1,
+		}
+
+		childTeam := &GithubTeam{
+			Name:    "childTeam",
+			Slug:    "childteam",
+			Members: []string{"existing_owner"},
+			Id:      2,
+		}
+
+		childTeamOwners := &GithubTeam{
+			Name:    "childTeam-owners",
+			Slug:    "childteam-owners",
+			Members: []string{"existing_owner"},
+			Id:      2,
+		}
+
+		remote.teams["parentteam"] = parentTeam
+		remote.teams["parentteam-owners"] = parentTeamOwners
+		remote.teams["childteam"] = childTeam
+		remote.teams["childteam-owners"] = childTeamOwners
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+
+		// 1 team parent updated
+		assert.Equal(t, 1, len(recorder.TeamParentUpdated))
 	})
 
 	t.Run("happy path: removed team", func(t *testing.T) {
