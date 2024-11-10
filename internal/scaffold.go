@@ -117,6 +117,11 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 	teamsRepositories := s.remote.TeamRepositories(ctx)
 	teams := s.remote.Teams(ctx)
 
+	teamIds := make(map[int]*engine.GithubTeam)
+	for _, t := range teams {
+		teamIds[t.Id] = t
+	}
+
 	// to ensure only one owner
 	repoAdmin := make(map[string]string)
 	teamsRepos := make(map[string][]string)
@@ -180,9 +185,15 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 				// put the right user name instead of the github id
 				lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
 			}
-			fs.MkdirAll(path.Join(teamspath, team), 0755)
-			if err := writeYamlFile(path.Join(teamspath, team, "team.yaml"), &lTeam, fs); err != nil {
-				logrus.Errorf("not able to write team file %s: %v", team, err)
+
+			teamPath, err := buildTeamPath(teamIds, teams[team])
+			if err != nil {
+				logrus.Errorf("unable to compute team's path: %v (for team %s)", err, team)
+				continue
+			}
+			fs.MkdirAll(path.Join(teamspath, teamPath), 0755)
+			if err := writeYamlFile(path.Join(teamspath, teamPath, "team.yaml"), &lTeam, fs); err != nil {
+				logrus.Errorf("not able to write team file %s in %s: %v", team, teamPath, err)
 			}
 
 			// write repos
@@ -208,7 +219,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 						break
 					}
 				}
-				if err := writeYamlFile(path.Join(teamspath, team, r+".yaml"), &lRepo, fs); err != nil {
+				if err := writeYamlFile(path.Join(teamspath, teamPath, r+".yaml"), &lRepo, fs); err != nil {
 					logrus.Errorf("not able to write repo file %s/%s.yaml: %v", team, r, err)
 				}
 			}
@@ -234,15 +245,44 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 				// put the right user name instead of the github id
 				lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
 			}
-			fs.MkdirAll(path.Join(teamspath, team), 0755)
-			if err := writeYamlFile(path.Join(teamspath, team, "team.yaml"), &lTeam, fs); err != nil {
-				logrus.Errorf("not able to write team file %s/team.yaml: %v", team, err)
+
+			teamPath, err := buildTeamPath(teamIds, teams[team])
+			if err != nil {
+				logrus.Errorf("unable to compute team's path: %v (for team %s)", err, team)
+				continue
+			}
+			fs.MkdirAll(path.Join(teamspath, teamPath), 0755)
+			if err := writeYamlFile(path.Join(teamspath, teamPath, "team.yaml"), &lTeam, fs); err != nil {
+				logrus.Errorf("not able to write team file %s/team.yaml: %v", teamPath, err)
 			}
 
 		}
 	}
 
 	return nil, adminTeamFound
+}
+
+func buildTeamPath(teamIds map[int]*engine.GithubTeam, team *engine.GithubTeam) (string, error) {
+	maxRecursive := 100
+	fullpath := team.Name
+
+	originalTeam := team.Name
+
+	for maxRecursive > 0 {
+		if team.ParentTeam == nil {
+			return fullpath, nil
+		} else {
+			prevTeam := team
+			t, ok := teamIds[*team.ParentTeam]
+			if !ok {
+				return fullpath, fmt.Errorf("not able to find back team's id %d (ie. parent of %s)", *prevTeam.ParentTeam, prevTeam.Name)
+			}
+			fullpath = path.Join(t.Name, fullpath)
+			team = t
+			maxRecursive--
+		}
+	}
+	return fullpath, fmt.Errorf("too many resursive loop for team %s. aborting", originalTeam)
 }
 
 /*
