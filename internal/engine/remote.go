@@ -53,9 +53,11 @@ type GithubRepository struct {
 }
 
 type GithubTeam struct {
-	Name    string
-	Slug    string
-	Members []string // user login
+	Name       string
+	Id         int
+	Slug       string
+	Members    []string // user login
+	ParentTeam *int
 }
 
 type GithubTeamRepo struct {
@@ -335,7 +337,7 @@ func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string,
 			return users, err
 		}
 		if len(gResult.Errors) > 0 {
-			return users, fmt.Errorf("Graphql error on loadOrgUsers: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
+			return users, fmt.Errorf("graphql error on loadOrgUsers: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 		}
 
 		for _, c := range gResult.Data.Organization.MembersWithRole.Nodes {
@@ -452,7 +454,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 			return repositories, repositoriesByRefId, err
 		}
 		if len(gResult.Errors) > 0 {
-			retErr = fmt.Errorf("Graphql error on loadRepositories: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
+			retErr = fmt.Errorf("graphql error on loadRepositories: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 		}
 
 		for _, c := range gResult.Data.Organization.Repositories.Nodes {
@@ -495,7 +497,12 @@ query listAllTeamsInOrg($orgLogin: String!, $endCursor: String) {
       teams(first: 100, after: $endCursor) {
         nodes {
           name
+		  id
           slug
+		  parentTeam {
+		    id
+			name
+		  }
         }
         pageInfo {
           hasNextPage
@@ -512,8 +519,13 @@ type GraplQLTeams struct {
 		Organization struct {
 			Teams struct {
 				Nodes []struct {
-					Name string
-					Slug string
+					Name       string
+					Id         int
+					Slug       string
+					ParentTeam struct {
+						Id   int
+						Name string
+					} `json:"parentTeam"`
 				} `json:"nodes"`
 				PageInfo struct {
 					HasNextPage bool
@@ -629,7 +641,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 				return err
 			}
 			logrus.Debugf("Error loading rulesets: %v", err)
-			retErr = fmt.Errorf("Error loading rulesets: %v", err)
+			retErr = fmt.Errorf("error loading rulesets: %v", err)
 		}
 		g.rulesets = rulesets
 		g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
@@ -642,7 +654,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 				return err
 			}
 			logrus.Debugf("Error loading app ids: %v", err)
-			retErr = fmt.Errorf("Error loading app ids: %v", err)
+			retErr = fmt.Errorf("error loading app ids: %v", err)
 		}
 		g.appIds = appIds
 		g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
@@ -655,7 +667,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 				return err
 			}
 			logrus.Debugf("Error loading users: %v", err)
-			retErr = fmt.Errorf("Error loading users: %v", err)
+			retErr = fmt.Errorf("error loading users: %v", err)
 		}
 		g.users = users
 		g.ttlExpireUsers = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
@@ -668,7 +680,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 				return err
 			}
 			logrus.Debugf("Error loading repositories: %v", err)
-			retErr = fmt.Errorf("Error loading repositories: %v", err)
+			retErr = fmt.Errorf("error loading repositories: %v", err)
 		}
 		g.repositories = repositories
 		g.repositoriesByRefId = repositoriesByRefId
@@ -682,7 +694,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 				return err
 			}
 			logrus.Debugf("Error loading teams: %v", err)
-			retErr = fmt.Errorf("Error loading teams: %v", err)
+			retErr = fmt.Errorf("error loading teams: %v", err)
 		}
 		g.teams = teams
 		g.teamSlugByName = teamSlugByName
@@ -697,7 +709,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 					return err
 				}
 				logrus.Debugf("Error loading teams-repos: %v", err)
-				retErr = fmt.Errorf("Error loading teams-repos: %v", err)
+				retErr = fmt.Errorf("error loading teams-repos: %v", err)
 			}
 			g.teamRepos = teamsrepos
 		} else {
@@ -707,7 +719,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 					return err
 				}
 				logrus.Debugf("Error loading teams-repos: %v", err)
-				retErr = fmt.Errorf("Error loading teams-repos: %v", err)
+				retErr = fmt.Errorf("error loading teams-repos: %v", err)
 			}
 			g.teamRepos = teamsrepos
 		}
@@ -819,7 +831,7 @@ func (g *GoliacRemoteImpl) loadTeamRepos(ctx context.Context, teamSlug string) (
 			return nil, err
 		}
 		if len(gResult.Errors) > 0 {
-			return nil, fmt.Errorf("Graphql error on loadTeamRepos: %v (%v) for teamSlug %s", gResult.Errors[0].Message, gResult.Errors[0].Path, teamSlug)
+			return nil, fmt.Errorf("graphql error on loadTeamRepos: %v (%v) for teamSlug %s", gResult.Errors[0].Message, gResult.Errors[0].Path, teamSlug)
 		}
 
 		for _, c := range gResult.Data.Organization.Team.Repository.Edges {
@@ -915,14 +927,19 @@ func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTea
 			return teams, teamSlugByName, err
 		}
 		if len(gResult.Errors) > 0 {
-			return teams, teamSlugByName, fmt.Errorf("Graphql error on loadTeams: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
+			return teams, teamSlugByName, fmt.Errorf("graphql error on loadTeams: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 		}
 
 		for _, c := range gResult.Data.Organization.Teams.Nodes {
-			teams[c.Slug] = &GithubTeam{
+			team := GithubTeam{
 				Name: c.Name,
+				Id:   c.Id,
 				Slug: c.Slug,
 			}
+			if c.ParentTeam.Name != "" {
+				team.ParentTeam = &c.ParentTeam.Id
+			}
+			teams[c.Slug] = &team
 			teamSlugByName[c.Name] = c.Slug
 		}
 
@@ -957,7 +974,7 @@ func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTea
 				return teams, teamSlugByName, err
 			}
 			if len(gResult.Errors) > 0 {
-				return teams, teamSlugByName, fmt.Errorf("Graphql error on loadTeams members: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
+				return teams, teamSlugByName, fmt.Errorf("graphql error on loadTeams members: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 			}
 
 			for _, c := range gResult.Data.Organization.Team.Members.Edges {
@@ -1192,7 +1209,7 @@ func (g *GoliacRemoteImpl) loadRulesets(ctx context.Context) (map[string]*Github
 			return rulesets, err
 		}
 		if len(gResult.Errors) > 0 {
-			return rulesets, fmt.Errorf("Graphql error on loadRulesets: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
+			return rulesets, fmt.Errorf("graphql error on loadRulesets: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 		}
 
 		for _, c := range gResult.Data.Organization.Rulesets.Nodes {
@@ -1386,7 +1403,7 @@ type CreateTeamResponse struct {
 	Slug string
 }
 
-func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, members []string) {
+func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
 	slugname := slug.Make(teamname)
 	// create team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
@@ -1395,7 +1412,12 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname
 			ctx,
 			fmt.Sprintf("/orgs/%s/teams", config.Config.GithubAppOrganization),
 			"POST",
-			map[string]interface{}{"name": teamname, "description": description, "privacy": "closed"},
+			map[string]interface{}{
+				"name":           teamname,
+				"description":    description,
+				"parent_team_id": parentTeam,
+				"privacy":        "closed",
+			},
 		)
 		if err != nil {
 			logrus.Errorf("failed to create team: %v. %s", err, string(body))
@@ -1488,6 +1510,22 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, dryrun bo
 		}
 		if found {
 			g.teams[teamslug].Members = members
+		}
+	}
+}
+
+func (g *GoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, dryrun bool, teamslug string, parentTeam *int) {
+	// set parent's team
+	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#update-a-team
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/orgs/%s/teams/%s", config.Config.GithubAppOrganization, teamslug),
+			"PATCH",
+			map[string]interface{}{"parent_team_id": parentTeam},
+		)
+		if err != nil {
+			logrus.Errorf("failed to delete a team: %v. %s", err, string(body))
 		}
 	}
 }

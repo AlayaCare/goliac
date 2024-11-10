@@ -147,6 +147,50 @@ name: team2
 		assert.Equal(t, len(warns), 0)
 		assert.NotNil(t, teams)
 	})
+
+	t.Run("happy path: parent and child team", func(t *testing.T) {
+		// create a new user
+		fs := memfs.New()
+		fixtureCreateUser(t, fs)
+		fs.MkdirAll("teams/team1", 0755)
+
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: team1
+spec:
+  owners:
+  - user1
+  - user2
+`), 0644)
+		assert.Nil(t, err)
+		err = utils.WriteFile(fs, "teams/team1/subteam/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: subteam
+spec:
+  owners:
+  - user1
+  - user2
+`), 0644)
+		assert.Nil(t, err)
+		users, errs, warns := ReadUserDirectory(fs, "users")
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, users)
+
+		teams, errs, warns := ReadTeamDirectory(fs, "teams", users)
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, teams)
+
+		assert.Equal(t, 2, len(teams))
+		team1 := teams["team1"]
+		assert.NotNil(t, team1)
+		subteam := teams["subteam"]
+		assert.NotNil(t, subteam)
+		assert.Equal(t, "team1", *subteam.ParentTeam)
+	})
 }
 
 func TestAdjustTeam(t *testing.T) {

@@ -16,13 +16,14 @@ type Team struct {
 		Owners  []string `yaml:"owners,omitempty"`
 		Members []string `yaml:"members,omitempty"`
 	} `yaml:"spec"`
+	ParentTeam *string
 }
 
 /*
  * NewTeam reads a file and returns a Team object
  * The next step is to validate the Team object using the Validate method
  */
-func NewTeam(fs billy.Filesystem, filename string) (*Team, error) {
+func NewTeam(fs billy.Filesystem, filename string, parent *string) (*Team, error) {
 	filecontent, err := utils.ReadFile(fs, filename)
 	if err != nil {
 		return nil, err
@@ -32,6 +33,10 @@ func NewTeam(fs billy.Filesystem, filename string) (*Team, error) {
 	err = yaml.Unmarshal(filecontent, team)
 	if err != nil {
 		return nil, err
+	}
+
+	if parent != nil {
+		team.ParentTeam = parent
 	}
 
 	return team, nil
@@ -56,12 +61,11 @@ func ReadTeamDirectory(fs billy.Filesystem, dirname string, users map[string]*Us
 	if !exist {
 		return teams, errors, warning
 	}
-
 	// Parse all the teams in the dirname directory
 	entries, err := fs.ReadDir(dirname)
 	if err != nil {
 		errors = append(errors, err)
-		return nil, errors, warning
+		return teams, errors, warning
 	}
 
 	for _, e := range entries {
@@ -72,21 +76,51 @@ func ReadTeamDirectory(fs billy.Filesystem, dirname string, users map[string]*Us
 		if e.Name()[0] == '.' {
 			continue
 		}
-		team, err := NewTeam(fs, filepath.Join(dirname, e.Name(), "team.yaml"))
-		if err != nil {
-			errors = append(errors, err)
-		} else {
-			err, warns := team.Validate(filepath.Join(dirname, e.Name()), users)
-			warning = append(warning, warns...)
-			if err != nil {
-				errors = append(errors, err)
-			} else {
-				teams[team.Name] = team
-			}
 
-		}
+		recursiveReadTeamDirectory(fs, filepath.Join(dirname, e.Name()), nil, users, teams, &errors, &warning)
 	}
 	return teams, errors, warning
+}
+
+func recursiveReadTeamDirectory(fs billy.Filesystem, dirname string, parentTeam *string, users map[string]*User, teams map[string]*Team, errors *[]error, warning *[]Warning) {
+
+	team, err := NewTeam(fs, filepath.Join(dirname, "team.yaml"), parentTeam)
+	if err != nil {
+		*errors = append(*errors, err)
+	} else {
+		err, warns := team.Validate(dirname, users)
+		*warning = append(*warning, warns...)
+		if err != nil {
+			*errors = append(*errors, err)
+		} else {
+			teams[team.Name] = team
+		}
+	}
+
+	parent := team.Name
+
+	// Parse all the subteams in the dirname directory
+	entries, err := fs.ReadDir(dirname)
+	if err != nil {
+		*errors = append(*errors, err)
+		return
+	}
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		// skipping files starting with '.'
+		if e.Name()[0] == '.' {
+			continue
+		}
+		if _, ok := teams[e.Name()]; ok {
+			*errors = append(*errors, fmt.Errorf("team %s already exists in %s", e.Name(), dirname))
+			continue
+		}
+
+		recursiveReadTeamDirectory(fs, filepath.Join(dirname, e.Name()), &parent, users, teams, errors, warning)
+	}
 }
 
 func (t *Team) Validate(dirname string, users map[string]*User) (error, []Warning) {
@@ -163,21 +197,51 @@ func ReadAndAdjustTeamDirectory(fs billy.Filesystem, dirname string, users map[s
 
 	for _, e := range entries {
 		if e.IsDir() {
-			team, err := NewTeam(fs, filepath.Join(dirname, e.Name(), "team.yaml"))
+			if e.Name()[0] == '.' {
+				continue
+			}
+			err := recursiveReadAndAdjustTeamDirectory(fs, filepath.Join(dirname, e.Name()), nil, users, &teamschanged)
 			if err != nil {
 				return teamschanged, err
-			} else {
-				changed, err := team.Update(fs, filepath.Join(dirname, e.Name(), "team.yaml"), users)
-				if err != nil {
-					return teamschanged, err
-				}
-				if changed {
-					teamschanged = append(teamschanged, filepath.Join(dirname, e.Name(), "team.yaml"))
-				}
 			}
 		}
 	}
 	return teamschanged, nil
+}
+
+func recursiveReadAndAdjustTeamDirectory(fs billy.Filesystem, dirname string, parent *string, users map[string]*User, teamschanged *[]string) error {
+	team, err := NewTeam(fs, filepath.Join(dirname, "team.yaml"), parent)
+	if err != nil {
+		return err
+	} else {
+		changed, err := team.Update(fs, filepath.Join(dirname, "team.yaml"), users)
+		if err != nil {
+			return err
+		}
+		if changed {
+			*teamschanged = append(*teamschanged, filepath.Join(dirname, "team.yaml"))
+		}
+	}
+
+	// Parse all the teams in the dirname directory
+	entries, err := fs.ReadDir(dirname)
+	if err != nil {
+		return err
+	}
+
+	parentTeam := team.Name
+	for _, e := range entries {
+		if e.IsDir() {
+			if e.Name()[0] == '.' {
+				continue
+			}
+			err := recursiveReadAndAdjustTeamDirectory(fs, filepath.Join(dirname, e.Name()), &parentTeam, users, teamschanged)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Update is telling if the team needs to be adjust (and the team's definition was changed on disk),
