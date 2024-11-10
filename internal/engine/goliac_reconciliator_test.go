@@ -234,7 +234,6 @@ func (r *ReconciliatorListenerRecorder) Commit(ctx context.Context, dryrun bool)
 }
 
 func TestReconciliation(t *testing.T) {
-
 	t.Run("happy path: new team", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
@@ -275,6 +274,7 @@ func TestReconciliation(t *testing.T) {
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
 
 		// 2 members created
+		fmt.Println("**debug", recorder.TeamsCreated)
 		assert.Equal(t, 2, len(recorder.TeamsCreated["new"]))
 		assert.Equal(t, 1, len(recorder.TeamsCreated["new-owners"]))
 	})
@@ -382,6 +382,8 @@ func TestReconciliation(t *testing.T) {
 
 		// 1 members added
 		assert.Equal(t, 0, len(recorder.TeamsCreated))
+		fmt.Println("added", recorder.TeamMemberAdded)
+		fmt.Println("removed", recorder.TeamMemberRemoved)
 		assert.Equal(t, 1, len(recorder.TeamMemberAdded["existing"]))
 	})
 

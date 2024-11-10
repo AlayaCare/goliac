@@ -155,10 +155,23 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 	// prepare the teams we want (regular and "-owners")
 	slugTeams := make(map[string]*GithubTeamComparable)
 	lTeams := local.Teams()
+	lUsers := local.Users()
+
 	for teamname, teamvalue := range lTeams {
 		members := []string{}
-		members = append(members, teamvalue.Spec.Members...)
-		members = append(members, teamvalue.Spec.Owners...)
+		membersOwners := []string{}
+		// teamvalue.Spec.Members are not github id
+		for _, m := range teamvalue.Spec.Members {
+			if u, ok := lUsers[m]; ok {
+				members = append(members, u.Spec.GithubID)
+			}
+		}
+		for _, m := range teamvalue.Spec.Owners {
+			if u, ok := lUsers[m]; ok {
+				members = append(members, u.Spec.GithubID)
+				membersOwners = append(membersOwners, u.Spec.GithubID)
+			}
+		}
 
 		teamslug := slug.Make(teamname)
 		team := &GithubTeamComparable{
@@ -176,7 +189,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		team = &GithubTeamComparable{
 			Name:    teamname + "-owners",
 			Slug:    teamslug + "-owners",
-			Members: teamvalue.Spec.Owners,
+			Members: membersOwners,
 		}
 		slugTeams[teamslug+"-owners"] = team
 	}
@@ -210,12 +223,6 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 	}
 
 	onAdded := func(key string, lTeam *GithubTeamComparable, rTeam *GithubTeamComparable) {
-		members := make([]string, 0)
-		for _, m := range lTeam.Members {
-			if ghuserid, ok := local.Users()[m]; ok {
-				members = append(members, ghuserid.Spec.GithubID)
-			}
-		}
 		// CREATE team
 
 		// it is possible that parent team will be added in 2 pass
@@ -223,7 +230,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		if lTeam.ParentTeam != nil && ghTeams[*lTeam.ParentTeam] != nil {
 			parentTeam = &ghTeams[*lTeam.ParentTeam].Id
 		}
-		r.CreateTeam(ctx, dryrun, remote, lTeam.Slug, lTeam.Name, parentTeam, members)
+		r.CreateTeam(ctx, dryrun, remote, lTeam.Slug, lTeam.Name, parentTeam, lTeam.Members)
 	}
 
 	onRemoved := func(key string, lTeam *GithubTeamComparable, rTeam *GithubTeamComparable) {
@@ -236,9 +243,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		if res, _, _ := entity.StringArrayEquivalent(lTeam.Members, rTeam.Members); !res {
 			localMembers := make(map[string]bool)
 			for _, m := range lTeam.Members {
-				if ghuserid, ok := local.Users()[m]; ok {
-					localMembers[ghuserid.Spec.GithubID] = true
-				}
+				localMembers[m] = true
 			}
 
 			for _, m := range rTeam.Members {
@@ -521,11 +526,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 	for _, confrs := range conf.Rulesets {
 		match, err := regexp.Compile(confrs.Pattern)
 		if err != nil {
-			return fmt.Errorf("Not able to parse ruleset regular expression %s: %v", confrs.Pattern, err)
+			return fmt.Errorf("not able to parse ruleset regular expression %s: %v", confrs.Pattern, err)
 		}
 		rs, ok := local.RuleSets()[confrs.Ruleset]
 		if !ok {
-			return fmt.Errorf("Not able to find ruleset %s definition", confrs.Ruleset)
+			return fmt.Errorf("not able to find ruleset %s definition", confrs.Ruleset)
 		}
 
 		grs := GithubRuleSet{
@@ -643,12 +648,12 @@ func (r *GoliacReconciliatorImpl) CreateTeam(ctx context.Context, dryrun bool, r
 	if a := ctx.Value(KeyAuthor); a != nil {
 		author = a.(string)
 	}
-	parenTeamId := -1
+	parenTeamId := "nil"
 	if parentTeam != nil {
-		parenTeamId = *parentTeam
+		parenTeamId = fmt.Sprintf("%d", *parentTeam)
 	}
 
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "create_team"}).Infof("teamname: %s, parentTeam : %d, members: %s", teamname, parenTeamId, strings.Join(members, ","))
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "create_team"}).Infof("teamname: %s, parentTeam : %s, members: %s", teamname, parenTeamId, strings.Join(members, ","))
 	remote.CreateTeam(teamname, description, members)
 	if r.executor != nil {
 		r.executor.CreateTeam(ctx, dryrun, teamname, description, parentTeam, members)
@@ -681,12 +686,12 @@ func (r *GoliacReconciliatorImpl) UpdateTeamSetParent(ctx context.Context, dryru
 	if a := ctx.Value(KeyAuthor); a != nil {
 		author = a.(string)
 	}
-	parenTeamId := -1
+	parenTeamId := "nil"
 	if parentTeam != nil {
-		parenTeamId = *parentTeam
+		parenTeamId = fmt.Sprintf("%d", *parentTeam)
 	}
 
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_Team_parentteam"}).Infof("parentteam: %d", parenTeamId)
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_team_parentteam"}).Infof("teamslug: %s, parentteam: %s", teamslug, parenTeamId)
 	remote.UpdateTeamSetParent(ctx, dryrun, teamslug, parentTeam)
 	if r.executor != nil {
 		r.executor.UpdateTeamSetParent(ctx, dryrun, teamslug, parentTeam)

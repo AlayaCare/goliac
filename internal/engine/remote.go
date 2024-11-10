@@ -497,11 +497,10 @@ query listAllTeamsInOrg($orgLogin: String!, $endCursor: String) {
       teams(first: 100, after: $endCursor) {
         nodes {
           name
-		  id
+		  databaseId
           slug
 		  parentTeam {
-		    id
-			name
+		    databaseId
 		  }
         }
         pageInfo {
@@ -520,11 +519,10 @@ type GraplQLTeams struct {
 			Teams struct {
 				Nodes []struct {
 					Name       string
-					Id         int
+					DatabaseId int `json:"databaseId"`
 					Slug       string
 					ParentTeam struct {
-						Id   int
-						Name string
+						DatabaseId int `json:"databaseId"`
 					} `json:"parentTeam"`
 				} `json:"nodes"`
 				PageInfo struct {
@@ -933,11 +931,12 @@ func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTea
 		for _, c := range gResult.Data.Organization.Teams.Nodes {
 			team := GithubTeam{
 				Name: c.Name,
-				Id:   c.Id,
+				Id:   c.DatabaseId,
 				Slug: c.Slug,
 			}
-			if c.ParentTeam.Name != "" {
-				team.ParentTeam = &c.ParentTeam.Id
+			if c.ParentTeam.DatabaseId != 0 {
+				parentId := c.ParentTeam.DatabaseId
+				team.ParentTeam = &parentId
 			}
 			teams[c.Slug] = &team
 			teamSlugByName[c.Name] = c.Slug
