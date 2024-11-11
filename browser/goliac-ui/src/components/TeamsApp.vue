@@ -13,9 +13,9 @@
               :stripe="true"
               :highlight-current-row="false"
               v-on:row-click="goToTeam"
-              :default-sort="{ prop: 'name', order: 'descending' }"
+              :default-sort="{ prop: 'path', order: 'descending' }"
           >
-              <el-table-column prop="name" align="left" label="Team name" sortable />
+              <el-table-column prop="path" align="left" label="Team name" sortable />
               <el-table-column prop="owners" align="left" label="Nb owners" >
                 <template #default="scope">
                     {{ scope.row.owners == null ? 0 : scope.row.owners.length }}

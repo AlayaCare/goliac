@@ -2,7 +2,7 @@
     <el-breadcrumb separator="/">
       <el-breadcrumb-item :to="{ path: '/' }">Goliac</el-breadcrumb-item>
       <el-breadcrumb-item :to="{ path: '/teams' }">teams</el-breadcrumb-item>
-      <el-breadcrumb-item>{{ teamid }} team</el-breadcrumb-item>
+      <el-breadcrumb-item>{{ teamid }} </el-breadcrumb-item>
     </el-breadcrumb>
     <el-divider />
     
@@ -11,7 +11,7 @@
             <el-card>
                 <template #header>
                     <div class="card-header">
-                        <el-text>{{teamid}} team</el-text>
+                        <el-text>Path: {{ team.path }}</el-text>
                     </div>
                 </template>
                 <el-text>Team Owners</el-text>

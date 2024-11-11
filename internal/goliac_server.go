@@ -211,11 +211,12 @@ func (g *GoliacServerImpl) GetTeams(app.GetTeamsParams) middleware.Responder {
 			Name:    teamname,
 			Members: team.Spec.Members,
 			Owners:  team.Spec.Owners,
+			Path:    teamname,
 		}
 		for team.ParentTeam != nil {
 			parentName := *team.ParentTeam
 			team = local.Teams()[parentName]
-			t.Name = parentName + "/" + t.Name
+			t.Path = parentName + "/" + t.Path
 		}
 		teams = append(teams, &t)
 
@@ -269,6 +270,13 @@ func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responde
 		Members:      make([]*models.TeamDetailsMembersItems0, len(team.Spec.Members)),
 		Name:         team.Name,
 		Repositories: repositories,
+		Path:         team.Name,
+	}
+
+	for team.ParentTeam != nil {
+		parentName := *team.ParentTeam
+		team = local.Teams()[parentName]
+		teamDetails.Path = parentName + "/" + teamDetails.Path
 	}
 
 	for i, u := range team.Spec.Owners {

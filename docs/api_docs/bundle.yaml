@@ -403,6 +403,9 @@ definitions:
       name:
         type: string
         x-isnullable: false
+      path:
+        type: string
+        x-isnullable: false
       owners:
         type: array
         items:
@@ -417,6 +420,9 @@ definitions:
     type: object
     properties:
       name:
+        type: string
+        x-isnullable: false
+      path:
         type: string
         x-isnullable: false
       owners:
