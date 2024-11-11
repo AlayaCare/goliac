@@ -28,6 +28,9 @@ type Team struct {
 
 	// owners
 	Owners []string `json:"owners"`
+
+	// path
+	Path string `json:"path,omitempty"`
 }
 
 // Validate validates this team

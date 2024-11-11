@@ -648,6 +648,10 @@ func init() {
             "type": "string",
             "minLength": 1
           }
+        },
+        "path": {
+          "type": "string",
+          "x-isnullable": false
         }
       }
     },
@@ -699,6 +703,10 @@ func init() {
               }
             }
           }
+        },
+        "path": {
+          "type": "string",
+          "x-isnullable": false
         },
         "repositories": {
           "type": "array",
@@ -1481,6 +1489,10 @@ func init() {
             "type": "string",
             "minLength": 1
           }
+        },
+        "path": {
+          "type": "string",
+          "x-isnullable": false
         }
       }
     },
@@ -1502,6 +1514,10 @@ func init() {
           "items": {
             "$ref": "#/definitions/TeamDetailsOwnersItems0"
           }
+        },
+        "path": {
+          "type": "string",
+          "x-isnullable": false
         },
         "repositories": {
           "type": "array",

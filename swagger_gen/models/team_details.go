@@ -29,6 +29,9 @@ type TeamDetails struct {
 	// owners
 	Owners []*TeamDetailsOwnersItems0 `json:"owners"`
 
+	// path
+	Path string `json:"path,omitempty"`
+
 	// repositories
 	Repositories []*Repository `json:"repositories"`
 }
