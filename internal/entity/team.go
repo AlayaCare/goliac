@@ -87,11 +87,13 @@ func recursiveReadTeamDirectory(fs billy.Filesystem, dirname string, parentTeam 
 	team, err := NewTeam(fs, filepath.Join(dirname, "team.yaml"), parentTeam)
 	if err != nil {
 		*errors = append(*errors, err)
+		return
 	} else {
 		err, warns := team.Validate(dirname, users)
 		*warning = append(*warning, warns...)
 		if err != nil {
 			*errors = append(*errors, err)
+			return
 		} else {
 			teams[team.Name] = team
 		}
