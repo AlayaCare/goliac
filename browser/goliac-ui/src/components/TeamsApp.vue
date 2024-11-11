@@ -18,12 +18,12 @@
               <el-table-column prop="name" align="left" label="Team name" sortable />
               <el-table-column prop="owners" align="left" label="Nb owners" >
                 <template #default="scope">
-                    {{ scope.row.length }}
+                    {{ scope.row.owners == null ? 0 : scope.row.owners.length }}
                 </template>
               </el-table-column>
               <el-table-column prop="members" align="left" label="Nb members">
                 <template #default="scope">
-                    {{ scope.row.length }}
+                    {{ scope.row.members == null ? 0 : scope.row.members.length }}
                 </template>
               </el-table-column>
           </el-table>
