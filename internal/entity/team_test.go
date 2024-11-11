@@ -148,6 +148,89 @@ name: team2
 		assert.NotNil(t, teams)
 	})
 
+	t.Run("not happy path: not able to create a sub team without a defined parent", func(t *testing.T) {
+		// create a new user
+		fs := memfs.New()
+		fixtureCreateUser(t, fs)
+		fs.MkdirAll("teams/team1", 0755)
+
+		err := utils.WriteFile(fs, "teams/foo/bar/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: bar
+spec:
+  owners:
+  - user1
+  - user2
+`), 0644)
+		assert.Nil(t, err)
+		assert.Nil(t, err)
+		users, errs, warns := ReadUserDirectory(fs, "users")
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, users)
+
+		_, errs, warns = ReadTeamDirectory(fs, "teams", users)
+		assert.NotEqual(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+	})
+
+	t.Run("not happy path: not able to create 2 times the same team", func(t *testing.T) {
+		// create a new user
+		fs := memfs.New()
+		fixtureCreateUser(t, fs)
+		fs.MkdirAll("teams/team1", 0755)
+
+		err := utils.WriteFile(fs, "teams/foo/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: foo
+spec:
+  owners:
+  - user1
+  - user2
+`), 0644)
+		assert.Nil(t, err)
+		err = utils.WriteFile(fs, "teams/foo/bar/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: bar
+spec:
+  owners:
+  - user1
+  - user2
+`), 0644)
+		assert.Nil(t, err)
+		err = utils.WriteFile(fs, "teams/foo2/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: foo2
+spec:
+  owners:
+  - user1
+  - user2
+`), 0644)
+		assert.Nil(t, err)
+		err = utils.WriteFile(fs, "teams/foo2/bar/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: bar
+spec:
+  owners:
+  - user1
+  - user2
+`), 0644)
+		assert.Nil(t, err)
+		users, errs, warns := ReadUserDirectory(fs, "users")
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, users)
+
+		_, errs, warns = ReadTeamDirectory(fs, "teams", users)
+		assert.NotEqual(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+	})
+
 	t.Run("happy path: parent and child team", func(t *testing.T) {
 		// create a new user
 		fs := memfs.New()
