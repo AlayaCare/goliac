@@ -213,10 +213,13 @@ func (g *GoliacServerImpl) GetTeams(app.GetTeamsParams) middleware.Responder {
 			Owners:  team.Spec.Owners,
 			Path:    teamname,
 		}
-		for team.ParentTeam != nil {
+		// prevent any issue, but it shoudn't happen
+		maxRec := 100
+		for team.ParentTeam != nil && maxRec > 0 {
 			parentName := *team.ParentTeam
 			team = local.Teams()[parentName]
 			t.Path = parentName + "/" + t.Path
+			maxRec--
 		}
 		teams = append(teams, &t)
 
@@ -273,10 +276,14 @@ func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responde
 		Path:         team.Name,
 	}
 
-	for team.ParentTeam != nil {
-		parentName := *team.ParentTeam
-		team = local.Teams()[parentName]
+	recTeam := team
+	// prevent any issue, but it shoudn't happen
+	maxRec := 100
+	for recTeam.ParentTeam != nil && maxRec > 0 {
+		parentName := *recTeam.ParentTeam
+		recTeam = local.Teams()[parentName]
 		teamDetails.Path = parentName + "/" + teamDetails.Path
+		maxRec--
 	}
 
 	for i, u := range team.Spec.Owners {
