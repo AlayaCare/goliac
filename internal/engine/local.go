@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -356,7 +355,7 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 		repo.Kind = "Repository"
 		repo.Name = reponame
 
-		filename := path.Join("archived", reponame+".yaml")
+		filename := filepath.Join("archived", reponame+".yaml")
 		file, err := w.Filesystem.Create(filename)
 		if err != nil {
 			return fmt.Errorf("not able to create file %s: %v", filename, err)
@@ -429,7 +428,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 		return err
 	}
 
-	codeownerpath := path.Join(".github", "CODEOWNERS")
+	codeownerpath := filepath.Join(".github", "CODEOWNERS")
 	var content []byte
 
 	info, err := w.Filesystem.Stat(codeownerpath)

@@ -3,7 +3,7 @@ package usersync
 import (
 	"fmt"
 	"os/exec"
-	"path"
+	"path/filepath"
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/engine"
@@ -18,7 +18,7 @@ func NewUserSyncPluginShellScript() engine.UserSyncPlugin {
 }
 
 func (p *UserSyncPluginShellScript) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
-	cmd := exec.Command(repoconfig.UserSync.Path, path.Join(fs.Root(), orguserdirrectorypath))
+	cmd := exec.Command(repoconfig.UserSync.Path, filepath.Join(fs.Root(), orguserdirrectorypath))
 	_, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err

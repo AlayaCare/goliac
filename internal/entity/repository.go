@@ -114,41 +114,56 @@ func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname s
 
 	for _, team := range entries {
 		if team.IsDir() {
-			subentries, err := fs.ReadDir(filepath.Join(teamDirname, team.Name()))
+			suberrs, subwarns := recursiveReadRepositories(fs, archivedDirname, filepath.Join(teamDirname, team.Name()), team.Name(), repos, teams, externalUsers)
+			errors = append(errors, suberrs...)
+			warning = append(warning, subwarns...)
+		}
+	}
+
+	return repos, errors, warning
+}
+
+func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, teamDirPath string, teamName string, repos map[string]*Repository, teams map[string]*Team, externalUsers map[string]*User) ([]error, []Warning) {
+	errors := []error{}
+	warnings := []Warning{}
+
+	subentries, err := fs.ReadDir(teamDirPath)
+	if err != nil {
+		errors = append(errors, err)
+		return errors, warnings
+	}
+	for _, sube := range subentries {
+		if sube.IsDir() && sube.Name()[0] != '.' {
+			suberrs, subwarns := recursiveReadRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), sube.Name(), repos, teams, externalUsers)
+			errors = append(errors, suberrs...)
+			warnings = append(warnings, subwarns...)
+		}
+		if !sube.IsDir() && filepath.Ext(sube.Name()) == ".yaml" && sube.Name() != "team.yaml" {
+			repo, err := NewRepository(fs, filepath.Join(teamDirPath, sube.Name()))
 			if err != nil {
 				errors = append(errors, err)
-				continue
-			}
-			for _, sube := range subentries {
-				if !sube.IsDir() && filepath.Ext(sube.Name()) == ".yaml" && sube.Name() != "team.yaml" {
-					repo, err := NewRepository(fs, filepath.Join(teamDirname, team.Name(), sube.Name()))
-					if err != nil {
-						errors = append(errors, err)
-					} else {
-						if err := repo.Validate(filepath.Join(teamDirname, team.Name(), sube.Name()), teams, externalUsers); err != nil {
-							errors = append(errors, err)
-						} else {
-							// check if the repository doesn't already exists
-							if _, exist := repos[repo.Name]; exist {
-								existing := filepath.Join(archivedDirname, repo.Name)
-								if repos[repo.Name].Owner != nil {
-									existing = filepath.Join(teamDirname, *repos[repo.Name].Owner, repo.Name)
-								}
-								errors = append(errors, fmt.Errorf("Repository %s defined in 2 places (check %s and %s)", repo.Name, filepath.Join(teamDirname, team.Name(), sube.Name()), existing))
-							} else {
-								teamname := team.Name()
-								repo.Owner = &teamname
-								repo.Archived = false
-								repos[repo.Name] = repo
-							}
+			} else {
+				if err := repo.Validate(filepath.Join(teamDirPath, sube.Name()), teams, externalUsers); err != nil {
+					errors = append(errors, err)
+				} else {
+					// check if the repository doesn't already exists
+					if _, exist := repos[repo.Name]; exist {
+						existing := filepath.Join(archivedDirPath, repo.Name)
+						if repos[repo.Name].Owner != nil {
+							existing = filepath.Join(*repos[repo.Name].Owner, repo.Name)
 						}
+						errors = append(errors, fmt.Errorf("Repository %s defined in 2 places (check %s and %s)", repo.Name, filepath.Join(teamDirPath, sube.Name()), existing))
+					} else {
+						teamname := teamName
+						repo.Owner = &teamname
+						repo.Archived = false
+						repos[repo.Name] = repo
 					}
 				}
 			}
 		}
 	}
-
-	return repos, errors, warning
+	return errors, warnings
 }
 
 func (r *Repository) Validate(filename string, teams map[string]*Team, externalUsers map[string]*User) error {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/Alayacare/goliac/internal/config"
@@ -191,8 +192,8 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 				logrus.Errorf("unable to compute team's path: %v (for team %s)", err, team)
 				continue
 			}
-			fs.MkdirAll(path.Join(teamspath, teamPath), 0755)
-			if err := writeYamlFile(path.Join(teamspath, teamPath, "team.yaml"), &lTeam, fs); err != nil {
+			fs.MkdirAll(filepath.Join(teamspath, teamPath), 0755)
+			if err := writeYamlFile(filepath.Join(teamspath, teamPath, "team.yaml"), &lTeam, fs); err != nil {
 				logrus.Errorf("not able to write team file %s in %s: %v", team, teamPath, err)
 			}
 
@@ -251,8 +252,8 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 				logrus.Errorf("unable to compute team's path: %v (for team %s)", err, team)
 				continue
 			}
-			fs.MkdirAll(path.Join(teamspath, teamPath), 0755)
-			if err := writeYamlFile(path.Join(teamspath, teamPath, "team.yaml"), &lTeam, fs); err != nil {
+			fs.MkdirAll(filepath.Join(teamspath, teamPath), 0755)
+			if err := writeYamlFile(filepath.Join(teamspath, teamPath, "team.yaml"), &lTeam, fs); err != nil {
 				logrus.Errorf("not able to write team file %s/team.yaml: %v", teamPath, err)
 			}
 
@@ -370,14 +371,14 @@ destructive_operations:
 usersync:
   plugin: noop
 `, adminteam)
-	if err := writeFile(path.Join(rootpath, "goliac.yaml"), []byte(conf), fs); err != nil {
+	if err := writeFile(filepath.Join(rootpath, "goliac.yaml"), []byte(conf), fs); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (s *Scaffold) generateGithubAction(fs billy.Filesystem, rootpath string) error {
-	fs.MkdirAll(path.Join(rootpath, ".github", "workflows"), 0755)
+	fs.MkdirAll(filepath.Join(rootpath, ".github", "workflows"), 0755)
 
 	workflow := `
 name: Validate structure
@@ -398,7 +399,7 @@ jobs:
           options: -v ${{ github.workspace }}:/work 
           run: /app/goliac verify /work
 `
-	if err := writeFile(path.Join(rootpath, ".github", "workflows", "pr.yaml"), []byte(workflow), fs); err != nil {
+	if err := writeFile(filepath.Join(rootpath, ".github", "workflows", "pr.yaml"), []byte(workflow), fs); err != nil {
 		return err
 	}
 	return nil
@@ -472,7 +473,7 @@ The users name used are the one defined in the ` + "`" + `/users` + "`" + ` sub 
 You can archive a repository, by a PR that move the yaml repository file into the ` + "`" + `/archived` + "`" + ` directory
 
 `
-	if err := writeFile(path.Join(rootpath, "README.md"), []byte(readme), fs); err != nil {
+	if err := writeFile(filepath.Join(rootpath, "README.md"), []byte(readme), fs); err != nil {
 		return err
 	}
 	return nil
