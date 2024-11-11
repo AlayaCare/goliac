@@ -855,7 +855,7 @@ const listAllTeamMembersInOrg = `
 query listAllTeamMembersInOrg($orgLogin: String!, $teamSlug: String!, $endCursor: String) {
     organization(login: $orgLogin) {
       team(slug: $teamSlug) {
-        members(first: 100, after: $endCursor) {
+        members(first: 100, membership: IMMEDIATE, after: $endCursor) {
           edges {
             node {
               login

@@ -212,6 +212,11 @@ func (g *GoliacServerImpl) GetTeams(app.GetTeamsParams) middleware.Responder {
 			Members: team.Spec.Members,
 			Owners:  team.Spec.Owners,
 		}
+		for team.ParentTeam != nil {
+			parentName := *team.ParentTeam
+			team = local.Teams()[parentName]
+			t.Name = parentName + "/" + t.Name
+		}
 		teams = append(teams, &t)
 
 	}
