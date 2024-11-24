@@ -26,7 +26,7 @@ In GitHub
   - Give Read/Write access to `Members`
 - Under Repository permissions
   - Give Read/Write access to `Administration`
-  - Give Read/Write access to `Repository Content`
+  - Give Read/Write access to `Content`
 - Where can this GitHub App be installed: `Only on this account`
 - And Create
 - then you must
@@ -84,7 +84,7 @@ You need the following structure:
 
 You can use the goliac application to assist you:
 
-```
+```shell
 export GOLIAC_GITHUB_APP_ID=<appid>
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=<private key filename>
 export GOLIAC_GITHUB_APP_ORGANIZATION=<your github organization>
@@ -92,7 +92,8 @@ export GOLIAC_GITHUB_APP_ORGANIZATION=<your github organization>
 ```
 
 So something like
-```
+
+```shell
 mkdir teams
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
@@ -111,7 +112,7 @@ And it will create the corresponding structure
 
 To make Goliac working you can configure the `/goliac.yaml` file
 
-```
+```yaml
 admin_team: admin # the name of the team (in the `/teams` directory ) that can admin this repository
 everyone_team_enabled: false # if you want all members to have read access to all repositories
 
@@ -130,7 +131,8 @@ destructive_operations:
 ```
 
 and you can configure different ruleset in the `/rulesets` directory like
-```
+
+```yaml
 apiVersion: v1
 kind: Ruleset
 name: default
@@ -161,7 +163,7 @@ goliac verify teams/
 
 After merging your team IAC teams repository, you can begin to test and apply
 
-```
+```shell
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
@@ -172,7 +174,7 @@ export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
 
 and you can apply the change "manually"
 
-```
+```shell
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
@@ -226,7 +228,7 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_GITHUB_WEBHOOK_PATH        | /webhook      | (optional) Path to listen to GitHub webhook |
 then you just need to start it with
 
-```
+```shell
 ./goliac serve
 ```
 
@@ -238,11 +240,30 @@ You can connect (eventually) to the UI for some statistic to `http://GOLIAC_SERV
 docker run -ti -v `pwd`/goliac-project-app.2023-07-03.private-key.pem:/app/private-key.pem -e GOLIAC_GITHUB_APP_ID=355525 -e GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=/app/private-key.pem -e GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project -e GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams -e GOLIAC_SERVER_HOST=0.0.0.0 -p 18000:18000 ghcr.io/nzin/goliac serve
 ```
 
+### Using docker-compose
+
+```yaml
+services:
+    goliac:
+        volumes:
+            - ./goliac-project-app.2023-07-03.private-key.pem:/app/private-key.pem"
+        environment:
+            - GOLIAC_GITHUB_APP_ID=355525
+            - GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=/app/private-key.pem
+            - GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
+            - GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
+            - GOLIAC_SERVER_HOST=0.0.0.0
+        ports:
+            - 18000:18000
+        image: ghcr.io/nzin/goliac
+        command: serve
+```
+
 ### Using kubernetes
 
 You can deploy the goliac server in a kubernetes cluster. You can use the `k8s/goliac-deployment.yaml` file as a template.
 
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
