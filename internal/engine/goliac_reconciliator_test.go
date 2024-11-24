@@ -318,7 +318,7 @@ func TestReconciliation(t *testing.T) {
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
 
 		// 2 members created
-		assert.Equal(t, 2, len(recorder.TeamsCreated["nouveaute"]))
+		assert.Equal(t, 2, len(recorder.TeamsCreated["nouveauté"]))
 		assert.Equal(t, 1, len(recorder.TeamsCreated["nouveaute-owners"]))
 	})
 

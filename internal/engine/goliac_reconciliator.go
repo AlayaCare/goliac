@@ -187,7 +187,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 
 		// owners
 		team = &GithubTeamComparable{
-			Name:    teamname + "-owners",
+			Name:    teamslug + "-owners",
 			Slug:    teamslug + "-owners",
 			Members: membersOwners,
 		}
@@ -230,7 +230,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		if lTeam.ParentTeam != nil && ghTeams[*lTeam.ParentTeam] != nil {
 			parentTeam = &ghTeams[*lTeam.ParentTeam].Id
 		}
-		r.CreateTeam(ctx, dryrun, remote, lTeam.Slug, lTeam.Name, parentTeam, lTeam.Members)
+		r.CreateTeam(ctx, dryrun, remote, lTeam.Name, lTeam.Name, parentTeam, lTeam.Members)
 	}
 
 	onRemoved := func(key string, lTeam *GithubTeamComparable, rTeam *GithubTeamComparable) {

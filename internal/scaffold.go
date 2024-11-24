@@ -53,6 +53,7 @@ func NewScaffold() (*Scaffold, error) {
  * Generate will generate a full teams directory structure compatible with Goliac
  */
 func (s *Scaffold) Generate(rootpath string, adminteam string) error {
+	logrus.Info("Generating the IAC structure, it can take several minutes to list everything")
 	if _, err := os.Stat(rootpath); os.IsNotExist(err) {
 		// Create the directory if it does not exist
 		err := os.MkdirAll(rootpath, 0755)
@@ -111,6 +112,12 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teamspath string, usermap map[string]string, adminteam string) error {
 	teamsRepositories := s.remote.TeamRepositories(ctx)
 	teams := s.remote.Teams(ctx)
+	teamsSlugByName := s.remote.TeamSlugByName(ctx)
+
+	teamsNameBySlug := make(map[string]string)
+	for k, v := range teamsSlugByName {
+		teamsNameBySlug[v] = k
+	}
 
 	teamIds := make(map[int]*engine.GithubTeam)
 	for _, t := range teams {
@@ -146,7 +153,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 					repoAdmin[reponame] = team
 					teamsRepos[team] = append(teamsRepos[team], reponame)
 				}
-				repoWrite[reponame] = append(repoWrite[reponame], team)
+				repoWrite[reponame] = append(repoWrite[reponame], teamsNameBySlug[team])
 			}
 		}
 	}
@@ -159,10 +166,10 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 					repoAdmin[reponame] = team
 					teamsRepos[team] = append(teamsRepos[team], reponame)
 				}
-				repoWrite[reponame] = append(repoWrite[reponame], team)
+				repoWrite[reponame] = append(repoWrite[reponame], teamsNameBySlug[team])
 			}
 			if repo.Permission != "ADMIN" && repo.Permission != "WRITE" {
-				repoRead[reponame] = append(repoRead[reponame], team)
+				repoRead[reponame] = append(repoRead[reponame], teamsNameBySlug[team])
 			}
 		}
 	}
@@ -188,7 +195,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 			lTeam := entity.Team{}
 			lTeam.ApiVersion = "v1"
 			lTeam.Kind = "Team"
-			lTeam.Name = team
+			lTeam.Name = t.Name
 			for _, m := range t.Members {
 				// put the right user name instead of the github id
 				lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
@@ -215,7 +222,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 
 				// removing team name from writer
 				for i, t := range lRepo.Spec.Writers {
-					if t == team {
+					if teamsSlugByName[t] == team {
 						lRepo.Spec.Writers = append(lRepo.Spec.Writers[:i], lRepo.Spec.Writers[i+1:]...)
 						break
 					}
@@ -234,25 +241,26 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 		}
 	}
 
-	for team, t := range teams {
-		if strings.HasSuffix(team, "-owners") {
+	for teamName, slugName := range teamsSlugByName {
+		t := teams[slugName]
+		if strings.HasSuffix(slugName, "-owners") {
 			continue
 		}
 
 		// searching for loney team (ie without repos)
-		if _, ok := teamsRepos[team]; !ok {
+		if _, ok := teamsRepos[slugName]; !ok {
 			lTeam := entity.Team{}
 			lTeam.ApiVersion = "v1"
 			lTeam.Kind = "Team"
-			lTeam.Name = team
+			lTeam.Name = teamName
 			for _, m := range t.Members {
 				// put the right user name instead of the github id
 				lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
 			}
 
-			teamPath, err := buildTeamPath(teamIds, teams[team])
+			teamPath, err := buildTeamPath(teamIds, teams[slugName])
 			if err != nil {
-				logrus.Errorf("unable to compute team's path: %v (for team %s)", err, team)
+				logrus.Errorf("unable to compute team's path: %v (for team %s)", err, teamName)
 				continue
 			}
 			fs.MkdirAll(filepath.Join(teamspath, teamPath), 0755)
