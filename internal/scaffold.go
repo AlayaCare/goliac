@@ -143,6 +143,8 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 		Slug:    adminteam,
 		Members: admins,
 	}
+	teamsSlugByName[adminteam] = adminteam
+	teamsNameBySlug[adminteam] = adminteam
 
 	// searching for ADMIN first
 	for team, tr := range teamsRepositories {
