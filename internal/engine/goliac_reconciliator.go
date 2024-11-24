@@ -93,7 +93,7 @@ func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local G
 	ghUsers := remote.Users()
 
 	rUsers := make(map[string]string)
-	for _, u := range ghUsers {
+	for u := range ghUsers {
 		rUsers[u] = u
 	}
 

@@ -282,7 +282,7 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, teamreponam
 			return unmanaged, fmt.Errorf("error when archiving repos: %v", err)
 		}
 	}
-	err = g.local.UpdateAndCommitCodeOwners(g.repoconfig, dryrun, accessToken, branch, GOLIAC_GIT_TAG)
+	err = g.local.UpdateAndCommitCodeOwners(g.repoconfig, dryrun, accessToken, branch, GOLIAC_GIT_TAG, config.Config.GithubAppOrganization)
 	if err != nil {
 		return unmanaged, fmt.Errorf("error when updating and commiting: %v", err)
 	}

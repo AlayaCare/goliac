@@ -628,10 +628,10 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		content := g.codeowners_regenerate("github-admins")
+		content := g.codeowners_regenerate("github-admins", "Alayacare")
 
 		// check the content of the CODEOWNERS file
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @/github-admins\n/teams/github-admins/* @/github-admins-owners @/github-admins\n", content)
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @Alayacare/github-admins\n/teams/github-admins/* @Alayacare/github-admins-owners @Alayacare/github-admins\n", content)
 	})
 }
 
@@ -699,13 +699,13 @@ func TestGoliacLocalImpl(t *testing.T) {
 		assert.NotNil(t, goliacConfig)
 
 		// update and commit the CODEOWNERS file
-		err = g.UpdateAndCommitCodeOwners(goliacConfig, false, "none", "master", "foobar")
+		err = g.UpdateAndCommitCodeOwners(goliacConfig, false, "none", "master", "foobar", "Alayacare")
 		assert.Nil(t, err)
 
 		// check the content of the CODEOWNERS file
 		content, err := utils.ReadFile(target, ".github/CODEOWNERS")
 		assert.Nil(t, err)
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @/github-admins\n/teams/github-admins/* @/github-admins-owners @/github-admins\n", string(content))
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @Alayacare/github-admins\n/teams/github-admins/* @Alayacare/github-admins-owners @Alayacare/github-admins\n", string(content))
 	})
 
 	t.Run("SyncUsersAndTeams", func(t *testing.T) {

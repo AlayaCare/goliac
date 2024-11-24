@@ -84,7 +84,7 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 		return fmt.Errorf("error creaing the users directory: %v", err)
 	}
 
-	err, foundAdmin := s.generateTeams(ctx, fs, "teams", usermap, adminteam)
+	err = s.generateTeams(ctx, fs, "teams", usermap, adminteam)
 	if err != nil {
 		return fmt.Errorf("error creating the teams directory: %v", err)
 	}
@@ -105,16 +105,10 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 		return fmt.Errorf("error creating the README.md file: %v", err)
 	}
 
-	if !foundAdmin {
-		return fmt.Errorf("the admin team '%s' was not found", adminteam)
-	}
-
 	return nil
 }
 
-func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teamspath string, usermap map[string]string, adminteam string) (error, bool) {
-	adminTeamFound := false
-
+func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teamspath string, usermap map[string]string, adminteam string) error {
 	teamsRepositories := s.remote.TeamRepositories(ctx)
 	teams := s.remote.Teams(ctx)
 
@@ -129,6 +123,19 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 	// to get all teams access per repo
 	repoWrite := make(map[string][]string)
 	repoRead := make(map[string][]string)
+
+	// let's create the goliac admin team first
+	admins := []string{}
+	for githubid, role := range s.remote.Users(ctx) {
+		if role == "ADMIN" {
+			admins = append(admins, githubid)
+		}
+	}
+	teams[adminteam] = &engine.GithubTeam{
+		Name:    adminteam,
+		Slug:    adminteam,
+		Members: admins,
+	}
 
 	// searching for ADMIN first
 	for team, tr := range teamsRepositories {
@@ -163,8 +170,8 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 	countOrphaned := 0
 	// orphan repos should go to the admin team
 	for repo := range s.remote.Repositories(ctx) {
-		logrus.Debugf("repo %s is orphaned, attaching it to the admin (%s) team", repo, adminteam)
 		if _, ok := repoAdmin[repo]; !ok {
+			logrus.Debugf("repo %s is orphaned, attaching it to the admin (%s) team", repo, adminteam)
 			repoAdmin[repo] = adminteam
 			teamsRepos[adminteam] = append(teamsRepos[adminteam], repo)
 			countOrphaned++
@@ -232,10 +239,6 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 			continue
 		}
 
-		if team == adminteam {
-			adminTeamFound = true
-		}
-
 		// searching for loney team (ie without repos)
 		if _, ok := teamsRepos[team]; !ok {
 			lTeam := entity.Team{}
@@ -260,7 +263,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 		}
 	}
 
-	return nil, adminTeamFound
+	return nil
 }
 
 func buildTeamPath(teamIds map[int]*engine.GithubTeam, team *engine.GithubTeam) (string, error) {

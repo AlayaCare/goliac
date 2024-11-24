@@ -49,7 +49,7 @@ type GoliacLocalGit interface {
 	// Load and Validate from a github repository
 	LoadAndValidate() ([]error, []entity.Warning)
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
-	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string) error
+	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error
 	// whenever repos are not deleted but archived
 	ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error
 	// whenever the users list is changing, reload users and teams, and commit them
@@ -297,9 +297,9 @@ func (g *GoliacLocalImpl) LoadRepoConfig() (*config.RepositoryConfig, error) {
 	return &repoconfig, nil
 }
 
-func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string) string {
+func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganization string) string {
 	codeowners := "# DO NOT MODIFY THIS FILE MANUALLY\n"
-	codeowners += fmt.Sprintf("* @%s/%s\n", config.Config.GithubAppOrganization, slug.Make(adminteam))
+	codeowners += fmt.Sprintf("* @%s/%s\n", githubOrganization, slug.Make(adminteam))
 
 	teamsnames := make([]string, 0)
 	for _, t := range g.teams {
@@ -308,7 +308,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string) string {
 	sort.Strings(teamsnames)
 
 	for _, t := range teamsnames {
-		codeowners += fmt.Sprintf("/teams/%s/* @%s/%s-owners @%s/%s\n", t, config.Config.GithubAppOrganization, slug.Make(t), config.Config.GithubAppOrganization, slug.Make(adminteam))
+		codeowners += fmt.Sprintf("/teams/%s/* @%s/%s-owners @%s/%s\n", t, githubOrganization, slug.Make(t), githubOrganization, slug.Make(adminteam))
 	}
 
 	return codeowners
@@ -417,7 +417,7 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
  * UpdateAndCommitCodeOwners will collects all teams definition to update the .github/CODEOWNERS file
  * cf https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
  */
-func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string) error {
+func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
 	if g.repo == nil {
 		return fmt.Errorf("git repository not cloned")
 	}
@@ -450,7 +450,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 		content = []byte("")
 	}
 
-	newContent := g.codeowners_regenerate(repoconfig.AdminTeam)
+	newContent := g.codeowners_regenerate(repoconfig.AdminTeam, githubOrganization)
 
 	if string(content) != newContent {
 		logrus.Info(".github/CODEOWNERS needs to be regenerated")

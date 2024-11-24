@@ -16,6 +16,7 @@ var dryrunParameter bool
 var forceParameter bool
 var repositoryParameter string
 var branchParameter string
+var goliacAdminTeamnameParameter string
 
 func main() {
 	verifyCmd := &cobra.Command{
@@ -150,15 +151,15 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 	postSyncUsersCmd.Flags().BoolVarP(&forceParameter, "force", "f", false, "force mode")
 
 	scaffoldcmd := &cobra.Command{
-		Use:   "scaffold <directory> <adminteam>",
+		Use:   "scaffold <directory> [--adminteam goliac_admin_team_name]",
 		Short: "Will create a base directory based on your current Github organization",
 		Long: `Base on your Github organization, this command will try to scaffold a
 goliac directory to let you start with something.
 The adminteam is your current team that contains Github administrator`,
-		Args: cobra.MatchAll(cobra.MinimumNArgs(2), cobra.OnlyValidArgs),
+		Args: cobra.MatchAll(cobra.MinimumNArgs(1), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
 			directory := args[0]
-			adminteam := args[1]
+			adminteam := goliacAdminTeamnameParameter
 			if directory == "" || adminteam == "" {
 				logrus.Fatalf("missing arguments. Try --help")
 			}
@@ -172,6 +173,7 @@ The adminteam is your current team that contains Github administrator`,
 			}
 		},
 	}
+	scaffoldcmd.Flags().StringVarP(&goliacAdminTeamnameParameter, "adminteam", "a", "goliac-admin", "name of the goliac admin team")
 
 	servecmd := &cobra.Command{
 		Use:   "serve",

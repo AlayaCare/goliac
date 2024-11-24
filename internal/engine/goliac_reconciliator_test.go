@@ -61,7 +61,7 @@ func (m *GoliacLocalMock) ExternalUsers() map[string]*entity.User {
 func (m *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 	return m.rulesets
 }
-func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string) error {
+func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
 	return nil
 }
 func (m *GoliacLocalMock) ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error {
