@@ -276,26 +276,32 @@ const listAllOrgMembers = `
 query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
     organization(login: $orgLogin) {
 		membersWithRole(first: 100, after: $endCursor) {
-        nodes {
-          login
+		  edges {
+            node {
+              login
+            }
+		    role
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
         }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        totalCount
-      }
     }
-  }
+}
 `
 
 type GraplQLUsers struct {
 	Data struct {
 		Organization struct {
 			MembersWithRole struct {
-				Nodes []struct {
-					Login string
-				} `json:"nodes"`
+				Edges []struct {
+					Node struct {
+						Login string
+					} `json:"node"`
+					Role string `json:"role"`
+				} `json:"edges"`
 				PageInfo struct {
 					HasNextPage bool
 					EndCursor   string
@@ -314,6 +320,10 @@ type GraplQLUsers struct {
 	} `json:"errors"`
 }
 
+/*
+loadOrgUsers returns
+map[githubid]permission (role)
+*/
 func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string, error) {
 	logrus.Debug("loading orgUsers")
 	users := make(map[string]string)
@@ -340,8 +350,8 @@ func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string,
 			return users, fmt.Errorf("graphql error on loadOrgUsers: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 		}
 
-		for _, c := range gResult.Data.Organization.MembersWithRole.Nodes {
-			users[c.Login] = c.Login
+		for _, c := range gResult.Data.Organization.MembersWithRole.Edges {
+			users[c.Node.Login] = c.Role
 		}
 
 		hasNextPage = gResult.Data.Organization.MembersWithRole.PageInfo.HasNextPage
@@ -1407,16 +1417,19 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname
 	// create team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
 	if !dryrun {
+		params := map[string]interface{}{
+			"name":        teamname,
+			"description": description,
+			"privacy":     "closed",
+		}
+		if parentTeam != nil {
+			params["parent_team_id"] = parentTeam
+		}
 		body, err := g.client.CallRestAPI(
 			ctx,
 			fmt.Sprintf("/orgs/%s/teams", config.Config.GithubAppOrganization),
 			"POST",
-			map[string]interface{}{
-				"name":           teamname,
-				"description":    description,
-				"parent_team_id": parentTeam,
-				"privacy":        "closed",
-			},
+			params,
 		)
 		if err != nil {
 			logrus.Errorf("failed to create team: %v. %s", err, string(body))

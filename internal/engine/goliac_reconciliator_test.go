@@ -61,7 +61,7 @@ func (m *GoliacLocalMock) ExternalUsers() map[string]*entity.User {
 func (m *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 	return m.rulesets
 }
-func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string) error {
+func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
 	return nil
 }
 func (m *GoliacLocalMock) ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error {
@@ -274,7 +274,6 @@ func TestReconciliation(t *testing.T) {
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
 
 		// 2 members created
-		fmt.Println("**debug", recorder.TeamsCreated)
 		assert.Equal(t, 2, len(recorder.TeamsCreated["new"]))
 		assert.Equal(t, 1, len(recorder.TeamsCreated["new-owners"]))
 	})
@@ -382,8 +381,6 @@ func TestReconciliation(t *testing.T) {
 
 		// 1 members added
 		assert.Equal(t, 0, len(recorder.TeamsCreated))
-		fmt.Println("added", recorder.TeamMemberAdded)
-		fmt.Println("removed", recorder.TeamMemberRemoved)
 		assert.Equal(t, 1, len(recorder.TeamMemberAdded["existing"]))
 	})
 

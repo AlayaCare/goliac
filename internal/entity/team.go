@@ -16,7 +16,7 @@ type Team struct {
 		Owners  []string `yaml:"owners,omitempty"`
 		Members []string `yaml:"members,omitempty"`
 	} `yaml:"spec"`
-	ParentTeam *string
+	ParentTeam *string `yaml:"parentTeam,omitempty"`
 }
 
 /*

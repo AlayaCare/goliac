@@ -212,15 +212,31 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusTooManyRequests {
+	// fmt.Println(string(body))
+	// fmt.Println(resp.StatusCode)
+	// for k, v := range resp.Header {
+	// 	fmt.Println(k, v)
+	// }
+
+	if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusForbidden {
 		if stats != nil {
 			goliacStats := stats.(*config.GoliacStatistics)
 			goliacStats.GithubThrottled++
 		}
 
-		// We're being rate limited. Get the reset time from the headers.
-		if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
-			return nil, err
+		if resp.Header.Get("X-RateLimit-Reset") != "" {
+			// We're being rate limited. Get the reset time from the headers.
+			if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
+				return nil, err
+			}
+		} else if resp.Header.Get("Retry-After") != "" {
+			retryAfter, err := strconv.Atoi(resp.Header.Get("Retry-After"))
+			if err != nil {
+				return nil, err
+			}
+			time.Sleep(time.Duration(retryAfter) * time.Second)
+		} else {
+			return nil, fmt.Errorf("unexpected status: %s", resp.Status)
 		}
 
 		// Retry the request.
