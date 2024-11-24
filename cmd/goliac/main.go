@@ -45,15 +45,14 @@ repository: a remote repository in the form https://github.com/...
 repository can be passed by parameter or by defining GOLIAC_SERVER_GIT_REPOSITORY env variable
 branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env variable`,
 		Run: func(cmd *cobra.Command, args []string) {
-			repo := ""
-			branch := ""
+			repo := repositoryParameter
+			branch := branchParameter
 
-			if len(args) == 2 {
-				repo = args[0]
-				branch = args[1]
-			} else {
-				repo = repositoryParameter
-				branch = branchParameter
+			if repo == "" {
+				repo = config.Config.ServerGitRepository
+			}
+			if branch == "" {
+				branch = config.Config.ServerGitBranch
 			}
 			if repo == "" || branch == "" {
 				logrus.Fatalf("missing arguments. Try --help")
@@ -82,14 +81,13 @@ repository: a remote repository in the form https://github.com/...
 repository can be passed by parameter or by defining GOLIAC_SERVER_GIT_REPOSITORY env variable
 branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env variable`,
 		Run: func(cmd *cobra.Command, args []string) {
-			repo := ""
-			branch := ""
+			repo := repositoryParameter
+			branch := branchParameter
 
-			if len(args) == 2 {
-				repo = repositoryParameter
-				branch = branchParameter
-			} else {
+			if repo == "" {
 				repo = config.Config.ServerGitRepository
+			}
+			if branch == "" {
 				branch = config.Config.ServerGitBranch
 			}
 			if repo == "" || branch == "" {

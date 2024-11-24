@@ -1417,16 +1417,19 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname
 	// create team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
 	if !dryrun {
+		params := map[string]interface{}{
+			"name":        teamname,
+			"description": description,
+			"privacy":     "closed",
+		}
+		if parentTeam != nil {
+			params["parent_team_id"] = parentTeam
+		}
 		body, err := g.client.CallRestAPI(
 			ctx,
 			fmt.Sprintf("/orgs/%s/teams", config.Config.GithubAppOrganization),
 			"POST",
-			map[string]interface{}{
-				"name":           teamname,
-				"description":    description,
-				"parent_team_id": parentTeam,
-				"privacy":        "closed",
-			},
+			params,
 		)
 		if err != nil {
 			logrus.Errorf("failed to create team: %v. %s", err, string(body))
