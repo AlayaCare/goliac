@@ -14,10 +14,12 @@ import (
 
 var dryrunParameter bool
 var forceParameter bool
+var repositoryParameter string
+var branchParameter string
 
 func main() {
 	verifyCmd := &cobra.Command{
-		Use:   "verify [path]",
+		Use:   "verify <path>",
 		Short: "Verify the validity of IAC directory structure",
 		Long:  `Verify the validity of IAC directory structure`,
 		Args:  cobra.MatchAll(cobra.MinimumNArgs(1), cobra.OnlyValidArgs),
@@ -35,13 +37,12 @@ func main() {
 	}
 
 	planCmd := &cobra.Command{
-		Use:   "plan [repository] [branch]",
+		Use:   "plan [--repository https_team_repository_url] [--branch branch]",
 		Short: "Check the validity of IAC directory structure against a Github organization",
 		Long: `Check the validity of IAC directory structure against a Github organization.
 repository: a remote repository in the form https://github.com/...
 repository can be passed by parameter or by defining GOLIAC_SERVER_GIT_REPOSITORY env variable
 branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env variable`,
-		Args: cobra.MatchAll(cobra.MinimumNArgs(1), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
 			repo := ""
 			branch := ""
@@ -50,11 +51,11 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 				repo = args[0]
 				branch = args[1]
 			} else {
-				repo = config.Config.ServerGitRepository
-				branch = config.Config.ServerGitBranch
+				repo = repositoryParameter
+				branch = branchParameter
 			}
 			if repo == "" || branch == "" {
-				logrus.Fatalf("missing arguments")
+				logrus.Fatalf("missing arguments. Try --help")
 			}
 
 			goliac, err := internal.NewGoliacImpl()
@@ -69,8 +70,11 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 		},
 	}
 
+	planCmd.Flags().StringVarP(&repositoryParameter, "repository", "r", config.Config.ServerGitRepository, "repository (default env variable GOLIAC_SERVER_GIT_REPOSITORY)")
+	planCmd.Flags().StringVarP(&branchParameter, "branch", "b", config.Config.ServerGitBranch, "branch (default env variable GOLIAC_SERVER_GIT_BRANCH)")
+
 	applyCmd := &cobra.Command{
-		Use:   "apply [repository] [branch]",
+		Use:   "apply [--repository https_team_repository_url] [--branch branch]",
 		Short: "Verify and apply a IAC directory structure to a Github organization",
 		Long: `Apply a IAC directory structure to a Github organization.
 repository: a remote repository in the form https://github.com/...
@@ -81,14 +85,14 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			branch := ""
 
 			if len(args) == 2 {
-				repo = args[0]
-				branch = args[1]
+				repo = repositoryParameter
+				branch = branchParameter
 			} else {
 				repo = config.Config.ServerGitRepository
 				branch = config.Config.ServerGitBranch
 			}
 			if repo == "" || branch == "" {
-				logrus.Fatalf("missing arguments")
+				logrus.Fatalf("missing arguments, try --help")
 			}
 
 			goliac, err := internal.NewGoliacImpl()
@@ -103,9 +107,11 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			}
 		},
 	}
+	applyCmd.Flags().StringVarP(&repositoryParameter, "repository", "r", config.Config.ServerGitRepository, "repository (default env variable GOLIAC_SERVER_GIT_REPOSITORY)")
+	applyCmd.Flags().StringVarP(&branchParameter, "branch", "b", config.Config.ServerGitBranch, "branch (default env variable GOLIAC_SERVER_GIT_BRANCH)")
 
 	postSyncUsersCmd := &cobra.Command{
-		Use:   "syncusers [repository] [branch]",
+		Use:   "syncusers <https_team_repository_url> <branch>",
 		Short: "Update and commit users and teams definition",
 		Long: `This command will use a user sync plugin to adjust users
  and team yaml definition, and commit them.
@@ -113,6 +119,7 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
  branch: the branch to commit to.
  repository can be passed by parameter or by defining GOLIAC_SERVER_GIT_REPOSITORY env variable
  branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env variable`,
+		Args: cobra.MatchAll(cobra.MinimumNArgs(2), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
 			repo := ""
 			branch := ""
@@ -125,7 +132,7 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 				branch = config.Config.ServerGitBranch
 			}
 			if repo == "" || branch == "" {
-				logrus.Fatalf("missing arguments")
+				logrus.Fatalf("missing arguments. Try --help")
 			}
 
 			goliac, err := internal.NewGoliacImpl()
@@ -143,17 +150,18 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 	postSyncUsersCmd.Flags().BoolVarP(&forceParameter, "force", "f", false, "force mode")
 
 	scaffoldcmd := &cobra.Command{
-		Use:   "scaffold [directory] [adminteam]",
+		Use:   "scaffold <directory> <adminteam>",
 		Short: "Will create a base directory based on your current Github organization",
 		Long: `Base on your Github organization, this command will try to scaffold a
 goliac directory to let you start with something.
 The adminteam is your current team that contains Github administrator`,
+		Args: cobra.MatchAll(cobra.MinimumNArgs(2), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) < 2 {
-				logrus.Fatalf("missing arguments")
-			}
 			directory := args[0]
 			adminteam := args[1]
+			if directory == "" || adminteam == "" {
+				logrus.Fatalf("missing arguments. Try --help")
+			}
 			scaffold, err := internal.NewScaffold()
 			if err != nil {
 				logrus.Fatalf("failed to create scaffold: %s", err)
