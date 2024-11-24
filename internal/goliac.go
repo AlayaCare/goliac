@@ -84,6 +84,10 @@ func (g *GoliacImpl) Apply(ctx context.Context, dryrun bool, repositoryUrl, bran
 	if err != nil {
 		return fmt.Errorf("failed to load and validate: %s", err), errs, warns, nil
 	}
+	if !strings.HasPrefix(repositoryUrl, "https://") {
+		return fmt.Errorf("local mode is not supported for plan/apply, you must specify the https url of the remote team git repository. Check the documentation"), errs, warns, nil
+	}
+
 	u, err := url.Parse(repositoryUrl)
 	if err != nil {
 		return fmt.Errorf("failed to parse %s: %v", repositoryUrl, err), errs, warns, nil

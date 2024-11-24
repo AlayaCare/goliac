@@ -210,6 +210,9 @@ func (g *GoliacLocalImpl) GetHeadCommit() (*object.Commit, error) {
 }
 
 func (g *GoliacLocalImpl) ListCommitsFromTag(tagname string) ([]*object.Commit, error) {
+	if g.repo == nil {
+		return nil, fmt.Errorf("git repository not cloned")
+	}
 
 	commits := make([]*object.Commit, 0)
 
@@ -657,7 +660,6 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		for _, u := range addedusers {
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "add_user_to_repository"}).Infof("user: %s", u)
 			if !dryrun {
-				fmt.Println(u)
 				_, err = w.Add(u)
 				if err != nil {
 					return err

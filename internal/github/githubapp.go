@@ -2,6 +2,8 @@ package github
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -30,9 +32,15 @@ func (client *GitHubClientImpl) getInstallations(jwt string) ([]Installation, er
 	defer resp.Body.Close()
 
 	var installations []Installation
-	err = json.NewDecoder(resp.Body).Decode(&installations)
+	// read body into a string
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to read body when getting Github installation id: %v", err)
+	}
+
+	err = json.Unmarshal(body, &installations)
+	if err != nil {
+		return nil, fmt.Errorf("when trying to get Github installation id: unable to decode %s: %v", body, err)
 	}
 
 	return installations, nil
