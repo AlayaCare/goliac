@@ -88,7 +88,7 @@ You can use the goliac application to assist you:
 export GOLIAC_GITHUB_APP_ID=<appid>
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=<private key filename>
 export GOLIAC_GITHUB_APP_ORGANIZATION=<your github organization>
-./goliac scaffold <directory> <existing github admin team name in your organization>
+./goliac scaffold <directory> <goliac-admin team you want to create>
 ```
 
 So something like
@@ -98,7 +98,7 @@ mkdir teams
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
-./goliac scaffold teams admin
+./goliac scaffold teams goliac-admin
 ```
 
 The application will connect to your GitHub organization and will try to guess
@@ -169,7 +169,7 @@ export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
 
-./goliac plan https://github.com/goliac-project/teams main
+./goliac plan --repository https://github.com/goliac-project/teams --branch main
 ```
 
 and you can apply the change "manually"
@@ -180,7 +180,7 @@ export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
 
-./goliac apply https://github.com/goliac-project/teams main
+./goliac apply --repository https://github.com/goliac-project/teams --branch main
 ```
 
 If it works for you, you can put in place the goliac service to fetch and apply automatically (like every 10 minute). See below

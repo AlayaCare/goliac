@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
 	"gopkg.in/yaml.v3"
@@ -144,8 +145,8 @@ func (t *Team) Validate(dirname string, users map[string]*User) (error, []Warnin
 		return fmt.Errorf("team name 'everyone' is reserved"), warnings
 	}
 
-	if strings.HasSuffix(t.Name, "-owners") {
-		return fmt.Errorf("metadata.name cannot finish with '-owners' for team filename %s. It is a reserved suffix", dirname), warnings
+	if strings.HasSuffix(t.Name, config.Config.GoliacTeamOwnerSuffix) {
+		return fmt.Errorf("metadata.name cannot finish with '%s' for team filename %s. It is a reserved suffix", config.Config.GoliacTeamOwnerSuffix, dirname), warnings
 	}
 
 	teamname := filepath.Base(dirname)

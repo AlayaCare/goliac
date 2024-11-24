@@ -234,6 +234,7 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 			if err != nil {
 				return nil, err
 			}
+			logrus.Debugf("2nd rate limit reached, waiting for %d seconds", retryAfter)
 			time.Sleep(time.Duration(retryAfter) * time.Second)
 		} else {
 			return nil, fmt.Errorf("unexpected status: %s", resp.Status)

@@ -9,6 +9,7 @@ import (
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/gosimple/slug"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
 )
@@ -29,7 +30,11 @@ func (s *ScaffoldGoliacRemoteMock) Users(ctx context.Context) map[string]string 
 	return s.users
 }
 func (s *ScaffoldGoliacRemoteMock) TeamSlugByName(ctx context.Context) map[string]string {
-	return nil
+	slugbyname := make(map[string]string)
+	for k, v := range s.teams {
+		slugbyname[k] = slug.Make(v.Name)
+	}
+	return slugbyname
 }
 func (s *ScaffoldGoliacRemoteMock) Teams(ctx context.Context) map[string]*engine.GithubTeam {
 	return s.teams
@@ -305,6 +310,7 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "repo1", r1.Name)
 		assert.Equal(t, 0, len(r1.Spec.Writers)) // regular -> not counted
+		assert.Equal(t, 0, len(r1.Spec.Readers))
 
 		repo2, err := utils.ReadFile(fs, "/teams/admin/repo2.yaml")
 		assert.Nil(t, err)

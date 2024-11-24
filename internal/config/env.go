@@ -14,6 +14,7 @@ var Config = struct {
 	GithubAppID             int64  `env:"GOLIAC_GITHUB_APP_ID"`
 	GithubAppPrivateKeyFile string `env:"GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE" envDefault:"github-app-private-key.pem"`
 	GoliacEmail             string `env:"GOLIAC_EMAIL" envDefault:"goliac@alayacare.com"`
+	GoliacTeamOwnerSuffix   string `env:"GOLIAC_TEAM_OWNER_SUFFIX" envDefault:"-goliac-owners"`
 
 	GithubConcurrentThreads int64 `env:"GOLIAC_GITHUB_CONCURRENT_THREADS" envDefault:"1"`
 	GithubCacheTTL          int64 `env:"GOLIAC_GITHUB_CACHE_TTL" envDefault:"86400"`

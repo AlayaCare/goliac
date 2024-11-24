@@ -308,7 +308,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 	sort.Strings(teamsnames)
 
 	for _, t := range teamsnames {
-		codeowners += fmt.Sprintf("/teams/%s/* @%s/%s-owners @%s/%s\n", t, githubOrganization, slug.Make(t), githubOrganization, slug.Make(adminteam))
+		codeowners += fmt.Sprintf("/teams/%s/* @%s/%s%s @%s/%s\n", t, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix, githubOrganization, slug.Make(adminteam))
 	}
 
 	return codeowners
