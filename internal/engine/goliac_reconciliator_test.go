@@ -275,7 +275,7 @@ func TestReconciliation(t *testing.T) {
 
 		// 2 members created
 		assert.Equal(t, 2, len(recorder.TeamsCreated["new"]))
-		assert.Equal(t, 1, len(recorder.TeamsCreated["new-owners"]))
+		assert.Equal(t, 1, len(recorder.TeamsCreated["new"+config.Config.GoliacTeamOwnerSuffix]))
 	})
 
 	t.Run("happy path: new team with non english slug", func(t *testing.T) {
@@ -319,7 +319,7 @@ func TestReconciliation(t *testing.T) {
 
 		// 2 members created
 		assert.Equal(t, 2, len(recorder.TeamsCreated["nouveauté"]))
-		assert.Equal(t, 1, len(recorder.TeamsCreated["nouveaute-owners"]))
+		assert.Equal(t, 1, len(recorder.TeamsCreated["nouveaute"+config.Config.GoliacTeamOwnerSuffix]))
 	})
 
 	t.Run("happy path: existing team with new members", func(t *testing.T) {
@@ -370,11 +370,11 @@ func TestReconciliation(t *testing.T) {
 		}
 		remote.teams["existing"] = existing
 		existingowners := &GithubTeam{
-			Name:    "existing-owners",
-			Slug:    "existing-owners",
+			Name:    "existing" + config.Config.GoliacTeamOwnerSuffix,
+			Slug:    "existing" + config.Config.GoliacTeamOwnerSuffix,
 			Members: []string{"existing_owner", "existing_member"},
 		}
-		remote.teams["existing-owners"] = existingowners
+		remote.teams["existing"+config.Config.GoliacTeamOwnerSuffix] = existingowners
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
@@ -433,11 +433,11 @@ func TestReconciliation(t *testing.T) {
 		remote.teams["exist-ing"] = existing
 
 		existingowners := &GithubTeam{
-			Name:    "exist ing-owners",
-			Slug:    "exist-ing-owners",
+			Name:    "exist ing" + config.Config.GoliacTeamOwnerSuffix,
+			Slug:    "exist-ing" + config.Config.GoliacTeamOwnerSuffix,
 			Members: []string{"existing_owner", "existing_member"},
 		}
-		remote.teams["exist-ing-owners"] = existingowners
+		remote.teams["exist-ing"+config.Config.GoliacTeamOwnerSuffix] = existingowners
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
@@ -492,7 +492,7 @@ func TestReconciliation(t *testing.T) {
 
 		// 2 members created
 		assert.Equal(t, 2, len(recorder.TeamsCreated["new"]))
-		assert.Equal(t, 1, len(recorder.TeamsCreated["new-owners"]))
+		assert.Equal(t, 1, len(recorder.TeamsCreated["new"+config.Config.GoliacTeamOwnerSuffix]))
 		// and the everyone team
 		assert.Equal(t, 2, len(recorder.TeamsCreated["everyone"]))
 	})
@@ -574,8 +574,8 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		parentTeamOwners := &GithubTeam{
-			Name:    "parentteam-owners",
-			Slug:    "parentteam-owners",
+			Name:    "parentteam" + config.Config.GoliacTeamOwnerSuffix,
+			Slug:    "parentteam" + config.Config.GoliacTeamOwnerSuffix,
 			Members: []string{"existing_owner"},
 			Id:      1,
 		}
@@ -588,16 +588,16 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		childTeamOwners := &GithubTeam{
-			Name:    "childTeam-owners",
-			Slug:    "childteam-owners",
+			Name:    "childTeam" + config.Config.GoliacTeamOwnerSuffix,
+			Slug:    "childteam" + config.Config.GoliacTeamOwnerSuffix,
 			Members: []string{"existing_owner"},
 			Id:      2,
 		}
 
 		remote.teams["parentteam"] = parentTeam
-		remote.teams["parentteam-owners"] = parentTeamOwners
+		remote.teams["parentteam"+config.Config.GoliacTeamOwnerSuffix] = parentTeamOwners
 		remote.teams["childteam"] = childTeam
-		remote.teams["childteam-owners"] = childTeamOwners
+		remote.teams["childteam"+config.Config.GoliacTeamOwnerSuffix] = childTeamOwners
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
@@ -652,8 +652,8 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		parentTeamOwners := &GithubTeam{
-			Name:    "parentteam-owners",
-			Slug:    "parentteam-owners",
+			Name:    "parentteam" + config.Config.GoliacTeamOwnerSuffix,
+			Slug:    "parentteam" + config.Config.GoliacTeamOwnerSuffix,
 			Members: []string{"existing_owner"},
 			Id:      1,
 		}
@@ -666,16 +666,16 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		childTeamOwners := &GithubTeam{
-			Name:    "childTeam-owners",
-			Slug:    "childteam-owners",
+			Name:    "childTeam" + config.Config.GoliacTeamOwnerSuffix,
+			Slug:    "childteam" + config.Config.GoliacTeamOwnerSuffix,
 			Members: []string{"existing_owner"},
 			Id:      2,
 		}
 
 		remote.teams["parentteam"] = parentTeam
-		remote.teams["parentteam-owners"] = parentTeamOwners
+		remote.teams["parentteam"+config.Config.GoliacTeamOwnerSuffix] = parentTeamOwners
 		remote.teams["childteam"] = childTeam
-		remote.teams["childteam-owners"] = childTeamOwners
+		remote.teams["childteam"+config.Config.GoliacTeamOwnerSuffix] = childTeamOwners
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)

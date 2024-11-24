@@ -152,7 +152,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		rTeams[k] = team
 	}
 
-	// prepare the teams we want (regular and "-owners")
+	// prepare the teams we want (regular and "-goliac-owners"/config.Config.GoliacTeamOwnerSuffix)
 	slugTeams := make(map[string]*GithubTeamComparable)
 	lTeams := local.Teams()
 	lUsers := local.Users()
@@ -187,11 +187,11 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 
 		// owners
 		team = &GithubTeamComparable{
-			Name:    teamslug + "-owners",
-			Slug:    teamslug + "-owners",
+			Name:    teamslug + config.Config.GoliacTeamOwnerSuffix,
+			Slug:    teamslug + config.Config.GoliacTeamOwnerSuffix,
 			Members: membersOwners,
 		}
-		slugTeams[teamslug+"-owners"] = team
+		slugTeams[teamslug+config.Config.GoliacTeamOwnerSuffix] = team
 	}
 
 	// adding the "everyone" team
@@ -347,7 +347,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		// special case for the Goliac "teams" repo
 		if reponame == teamsreponame {
 			for teamname := range local.Teams() {
-				writers = append(writers, slug.Make(teamname)+"-owners")
+				writers = append(writers, slug.Make(teamname)+config.Config.GoliacTeamOwnerSuffix)
 			}
 		}
 

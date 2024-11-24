@@ -191,7 +191,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 	for team, repos := range teamsRepos {
 		// write the team dir
 		if t := teams[team]; t != nil {
-			if strings.HasSuffix(team, "-owners") {
+			if strings.HasSuffix(team, config.Config.GoliacTeamOwnerSuffix) {
 				continue
 			}
 			lTeam := entity.Team{}
@@ -231,7 +231,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 				}
 				// removing team owner (especially for the special case teams repo)
 				for i, t := range lRepo.Spec.Writers {
-					if strings.HasSuffix(t, "-owners") {
+					if strings.HasSuffix(t, config.Config.GoliacTeamOwnerSuffix) {
 						lRepo.Spec.Writers = append(lRepo.Spec.Writers[:i], lRepo.Spec.Writers[i+1:]...)
 						break
 					}
@@ -245,7 +245,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 
 	for teamName, slugName := range teamsSlugByName {
 		t := teams[slugName]
-		if strings.HasSuffix(slugName, "-owners") {
+		if strings.HasSuffix(slugName, config.Config.GoliacTeamOwnerSuffix) {
 			continue
 		}
 
