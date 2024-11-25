@@ -553,58 +553,6 @@ type GraplQLTeams struct {
 	} `json:"errors"`
 }
 
-const listAllTeamsReposInOrg = `
-query listAllTeamsReposInOrg($orgLogin: String!, $teamSlug: String!, $endCursor: String) {
-  organization(login: $orgLogin) {
-    team(slug: $teamSlug) {
-       repositories(first: 100, after: $endCursor) {
-        edges {
-          permission
-          node {
-            name
-          }
-        }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        totalCount
-      }
-    }
-  }
-}
-`
-
-type GraplQLTeamsRepos struct {
-	Data struct {
-		Organization struct {
-			Team struct {
-				Repository struct {
-					Edges []struct {
-						Permission string
-						Node       struct {
-							Name string
-						}
-					} `json:"edges"`
-					PageInfo struct {
-						HasNextPage bool
-						EndCursor   string
-					} `json:"pageInfo"`
-					TotalCount int `json:"totalCount"`
-				} `json:"repositories"`
-			} `json:"team"`
-		}
-	}
-	Errors []struct {
-		Path       []interface{} `json:"path"`
-		Extensions struct {
-			Code         string
-			ErrorMessage string
-		} `json:"extensions"`
-		Message string
-	} `json:"errors"`
-}
-
 func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, error) {
 	logrus.Debug("loading appIds")
 	type Installation struct {
@@ -742,40 +690,55 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 }
 
 func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently(ctx context.Context) (map[string]map[string]*GithubTeamRepo, error) {
-	logrus.Debug("loading teamReposNonConcurrently")
+	logrus.Debug("loading teamReposNonConcurrentlyV2")
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
 
-	for teamSlug := range g.teams {
-		repos, err := g.loadTeamRepos(ctx, teamSlug)
+	teamsPerRepo := make(map[string]map[string]*GithubTeamRepo)
+	for repository := range g.repositories {
+		repos, err := g.loadTeamRepos(ctx, repository)
 		if err != nil {
 			return teamRepos, err
 		}
-		teamRepos[teamSlug] = repos
+		teamsPerRepo[repository] = repos
 	}
+
+	// we have all the teams per repo, now we need to invert the map
+	for repository, repos := range teamsPerRepo {
+		for team, repo := range repos {
+			if _, ok := teamRepos[team]; ok {
+				teamRepos[team][repository] = repo
+			} else {
+				teamRepos[team] = map[string]*GithubTeamRepo{repository: repo}
+			}
+		}
+	}
+
 	return teamRepos, nil
 }
 
 func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGoroutines int64) (map[string]map[string]*GithubTeamRepo, error) {
-	logrus.Debug("loading teamReposConcurrently")
+	logrus.Debug("loading teamReposConcurrentlyV2")
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
+
+	teamsPerRepo := make(map[string]map[string]*GithubTeamRepo)
 
 	var wg sync.WaitGroup
 
 	// Create buffered channels
-	teamsChan := make(chan string, len(g.teams))
+	reposChan := make(chan string, len(g.repositories))
 	errChan := make(chan error, 1) // will hold the first error
-	reposChan := make(chan struct {
-		teamSlug string
+	teamReposChan := make(chan struct {
+		repoName string
 		repos    map[string]*GithubTeamRepo
-	}, len(g.teams))
+	}, len(g.repositories))
 
 	// Create worker goroutines
 	for i := int64(0); i < maxGoroutines; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for slug := range teamsChan {
-				repos, err := g.loadTeamRepos(ctx, slug)
+			for repoName := range reposChan {
+				repos, err := g.loadTeamRepos(ctx, repoName)
 				if err != nil {
 					// Try to report the error
 					select {
@@ -784,23 +747,23 @@ func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGor
 					}
 					return
 				}
-				reposChan <- struct {
-					teamSlug string
+				teamReposChan <- struct {
+					repoName string
 					repos    map[string]*GithubTeamRepo
-				}{slug, repos}
+				}{repoName, repos}
 			}
 		}()
 	}
 
-	// Send teams to teamsChan
-	for teamSlug := range g.teams {
-		teamsChan <- teamSlug
+	// Send repositories to reposChan
+	for repoName := range g.repositories {
+		reposChan <- repoName
 	}
-	close(teamsChan)
+	close(reposChan)
 
 	// Wait for all goroutines to finish
 	wg.Wait()
-	close(reposChan)
+	close(teamReposChan)
 
 	// Check if any goroutine returned an error
 	select {
@@ -808,57 +771,67 @@ func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGor
 		return teamRepos, err
 	default:
 		// No error, populate the teamRepos map
-		for r := range reposChan {
-			teamRepos[r.teamSlug] = r.repos
+		for r := range teamReposChan {
+			teamsPerRepo[r.repoName] = r.repos
+		}
+	}
+
+	// we have all the teams per repo, now we need to invert the map
+	for repository, repos := range teamsPerRepo {
+		for team, repo := range repos {
+			if _, ok := teamRepos[team]; ok {
+				teamRepos[team][repository] = repo
+			} else {
+				teamRepos[team] = map[string]*GithubTeamRepo{repository: repo}
+			}
 		}
 	}
 
 	return teamRepos, nil
 }
 
-func (g *GoliacRemoteImpl) loadTeamRepos(ctx context.Context, teamSlug string) (map[string]*GithubTeamRepo, error) {
-	variables := make(map[string]interface{})
-	variables["orgLogin"] = config.Config.GithubAppOrganization
-	variables["teamSlug"] = teamSlug
-	variables["endCursor"] = nil
+type TeamsRepoResponse struct {
+	Name       string `json:"name"`
+	Permission string `json:"permission"`
+	Slug       string `json:"slug"`
+}
 
-	repos := make(map[string]*GithubTeamRepo)
+/*
+loadTeamRepos returns
+map[teamSlug]repoinfo
+*/
+func (g *GoliacRemoteImpl) loadTeamRepos(ctx context.Context, repository string) (map[string]*GithubTeamRepo, error) {
+	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-repository-teams
+	teamsrepo := make(map[string]*GithubTeamRepo)
 
-	hasNextPage := true
-	count := 0
-	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamsReposInOrg, variables)
-		if err != nil {
-			return nil, err
+	data, err := g.client.CallRestAPI(ctx, "/repos/"+config.Config.GithubAppOrganization+"/"+repository+"/teams", "GET", nil)
+	if err != nil {
+		return nil, fmt.Errorf("not able to list teams for repo %s: %v", repository, err)
+	}
+
+	var teams []TeamsRepoResponse
+	err = json.Unmarshal(data, &teams)
+	if err != nil {
+		return nil, fmt.Errorf("not able to unmarshall teams for repo %s: %v", repository, err)
+	}
+
+	for _, t := range teams {
+		permission := ""
+		switch t.Permission {
+		case "admin":
+			permission = "ADMIN"
+		case "push":
+			permission = "WRITE"
+		case "pull":
+			permission = "READ"
 		}
-		var gResult GraplQLTeamsRepos
-
-		// parse first page
-		err = json.Unmarshal(data, &gResult)
-		if err != nil {
-			return nil, err
-		}
-		if len(gResult.Errors) > 0 {
-			return nil, fmt.Errorf("graphql error on loadTeamRepos: %v (%v) for teamSlug %s", gResult.Errors[0].Message, gResult.Errors[0].Path, teamSlug)
-		}
-
-		for _, c := range gResult.Data.Organization.Team.Repository.Edges {
-			repos[c.Node.Name] = &GithubTeamRepo{
-				Name:       c.Node.Name,
-				Permission: c.Permission,
-			}
-		}
-
-		hasNextPage = gResult.Data.Organization.Team.Repository.PageInfo.HasNextPage
-		variables["endCursor"] = gResult.Data.Organization.Team.Repository.PageInfo.EndCursor
-
-		count++
-		// sanity check to avoid loops
-		if count > FORLOOP_STOP {
-			break
+		teamsrepo[t.Slug] = &GithubTeamRepo{
+			Name:       repository,
+			Permission: permission,
 		}
 	}
-	return repos, nil
+
+	return teamsrepo, nil
 }
 
 const listAllTeamMembersInOrg = `

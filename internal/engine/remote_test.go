@@ -8,8 +8,10 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
+	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/github"
 	"github.com/stretchr/testify/assert"
 
@@ -391,8 +393,20 @@ func (m *MockGithubClient) QueryGraphQLAPI(ctx context.Context, query string, va
 }
 
 func (m *MockGithubClient) CallRestAPI(ctx context.Context, endpoint, method string, body map[string]interface{}) ([]byte, error) {
+	// /repos/"+config.Config.GithubAppOrganization+"/"+repository+"/teams
+	if strings.HasPrefix(endpoint, "/repos/"+config.Config.GithubAppOrganization+"/repo_") {
+		// we still pretend we have 133 teams, cf L263
+		repoSuffix := strings.TrimPrefix(endpoint, "/repos/"+config.Config.GithubAppOrganization+"/repo_")
+		repoIdStr := strings.Split(repoSuffix, "/")[0]
+		repoId, err := strconv.Atoi(repoIdStr)
+		if err != nil {
+			return nil, err
+		}
+		return []byte(fmt.Sprintf(`[{"name":"team_1","permission":"push","slug":"slug-%d"},{"name":"team_2","permission":"push","slug":"slug-2"}]`, repoId)), nil
+	}
 	return nil, nil
 }
+
 func (m *MockGithubClient) GetAccessToken(ctx context.Context) (string, error) {
 	return "", nil
 }
@@ -435,10 +449,10 @@ func TestRemoteRepository(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(&client)
 
 		ctx := context.TODO()
-		repos, err := remoteImpl.loadTeamRepos(ctx, "team-1")
+		repos, err := remoteImpl.loadTeamRepos(ctx, "repo_0")
 		assert.Nil(t, err)
 		assert.Equal(t, 2, len(repos))
-		assert.Equal(t, "push", repos["repo_0"].Permission)
+		assert.Equal(t, "WRITE", repos["slug-0"].Permission)
 	})
 
 	t.Run("happy path: load remote teams and team's repos", func(t *testing.T) {
@@ -451,7 +465,7 @@ func TestRemoteRepository(t *testing.T) {
 		err := remoteImpl.Load(ctx, false)
 		assert.Nil(t, err)
 		assert.Equal(t, 122, len(remoteImpl.teams))
-		assert.Equal(t, 2, len(remoteImpl.teamRepos["slug-1"]))
+		assert.Equal(t, 1, len(remoteImpl.teamRepos["slug-1"]))
 	})
 }
 
