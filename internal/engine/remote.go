@@ -553,58 +553,6 @@ type GraplQLTeams struct {
 	} `json:"errors"`
 }
 
-const listAllTeamsReposInOrg = `
-query listAllTeamsReposInOrg($orgLogin: String!, $teamSlug: String!, $endCursor: String) {
-  organization(login: $orgLogin) {
-    team(slug: $teamSlug) {
-       repositories(first: 100, after: $endCursor) {
-        edges {
-          permission
-          node {
-            name
-          }
-        }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-        totalCount
-      }
-    }
-  }
-}
-`
-
-type GraplQLTeamsRepos struct {
-	Data struct {
-		Organization struct {
-			Team struct {
-				Repository struct {
-					Edges []struct {
-						Permission string
-						Node       struct {
-							Name string
-						}
-					} `json:"edges"`
-					PageInfo struct {
-						HasNextPage bool
-						EndCursor   string
-					} `json:"pageInfo"`
-					TotalCount int `json:"totalCount"`
-				} `json:"repositories"`
-			} `json:"team"`
-		}
-	}
-	Errors []struct {
-		Path       []interface{} `json:"path"`
-		Extensions struct {
-			Code         string
-			ErrorMessage string
-		} `json:"extensions"`
-		Message string
-	} `json:"errors"`
-}
-
 func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, error) {
 	logrus.Debug("loading appIds")
 	type Installation struct {
