@@ -9,6 +9,63 @@ permissions:
   packages: write
 
 jobs:
+  build-binaries:
+    runs-on: ubuntu-latest
+    outputs:
+      linux-x86_64-binary-path: ${{ steps.upload-artifact-linux-x86_64.outputs.binary-path }}
+      linux-aarch64-binary-path: ${{ steps.upload-artifact-linux-aarch64.outputs.binary-path }}
+      darwin-arm64-binary-path: ${{ steps.upload-artifact-Darwin-arm64.outputs.binary-path }}
+      windows-x86_64-binary-path: ${{ steps.upload-artifact-windows-x86_64.outputs.binary-path }}
+
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Go environment
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20
+
+      # Build Go binaries for different platforms. Name is goliac-`uname -s`-`uname -m` (at least for linux and mac)
+      - name: Build binaries
+        run: |
+          mkdir -p dist
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Linux-x86_64 ./cmd/goliac
+          GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Linux-aarch64 ./cmd/goliac
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Darwin-arm64 ./cmd/goliac
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-win-x86_64 ./cmd/goliac
+
+      # Upload binaries as artifacts
+      - name: Upload Linux-x86_64 binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-x86_64
+          path: dist/goliac-Linux-x86_64
+        id: upload-artifact-linux-x86_64
+
+      - name: Upload Linux-aarch64 binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-aarch64
+          path: dist/goliac-Linux-aarch64
+        id: upload-artifact-linux-aarch64
+
+      - name: Upload Darwin-arm64 binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: darwin-arm64
+          path: dist/goliac-Darwin-arm64
+        id: upload-artifact-Darwin-arm64
+
+      - name: Upload Windows-x86_64 binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-x86_64
+          path: dist/goliac-win-x86_64
+        id: upload-artifact-windows-x86_64
+
   build:
     runs-on: ubuntu-latest
 
@@ -44,3 +101,4 @@ jobs:
         tags: ghcr.io/${{ steps.lower-repo.outputs.repository }}:latest,ghcr.io/${{ steps.lower-repo.outputs.repository }}:${{ github.ref_name }}
         build-args: |
           GITHUB_REF=${{ github.ref_name }}
+    
