@@ -38,29 +38,29 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-win-x86_64 ./cmd/goliac
 
       # Upload binaries as artifacts
-      - name: Upload Linux-x86_64 binary
-        uses: actions/upload-artifact@v3
+      - name: Linux-x86_64 binary
+        uses: actions/upload-artifact@v4
         with:
           name: linux-x86_64
           path: dist/goliac-Linux-x86_64
         id: upload-artifact-linux-x86_64
 
-      - name: Upload Linux-aarch64 binary
-        uses: actions/upload-artifact@v3
+      - name: Linux-aarch64 binary
+        uses: actions/upload-artifact@v4
         with:
           name: linux-aarch64
           path: dist/goliac-Linux-aarch64
         id: upload-artifact-linux-aarch64
 
-      - name: Upload Darwin-arm64 binary
-        uses: actions/upload-artifact@v3
+      - name: Darwin-arm64 binary
+        uses: actions/upload-artifact@v4
         with:
           name: darwin-arm64
           path: dist/goliac-Darwin-arm64
         id: upload-artifact-Darwin-arm64
 
-      - name: Upload Windows-x86_64 binary
-        uses: actions/upload-artifact@v3
+      - name: Windows-x86_64 binary
+        uses: actions/upload-artifact@v4
         with:
           name: windows-x86_64
           path: dist/goliac-win-x86_64
