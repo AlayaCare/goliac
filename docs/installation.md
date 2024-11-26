@@ -82,6 +82,12 @@ You need the following structure:
 
 ### Assisted initialization
 
+You will need the goliac binary, either from docker image, or from Github release.
+
+```shell
+curl -o goliac -L https://github.com/Alayacare/goliac/releases/download/v0.9.4/goliac-`uname -s`-`uname -m` && chmod +x goliac
+```
+
 You can use the goliac application to assist you:
 
 ```shell
