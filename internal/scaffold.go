@@ -406,11 +406,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Verify
-        uses: addnab/docker-run-action@v3
-        with:
-          image: ghcr.io/nzin/goliac
-          options: -v ${{ github.workspace }}:/work 
-          run: /app/goliac verify /work
+        run: docker run -v ${{ github.workspace }}:/work --rm ghcr.io/nzin/goliac verify /work
 `
 	if err := writeFile(filepath.Join(rootpath, ".github", "workflows", "pr.yaml"), []byte(workflow), fs); err != nil {
 		return err
