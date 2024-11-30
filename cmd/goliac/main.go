@@ -176,14 +176,14 @@ The adminteam is your current team that contains Github administrator`,
 				newRepoSuggestion := filepath.Dir(directory)
 				cwd, err := os.Getwd()
 				if err == nil {
-					newRepoSuggestion = filepath.Dir(filepath.Join(cwd, directory))
+					newRepoSuggestion = filepath.Base(filepath.Join(cwd, directory))
 				}
-				newRepoSuggestion = config.Config.GithubServer + "/" + config.Config.GithubAppOrganization + "/" + newRepoSuggestion
+				newRepoSuggestion = "https://github.com/" + config.Config.GithubAppOrganization + "/" + newRepoSuggestion
 				fmt.Printf(`Scaffold directory (%s) created
 Now you can push this directory as a new repository to Github, like:
 - check the validity of the directory:
    goliac verify %s
-- create a new repository %s on Github
+- create a new repository '%s' on Github
 - push this directory to the new repository:
    cd %s
    git init --initial-branch=main
