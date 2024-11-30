@@ -88,6 +88,10 @@ func (g *GoliacServerImpl) GetUnmanaged(app.GetUnmanagedParams) middleware.Respo
 		for r := range g.lastUnmanaged.Repositories {
 			repos = append(repos, r)
 		}
+		externallyManagedTeams := make([]string, 0, len(g.lastUnmanaged.Teams))
+		for t := range g.lastUnmanaged.ExternallyManagedTeams {
+			externallyManagedTeams = append(externallyManagedTeams, t)
+		}
 		teams := make([]string, 0, len(g.lastUnmanaged.Teams))
 		for t := range g.lastUnmanaged.Teams {
 			teams = append(teams, t)
@@ -101,10 +105,11 @@ func (g *GoliacServerImpl) GetUnmanaged(app.GetUnmanagedParams) middleware.Respo
 			rulesets = append(rulesets, fmt.Sprintf("%d", r))
 		}
 		return app.NewGetUnmanagedOK().WithPayload(&models.Unmanaged{
-			Repos:    repos,
-			Teams:    teams,
-			Users:    users,
-			Rulesets: rulesets,
+			Repos:                  repos,
+			ExternallyManagedTeams: externallyManagedTeams,
+			Teams:                  teams,
+			Users:                  users,
+			Rulesets:               rulesets,
 		})
 	}
 }

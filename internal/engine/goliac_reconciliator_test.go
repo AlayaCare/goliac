@@ -1219,6 +1219,75 @@ func TestReconciliation(t *testing.T) {
 		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded))
 	})
 
+	t.Run("happy path: add a externally managed team AND add it to an existing repo", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+		lRepo := &entity.Repository{}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{"newerTeam"}
+		lRepo.Spec.Writers = []string{}
+		lowner := "existing"
+		lRepo.Owner = &lowner
+		local.repos["myrepo"] = lRepo
+
+		existingTeam := &entity.Team{}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{"existing_member"}
+		local.teams["existing"] = existingTeam
+
+		newerTeam := &entity.Team{}
+		newerTeam.Name = "newerTeam"
+		newerTeam.Spec.ExternallyManaged = true
+		local.teams["newerTeam"] = newerTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+		existing := &GithubTeam{
+			Name:    "existing",
+			Slug:    "existing",
+			Members: []string{"existing_owner", "existing_member"},
+		}
+		remote.teams["existing"] = existing
+		remote.teams["existing"+config.Config.GoliacTeamOwnerSuffix] = existing
+		rRepo := GithubRepository{
+			Name:           "myrepo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
+		remote.repos["myrepo"] = &rRepo
+
+		remote.teamsrepos["existing"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["existing"]["myrepo"] = &GithubTeamRepo{
+			Name:       "myrepo",
+			Permission: "WRITE",
+		}
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+
+		// 1 repo updated
+		assert.Equal(t, 1, len(recorder.TeamsCreated)) // the newerTeam-goliac-owners team
+		assert.Equal(t, 0, len(recorder.RepositoryCreated))
+		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
+		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded))
+	})
+
 	t.Run("happy path: existing repo with new external write collaborator", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 

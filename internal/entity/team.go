@@ -14,8 +14,9 @@ import (
 type Team struct {
 	Entity `yaml:",inline"`
 	Spec   struct {
-		Owners  []string `yaml:"owners,omitempty"`
-		Members []string `yaml:"members,omitempty"`
+		ExternallyManaged bool     `yaml:"externallyManaged,omitempty"`
+		Owners            []string `yaml:"owners,omitempty"`
+		Members           []string `yaml:"members,omitempty"`
 	} `yaml:"spec"`
 	ParentTeam *string `yaml:"parentTeam,omitempty"`
 }
@@ -152,6 +153,15 @@ func (t *Team) Validate(dirname string, users map[string]*User) (error, []Warnin
 	teamname := filepath.Base(dirname)
 	if t.Name != teamname {
 		return fmt.Errorf("invalid metadata.name: %s for team filename %s/team.yaml", t.Name, dirname), warnings
+	}
+
+	if t.Spec.ExternallyManaged {
+		if len(t.Spec.Owners) > 0 {
+			return fmt.Errorf("externallyManaged team cannot have owners for team filename %s/team.yaml", dirname), warnings
+		}
+		if len(t.Spec.Members) > 0 {
+			return fmt.Errorf("externallyManaged team cannot have members for team filename %s/team.yaml", dirname), warnings
+		}
 	}
 
 	for _, owner := range t.Spec.Owners {

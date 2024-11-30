@@ -38,7 +38,7 @@
               :highlight-current-row="false"
               :default-sort="{ prop: 'title', order: 'descending' }"
             >
-              <el-table-column width="150" prop="key" align="left" label="Key" sortable />
+              <el-table-column width="250" prop="key" align="left" label="Key" sortable />
               <el-table-column width="100" prop="nb" align="left" label="Nb" />
               <el-table-column prop="values" align="left" label="Values" />
             </el-table>
@@ -159,6 +159,11 @@
                         values: unmanaged.users ? unmanaged.users.slice(0, 20).join(",") : "unknown",
                     },
                     {
+                        key: "Externally Managed Teams",
+                        nb: unmanaged.externally_managed_teams ? unmanaged.externally_managed_teams.length : "unknown",
+                        values: unmanaged.externally_managed_teams ? unmanaged.externally_managed_teams.slice(0, 20).join(",") : "unknown",
+                    },
+                    {
                         key: "Teams",
                         nb: unmanaged.teams ? unmanaged.teams.length : "unknown",
                         values: unmanaged.teams ? unmanaged.teams.slice(0, 20).join(",") : "unknown",
@@ -176,6 +181,9 @@
                 ]
                 if (unmanaged.users && unmanaged.users.length > 20) {
                     this.unmanagedTable.users += ", ...";
+                }
+                if (unmanaged.externally_managed_teams && unmanaged.externally_managed_teams.length > 20) {
+                    this.unmanagedTable.externally_managed_teams += ", ...";
                 }
                 if (unmanaged.teams && unmanaged.teams.length > 20) {
                     this.unmanagedTable.teams += ", ...";

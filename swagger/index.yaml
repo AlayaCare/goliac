@@ -319,6 +319,11 @@ definitions:
         items:
           type: string
           minLength: 1
+      externally_managed_teams:
+        type: array
+        items:
+          type: string
+          minLength: 1
       teams:
         type: array
         items:
