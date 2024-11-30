@@ -154,7 +154,7 @@
                 let unmanaged = response.data;
                 this.unmanagedTable = [
                     {
-                        key: "Users",
+                        key: "Unmanaged Users",
                         nb: unmanaged.users ? unmanaged.users.length : "unknown",
                         values: unmanaged.users ? unmanaged.users.slice(0, 20).join(",") : "unknown",
                     },
@@ -164,17 +164,17 @@
                         values: unmanaged.externally_managed_teams ? unmanaged.externally_managed_teams.slice(0, 20).join(",") : "unknown",
                     },
                     {
-                        key: "Teams",
+                        key: "Unmanaged Teams",
                         nb: unmanaged.teams ? unmanaged.teams.length : "unknown",
                         values: unmanaged.teams ? unmanaged.teams.slice(0, 20).join(",") : "unknown",
                     },
                     {
-                        key: "Repositories",
+                        key: "Unmanaged Repositories",
                         nb: unmanaged.repos ? unmanaged.repos.length : "unknown",
                         values: unmanaged.repos ? unmanaged.repos.slice(0, 20).join(",") : "unknown",
                     },
                     {
-                        key: "Rulesets",
+                        key: "Unmanaged Rulesets",
                         nb: unmanaged.rulesets ? unmanaged.rulesets.length : "unknown",
                         values: unmanaged.rulesets ? unmanaged.rulesets.slice(0, 20).join(",") : "unknown",
                     },
