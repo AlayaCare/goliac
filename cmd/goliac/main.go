@@ -111,7 +111,7 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 	applyCmd.Flags().StringVarP(&branchParameter, "branch", "b", config.Config.ServerGitBranch, "branch (default env variable GOLIAC_SERVER_GIT_BRANCH)")
 
 	postSyncUsersCmd := &cobra.Command{
-		Use:   "syncusers <https_team_repository_url> <branch>",
+		Use:   "syncusers [--repository https_team_repository_url] [--branch branch] [--dryrun] [--force]",
 		Short: "Update and commit users and teams definition",
 		Long: `This command will use a user sync plugin to adjust users
  and team yaml definition, and commit them.
@@ -121,18 +121,17 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
  branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env variable`,
 		Args: cobra.MatchAll(cobra.MinimumNArgs(2), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
-			repo := ""
-			branch := ""
+			repo := repositoryParameter
+			branch := branchParameter
 
-			if len(args) == 2 {
-				repo = args[0]
-				branch = args[1]
-			} else {
+			if repo == "" {
 				repo = config.Config.ServerGitRepository
+			}
+			if branch == "" {
 				branch = config.Config.ServerGitBranch
 			}
 			if repo == "" || branch == "" {
-				logrus.Fatalf("missing arguments. Try --help")
+				logrus.Fatalf("missing arguments, try --help")
 			}
 
 			goliac, err := internal.NewGoliacImpl()
@@ -146,6 +145,8 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			}
 		},
 	}
+	postSyncUsersCmd.Flags().StringVarP(&repositoryParameter, "repository", "r", config.Config.ServerGitRepository, "repository (default env variable GOLIAC_SERVER_GIT_REPOSITORY)")
+	postSyncUsersCmd.Flags().StringVarP(&branchParameter, "branch", "b", config.Config.ServerGitBranch, "branch (default env variable GOLIAC_SERVER_GIT_BRANCH)")
 	postSyncUsersCmd.Flags().BoolVarP(&dryrunParameter, "dryrun", "d", false, "dryrun mode")
 	postSyncUsersCmd.Flags().BoolVarP(&forceParameter, "force", "f", false, "force mode")
 
