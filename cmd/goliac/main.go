@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/Alayacare/goliac/internal"
 	"github.com/Alayacare/goliac/internal/config"
@@ -165,9 +166,36 @@ The adminteam is your current team that contains Github administrator`,
 			if err != nil {
 				logrus.Fatalf("failed to create scaffold: %s", err)
 			}
+			fmt.Println("Generating the IAC structure, it can take several minutes to list everything. \u2615")
+
 			err = scaffold.Generate(directory, adminteam)
 			if err != nil {
 				logrus.Fatalf("failed to create scaffold direcrory: %s", err)
+			} else {
+				newRepoSuggestion := filepath.Dir(directory)
+				cwd, err := os.Getwd()
+				if err == nil {
+					newRepoSuggestion = filepath.Dir(filepath.Join(cwd, directory))
+				}
+				newRepoSuggestion = config.Config.GithubServer + "/" + config.Config.GithubAppOrganization + "/" + newRepoSuggestion
+				fmt.Printf(`Scaffold directory (%s) created
+Now you can push this directory as a new repository to Github, like:
+- check the validity of the directory:
+   goliac verify %s
+- create a new repository %s on Github
+- push this directory to the new repository:
+   cd %s
+   git init --initial-branch=main
+   git add .
+   git commit -m 'team repository created'
+   git remote add origin %s
+   git push -u origin main
+- check the validity of the repository:
+   goliac plan --repository %s
+- apply the repository:
+   goliac apply --repository %s
+- and then setup and start the goliac server
+`, directory, directory, newRepoSuggestion, directory, newRepoSuggestion, newRepoSuggestion, newRepoSuggestion)
 			}
 		},
 	}
