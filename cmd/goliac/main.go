@@ -224,6 +224,14 @@ any changes from the teams Git repository to Github.`,
 		},
 	}
 
+	versioncmd := &cobra.Command{
+		Use:   "version",
+		Short: "Return the version of the goliac CLI",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(config.GoliacBuildVersion)
+		},
+	}
+
 	rootCmd := &cobra.Command{
 		Use:   "goliac",
 		Short: "A CLI for the goliac organization",
@@ -238,6 +246,7 @@ Either local directory, or remote git repository`,
 	rootCmd.AddCommand(postSyncUsersCmd)
 	rootCmd.AddCommand(scaffoldcmd)
 	rootCmd.AddCommand(servecmd)
+	rootCmd.AddCommand(versioncmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
