@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/Alayacare/goliac/internal"
 	"github.com/Alayacare/goliac/internal/config"
@@ -110,7 +111,7 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 	applyCmd.Flags().StringVarP(&branchParameter, "branch", "b", config.Config.ServerGitBranch, "branch (default env variable GOLIAC_SERVER_GIT_BRANCH)")
 
 	postSyncUsersCmd := &cobra.Command{
-		Use:   "syncusers <https_team_repository_url> <branch>",
+		Use:   "syncusers [--repository https_team_repository_url] [--branch branch] [--dryrun] [--force]",
 		Short: "Update and commit users and teams definition",
 		Long: `This command will use a user sync plugin to adjust users
  and team yaml definition, and commit them.
@@ -120,18 +121,17 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
  branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env variable`,
 		Args: cobra.MatchAll(cobra.MinimumNArgs(2), cobra.OnlyValidArgs),
 		Run: func(cmd *cobra.Command, args []string) {
-			repo := ""
-			branch := ""
+			repo := repositoryParameter
+			branch := branchParameter
 
-			if len(args) == 2 {
-				repo = args[0]
-				branch = args[1]
-			} else {
+			if repo == "" {
 				repo = config.Config.ServerGitRepository
+			}
+			if branch == "" {
 				branch = config.Config.ServerGitBranch
 			}
 			if repo == "" || branch == "" {
-				logrus.Fatalf("missing arguments. Try --help")
+				logrus.Fatalf("missing arguments, try --help")
 			}
 
 			goliac, err := internal.NewGoliacImpl()
@@ -145,6 +145,8 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			}
 		},
 	}
+	postSyncUsersCmd.Flags().StringVarP(&repositoryParameter, "repository", "r", config.Config.ServerGitRepository, "repository (default env variable GOLIAC_SERVER_GIT_REPOSITORY)")
+	postSyncUsersCmd.Flags().StringVarP(&branchParameter, "branch", "b", config.Config.ServerGitBranch, "branch (default env variable GOLIAC_SERVER_GIT_BRANCH)")
 	postSyncUsersCmd.Flags().BoolVarP(&dryrunParameter, "dryrun", "d", false, "dryrun mode")
 	postSyncUsersCmd.Flags().BoolVarP(&forceParameter, "force", "f", false, "force mode")
 
@@ -165,9 +167,36 @@ The adminteam is your current team that contains Github administrator`,
 			if err != nil {
 				logrus.Fatalf("failed to create scaffold: %s", err)
 			}
+			fmt.Println("Generating the IAC structure, it can take several minutes to list everything. \u2615")
+
 			err = scaffold.Generate(directory, adminteam)
 			if err != nil {
 				logrus.Fatalf("failed to create scaffold direcrory: %s", err)
+			} else {
+				newRepoSuggestion := filepath.Dir(directory)
+				cwd, err := os.Getwd()
+				if err == nil {
+					newRepoSuggestion = filepath.Dir(filepath.Join(cwd, directory))
+				}
+				newRepoSuggestion = config.Config.GithubServer + "/" + config.Config.GithubAppOrganization + "/" + newRepoSuggestion
+				fmt.Printf(`Scaffold directory (%s) created
+Now you can push this directory as a new repository to Github, like:
+- check the validity of the directory:
+   goliac verify %s
+- create a new repository %s on Github
+- push this directory to the new repository:
+   cd %s
+   git init --initial-branch=main
+   git add .
+   git commit -m 'team repository created'
+   git remote add origin %s
+   git push -u origin main
+- check the validity of the repository:
+   goliac plan --repository %s
+- apply the repository:
+   goliac apply --repository %s
+- and then setup and start the goliac server
+`, directory, directory, newRepoSuggestion, directory, newRepoSuggestion, newRepoSuggestion, newRepoSuggestion)
 			}
 		},
 	}

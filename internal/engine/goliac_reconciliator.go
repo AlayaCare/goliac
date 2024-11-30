@@ -19,10 +19,11 @@ const (
 )
 
 type UnmanagedResources struct {
-	Users        map[string]bool
-	Teams        map[string]bool
-	Repositories map[string]bool
-	RuleSets     map[int]bool
+	Users                  map[string]bool
+	ExternallyManagedTeams map[string]bool
+	Teams                  map[string]bool
+	Repositories           map[string]bool
+	RuleSets               map[int]bool
 }
 
 /*
@@ -50,10 +51,11 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 	rremote := NewMutableGoliacRemoteImpl(ctx, remote)
 	r.Begin(ctx, dryrun)
 	unmanaged := &UnmanagedResources{
-		Users:        make(map[string]bool),
-		Teams:        make(map[string]bool),
-		Repositories: make(map[string]bool),
-		RuleSets:     make(map[int]bool),
+		Users:                  make(map[string]bool),
+		ExternallyManagedTeams: make(map[string]bool),
+		Teams:                  make(map[string]bool),
+		Repositories:           make(map[string]bool),
+		RuleSets:               make(map[int]bool),
 	}
 	r.unmanaged = unmanaged
 
@@ -158,6 +160,28 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 	lUsers := local.Users()
 
 	for teamname, teamvalue := range lTeams {
+		teamslug := slug.Make(teamname)
+
+		// if the team is externally managed, we don't want to touch it
+		// we just remove it from the list
+		if teamvalue.Spec.ExternallyManaged {
+			// let's add it to the special -goliac-owners
+			membersOwners := []string{}
+			if rt, ok := rTeams[teamslug]; ok {
+				membersOwners = append(membersOwners, rt.Members...)
+			}
+			team := &GithubTeamComparable{
+				Name:    teamslug + config.Config.GoliacTeamOwnerSuffix,
+				Slug:    teamslug + config.Config.GoliacTeamOwnerSuffix,
+				Members: membersOwners,
+			}
+			slugTeams[teamslug+config.Config.GoliacTeamOwnerSuffix] = team
+
+			r.unmanaged.ExternallyManagedTeams[teamslug] = true
+			delete(rTeams, teamslug)
+			continue
+		}
+
 		members := []string{}
 		membersOwners := []string{}
 		// teamvalue.Spec.Members are not github id
@@ -173,7 +197,6 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 			}
 		}
 
-		teamslug := slug.Make(teamname)
 		team := &GithubTeamComparable{
 			Name:    teamname,
 			Slug:    teamslug,

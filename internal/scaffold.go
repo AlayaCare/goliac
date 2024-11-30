@@ -53,7 +53,6 @@ func NewScaffold() (*Scaffold, error) {
  * Generate will generate a full teams directory structure compatible with Goliac
  */
 func (s *Scaffold) Generate(rootpath string, adminteam string) error {
-	logrus.Info("Generating the IAC structure, it can take several minutes to list everything")
 	if _, err := os.Stat(rootpath); os.IsNotExist(err) {
 		// Create the directory if it does not exist
 		err := os.MkdirAll(rootpath, 0755)
@@ -67,6 +66,7 @@ func (s *Scaffold) Generate(rootpath string, adminteam string) error {
 	if err := s.remote.Load(ctx, true); err != nil {
 		logrus.Warnf("Not able to load all information from Github: %v, but I will try to continue", err)
 	}
+
 	return s.generate(ctx, fs, adminteam)
 }
 
@@ -480,6 +480,21 @@ The users name used are the one defined in the ` + "`" + `/users` + "`" + ` sub 
 ### Archive a repository
 
 You can archive a repository, by a PR that move the yaml repository file into the ` + "`" + `/archived` + "`" + ` directory
+
+### Special case: externally managed teams
+
+If you want to create a team that is managed outside of Goliac, you can create a team with the ` + "`" + `externallyManaged: true` + "`" + ` flag:
+
+` + "```" + `
+apiVersion: v1
+kind: Team
+name: foobar
+spec:
+  externallyManaged: true
+` + "```" + `
+
+It will mean that the team is managed outside of Goliac, and that Goliac will not touch it.
+You can still "attach" repositories to this team, but you will have to manage the team members by yourself.
 
 `
 	if err := writeFile(filepath.Join(rootpath, "README.md"), []byte(readme), fs); err != nil {

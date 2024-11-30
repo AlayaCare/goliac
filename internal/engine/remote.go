@@ -56,7 +56,7 @@ type GithubTeam struct {
 	Name       string
 	Id         int
 	Slug       string
-	Members    []string // user login
+	Members    []string // user login, aka githubid
 	ParentTeam *int
 }
 

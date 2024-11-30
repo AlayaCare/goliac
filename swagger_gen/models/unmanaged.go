@@ -20,6 +20,9 @@ import (
 // swagger:model unmanaged
 type Unmanaged struct {
 
+	// externally managed teams
+	ExternallyManagedTeams []string `json:"externally_managed_teams"`
+
 	// repos
 	Repos []string `json:"repos"`
 
@@ -36,6 +39,10 @@ type Unmanaged struct {
 // Validate validates this unmanaged
 func (m *Unmanaged) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateExternallyManagedTeams(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateRepos(formats); err != nil {
 		res = append(res, err)
@@ -56,6 +63,22 @@ func (m *Unmanaged) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *Unmanaged) validateExternallyManagedTeams(formats strfmt.Registry) error {
+	if swag.IsZero(m.ExternallyManagedTeams) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.ExternallyManagedTeams); i++ {
+
+		if err := validate.MinLength("externally_managed_teams"+"."+strconv.Itoa(i), "body", m.ExternallyManagedTeams[i], 1); err != nil {
+			return err
+		}
+
+	}
+
 	return nil
 }
 

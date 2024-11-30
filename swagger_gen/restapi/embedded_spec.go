@@ -724,6 +724,13 @@ func init() {
     },
     "unmanaged": {
       "properties": {
+        "externally_managed_teams": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "repos": {
           "type": "array",
           "items": {
@@ -1535,6 +1542,13 @@ func init() {
     },
     "unmanaged": {
       "properties": {
+        "externally_managed_teams": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "repos": {
           "type": "array",
           "items": {
