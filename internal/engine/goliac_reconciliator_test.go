@@ -67,8 +67,8 @@ func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 func (m *GoliacLocalMock) ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error {
 	return nil
 }
-func (m *GoliacLocalMock) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) error {
-	return nil
+func (m *GoliacLocalMock) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) (bool, error) {
+	return false, nil
 }
 func (m *GoliacLocalMock) Close() {
 
@@ -90,7 +90,8 @@ func (m *GoliacRemoteMock) IsEnterprise() bool {
 	return true
 }
 func (m *GoliacRemoteMock) FlushCache() {
-
+}
+func (m *GoliacRemoteMock) FlushCacheUsersTeamsOnly() {
 }
 func (m *GoliacRemoteMock) RuleSets(ctx context.Context) map[string]*GithubRuleSet {
 	return m.rulesets

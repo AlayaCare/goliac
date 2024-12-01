@@ -26,6 +26,8 @@ func (s *ScaffoldGoliacRemoteMock) Load(ctx context.Context, continueOnError boo
 }
 func (s *ScaffoldGoliacRemoteMock) FlushCache() {
 }
+func (s *ScaffoldGoliacRemoteMock) FlushCacheUsersTeamsOnly() {
+}
 func (s *ScaffoldGoliacRemoteMock) Users(ctx context.Context) map[string]string {
 	return s.users
 }

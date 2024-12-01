@@ -139,7 +139,7 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
 			ctx := context.Background()
-			err = goliac.UsersUpdate(ctx, repo, branch, dryrunParameter, forceParameter)
+			_, err = goliac.UsersUpdate(ctx, repo, branch, dryrunParameter, forceParameter)
 			if err != nil {
 				logrus.Fatalf("failed to update and commit teams: %s", err)
 			}

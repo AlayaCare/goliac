@@ -28,6 +28,9 @@ var Config = struct {
 	// MaxChangesetsOverride - override the max changesets limitation from the repository config
 	MaxChangesetsOverride bool `env:"GOLIAC_MAX_CHANGESETS_OVERRIDE" envDefault:"false"`
 
+	// SyncUsersBeforeApply - to sync users before applying the commits
+	SyncUsersBeforeApply bool `env:"GOLIAC_SYNC_USERS_BEFORE_APPLY" envDefault:"true"`
+
 	// Host - golang-skeleton server host
 	SwaggerHost string `env:"GOLIAC_SERVER_HOST" envDefault:"localhost"`
 	// Port - golang-skeleton server port

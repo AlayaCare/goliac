@@ -118,8 +118,8 @@ func (g *GoliacMock) Apply(ctx context.Context, dryrun bool, repo string, branch
 	unmanaged.Users["unmanaged"] = true
 	return nil, nil, nil, unmanaged
 }
-func (g *GoliacMock) UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) error {
-	return nil
+func (g *GoliacMock) UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) (bool, error) {
+	return false, nil
 }
 func (g *GoliacMock) FlushCache() {
 }

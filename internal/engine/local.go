@@ -53,7 +53,9 @@ type GoliacLocalGit interface {
 	// whenever repos are not deleted but archived
 	ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error
 	// whenever the users list is changing, reload users and teams, and commit them
-	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) error
+	// (force will bypass the max_changesets check)
+	// return true if some changes were done
+	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) (bool, error)
 	Close()
 
 	// Load and Validate from a local directory
@@ -599,13 +601,13 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 	return deletedusers, updatedusers, nil
 }
 
-func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) error {
+func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) (bool, error) {
 	if g.repo == nil {
-		return fmt.Errorf("git repository not cloned")
+		return false, fmt.Errorf("git repository not cloned")
 	}
 	w, err := g.repo.Worktree()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// read the organization files
@@ -618,7 +620,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 	// Parse all the users in the <orgDirectory>/org-users directory
 	deletedusers, addedusers, err := syncUsersViaUserPlugin(repoconfig, w.Filesystem, userplugin)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	//
@@ -627,17 +629,17 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 
 	errors, _ := g.loadUsers(w.Filesystem)
 	if len(errors) > 0 {
-		return fmt.Errorf("cannot read users (for example: %v)", errors[0])
+		return false, fmt.Errorf("cannot read users (for example: %v)", errors[0])
 	}
 
 	teamschanged, err := entity.ReadAndAdjustTeamDirectory(w.Filesystem, filepath.Join(rootDir, "teams"), g.users)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// check if we have too many changesets
 	if !force && len(teamschanged)+len(deletedusers)+len(addedusers) > repoconfig.MaxChangesets {
-		return fmt.Errorf("too many changesets (%d) to commit. Please increase max_changesets in goliac.yaml", len(teamschanged)+len(deletedusers)+len(addedusers))
+		return false, fmt.Errorf("too many changesets (%d) to commit. Please increase max_changesets in goliac.yaml", len(teamschanged)+len(deletedusers)+len(addedusers))
 	}
 
 	//
@@ -652,7 +654,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 			if !dryrun {
 				_, err = w.Remove(u)
 				if err != nil {
-					return err
+					return false, err
 				}
 			}
 		}
@@ -662,7 +664,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 			if !dryrun {
 				_, err = w.Add(u)
 				if err != nil {
-					return err
+					return false, err
 				}
 			}
 		}
@@ -672,13 +674,13 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 			if !dryrun {
 				_, err = w.Add(t)
 				if err != nil {
-					return err
+					return false, err
 				}
 			}
 		}
 
 		if dryrun {
-			return nil
+			return false, nil
 		}
 
 		_, err = w.Commit("update teams and users", &git.CommitOptions{
@@ -690,7 +692,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		})
 
 		if err != nil {
-			return err
+			return false, err
 		}
 
 		// Now push the tag to the remote repository
@@ -704,9 +706,9 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 			Auth:       auth,
 		})
 
-		return err
+		return true, err
 	}
-	return nil
+	return false, nil
 }
 
 /*
