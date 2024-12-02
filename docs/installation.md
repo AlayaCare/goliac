@@ -85,7 +85,7 @@ You need the following structure:
 You will need the goliac binary, either from docker image, or from Github release.
 
 ```shell
-curl -o goliac -L https://github.com/Alayacare/goliac/releases/download/v0.9.5/goliac-`uname -s`-`uname -m` && chmod +x goliac
+curl -o goliac -L https://github.com/Alayacare/goliac/releases/download/v0.9.8/goliac-`uname -s`-`uname -m` && chmod +x goliac
 ```
 
 You can use the goliac application to assist you:
