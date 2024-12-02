@@ -24,6 +24,7 @@ type LoadGithubSamlUsers func() (map[string]*entity.User, error)
 type Scaffold struct {
 	remote                     engine.GoliacRemote
 	loadUsersFromGithubOrgSaml LoadGithubSamlUsers
+	githubappname              string
 }
 
 func NewScaffold() (*Scaffold, error) {
@@ -46,6 +47,7 @@ func NewScaffold() (*Scaffold, error) {
 		loadUsersFromGithubOrgSaml: func() (map[string]*entity.User, error) {
 			return engine.LoadUsersFromGithubOrgSaml(ctx, githubClient)
 		},
+		githubappname: githubClient.GetAppSlug(),
 	}, nil
 }
 
@@ -340,13 +342,13 @@ func (s *Scaffold) generateUsers(ctx context.Context, fs billy.Filesystem, users
 }
 
 func (s *Scaffold) generateRuleset(fs billy.Filesystem, rulesetspath string) error {
-	ruleset := `apiVersion: v1
+	ruleset := fmt.Sprintf(`apiVersion: v1
 kind: Ruleset
 name: default
 spec:
   enforcement: active
   bypassapps:
-    - appname: goliac-project-app
+    - appname: %s
       mode: always
   on:
     include: 
@@ -356,7 +358,7 @@ spec:
     - ruletype: pull_request
       parameters:
         requiredApprovingReviewCount: 1
-`
+`, s.githubappname)
 	if err := writeFile(path.Join(rulesetspath, "default.yaml"), []byte(ruleset), fs); err != nil {
 		return err
 	}
