@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/go-git/go-billy/v5"
 )
@@ -81,4 +82,31 @@ func RemoveAll(fs billy.Filesystem, path string) error {
 	}
 
 	return nil
+}
+
+// MkdirTemp creates a temporary directory in the appropriate system temp directory
+// using the specified billy.Filesystem.
+func MkdirTemp(fs billy.Filesystem, baseDir, pattern string) (string, error) {
+
+	if baseDir == "" {
+		// Get the OS-specific temporary directory
+		baseDir = os.TempDir()
+	}
+
+	// Ensure the pattern is not empty
+	if pattern == "" {
+		pattern = "tmp"
+	}
+
+	// Generate a unique temporary directory name
+	tempDirName := fmt.Sprintf("%s-%d", pattern, time.Now().UnixNano())
+	tempDirPath := filepath.Join(baseDir, tempDirName)
+
+	// Create the temporary directory
+	err := fs.MkdirAll(tempDirPath, 0755)
+	if err != nil {
+		return "", err
+	}
+
+	return tempDirPath, nil
 }

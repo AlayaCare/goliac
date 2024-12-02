@@ -226,6 +226,7 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_SERVER_PORT               | 18000       |                            |
 | GOLIAC_SERVER_GIT_BRANCH_PROTECTION_REQUIRED_CHECK | validate | ci check to enforce when evaluating a PR (used for CI mode) |
 | GOLIAC_MAX_CHANGESETS_OVERRIDE    | false          | if you need to override the `max_changesets` setting in the `goliac.yaml` file. Useful in particular using the `goliac apply` CLI  |
+| GOLIAC_SYNC_USERS_BEFORE_APPLY    | true          | to sync users before applying the changes |
 | GOLIAC_SLACK_TOKEN                |               | (optional) Slack token to send notification (ususally error messages if any) |
 | GOLIAC_SLACK_CHANNEL              |               | (optional) Slack channel to send notification |
 | GOLIAC_GITHUB_WEBHOOK_HOST        | 0.0.0.0       | (optional) Hostname to listen to GitHub webhook |
@@ -371,6 +372,10 @@ Goliac can sync users from an external source, This is the `usersync` section in
 
 What you need to do:
 - edit the `goliac.yaml` file to specify the right `usersync` plugin
+- by default Goliac will run the sync before applying new changes
+
+If you want to run the sync manually, you can
+- set the GOLIAC_SYNC_USERS_BEFORE_APPLY to false
 - run regularly the `./goliac syncusers` command (cronjob or k8s cronjob) to sync users definition
 
 ### Protected users

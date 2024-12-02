@@ -365,6 +365,11 @@ spec:
 }
 
 func (s *Scaffold) generateGoliacConf(fs billy.Filesystem, rootpath string, adminteam string) error {
+	userplugin := "noop"
+	if s.remote.IsEnterprise() {
+		userplugin = "fromgithubsaml"
+	}
+
 	conf := fmt.Sprintf(`
 admin_team: %s
 
@@ -382,8 +387,8 @@ destructive_operations:
   rulesets: false
 
 usersync:
-  plugin: noop
-`, adminteam)
+  plugin: %s
+`, adminteam, userplugin)
 	if err := writeFile(filepath.Join(rootpath, "goliac.yaml"), []byte(conf), fs); err != nil {
 		return err
 	}

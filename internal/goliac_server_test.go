@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-git/go-billy/v5"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Alayacare/goliac/internal/engine"
@@ -108,7 +109,7 @@ type GoliacMock struct {
 	local engine.GoliacLocalResources
 }
 
-func (g *GoliacMock) Apply(ctx context.Context, dryrun bool, repo string, branch string, forceresync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
+func (g *GoliacMock) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repo string, branch string, forceresync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
 	unmanaged := &engine.UnmanagedResources{
 		Users:        make(map[string]bool),
 		Teams:        make(map[string]bool),
@@ -118,8 +119,8 @@ func (g *GoliacMock) Apply(ctx context.Context, dryrun bool, repo string, branch
 	unmanaged.Users["unmanaged"] = true
 	return nil, nil, nil, unmanaged
 }
-func (g *GoliacMock) UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) error {
-	return nil
+func (g *GoliacMock) UsersUpdate(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) (bool, error) {
+	return false, nil
 }
 func (g *GoliacMock) FlushCache() {
 }

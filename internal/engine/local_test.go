@@ -735,8 +735,9 @@ func TestGoliacLocalImpl(t *testing.T) {
 		mockUserPlugin := &UserSyncPluginMock{}
 
 		// sync users and teams
-		err = g.SyncUsersAndTeams(goliacConfig, mockUserPlugin, "none", false, false)
+		change, err := g.SyncUsersAndTeams(goliacConfig, mockUserPlugin, "none", false, false)
 		assert.Nil(t, err)
+		assert.True(t, change)
 
 		// there should be a new user: foobar
 		// check the content of the 'users/org/foobar.yaml' file

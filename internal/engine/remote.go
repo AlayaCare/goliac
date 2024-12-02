@@ -26,9 +26,14 @@ const FORLOOP_STOP = 100
 type GoliacRemote interface {
 	// Load from a github repository. continueOnError is used for scaffolding
 	Load(ctx context.Context, continueOnError bool) error
+
+	// Flush all assets from the cache
 	FlushCache()
 
-	Users(ctx context.Context) map[string]string
+	// Flush only the users, and teams from the cache
+	FlushCacheUsersTeamsOnly()
+
+	Users(ctx context.Context) map[string]string // key is the login, value is the role (member, admin)
 	TeamSlugByName(ctx context.Context) map[string]string
 	Teams(ctx context.Context) map[string]*GithubTeam                           // the key is the team slug
 	Repositories(ctx context.Context) map[string]*GithubRepository              // the key is the repository name
@@ -173,6 +178,11 @@ func NewGoliacRemoteImpl(client github.GitHubClient) *GoliacRemoteImpl {
 
 func (g *GoliacRemoteImpl) IsEnterprise() bool {
 	return g.isEnterprise
+}
+
+func (g *GoliacRemoteImpl) FlushCacheUsersTeamsOnly() {
+	g.ttlExpireUsers = time.Now()
+	g.ttlExpireTeams = time.Now()
 }
 
 func (g *GoliacRemoteImpl) FlushCache() {

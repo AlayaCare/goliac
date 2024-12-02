@@ -18,6 +18,7 @@ import (
 	"github.com/Alayacare/goliac/swagger_gen/restapi/operations"
 	"github.com/Alayacare/goliac/swagger_gen/restapi/operations/app"
 	"github.com/Alayacare/goliac/swagger_gen/restapi/operations/health"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/sirupsen/logrus"
@@ -758,7 +759,8 @@ func (g *GoliacServerImpl) serveApply(forceresync bool) (error, []error, []entit
 	stats := config.GoliacStatistics{}
 	ctx := context.WithValue(context.Background(), config.ContextKeyStatistics, &stats)
 
-	err, errs, warns, unmanaged := g.goliac.Apply(ctx, false, repo, branch, forceresync)
+	fs := osfs.New("/")
+	err, errs, warns, unmanaged := g.goliac.Apply(ctx, fs, false, repo, branch, forceresync)
 	if err != nil {
 		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), errs, warns, false
 	}
