@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -36,7 +35,7 @@ type GoliacLocal interface {
 }
 
 type GoliacLocalGit interface {
-	Clone(accesstoken, repositoryUrl, branch string) error
+	Clone(fs billy.Filesystem, accesstoken, repositoryUrl, branch string) error
 
 	// Return commits from tagname to HEAD
 	ListCommitsFromTag(tagname string) ([]*object.Commit, error)
@@ -56,7 +55,7 @@ type GoliacLocalGit interface {
 	// (force will bypass the max_changesets check)
 	// return true if some changes were done
 	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) (bool, error)
-	Close()
+	Close(fs billy.Filesystem)
 
 	// Load and Validate from a local directory
 	LoadAndValidateLocal(fs billy.Filesystem) ([]error, []entity.Warning)
@@ -90,6 +89,18 @@ func NewGoliacLocalImpl() GoliacLocal {
 	}
 }
 
+// NewMockGoliacLocalImpl is used for testing purposes
+func NewGoliacLocalImplWithRepo(repo *git.Repository) GoliacLocal {
+	return &GoliacLocalImpl{
+		teams:         map[string]*entity.Team{},
+		repositories:  map[string]*entity.Repository{},
+		users:         map[string]*entity.User{},
+		externalUsers: map[string]*entity.User{},
+		rulesets:      map[string]*entity.RuleSet{},
+		repo:          repo,
+	}
+}
+
 func (g *GoliacLocalImpl) Teams() map[string]*entity.Team {
 	return g.teams
 }
@@ -110,12 +121,13 @@ func (g *GoliacLocalImpl) RuleSets() map[string]*entity.RuleSet {
 	return g.rulesets
 }
 
-func (g *GoliacLocalImpl) Clone(accesstoken, repositoryUrl, branch string) error {
+func (g *GoliacLocalImpl) Clone(fs billy.Filesystem, accesstoken, repositoryUrl, branch string) error {
 	if g.repo != nil {
-		g.Close()
+		g.Close(fs)
 	}
+
 	// create a temp directory
-	tmpDir, err := os.MkdirTemp("", "goliac")
+	tmpDir, err := utils.MkdirTemp(fs, "", "goliac")
 	if err != nil {
 		return err
 	}
@@ -266,11 +278,11 @@ func (g *GoliacLocalImpl) ListCommitsFromTag(tagname string) ([]*object.Commit, 
 	return commits, nil
 }
 
-func (g *GoliacLocalImpl) Close() {
+func (g *GoliacLocalImpl) Close(fs billy.Filesystem) {
 	if g.repo != nil {
 		w, err := g.repo.Worktree()
 		if err == nil {
-			os.RemoveAll(w.Filesystem.Root())
+			utils.RemoveAll(fs, w.Filesystem.Root())
 		}
 	}
 	g.repo = nil

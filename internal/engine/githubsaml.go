@@ -100,7 +100,7 @@ func LoadUsersFromGithubOrgSaml(ctx context.Context, client github.GitHubClient)
 			return users, err
 		}
 		if len(gResult.Errors) > 0 {
-			return users, fmt.Errorf("Graphql error: %v", gResult.Errors[0].Message)
+			return users, fmt.Errorf("graphql error: %v", gResult.Errors[0].Message)
 		}
 
 		for _, c := range gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.Edges {

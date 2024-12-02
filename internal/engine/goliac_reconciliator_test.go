@@ -22,7 +22,7 @@ type GoliacLocalMock struct {
 	rulesets  map[string]*entity.RuleSet
 }
 
-func (m *GoliacLocalMock) Clone(accesstoken, repositoryUrl, branch string) error {
+func (m *GoliacLocalMock) Clone(fs billy.Filesystem, accesstoken, repositoryUrl, branch string) error {
 	return nil
 }
 func (m *GoliacLocalMock) ListCommitsFromTag(tagname string) ([]*object.Commit, error) {
@@ -70,7 +70,7 @@ func (m *GoliacLocalMock) ArchiveRepos(reposToArchiveList []string, accesstoken 
 func (m *GoliacLocalMock) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) (bool, error) {
 	return false, nil
 }
-func (m *GoliacLocalMock) Close() {
+func (m *GoliacLocalMock) Close(fs billy.Filesystem) {
 
 }
 

@@ -33,7 +33,7 @@ type GoliacRemote interface {
 	// Flush only the users, and teams from the cache
 	FlushCacheUsersTeamsOnly()
 
-	Users(ctx context.Context) map[string]string
+	Users(ctx context.Context) map[string]string // key is the login, value is the role (member, admin)
 	TeamSlugByName(ctx context.Context) map[string]string
 	Teams(ctx context.Context) map[string]*GithubTeam                           // the key is the team slug
 	Repositories(ctx context.Context) map[string]*GithubRepository              // the key is the repository name

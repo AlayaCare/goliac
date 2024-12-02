@@ -104,7 +104,7 @@ func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local G
 
 		if !ok {
 			// deal with non existing remote user
-			r.AddUserToOrg(ctx, dryrun, remote, user)
+			r.AddUserToOrg(ctx, dryrun, remote, lUser.Spec.GithubID)
 		} else {
 			delete(rUsers, user)
 		}

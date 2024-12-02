@@ -13,7 +13,7 @@ import (
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
 	"github.com/Alayacare/goliac/internal/usersync"
-	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/go-git/go-billy/v5"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,10 +29,10 @@ type Goliac interface {
 	// will run and apply the reconciliation,
 	// forcesync will force the sync of the latest commit, even if we have commits to apply
 	// it returns an error if something went wrong, and a detailed list of errors and warnings
-	Apply(ctx context.Context, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources)
+	Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources)
 
 	// will clone run the user-plugin to sync users, and will commit to the team repository, return true if a change was done
-	UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) (bool, error)
+	UsersUpdate(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) (bool, error)
 
 	// flush remote cache
 	FlushCache()
@@ -79,13 +79,14 @@ func (g *GoliacImpl) FlushCache() {
 	g.remote.FlushCache()
 }
 
-func (g *GoliacImpl) Apply(ctx context.Context, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
-	err, errs, warns := g.loadAndValidateGoliacOrganization(ctx, repositoryUrl, branch)
-	defer g.local.Close()
+func (g *GoliacImpl) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
+	err, errs, warns := g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch)
+	defer g.local.Close(fs)
 	if err != nil {
 		return fmt.Errorf("failed to load and validate: %s", err), errs, warns, nil
 	}
-	if !strings.HasPrefix(repositoryUrl, "https://") {
+	if !strings.HasPrefix(repositoryUrl, "https://") &&
+		!strings.HasPrefix(repositoryUrl, "inmemory:///") { // <- only for testing purposes
 		return fmt.Errorf("local mode is not supported for plan/apply, you must specify the https url of the remote team git repository. Check the documentation"), errs, warns, nil
 	}
 
@@ -112,7 +113,7 @@ func (g *GoliacImpl) Apply(ctx context.Context, dryrun bool, repositoryUrl, bran
 	return nil, errs, warns, unmanaged
 }
 
-func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, repositoryUrl, branch string) (error, []error, []entity.Warning) {
+func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string) (error, []error, []entity.Warning) {
 	var errs []error
 	var warns []entity.Warning
 	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") {
@@ -121,7 +122,7 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, repo
 			return err, nil, nil
 		}
 
-		err = g.local.Clone(accessToken, repositoryUrl, branch)
+		err = g.local.Clone(fs, accessToken, repositoryUrl, branch)
 		if err != nil {
 			return fmt.Errorf("unable to clone: %v", err), nil, nil
 		}
@@ -134,8 +135,11 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, repo
 		errs, warns = g.local.LoadAndValidate()
 	} else {
 		// Local
-		fs := osfs.New(repositoryUrl)
-		errs, warns = g.local.LoadAndValidateLocal(fs)
+		subfs, err := fs.Chroot(repositoryUrl)
+		if err != nil {
+			return fmt.Errorf("unable to chroot to %s: %v", repositoryUrl, err), nil, nil
+		}
+		errs, warns = g.local.LoadAndValidateLocal(subfs)
 	}
 
 	for _, warn := range warns {
@@ -354,17 +358,17 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 	return unmanaged, nil
 }
 
-func (g *GoliacImpl) UsersUpdate(ctx context.Context, repositoryUrl, branch string, dryrun bool, force bool) (bool, error) {
+func (g *GoliacImpl) UsersUpdate(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) (bool, error) {
 	accessToken, err := g.githubClient.GetAccessToken(ctx)
 	if err != nil {
 		return false, err
 	}
 
-	err = g.local.Clone(accessToken, repositoryUrl, branch)
+	err = g.local.Clone(fs, accessToken, repositoryUrl, branch)
 	if err != nil {
 		return false, err
 	}
-	defer g.local.Close()
+	defer g.local.Close(fs)
 
 	repoconfig, err := g.local.LoadRepoConfig()
 	if err != nil {

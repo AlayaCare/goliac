@@ -9,6 +9,7 @@ import (
 	"github.com/Alayacare/goliac/internal"
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/notification"
+	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -64,7 +65,8 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
 			ctx := context.Background()
-			err, _, _, _ = goliac.Apply(ctx, true, repo, branch, true)
+			fs := osfs.New("/")
+			err, _, _, _ = goliac.Apply(ctx, fs, true, repo, branch, true)
 			if err != nil {
 				logrus.Errorf("Failed to plan: %v", err)
 			}
@@ -101,7 +103,8 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			}
 
 			ctx := context.Background()
-			err, _, _, _ = goliac.Apply(ctx, false, repo, branch, true)
+			fs := osfs.New("/")
+			err, _, _, _ = goliac.Apply(ctx, fs, false, repo, branch, true)
 			if err != nil {
 				logrus.Errorf("Failed to apply: %v", err)
 			}
@@ -139,7 +142,8 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
 			ctx := context.Background()
-			_, err = goliac.UsersUpdate(ctx, repo, branch, dryrunParameter, forceParameter)
+			fs := osfs.New("/")
+			_, err = goliac.UsersUpdate(ctx, fs, repo, branch, dryrunParameter, forceParameter)
 			if err != nil {
 				logrus.Fatalf("failed to update and commit teams: %s", err)
 			}
