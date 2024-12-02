@@ -9,6 +9,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/usersync"
 	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -24,6 +25,8 @@ import (
 //
 // fixture
 //
+
+type FixtureFunc func(fs billy.Filesystem)
 
 // create a working simple teams repository
 func repoFixture1(fs billy.Filesystem) {
@@ -136,7 +139,113 @@ spec:
 `), 0644)
 }
 
-func createTeamRepo1(src billy.Filesystem) (*git.Repository, error) {
+// create a working simple teams repository
+// - missing user4 in the teams repo
+// - using the `fromgithubsaml` user sync plugin
+func repoFixture2(fs billy.Filesystem) {
+	fs.MkdirAll("teams", 0755)
+	fs.MkdirAll("archived", 0755)
+
+	// create users
+	fs.MkdirAll("users/external", 0755)
+	fs.MkdirAll("users/org", 0755)
+	fs.MkdirAll("users/protected", 0755)
+	utils.WriteFile(fs, "users/org/user1.yaml", []byte(`apiVersion: v1
+kind: User
+name: user1
+spec:
+  githubID: github1
+`), 0644)
+	utils.WriteFile(fs, "users/org/user2.yaml", []byte(`apiVersion: v1
+kind: User
+name: user2
+spec:
+  githubID: github2
+`), 0644)
+	utils.WriteFile(fs, "users/org/user3.yaml", []byte(`apiVersion: v1
+kind: User
+name: user3
+spec:
+  githubID: github3
+`), 0644)
+
+	// create teams
+	fs.MkdirAll("teams/team1", 0755)
+	utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`apiVersion: v1
+kind: Team
+name: team1
+spec:
+  owners:
+    - user1
+    - user2
+`), 0644)
+	fs.MkdirAll("teams/team2", 0755)
+	utils.WriteFile(fs, "teams/team2/team.yaml", []byte(`apiVersion: v1
+kind: Team
+name: team2
+spec:
+  owners:
+    - user3
+`), 0644)
+
+	// create repositories
+	utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`apiVersion: v1
+kind: Repository
+name: repo1
+`), 0644)
+	utils.WriteFile(fs, "teams/team2/repo2.yaml", []byte(`apiVersion: v1
+kind: Repository
+name: repo2
+`), 0644)
+
+	// create goliac.yaml
+	utils.WriteFile(fs, "goliac.yaml", []byte(`admin_team: admin
+
+rulesets:
+  - pattern: .*
+    ruleset: default
+
+max_changesets: 50
+archive_on_delete: true
+
+destructive_operations:
+  repositories: false
+  teams: false
+  users: false
+  rulesets: false
+
+usersync:
+  plugin: fromgithubsaml
+`), 0644)
+	// rulesets
+	fs.MkdirAll("rulesets", 0755)
+	utils.WriteFile(fs, "rulesets/default.yaml", []byte(`apiVersion: v1
+kind: Ruleset
+name: default
+spec:
+  enforcement: active
+  bypassapps:
+    - appname: goliac-project-app
+      mode: always
+  on:
+    include: 
+      - "~DEFAULT_BRANCH"
+
+  rules:
+    - ruletype: pull_request
+      parameters:
+        requiredApprovingReviewCount: 1
+`), 0644)
+
+	// create .github/CODEOWNERS
+	utils.WriteFile(fs, ".github/CODEOWNERS", []byte(`# DO NOT MODIFY THIS FILE MANUALLY
+* @goliac-project/admin
+/teams/team1/* @goliac-project/team1-goliac-owners @goliac-project/admin
+/teams/team2/* @goliac-project/team2-goliac-owners @goliac-project/admin
+`), 0644)
+}
+
+func createTeamRepo(src billy.Filesystem, fixtureFunc FixtureFunc) (*git.Repository, error) {
 	masterStorer := filesystem.NewStorage(src, cache.NewObjectLRUDefault())
 
 	// Create a fake bare repository
@@ -148,7 +257,7 @@ func createTeamRepo1(src billy.Filesystem) (*git.Repository, error) {
 	//
 	// Create a new file in the working directory
 	//
-	repoFixture1(src)
+	fixtureFunc(src)
 
 	// commit
 	worktree, err := repo.Worktree()
@@ -181,8 +290,8 @@ func createTeamRepo1(src billy.Filesystem) (*git.Repository, error) {
 
 /*
  */
-func helperCreateAndClone1(root billy.Filesystem, src billy.Filesystem, target billy.Filesystem) (*git.Repository, *git.Repository, error) {
-	repo, err := createTeamRepo1(src)
+func helperCreateAndClone(root billy.Filesystem, src billy.Filesystem, target billy.Filesystem, fixtureFunc FixtureFunc) (*git.Repository, *git.Repository, error) {
+	repo, err := createTeamRepo(src, fixtureFunc)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -256,7 +365,7 @@ func (c *GitHubClientMock) QueryGraphQLAPI(ctx context.Context, query string, va
 									"node": {
 										"guid": "guid2",
 										"samlIdentity": {
-											"nameId": "name2"
+											"nameId": "user2"
 										},
 										"user": {
 											"login": "github2"
@@ -317,13 +426,17 @@ func (c *GitHubClientMock) GetAppSlug() string {
 //
 
 type GoliacRemoteExecutorMock struct {
-	nbChanges int
+	teams1Members []string
+	teams2Members []string
+	nbChanges     int
 }
 
 // GoliacRemoteExecutorMock
 func NewGoliacRemoteExecutorMock() engine.GoliacRemoteExecutor {
 	return &GoliacRemoteExecutorMock{
-		nbChanges: 0,
+		nbChanges:     0,
+		teams1Members: []string{"github1", "github2"},
+		teams2Members: []string{"github3", "github4"},
 	}
 }
 
@@ -356,22 +469,22 @@ func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context) map[string]*engine
 		"team1": &engine.GithubTeam{
 			Slug:    "team1",
 			Name:    "team1",
-			Members: []string{"github1", "github2"},
+			Members: e.teams1Members,
 		},
 		"team2": &engine.GithubTeam{
 			Slug:    "team2",
 			Name:    "team2",
-			Members: []string{"github3", "github4"},
+			Members: e.teams2Members,
 		},
 		"team1-goliac-owners": &engine.GithubTeam{
 			Slug:    "team1-goliac-owners",
 			Name:    "team1-goliac-owners",
-			Members: []string{"github1", "github2"},
+			Members: e.teams1Members,
 		},
 		"team2-goliac-owners": &engine.GithubTeam{
 			Slug:    "team2-goliac-owners",
 			Name:    "team2-goliac-owners",
-			Members: []string{"github3", "github4"},
+			Members: e.teams2Members,
 		},
 	}
 }
@@ -520,7 +633,7 @@ func (e *GoliacRemoteExecutorMock) Commit(ctx context.Context, dryrun bool) erro
 
 func TestGoliacApply(t *testing.T) {
 
-	t.Run("happy path: get status", func(t *testing.T) {
+	t.Run("happy path: in-sync teams repo", func(t *testing.T) {
 
 		fs := memfs.New()
 		fs.MkdirAll("src", 0755)        // create a fake bare repository
@@ -528,7 +641,7 @@ func TestGoliacApply(t *testing.T) {
 		fs.MkdirAll(os.TempDir(), 0755) // need a tmp folder
 		srcsFs, _ := fs.Chroot("src")
 		clonedFs, _ := fs.Chroot("teams")
-		_, clonedRepo, err := helperCreateAndClone1(fs, srcsFs, clonedFs)
+		_, clonedRepo, err := helperCreateAndClone(fs, srcsFs, clonedFs, repoFixture1)
 		assert.Nil(t, err)
 
 		local := engine.NewGoliacLocalImplWithRepo(clonedRepo)
@@ -539,7 +652,50 @@ func TestGoliacApply(t *testing.T) {
 		repoconfig, err := local.LoadRepoConfig()
 		assert.Nil(t, err)
 
+		githubClient := NewGitHubClientMock()
 		remote := NewGoliacRemoteExecutorMock().(*GoliacRemoteExecutorMock)
+
+		usersync.InitPlugins(githubClient)
+
+		goliac := GoliacImpl{
+			local:        local,
+			remote:       remote,
+			githubClient: githubClient,
+			repoconfig:   repoconfig,
+		}
+		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///teams", "master", false)
+		assert.Nil(t, err)
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, unmanaged)
+		assert.Equal(t, 0, remote.nbChanges)
+	})
+
+	t.Run("happy path: user4 to sync", func(t *testing.T) {
+
+		fs := memfs.New()
+		fs.MkdirAll("src", 0755)        // create a fake bare repository
+		fs.MkdirAll("teams", 0755)      // create a fake cloned repository
+		fs.MkdirAll(os.TempDir(), 0755) // need a tmp folder
+		srcsFs, _ := fs.Chroot("src")
+		clonedFs, _ := fs.Chroot("teams")
+		_, clonedRepo, err := helperCreateAndClone(fs, srcsFs, clonedFs, repoFixture2)
+		assert.Nil(t, err)
+
+		local := engine.NewGoliacLocalImplWithRepo(clonedRepo)
+		errs, warns := local.LoadAndValidateLocal(clonedFs)
+		assert.Equal(t, 0, len(errs))
+		assert.Equal(t, 1, len(warns))
+		assert.Equal(t, "not enough owners for team filename teams/team2/team.yaml", warns[0].Error())
+
+		repoconfig, err := local.LoadRepoConfig()
+		assert.Nil(t, err)
+
+		githubClient := NewGitHubClientMock()
+		remote := NewGoliacRemoteExecutorMock().(*GoliacRemoteExecutorMock)
+		remote.teams2Members = []string{"github3"}
+
+		usersync.InitPlugins(githubClient)
 
 		goliac := GoliacImpl{
 			local:        local,
@@ -549,9 +705,37 @@ func TestGoliacApply(t *testing.T) {
 		}
 		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///teams", "master", false)
 		assert.Nil(t, err)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		assert.Equal(t, 0, len(errs))
+		assert.Equal(t, 0, len(warns))
 		assert.NotNil(t, unmanaged)
 		assert.Equal(t, 0, remote.nbChanges)
+
+		//
+		// checking the FS
+		//
+
+		// let's clone it again
+		loader := server.NewFilesystemLoader(fs)
+		client.InstallProtocol("inmemory", server.NewClient(loader))
+
+		dotGit, err := clonedFs.Chroot(".git")
+		assert.Nil(t, err)
+		storer := filesystem.NewStorage(dotGit, cache.NewObjectLRUDefault())
+
+		clonedRepo, err = git.Clone(storer, clonedFs, &git.CloneOptions{
+			URL:      "inmemory:///src",
+			Progress: nil,
+		})
+		assert.Nil(t, err)
+
+		wt, err := clonedRepo.Worktree()
+		assert.Nil(t, err)
+		clonedFs = wt.Filesystem
+
+		// check the user4 is now in the users/org directory
+		exist, err := utils.Exists(clonedFs, "users/org/user4.yaml")
+		assert.Nil(t, err)
+		assert.True(t, exist)
+
 	})
 }
