@@ -12,6 +12,7 @@ Goliac (Github Organization Leveraged by Infrastructure As Code), is a collabora
 
 - [why Goliac](docs/why_goliac.md)
 - [Installation guide](docs/installation.md)
+- [Security hardening](docs/security.md)
 - [How to sync (users) from external](docs/installation.md#syncing-users-from-an-external-source)
 - [Troubleshooting guide](docs/troubleshooting.md)
 
