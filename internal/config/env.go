@@ -9,12 +9,14 @@ var Config = struct {
 	// Possible values: text, json
 	LogrusFormat string `env:"GOLIAC_LOGRUS_FORMAT" envDefault:"text"`
 
-	GithubServer            string `env:"GOLIAC_GITHUB_SERVER" envDefault:"https://api.github.com"`
-	GithubAppOrganization   string `env:"GOLIAC_GITHUB_APP_ORGANIZATION" envDefault:""`
-	GithubAppID             int64  `env:"GOLIAC_GITHUB_APP_ID"`
-	GithubAppPrivateKeyFile string `env:"GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE" envDefault:"github-app-private-key.pem"`
-	GoliacEmail             string `env:"GOLIAC_EMAIL" envDefault:"goliac@alayacare.com"`
-	GoliacTeamOwnerSuffix   string `env:"GOLIAC_TEAM_OWNER_SUFFIX" envDefault:"-goliac-owners"`
+	GithubServer                string `env:"GOLIAC_GITHUB_SERVER" envDefault:"https://api.github.com"`
+	GithubAppOrganization       string `env:"GOLIAC_GITHUB_APP_ORGANIZATION" envDefault:""`
+	GithubAppID                 int64  `env:"GOLIAC_GITHUB_APP_ID"`
+	GithubAppPrivateKeyFile     string `env:"GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE" envDefault:"github-app-private-key.pem"`
+	GithubTeamAppID             int64  `env:"GOLIAC_GITHUB_TEAM_APP_ID"`
+	GithubTeamAppPrivateKeyFile string `env:"GOLIAC_GITHUB_TEAM_APP_PRIVATE_KEY_FILE"`
+	GoliacEmail                 string `env:"GOLIAC_EMAIL" envDefault:"goliac@alayacare.com"`
+	GoliacTeamOwnerSuffix       string `env:"GOLIAC_TEAM_OWNER_SUFFIX" envDefault:"-goliac-owners"`
 
 	GithubConcurrentThreads int64 `env:"GOLIAC_GITHUB_CONCURRENT_THREADS" envDefault:"1"`
 	GithubCacheTTL          int64 `env:"GOLIAC_GITHUB_CACHE_TTL" envDefault:"86400"`

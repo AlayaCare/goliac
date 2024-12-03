@@ -41,33 +41,44 @@ type Goliac interface {
 }
 
 type GoliacImpl struct {
-	local        engine.GoliacLocal
-	remote       engine.GoliacRemoteExecutor
-	githubClient github.GitHubClient
-	repoconfig   *config.RepositoryConfig
+	local              engine.GoliacLocal
+	remote             engine.GoliacRemoteExecutor
+	localGithubClient  github.GitHubClient // github client for team repository operations
+	remoteGithubClient github.GitHubClient // github client for admin operations
+	repoconfig         *config.RepositoryConfig
 }
 
 func NewGoliacImpl() (Goliac, error) {
-	githubClient, err := github.NewGitHubClientImpl(
+	remoteGithubClient, err := github.NewGitHubClientImpl(
 		config.Config.GithubServer,
 		config.Config.GithubAppOrganization,
 		config.Config.GithubAppID,
 		config.Config.GithubAppPrivateKeyFile,
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
-	remote := engine.NewGoliacRemoteImpl(githubClient)
+	localGithubClient, err := github.NewGitHubClientImpl(
+		config.Config.GithubServer,
+		config.Config.GithubAppOrganization,
+		config.Config.GithubTeamAppID,
+		config.Config.GithubTeamAppPrivateKeyFile,
+	)
+	if err != nil {
+		return nil, err
+	}
 
-	usersync.InitPlugins(githubClient)
+	remote := engine.NewGoliacRemoteImpl(remoteGithubClient)
+
+	usersync.InitPlugins(remoteGithubClient)
 
 	return &GoliacImpl{
-		local:        engine.NewGoliacLocalImpl(),
-		githubClient: githubClient,
-		remote:       remote,
-		repoconfig:   &config.RepositoryConfig{},
+		local:              engine.NewGoliacLocalImpl(),
+		remoteGithubClient: remoteGithubClient,
+		localGithubClient:  localGithubClient,
+		remote:             remote,
+		repoconfig:         &config.RepositoryConfig{},
 	}, nil
 }
 
@@ -117,7 +128,7 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs b
 	var errs []error
 	var warns []entity.Warning
 	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") {
-		accessToken, err := g.githubClient.GetAccessToken(ctx)
+		accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 		if err != nil {
 			return err, nil, nil
 		}
@@ -161,7 +172,7 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs b
  * Else we may append to apply commits that are part of a PR, but wasn't the final PR commit state
  */
 func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamreponame string, branchname string) error {
-	_, err := g.githubClient.CallRestAPI(ctx, fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, teamreponame), "PATCH",
+	_, err := g.remoteGithubClient.CallRestAPI(ctx, fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, teamreponame), "PATCH",
 		map[string]interface{}{
 			"allow_merge_commit": false,
 			"allow_rebase_merge": false,
@@ -177,7 +188,7 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 	if config.Config.ServerGitBranchProtectionRequiredCheck != "" {
 		contexts = append(contexts, config.Config.ServerGitBranchProtectionRequiredCheck)
 	}
-	_, err = g.githubClient.CallRestAPI(ctx, fmt.Sprintf("/repos/%s/%s/branches/%s/protection", config.Config.GithubAppOrganization, teamreponame, branchname), "PUT",
+	_, err = g.remoteGithubClient.CallRestAPI(ctx, fmt.Sprintf("/repos/%s/%s/branches/%s/protection", config.Config.GithubAppOrganization, teamreponame, branchname), "PUT",
 		map[string]interface{}{
 			"required_status_checks": map[string]interface{}{
 				"strict":   true,     // // This ensures branches are up to date before merging
@@ -219,7 +230,7 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 		if !found {
 			logrus.Warnf("user sync plugin %s not found", g.repoconfig.UserSync.Plugin)
 		} else {
-			accessToken, err := g.githubClient.GetAccessToken(ctx)
+			accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -253,7 +264,7 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 
 	// we update the codeowners file
 	if !dryrun {
-		accessToken, err := g.githubClient.GetAccessToken(ctx)
+		accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 		if err != nil {
 			return unmanaged, err
 		}
@@ -325,7 +336,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 					lastErr = nil
 				}
 				if !dryrun && err == nil {
-					accessToken, err := g.githubClient.GetAccessToken(ctx)
+					accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 					if err != nil {
 						return unmanaged, err
 					}
@@ -339,7 +350,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 			return unmanaged, lastErr
 		}
 	}
-	accessToken, err := g.githubClient.GetAccessToken(ctx)
+	accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 	if err != nil {
 		return unmanaged, err
 	}
@@ -359,7 +370,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 }
 
 func (g *GoliacImpl) UsersUpdate(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) (bool, error) {
-	accessToken, err := g.githubClient.GetAccessToken(ctx)
+	accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 	if err != nil {
 		return false, err
 	}

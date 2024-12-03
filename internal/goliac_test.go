@@ -658,10 +658,11 @@ func TestGoliacApply(t *testing.T) {
 		usersync.InitPlugins(githubClient)
 
 		goliac := GoliacImpl{
-			local:        local,
-			remote:       remote,
-			githubClient: githubClient,
-			repoconfig:   repoconfig,
+			local:              local,
+			remote:             remote,
+			remoteGithubClient: githubClient,
+			localGithubClient:  githubClient,
+			repoconfig:         repoconfig,
 		}
 		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///teams", "master", false)
 		assert.Nil(t, err)
@@ -698,10 +699,11 @@ func TestGoliacApply(t *testing.T) {
 		usersync.InitPlugins(githubClient)
 
 		goliac := GoliacImpl{
-			local:        local,
-			remote:       remote,
-			githubClient: NewGitHubClientMock(),
-			repoconfig:   repoconfig,
+			local:              local,
+			remote:             remote,
+			remoteGithubClient: githubClient,
+			localGithubClient:  githubClient,
+			repoconfig:         repoconfig,
 		}
 		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///teams", "master", false)
 		assert.Nil(t, err)

@@ -18,7 +18,7 @@ In GitHub
   - in your profile settings, go to `Developer settings`/`GitHub Apps`
   - Click on `New GitHub App`
 - Give basic information:
-  - GitHub App  name can be `goliac-project-app` (it will be used in the rulesets later)
+  - GitHub App  name can be `<yourorg>-goliac-app` (it will be used in the rulesets later)
   - Homepage URL can be `https://github.com/Alayacare/goliac`
   - Disable the active Webhook
 - Under Organization permissions
@@ -85,7 +85,7 @@ You need the following structure:
 You will need the goliac binary, either from docker image, or from Github release.
 
 ```shell
-curl -o goliac -L https://github.com/Alayacare/goliac/releases/download/v0.9.8/goliac-`uname -s`-`uname -m` && chmod +x goliac
+curl -o goliac -L https://github.com/Alayacare/goliac/releases/download/v0.10.0/goliac-`uname -s`-`uname -m` && chmod +x goliac
 ```
 
 You can use the goliac application to assist you:
@@ -216,6 +216,8 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_GITHUB_APP_ORGANIZATION   |             | (mandatory) name of your github org     |
 | GOLIAC_GITHUB_APP_ID             |             | (mandatory) app id of Goliac GitHub App |
 | GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE |           | (mandatory) path to private key       |
+| GOLIAC_GITHUB_TEAM_APP_ID             |             | (optional) dedicated app id of Goliac GitHub App for teams repo (see security.md) |
+| GOLIAC_GITHUB_TEAM_APP_PRIVATE_KEY_FILE |           | (optional) dedicated path to private key for teams repo (see security.md) |
 | GOLIAC_EMAIL                     | goliac@alayacare.com | author name used by Goliac to commit (Codeowners) |
 | GOLIAC_GITHUB_CONCURRENT_THREADS | 1           | You can increase, like '4' |
 | GOLIAC_GITHUB_CACHE_TTL          |  86400      | GitHub remote cache seconds retention |
