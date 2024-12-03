@@ -65,7 +65,7 @@ var Config = struct {
 
 	// to receive Github main branch merge webhook events on the /webhook endpoint
 	GithubWebhookSecret        string `env:"GOLIAC_GITHUB_WEBHOOK_SECRET" envDefault:""`
-	GithubWebhookDedicatedHost string `env:"GOLIAC_GITHUB_WEBHOOK_HOST" envDefault:"0.0.0.0"`
+	GithubWebhookDedicatedHost string `env:"GOLIAC_GITHUB_WEBHOOK_HOST" envDefault:"localhost"`
 	GithubWebhookDedicatedPort int    `env:"GOLIAC_GITHUB_WEBHOOK_PORT" envDefault:"18001"`
 	GithubWebhookPath          string `env:"GOLIAC_GITHUB_WEBHOOK_PATH" envDefault:"/webhook"`
 }{}

@@ -13,6 +13,8 @@ Optionally, you can:
 
 ## 1. Creating the Goliac GitHub App
 
+Note: if you want an more restricted Github app, see [Security hardening](./security.md#security-hardening)
+
 In GitHub
 - Register new GitHub App
   - in your profile settings, go to `Developer settings`/`GitHub Apps`
@@ -445,9 +447,11 @@ To do so, you need to update the GitHub App configuration:
   - enable the active Webhook
   - set a webhook secret
   - set the webhook URL to be able to reach `http://GOLIAC_SERVER_HOST:GOLIAC_SERVER_PORT/webhook`
-- in Permissions & events
-  - Subscribe to events: `Push`
+- in Subscribe to events
+  - select `Push`
 
 And you need to configure the Goliac server with
 - the `GOLIAC_GITHUB_WEBHOOK_SECRET` environment variable.
-- optionally the `GOLIAC_GITHUB_WEBHOOK_HOST` (`0.0.0.0` by default) and `GOLIAC_GITHUB_WEBHOOK_PORT`  (`18001` by default) environment variables.
+- the `GOLIAC_GITHUB_WEBHOOK_HOST` environment variable (`localhost` by default, so you need to change it to something like `0.0.0.0`)
+- the `GOLIAC_GITHUB_WEBHOOK_PORT` environment variable (`18001` by default)
+- the `GOLIAC_GITHUB_WEBHOOK_PATH` environment variable (`/webhook` by default)
