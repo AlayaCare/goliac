@@ -200,9 +200,28 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 			lTeam.ApiVersion = "v1"
 			lTeam.Kind = "Team"
 			lTeam.Name = t.Name
-			for _, m := range t.Members {
-				// put the right user name instead of the github id
-				lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
+
+			// if we have 2 or more maintainers in the Github team
+			// we will use them as owners
+			if len(t.Maintainers) >= 2 {
+				for _, m := range t.Maintainers {
+					// put the right user name instead of the github id
+					lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
+				}
+				for _, m := range t.Members {
+					// put the right user name instead of the github id
+					lTeam.Spec.Members = append(lTeam.Spec.Members, usermap[m])
+				}
+			} else {
+				for _, m := range t.Maintainers {
+					// put the right user name instead of the github id
+					lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
+				}
+				// else we put everyone as owners
+				for _, m := range t.Members {
+					// put the right user name instead of the github id
+					lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
+				}
 			}
 
 			teamPath, err := buildTeamPath(teamIds, teams[team])
@@ -257,9 +276,28 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 			lTeam.ApiVersion = "v1"
 			lTeam.Kind = "Team"
 			lTeam.Name = teamName
-			for _, m := range t.Members {
-				// put the right user name instead of the github id
-				lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
+
+			// if we have 2 or more maintainers in the Github team
+			// we will use them as owners
+			if len(t.Maintainers) >= 2 {
+				for _, m := range t.Maintainers {
+					// put the right user name instead of the github id
+					lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
+				}
+				for _, m := range t.Members {
+					// put the right user name instead of the github id
+					lTeam.Spec.Members = append(lTeam.Spec.Members, usermap[m])
+				}
+			} else {
+				for _, m := range t.Maintainers {
+					// put the right user name instead of the github id
+					lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
+				}
+				// else we put everyone as owners
+				for _, m := range t.Members {
+					// put the right user name instead of the github id
+					lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
+				}
 			}
 
 			teamPath, err := buildTeamPath(teamIds, teams[slugName])

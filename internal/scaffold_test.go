@@ -69,16 +69,83 @@ func NewScaffoldGoliacRemoteMock() engine.GoliacRemote {
 	users["githubid4"] = "githubid4"
 
 	admin := engine.GithubTeam{
-		Name:    "admin",
-		Slug:    "admin",
-		Members: []string{"githubid1", "githubid2"},
+		Name:        "admin",
+		Slug:        "admin",
+		Members:     []string{"githubid1", "githubid2"},
+		Maintainers: []string{},
 	}
 	teams["admin"] = &admin
 
 	regular := engine.GithubTeam{
-		Name:    "regular",
-		Slug:    "regular",
-		Members: []string{"githubid2", "githubid3"},
+		Name:        "regular",
+		Slug:        "regular",
+		Members:     []string{"githubid2", "githubid3"},
+		Maintainers: []string{},
+	}
+	teams["regular"] = &regular
+
+	repo1 := engine.GithubRepository{
+		Name: "repo1",
+	}
+	repos["repo1"] = &repo1
+
+	repo2 := engine.GithubRepository{
+		Name: "repo2",
+	}
+	repos["repo2"] = &repo2
+
+	teamRepoRegular := make(map[string]*engine.GithubTeamRepo)
+	teamRepoRegular["repo1"] = &engine.GithubTeamRepo{
+		Name:       "repo1",
+		Permission: "WRITE",
+	}
+	teamRepoRegular["repo2"] = &engine.GithubTeamRepo{
+		Name:       "repo2",
+		Permission: "READ",
+	}
+	teamsRepos["regular"] = teamRepoRegular
+
+	teamRepoAdmin := make(map[string]*engine.GithubTeamRepo)
+	teamRepoAdmin["repo2"] = &engine.GithubTeamRepo{
+		Name:       "repo2",
+		Permission: "WRITE",
+	}
+	teamsRepos["admin"] = teamRepoAdmin
+
+	mock := ScaffoldGoliacRemoteMock{
+		users:      users,
+		teams:      teams,
+		repos:      repos,
+		teamsRepos: teamsRepos,
+	}
+
+	return &mock
+}
+
+func NewScaffoldGoliacRemoteMockWithMaintainers() engine.GoliacRemote {
+	users := make(map[string]string)
+	teams := make(map[string]*engine.GithubTeam)
+	repos := make(map[string]*engine.GithubRepository)
+	teamsRepos := make(map[string]map[string]*engine.GithubTeamRepo)
+
+	users["githubid1"] = "githubid1"
+	users["githubid2"] = "githubid2"
+	users["githubid3"] = "githubid3"
+	users["githubid4"] = "githubid4"
+
+	admin := engine.GithubTeam{
+		Name:        "admin",
+		Slug:        "admin",
+		Members:     []string{"githubid1", "githubid2"},
+		Maintainers: []string{},
+	}
+	teams["admin"] = &admin
+
+	regular := engine.GithubTeam{
+		Name:        "regular",
+		Slug:        "regular",
+		Members:     []string{"githubid1", "githubid4"},
+		Maintainers: []string{"githubid2", "githubid3"},
 	}
 	teams["regular"] = &regular
 
@@ -322,5 +389,35 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "repo2", r2.Name)
 		assert.Equal(t, 1, len(r2.Spec.Readers)) // regular
+	})
+
+	t.Run("happy path: test teams with maintainers", func(t *testing.T) {
+		fs := memfs.New()
+		// MockGithubClient doesn't support concurrent access
+
+		scaffold := &Scaffold{
+			remote:                     NewScaffoldGoliacRemoteMockWithMaintainers(),
+			loadUsersFromGithubOrgSaml: NoLoadGithubSamlUsersMock,
+		}
+
+		ctx := context.TODO()
+		users, err := scaffold.generateUsers(ctx, fs, "/users")
+		assert.Nil(t, err)
+		assert.Equal(t, 4, len(users))
+
+		err = scaffold.generateTeams(ctx, fs, "/teams", users, "admin")
+		assert.Nil(t, err)
+
+		found, err := utils.Exists(fs, "/teams/regular/team.yaml")
+		assert.Nil(t, err)
+		assert.Equal(t, true, found)
+
+		teamContent, err := utils.ReadFile(fs, "/teams/regular/team.yaml")
+		assert.Nil(t, err)
+
+		var teamDefinition entity.Team
+		yaml.Unmarshal(teamContent, &teamDefinition)
+		assert.Equal(t, 2, len(teamDefinition.Spec.Owners))
+		assert.Equal(t, 2, len(teamDefinition.Spec.Members))
 	})
 }
