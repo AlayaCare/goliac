@@ -141,7 +141,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		team := &GithubTeamComparable{
 			Name:       v.Name,
 			Slug:       v.Slug,
-			Members:    v.Members,
+			Members:    append(v.Members, v.Maintainers...),
 			ParentTeam: nil,
 		}
 		if v.ParentTeam != nil {

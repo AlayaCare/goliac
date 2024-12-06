@@ -467,24 +467,28 @@ func (e *GoliacRemoteExecutorMock) TeamSlugByName(ctx context.Context) map[strin
 func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context) map[string]*engine.GithubTeam {
 	return map[string]*engine.GithubTeam{
 		"team1": &engine.GithubTeam{
-			Slug:    "team1",
-			Name:    "team1",
-			Members: e.teams1Members,
+			Slug:        "team1",
+			Name:        "team1",
+			Members:     e.teams1Members,
+			Maintainers: []string{},
 		},
 		"team2": &engine.GithubTeam{
-			Slug:    "team2",
-			Name:    "team2",
-			Members: e.teams2Members,
+			Slug:        "team2",
+			Name:        "team2",
+			Members:     e.teams2Members,
+			Maintainers: []string{},
 		},
 		"team1-goliac-owners": &engine.GithubTeam{
-			Slug:    "team1-goliac-owners",
-			Name:    "team1-goliac-owners",
-			Members: e.teams1Members,
+			Slug:        "team1-goliac-owners",
+			Name:        "team1-goliac-owners",
+			Members:     e.teams1Members,
+			Maintainers: []string{},
 		},
 		"team2-goliac-owners": &engine.GithubTeam{
-			Slug:    "team2-goliac-owners",
-			Name:    "team2-goliac-owners",
-			Members: e.teams2Members,
+			Slug:        "team2-goliac-owners",
+			Name:        "team2-goliac-owners",
+			Members:     e.teams2Members,
+			Maintainers: []string{},
 		},
 	}
 }

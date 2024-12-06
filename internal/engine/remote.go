@@ -58,11 +58,12 @@ type GithubRepository struct {
 }
 
 type GithubTeam struct {
-	Name       string
-	Id         int
-	Slug       string
-	Members    []string // user login, aka githubid
-	ParentTeam *int
+	Name        string
+	Id          int
+	Slug        string
+	Members     []string // user login, aka githubid
+	Maintainers []string // user login (that are not in the Members array)
+	ParentTeam  *int
 }
 
 type GithubTeamRepo struct {
@@ -290,7 +291,7 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
             node {
               login
             }
-		    role
+            role
           }
           pageInfo {
             hasNextPage
@@ -333,6 +334,7 @@ type GraplQLUsers struct {
 /*
 loadOrgUsers returns
 map[githubid]permission (role)
+role can be 'ADMIN', 'MEMBER'
 */
 func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string, error) {
 	logrus.Debug("loading orgUsers")
@@ -853,6 +855,7 @@ query listAllTeamMembersInOrg($orgLogin: String!, $teamSlug: String!, $endCursor
             node {
               login
             }
+            role
           }
           pageInfo {
             hasNextPage
@@ -874,6 +877,7 @@ type GraplQLTeamMembers struct {
 						Node struct {
 							Login string
 						}
+						Role string
 					} `json:"edges"`
 					PageInfo struct {
 						HasNextPage bool
@@ -970,7 +974,11 @@ func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTea
 			}
 
 			for _, c := range gResult.Data.Organization.Team.Members.Edges {
-				t.Members = append(t.Members, c.Node.Login)
+				if c.Role == "MAINTAINER" {
+					t.Maintainers = append(t.Maintainers, c.Node.Login)
+				} else {
+					t.Members = append(t.Members, c.Node.Login)
+				}
 			}
 
 			hasNextPage = gResult.Data.Organization.Team.Members.PageInfo.HasNextPage
@@ -1443,9 +1451,10 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname
 	}
 
 	g.teams[slugname] = &GithubTeam{
-		Name:    teamname,
-		Slug:    slugname,
-		Members: members,
+		Name:        teamname,
+		Slug:        slugname,
+		Members:     members,
+		Maintainers: []string{},
 	}
 	g.teamSlugByName[teamname] = slugname
 }
@@ -1466,7 +1475,7 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, dryrun bool,
 	}
 
 	if team, ok := g.teams[teamslug]; ok {
-		members := team.Members
+		members := append(team.Members, team.Maintainers...)
 		found := false
 		for _, m := range members {
 			if m == username {
