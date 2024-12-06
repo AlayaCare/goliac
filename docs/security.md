@@ -17,7 +17,8 @@ You need to
   - Homepage URL can be `https://github.com/Alayacare/goliac`
   - Disable the active Webhook
 - Under Repository permissions
-  - Give Read/Write access to `Content`
+  - Give Read/Write access to `Administration` (needed to bypass the 'vaidate' check)
+  - Give Read/Write access to `Content` (needed to be able to udpate the repository)
 - Where can this GitHub App be installed: `Only on this account`
 - And Create
 - then you must
