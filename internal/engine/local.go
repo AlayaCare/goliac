@@ -326,7 +326,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 	for _, t := range teamsnames {
 		teampath := fmt.Sprintf("/teams/%s/*", t)
 		if strings.Contains(teampath, " ") {
-			teampath = "\"" + teampath + "\""
+			teampath = strings.ReplaceAll(teampath, " ", "\\ ")
 		}
 		codeowners += fmt.Sprintf("%s @%s/%s%s %s\n", teampath, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix, adminteamname)
 	}
