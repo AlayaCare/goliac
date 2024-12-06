@@ -16,6 +16,7 @@ jobs:
       linux-x86_64-binary-path: ${{ steps.upload-artifact-linux-x86_64.outputs.binary-path }}
       linux-aarch64-binary-path: ${{ steps.upload-artifact-linux-aarch64.outputs.binary-path }}
       darwin-arm64-binary-path: ${{ steps.upload-artifact-Darwin-arm64.outputs.binary-path }}
+      darwin-x86_64-binary-path: ${{ steps.upload-artifact-Darwin-x86_64.outputs.binary-path }}
       windows-x86_64-binary-path: ${{ steps.upload-artifact-windows-x86_64.outputs.binary-path }}
 
     steps:
@@ -36,6 +37,7 @@ jobs:
           GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Linux-x86_64 ./cmd/goliac
           GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Linux-aarch64 ./cmd/goliac
           GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Darwin-arm64 ./cmd/goliac
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Darwin-x86_64 ./cmd/goliac
           GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-win-x86_64 ./cmd/goliac
 
       # Publish binaries as release assets
