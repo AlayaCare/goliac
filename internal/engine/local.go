@@ -312,8 +312,10 @@ func (g *GoliacLocalImpl) LoadRepoConfig() (*config.RepositoryConfig, error) {
 }
 
 func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganization string) string {
+	adminteamname := fmt.Sprintf("@%s/%s", githubOrganization, slug.Make(adminteam))
+
 	codeowners := "# DO NOT MODIFY THIS FILE MANUALLY\n"
-	codeowners += fmt.Sprintf("* @%s/%s\n", githubOrganization, slug.Make(adminteam))
+	codeowners += fmt.Sprintf("* %s\n", adminteamname)
 
 	teamsnames := make([]string, 0)
 	for _, t := range g.teams {
@@ -322,7 +324,11 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 	sort.Strings(teamsnames)
 
 	for _, t := range teamsnames {
-		codeowners += fmt.Sprintf("/teams/%s/* @%s/%s%s @%s/%s\n", t, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix, githubOrganization, slug.Make(adminteam))
+		teampath := fmt.Sprintf("/teams/%s/*", t)
+		if strings.Contains(teampath, " ") {
+			teampath = "\"" + teampath + "\""
+		}
+		codeowners += fmt.Sprintf("%s @%s/%s%s %s\n", teampath, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix, adminteamname)
 	}
 
 	return codeowners
