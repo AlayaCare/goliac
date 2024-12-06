@@ -201,9 +201,9 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 			lTeam.Kind = "Team"
 			lTeam.Name = t.Name
 
-			// if we have 2 or more maintainers in the Github team
+			// if we have 1 or more maintainers in the Github team
 			// we will use them as owners
-			if len(t.Maintainers) >= 2 {
+			if len(t.Maintainers) >= 1 {
 				for _, m := range t.Maintainers {
 					// put the right user name instead of the github id
 					lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
@@ -277,9 +277,9 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 			lTeam.Kind = "Team"
 			lTeam.Name = teamName
 
-			// if we have 2 or more maintainers in the Github team
+			// if we have 1 or more maintainers in the Github team
 			// we will use them as owners
-			if len(t.Maintainers) >= 2 {
+			if len(t.Maintainers) >= 1 {
 				for _, m := range t.Maintainers {
 					// put the right user name instead of the github id
 					lTeam.Spec.Owners = append(lTeam.Spec.Owners, usermap[m])
