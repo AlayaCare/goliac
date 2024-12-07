@@ -143,25 +143,14 @@ func (g *GoliacLocalImpl) Clone(fs billy.Filesystem, accesstoken, repositoryUrl,
 		return fmt.Errorf("not supported")
 	}
 	repo, err := git.PlainClone(tmpDir, false, &git.CloneOptions{
-		URL:  repositoryUrl,
-		Auth: auth,
+		URL:           repositoryUrl,
+		Auth:          auth,
+		ReferenceName: plumbing.NewBranchReferenceName(branch),
 	})
 	if err != nil {
 		return err
 	}
 	g.repo = repo
-
-	// checkout the branch
-	w, err := g.repo.Worktree()
-	if err != nil {
-		return err
-	}
-	err = w.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.NewBranchReferenceName(branch),
-	})
-	if err != nil {
-		return err
-	}
 
 	return err
 }
