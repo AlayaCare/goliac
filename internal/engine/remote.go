@@ -1474,17 +1474,93 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, dryrun bool,
 		}
 	}
 
-	if team, ok := g.teams[teamslug]; ok {
-		members := append(team.Members, team.Maintainers...)
-		found := false
-		for _, m := range members {
-			if m == username {
-				found = true
+	if role == "maintainer" {
+		if team, ok := g.teams[teamslug]; ok {
+			// searching for maintainers
+			found := false
+			for _, m := range team.Maintainers {
+				if m == username {
+					found = true
+					break
+				}
+			}
+			if !found {
+				g.teams[teamslug].Maintainers = append(g.teams[teamslug].Maintainers, username)
 			}
 		}
-		if !found {
-			members = append(members, username)
-			g.teams[teamslug].Members = members
+	} else {
+		if team, ok := g.teams[teamslug]; ok {
+			// searching for members
+			found := false
+			for _, m := range team.Members {
+				if m == username {
+					found = true
+					break
+				}
+			}
+			if !found {
+				g.teams[teamslug].Members = append(g.teams[teamslug].Members, username)
+			}
+		}
+	}
+}
+
+// role = member or maintainer (usually we use member)
+func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
+	// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/orgs/%s/teams/%s/memberships/%s", config.Config.GithubAppOrganization, teamslug, username),
+			"PUT",
+			map[string]interface{}{"role": role},
+		)
+		if err != nil {
+			logrus.Errorf("failed to update team member: %v. %s", err, string(body))
+		}
+	}
+
+	if role == "maintainer" {
+		if team, ok := g.teams[teamslug]; ok {
+			// searching for maintainers
+			found := false
+			for _, m := range team.Maintainers {
+				if m == username {
+					found = true
+					break
+				}
+			}
+			if !found {
+				g.teams[teamslug].Maintainers = append(g.teams[teamslug].Maintainers, username)
+			}
+			// searching for members
+			for i, m := range team.Members {
+				if m == username {
+					g.teams[teamslug].Members = append(g.teams[teamslug].Members[:i], g.teams[teamslug].Members[i+1:]...)
+					break
+				}
+			}
+		}
+	} else {
+		if team, ok := g.teams[teamslug]; ok {
+			// searching for members
+			found := false
+			for _, m := range team.Members {
+				if m == username {
+					found = true
+					break
+				}
+			}
+			if !found {
+				g.teams[teamslug].Members = append(g.teams[teamslug].Members, username)
+			}
+			// searching for maintainers
+			for i, m := range team.Maintainers {
+				if m == username {
+					g.teams[teamslug].Maintainers = append(g.teams[teamslug].Maintainers[:i], g.teams[teamslug].Maintainers[i+1:]...)
+					break
+				}
+			}
 		}
 	}
 }

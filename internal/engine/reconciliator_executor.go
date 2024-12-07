@@ -7,8 +7,8 @@ type ReconciliatorExecutor interface {
 	RemoveUserFromOrg(ctx context.Context, dryrun bool, ghuserid string)
 
 	CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, parentTeam *int, members []string)
-	UpdateTeamAddMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) // role can be 'member' or 'maintainer'
-	//UpdateTeamUpdateMember(dryrun bool, teamslug string, username string, role string) // role can be 'member' or 'maintainer'
+	UpdateTeamAddMember(ctx context.Context, dryrun bool, teamslug string, username string, role string)    // role can be 'member' or 'maintainer'
+	UpdateTeamUpdateMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) // role can be 'member' or 'maintainer'
 	UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string)
 	UpdateTeamSetParent(ctx context.Context, dryrun bool, teamslug string, parentTeam *int)
 	DeleteTeam(ctx context.Context, dryrun bool, teamslug string)

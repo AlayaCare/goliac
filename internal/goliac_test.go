@@ -579,6 +579,9 @@ func (e *GoliacRemoteExecutorMock) CreateTeam(ctx context.Context, dryrun bool, 
 func (e *GoliacRemoteExecutorMock) UpdateTeamAddMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
 	e.nbChanges++
 }
+func (e *GoliacRemoteExecutorMock) UpdateTeamUpdateMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
+	e.nbChanges++
+}
 func (e *GoliacRemoteExecutorMock) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string) {
 	e.nbChanges++
 }
