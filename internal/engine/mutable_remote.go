@@ -110,9 +110,10 @@ func (m *MutableGoliacRemoteImpl) RemoveUserFromOrg(ghuserid string) {
 func (m *MutableGoliacRemoteImpl) CreateTeam(teamname string, description string, members []string) {
 	teamslug := slug.Make(teamname)
 	t := GithubTeam{
-		Name:    teamname,
-		Slug:    teamslug,
-		Members: members,
+		Name:        teamname,
+		Slug:        teamslug,
+		Members:     members,
+		Maintainers: []string{},
 	}
 	m.teams[teamslug] = &t
 	m.teamSlugByName[teamname] = teamslug
@@ -128,6 +129,29 @@ func (m *MutableGoliacRemoteImpl) UpdateTeamRemoveMember(teamslug string, userna
 			if m == username {
 				t.Members = append(t.Members[:i], t.Members[i+1:]...)
 				return
+			}
+		}
+	}
+}
+func (m *MutableGoliacRemoteImpl) UpdateTeamUpdateMember(teamslug string, username string, role string) {
+	if role == "maintainer" {
+		if t, ok := m.teams[teamslug]; ok {
+			for i, m := range t.Members {
+				if m == username {
+					t.Members = append(t.Members[:i], t.Members[i+1:]...)
+					t.Maintainers = append(t.Maintainers, username)
+					return
+				}
+			}
+		}
+	} else { // "member"
+		if t, ok := m.teams[teamslug]; ok {
+			for i, m := range t.Maintainers {
+				if m == username {
+					t.Maintainers = append(t.Maintainers[:i], t.Maintainers[i+1:]...)
+					t.Members = append(t.Members, username)
+					return
+				}
 			}
 		}
 	}

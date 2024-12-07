@@ -80,6 +80,17 @@ func (g *GithubBatchExecutor) UpdateTeamAddMember(ctx context.Context, dryrun bo
 	})
 }
 
+// role = member or maintainer (usually we use member)
+func (g *GithubBatchExecutor) UpdateTeamUpdateMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
+	g.commands = append(g.commands, &GithubCommandUpdateTeamUpdateMember{
+		client:   g.client,
+		dryrun:   dryrun,
+		teamslug: teamslug,
+		member:   username,
+		role:     role,
+	})
+}
+
 func (g *GithubBatchExecutor) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string) {
 	g.commands = append(g.commands, &GithubCommandUpdateTeamRemoveMember{
 		client:   g.client,
@@ -383,6 +394,18 @@ type GithubCommandUpdateTeamRemoveMember struct {
 
 func (g *GithubCommandUpdateTeamRemoveMember) Apply(ctx context.Context) {
 	g.client.UpdateTeamRemoveMember(ctx, g.dryrun, g.teamslug, g.member)
+}
+
+type GithubCommandUpdateTeamUpdateMember struct {
+	client   engine.ReconciliatorExecutor
+	dryrun   bool
+	teamslug string
+	member   string
+	role     string
+}
+
+func (g *GithubCommandUpdateTeamUpdateMember) Apply(ctx context.Context) {
+	g.client.UpdateTeamUpdateMember(ctx, g.dryrun, g.teamslug, g.member, g.role)
 }
 
 type GithubCommandUpdateTeamSetParent struct {

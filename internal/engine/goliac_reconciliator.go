@@ -119,10 +119,11 @@ func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local G
 }
 
 type GithubTeamComparable struct {
-	Name       string
-	Slug       string
-	Members    []string
-	ParentTeam *string
+	Name        string
+	Slug        string
+	Members     []string
+	Maintainers []string
+	ParentTeam  *string
 }
 
 /*
@@ -130,6 +131,7 @@ type GithubTeamComparable struct {
  */
 func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) error {
 	ghTeams := remote.Teams()
+	rUsers := remote.Users()
 
 	ghTeamsPerId := make(map[int]*GithubTeam)
 	for _, v := range ghTeams {
@@ -138,11 +140,25 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 
 	rTeams := make(map[string]*GithubTeamComparable)
 	for k, v := range ghTeams {
+		members := make([]string, len(v.Members))
+		copy(members, v.Members)
+		maintainers := []string{}
+
+		// let's filter admin from the maintainers
+		for _, m := range v.Maintainers {
+			if rUsers[m] == "ADMIN" {
+				members = append(members, m)
+			} else {
+				maintainers = append(maintainers, m)
+			}
+		}
+
 		team := &GithubTeamComparable{
-			Name:       v.Name,
-			Slug:       v.Slug,
-			Members:    append(v.Members, v.Maintainers...),
-			ParentTeam: nil,
+			Name:        v.Name,
+			Slug:        v.Slug,
+			Members:     members,
+			Maintainers: maintainers,
+			ParentTeam:  nil,
 		}
 		if v.ParentTeam != nil {
 			if parent, ok := ghTeamsPerId[*v.ParentTeam]; ok {
@@ -167,13 +183,16 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		if teamvalue.Spec.ExternallyManaged {
 			// let's add it to the special -goliac-owners
 			membersOwners := []string{}
+			membersMaintainers := []string{}
 			if rt, ok := rTeams[teamslug]; ok {
 				membersOwners = append(membersOwners, rt.Members...)
+				membersMaintainers = append(membersMaintainers, rt.Maintainers...)
 			}
 			team := &GithubTeamComparable{
-				Name:    teamslug + config.Config.GoliacTeamOwnerSuffix,
-				Slug:    teamslug + config.Config.GoliacTeamOwnerSuffix,
-				Members: membersOwners,
+				Name:        teamslug + config.Config.GoliacTeamOwnerSuffix,
+				Slug:        teamslug + config.Config.GoliacTeamOwnerSuffix,
+				Members:     membersOwners,
+				Maintainers: membersMaintainers,
 			}
 			slugTeams[teamslug+config.Config.GoliacTeamOwnerSuffix] = team
 
@@ -210,9 +229,10 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 
 		// owners
 		team = &GithubTeamComparable{
-			Name:    teamslug + config.Config.GoliacTeamOwnerSuffix,
-			Slug:    teamslug + config.Config.GoliacTeamOwnerSuffix,
-			Members: membersOwners,
+			Name:        teamslug + config.Config.GoliacTeamOwnerSuffix,
+			Slug:        teamslug + config.Config.GoliacTeamOwnerSuffix,
+			Members:     membersOwners,
+			Maintainers: []string{},
 		}
 		slugTeams[teamslug+config.Config.GoliacTeamOwnerSuffix] = team
 	}
@@ -234,6 +254,9 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 
 	compareTeam := func(lTeam *GithubTeamComparable, rTeam *GithubTeamComparable) bool {
 		if res, _, _ := entity.StringArrayEquivalent(lTeam.Members, rTeam.Members); !res {
+			return false
+		}
+		if res, _, _ := entity.StringArrayEquivalent(lTeam.Maintainers, rTeam.Maintainers); !res {
 			return false
 		}
 		if (lTeam.ParentTeam == nil && rTeam.ParentTeam != nil) ||
@@ -262,6 +285,32 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 	}
 
 	onChanged := func(slugTeam string, lTeam *GithubTeamComparable, rTeam *GithubTeamComparable) {
+		// change membership from maintainers to members
+
+		rmaintainers := make([]string, len(rTeam.Maintainers))
+		copy(rmaintainers, rTeam.Maintainers)
+
+		for _, r_maintainer := range rmaintainers {
+			found := false
+			for _, l_maintainer := range lTeam.Maintainers {
+				if r_maintainer == l_maintainer {
+					found = true
+					break
+				}
+			}
+			if !found {
+				// let's downgrade the maintainer to member
+				r.UpdateTeamChangeMaintainerToMember(ctx, dryrun, remote, slugTeam, r_maintainer)
+				for i, m := range rTeam.Maintainers {
+					if m == r_maintainer {
+						rTeam.Maintainers = append(rTeam.Maintainers[:i], rTeam.Maintainers[i+1:]...)
+						break
+					}
+				}
+				rTeam.Members = append(rTeam.Members, r_maintainer)
+			}
+		}
+
 		// membership change
 		if res, _, _ := entity.StringArrayEquivalent(lTeam.Members, rTeam.Members); !res {
 			localMembers := make(map[string]bool)
@@ -702,6 +751,17 @@ func (r *GoliacReconciliatorImpl) UpdateTeamRemoveMember(ctx context.Context, dr
 	remote.UpdateTeamRemoveMember(teamslug, username)
 	if r.executor != nil {
 		r.executor.UpdateTeamRemoveMember(ctx, dryrun, teamslug, username)
+	}
+}
+func (r *GoliacReconciliatorImpl) UpdateTeamChangeMaintainerToMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, username string) {
+	author := "unknown"
+	if a := ctx.Value(KeyAuthor); a != nil {
+		author = a.(string)
+	}
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": author, "command": "update_team_change_maintainer_to_member"}).Infof("teamslug: %s, username: %s", teamslug, username)
+	remote.UpdateTeamUpdateMember(teamslug, username, "member")
+	if r.executor != nil {
+		r.executor.UpdateTeamUpdateMember(ctx, dryrun, teamslug, username, "member")
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateTeamSetParent(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, parentTeam *int) {

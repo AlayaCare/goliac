@@ -130,6 +130,7 @@ type ReconciliatorListenerRecorder struct {
 	TeamsCreated      map[string][]string
 	TeamMemberAdded   map[string][]string
 	TeamMemberRemoved map[string][]string
+	TeamMemberUpdated map[string][]string
 	TeamParentUpdated map[string]*int
 	TeamDeleted       map[string]bool
 
@@ -155,6 +156,7 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 		TeamsCreated:                   make(map[string][]string),
 		TeamMemberAdded:                make(map[string][]string),
 		TeamMemberRemoved:              make(map[string][]string),
+		TeamMemberUpdated:              make(map[string][]string),
 		TeamParentUpdated:              make(map[string]*int),
 		TeamDeleted:                    make(map[string]bool),
 		RepositoryCreated:              make(map[string]bool),
@@ -186,6 +188,9 @@ func (r *ReconciliatorListenerRecorder) UpdateTeamAddMember(ctx context.Context,
 }
 func (r *ReconciliatorListenerRecorder) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string) {
 	r.TeamMemberRemoved[teamslug] = append(r.TeamMemberRemoved[teamslug], username)
+}
+func (r *ReconciliatorListenerRecorder) UpdateTeamUpdateMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
+	r.TeamMemberUpdated[teamslug] = append(r.TeamMemberUpdated[teamslug], username)
 }
 func (r *ReconciliatorListenerRecorder) UpdateTeamSetParent(ctx context.Context, dryrun bool, teamslug string, parentTeam *int) {
 	r.TeamParentUpdated[teamslug] = parentTeam
@@ -235,6 +240,7 @@ func (r *ReconciliatorListenerRecorder) Commit(ctx context.Context, dryrun bool)
 }
 
 func TestReconciliation(t *testing.T) {
+
 	t.Run("happy path: new team", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
@@ -1106,6 +1112,12 @@ func TestReconciliation(t *testing.T) {
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		local.repos["myrepo"] = lRepo
+		existingUser := entity.User{}
+		existingUser.Spec.GithubID = "existing_member"
+		local.users["existing_member"] = &existingUser
+		existingOwner := entity.User{}
+		existingOwner.Spec.GithubID = "existing_owner"
+		local.users["existing_owner"] = &existingOwner
 
 		existingTeam := &entity.Team{}
 		existingTeam.Name = "existing"
@@ -1150,6 +1162,80 @@ func TestReconciliation(t *testing.T) {
 		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 		assert.Equal(t, 1, len(recorder.TeamMemberRemoved))
+	})
+
+	t.Run("happy path: update a team member from maintainer to member", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+		lRepo := &entity.Repository{}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{}
+		lRepo.Spec.Writers = []string{}
+		lowner := "existing"
+		lRepo.Owner = &lowner
+		local.repos["myrepo"] = lRepo
+		existingUser := entity.User{}
+		existingUser.Spec.GithubID = "existing_member"
+		local.users["existing_member"] = &existingUser
+		existingOwner := entity.User{}
+		existingOwner.Spec.GithubID = "existing_owner"
+		local.users["existing_owner"] = &existingOwner
+
+		existingTeam := &entity.Team{}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{"existing_member"}
+		local.teams["existing"] = existingTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+		existing := &GithubTeam{
+			Name:        "existing",
+			Slug:        "existing",
+			Members:     []string{"existing_member"},
+			Maintainers: []string{"existing_owner"},
+		}
+		remote.teams["existing"] = existing
+		rRepo := GithubRepository{
+			Name:           "myrepo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
+		remote.repos["myrepo"] = &rRepo
+
+		remote.teamsrepos["existing"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["existing"]["myrepo"] = &GithubTeamRepo{
+			Name:       "myrepo",
+			Permission: "WRITE",
+		}
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+
+		// 1 member removed
+		assert.Equal(t, 0, len(recorder.RepositoryCreated))
+		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
+		fmt.Println("**debug", recorder.TeamMemberRemoved)
+		assert.Equal(t, 0, len(recorder.TeamMemberRemoved))
+		assert.Equal(t, 1, len(recorder.TeamMemberUpdated))
 	})
 
 	t.Run("happy path: add a team AND add it to an existing repo", func(t *testing.T) {
