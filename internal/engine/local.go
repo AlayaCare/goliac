@@ -658,36 +658,26 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 
 		for _, u := range deletedusers {
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "remove_user_from_repository"}).Infof("user: %s", u)
-			if !dryrun {
-				_, err = w.Remove(u)
-				if err != nil {
-					return false, err
-				}
+			_, err = w.Remove(u)
+			if err != nil {
+				return false, err
 			}
 		}
 
 		for _, u := range addedusers {
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "add_user_to_repository"}).Infof("user: %s", u)
-			if !dryrun {
-				_, err = w.Add(u)
-				if err != nil {
-					return false, err
-				}
+			_, err = w.Add(u)
+			if err != nil {
+				return false, err
 			}
 		}
 
 		for _, t := range teamschanged {
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "update_team_to_repository"}).Infof("team: %s", t)
-			if !dryrun {
-				_, err = w.Add(t)
-				if err != nil {
-					return false, err
-				}
+			_, err = w.Add(t)
+			if err != nil {
+				return false, err
 			}
-		}
-
-		if dryrun {
-			return false, nil
 		}
 
 		_, err = w.Commit("update teams and users", &git.CommitOptions{
@@ -700,6 +690,10 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 
 		if err != nil {
 			return false, err
+		}
+
+		if dryrun {
+			return false, nil
 		}
 
 		// Now push the tag to the remote repository

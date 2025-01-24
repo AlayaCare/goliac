@@ -343,7 +343,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 					g.local.PushTag(GOLIAC_GIT_TAG, commit.Hash, accessToken)
 				}
 			} else {
-				logrus.Errorf("Not able to checkout commit %s", commit.Hash.String())
+				logrus.Errorf("Not able to checkout commit %s: %v", commit.Hash.String(), err)
 			}
 		}
 		if lastErr != nil {
