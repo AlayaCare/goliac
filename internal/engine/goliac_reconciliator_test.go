@@ -7,6 +7,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -67,7 +68,7 @@ func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 func (m *GoliacLocalMock) ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error {
 	return nil
 }
-func (m *GoliacLocalMock) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) (bool, error) {
+func (m *GoliacLocalMock) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteLoadFeedback) (bool, error) {
 	return false, nil
 }
 func (m *GoliacLocalMock) Close(fs billy.Filesystem) {
@@ -121,6 +122,11 @@ func (m *GoliacRemoteMock) TeamRepositories(ctx context.Context) map[string]map[
 }
 func (m *GoliacRemoteMock) AppIds(ctx context.Context) map[string]int {
 	return m.appids
+}
+func (m *GoliacRemoteMock) CountAssets(ctx context.Context) (int, error) {
+	return 3, nil
+}
+func (g *GoliacRemoteMock) SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) {
 }
 
 type ReconciliatorListenerRecorder struct {

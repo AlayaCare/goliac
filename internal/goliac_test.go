@@ -9,6 +9,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/Alayacare/goliac/internal/usersync"
 	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
@@ -564,6 +565,11 @@ func (e *GoliacRemoteExecutorMock) AppIds(ctx context.Context) map[string]int {
 }
 func (e *GoliacRemoteExecutorMock) IsEnterprise() bool {
 	return true
+}
+func (m *GoliacRemoteExecutorMock) CountAssets(ctx context.Context) (int, error) {
+	return 4, nil
+}
+func (g *GoliacRemoteExecutorMock) SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) {
 }
 
 func (e *GoliacRemoteExecutorMock) AddUserToOrg(ctx context.Context, dryrun bool, ghuserid string) {

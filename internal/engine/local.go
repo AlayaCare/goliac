@@ -11,6 +11,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5"
@@ -54,7 +55,7 @@ type GoliacLocalGit interface {
 	// whenever the users list is changing, reload users and teams, and commit them
 	// (force will bypass the max_changesets check)
 	// return true if some changes were done
-	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) (bool, error)
+	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteLoadFeedback) (bool, error)
 	Close(fs billy.Filesystem)
 
 	// Load and Validate from a local directory
@@ -546,7 +547,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
  * - collect the difference
  * - returns deleted users, and add/updated users
  */
-func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesystem, userplugin UserSyncPlugin) ([]string, []string, error) {
+func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesystem, userplugin UserSyncPlugin, feedback observability.RemoteLoadFeedback) ([]string, []string, error) {
 	usersOrgPath := filepath.Join("users", "org")
 	orgUsers, errs, _ := entity.ReadUserDirectory(fs, usersOrgPath)
 	if len(errs) > 0 {
@@ -554,7 +555,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 	}
 
 	// use usersync to update the users
-	newOrgUsers, err := userplugin.UpdateUsers(repoconfig, fs, usersOrgPath)
+	newOrgUsers, err := userplugin.UpdateUsers(repoconfig, fs, usersOrgPath, feedback)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -608,7 +609,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 	return deletedusers, updatedusers, nil
 }
 
-func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool) (bool, error) {
+func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteLoadFeedback) (bool, error) {
 	if g.repo == nil {
 		return false, fmt.Errorf("git repository not cloned")
 	}
@@ -625,7 +626,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 	//
 
 	// Parse all the users in the <orgDirectory>/org-users directory
-	deletedusers, addedusers, err := syncUsersViaUserPlugin(repoconfig, w.Filesystem, userplugin)
+	deletedusers, addedusers, err := syncUsersViaUserPlugin(repoconfig, w.Filesystem, userplugin, feedback)
 	if err != nil {
 		return false, err
 	}

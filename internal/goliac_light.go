@@ -42,7 +42,7 @@ func (g *GoliacLightImpl) Validate(path string) error {
 		for _, err := range errs {
 			logrus.Error(err)
 		}
-		return fmt.Errorf("Not able to validate the goliac organization: see logs")
+		return fmt.Errorf("not able to validate the goliac organization: see logs")
 	}
 
 	return nil

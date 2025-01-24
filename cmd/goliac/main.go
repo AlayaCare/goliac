@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Alayacare/goliac/internal"
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/notification"
 	"github.com/go-git/go-billy/v5/osfs"
+	progressbar "github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -19,6 +21,38 @@ var forceParameter bool
 var repositoryParameter string
 var branchParameter string
 var goliacAdminTeamnameParameter string
+
+type ProgressBar struct {
+	bar *progressbar.ProgressBar
+}
+
+func CreateProgressBar(goliac internal.Goliac) (*ProgressBar, error) {
+	nb, err := goliac.CountAssets(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	bar := progressbar.NewOptions(nb,
+		progressbar.OptionSetPredictTime(false),
+		progressbar.OptionSetDescription("fetching github"),
+		//progressbar.OptionSetWriter(os.Stderr),
+		progressbar.OptionSetWidth(40),
+		progressbar.OptionShowTotalBytes(true),
+		progressbar.OptionThrottle(65*time.Millisecond),
+		progressbar.OptionShowCount(),
+		progressbar.OptionShowIts(),
+		progressbar.OptionOnCompletion(func() {
+			fmt.Fprint(os.Stderr, "\n")
+		}),
+		progressbar.OptionSpinnerType(14),
+		//progressbar.OptionFullWidth(),
+		progressbar.OptionSetRenderBlankState(true),
+	)
+	return &ProgressBar{bar: bar}, nil
+}
+
+func (p *ProgressBar) LoadingAsset(nb int) {
+	p.bar.Add(nb)
+}
 
 func main() {
 	verifyCmd := &cobra.Command{
@@ -67,6 +101,17 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
+			if progressbarBool, err := cmd.Flags().GetBool("progressbar"); err == nil {
+				if progressbarBool {
+					bar, err := CreateProgressBar(goliac)
+					if err != nil {
+						logrus.Warnf("failed to create progress bar: %s", err)
+					} else {
+						goliac.SetRemoteLoadFeedback(bar)
+					}
+				}
+			}
+
 			ctx := context.Background()
 			fs := osfs.New("/")
 			err, _, _, _ = goliac.Apply(ctx, fs, true, repo, branch, true)
@@ -103,6 +148,17 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			goliac, err := internal.NewGoliacImpl()
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
+			}
+
+			if progressbarBool, err := cmd.Flags().GetBool("progressbar"); err == nil {
+				if progressbarBool {
+					bar, err := CreateProgressBar(goliac)
+					if err != nil {
+						logrus.Warnf("failed to create progress bar: %s", err)
+					} else {
+						goliac.SetRemoteLoadFeedback(bar)
+					}
+				}
 			}
 
 			ctx := context.Background()
@@ -248,7 +304,9 @@ Either local directory, or remote git repository`,
 	}
 
 	rootCmd.AddCommand(verifyCmd)
+	planCmd.Flags().BoolP("progressbar", "p", true, "display a progress bar")
 	rootCmd.AddCommand(planCmd)
+	applyCmd.Flags().BoolP("progressbar", "p", true, "display a progress bar")
 	rootCmd.AddCommand(applyCmd)
 	rootCmd.AddCommand(postSyncUsersCmd)
 	rootCmd.AddCommand(scaffoldcmd)

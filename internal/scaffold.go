@@ -45,7 +45,7 @@ func NewScaffold() (*Scaffold, error) {
 	return &Scaffold{
 		remote: remote,
 		loadUsersFromGithubOrgSaml: func() (map[string]*entity.User, error) {
-			return engine.LoadUsersFromGithubOrgSaml(ctx, githubClient)
+			return engine.LoadUsersFromGithubOrgSaml(ctx, githubClient, nil)
 		},
 		githubappname: githubClient.GetAppSlug(),
 	}, nil

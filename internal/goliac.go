@@ -12,6 +12,7 @@ import (
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/Alayacare/goliac/internal/usersync"
 	"github.com/go-git/go-billy/v5"
 	"github.com/sirupsen/logrus"
@@ -38,6 +39,9 @@ type Goliac interface {
 	FlushCache()
 
 	GetLocal() engine.GoliacLocalResources
+
+	CountAssets(ctx context.Context) (int, error)                    // return the number of (some) assets that will be loaded (to be used with the RemoteLoadFeedback/progress bar)
+	SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) // if you want to get feedback on the loading process
 }
 
 type GoliacImpl struct {
@@ -46,6 +50,7 @@ type GoliacImpl struct {
 	localGithubClient  github.GitHubClient // github client for team repository operations
 	remoteGithubClient github.GitHubClient // github client for admin operations
 	repoconfig         *config.RepositoryConfig
+	feedback           observability.RemoteLoadFeedback
 }
 
 func NewGoliacImpl() (Goliac, error) {
@@ -79,11 +84,20 @@ func NewGoliacImpl() (Goliac, error) {
 		localGithubClient:  localGithubClient,
 		remote:             remote,
 		repoconfig:         &config.RepositoryConfig{},
+		feedback:           nil,
 	}, nil
 }
 
 func (g *GoliacImpl) GetLocal() engine.GoliacLocalResources {
 	return g.local
+}
+
+func (g *GoliacImpl) CountAssets(ctx context.Context) (int, error) {
+	return g.remote.CountAssets(ctx)
+}
+func (g *GoliacImpl) SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) {
+	g.feedback = feedback
+	g.remote.SetRemoteLoadFeedback(feedback)
 }
 
 func (g *GoliacImpl) FlushCache() {
@@ -117,6 +131,9 @@ func (g *GoliacImpl) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool
 	}
 
 	unmanaged, err := g.applyToGithub(ctx, dryrun, config.Config.GithubAppOrganization, teamreponame, branch, forcesync, config.Config.SyncUsersBeforeApply)
+	for _, warn := range warns {
+		logrus.Warn(warn)
+	}
 	if err != nil {
 		return err, errs, warns, unmanaged
 	}
@@ -154,7 +171,7 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs b
 	}
 
 	for _, warn := range warns {
-		logrus.Warn(warn)
+		logrus.Debug(warn)
 	}
 	if len(errs) != 0 {
 		for _, err := range errs {
@@ -234,7 +251,7 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 			if err != nil {
 				return nil, err
 			}
-			change, err := g.local.SyncUsersAndTeams(g.repoconfig, userplugin, accessToken, dryrun, false)
+			change, err := g.local.SyncUsersAndTeams(g.repoconfig, userplugin, accessToken, dryrun, false, g.feedback)
 			if err != nil {
 				return nil, err
 			}
@@ -391,5 +408,5 @@ func (g *GoliacImpl) UsersUpdate(ctx context.Context, fs billy.Filesystem, repos
 		return false, fmt.Errorf("user sync Plugin %s not found", repoconfig.UserSync.Plugin)
 	}
 
-	return g.local.SyncUsersAndTeams(repoconfig, userplugin, accessToken, dryrun, force)
+	return g.local.SyncUsersAndTeams(repoconfig, userplugin, accessToken, dryrun, force, g.feedback)
 }

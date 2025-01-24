@@ -18,7 +18,7 @@ var Config = struct {
 	GoliacEmail                 string `env:"GOLIAC_EMAIL" envDefault:"goliac@alayacare.com"`
 	GoliacTeamOwnerSuffix       string `env:"GOLIAC_TEAM_OWNER_SUFFIX" envDefault:"-goliac-owners"`
 
-	GithubConcurrentThreads int64 `env:"GOLIAC_GITHUB_CONCURRENT_THREADS" envDefault:"1"`
+	GithubConcurrentThreads int64 `env:"GOLIAC_GITHUB_CONCURRENT_THREADS" envDefault:"2"`
 	GithubCacheTTL          int64 `env:"GOLIAC_GITHUB_CACHE_TTL" envDefault:"86400"`
 
 	ServerApplyInterval int64  `env:"GOLIAC_SERVER_APPLY_INTERVAL" envDefault:"600"`

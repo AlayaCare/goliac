@@ -7,6 +7,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -145,7 +146,7 @@ func TestRepository(t *testing.T) {
 type ScrambleUserSync struct {
 }
 
-func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
+func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
 	users := make(map[string]*entity.User)
 
 	// added
@@ -170,7 +171,7 @@ func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs b
 type ErroreUserSync struct {
 }
 
-func (p *ErroreUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
+func (p *ErroreUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
 	return nil, fmt.Errorf("unknown error")
 }
 
@@ -180,7 +181,7 @@ func NewUserSyncPluginNoop() UserSyncPlugin {
 	return &UserSyncPluginNoop{}
 }
 
-func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
+func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
 	users, errs, _ := entity.ReadUserDirectory(fs, orguserdirrectorypath)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("cannot load org users (for example: %v)", errs[0])
@@ -195,7 +196,7 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		fs := memfs.New()
 		createBasicStructure(fs)
 
-		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &UserSyncPluginNoop{})
+		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &UserSyncPluginNoop{}, nil)
 
 		assert.Nil(t, err)
 		assert.Equal(t, 0, len(removed))
@@ -206,7 +207,7 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		fs := memfs.New()
 		createBasicStructure(fs)
 
-		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ScrambleUserSync{})
+		removed, added, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ScrambleUserSync{}, nil)
 
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(removed))
@@ -218,7 +219,7 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		fs := memfs.New()
 		createBasicStructure(fs)
 
-		_, _, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ErroreUserSync{})
+		_, _, err := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ErroreUserSync{}, nil)
 
 		assert.NotNil(t, err)
 	})
@@ -769,7 +770,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 		mockUserPlugin := &UserSyncPluginMock{}
 
 		// sync users and teams
-		change, err := g.SyncUsersAndTeams(goliacConfig, mockUserPlugin, "none", false, false)
+		change, err := g.SyncUsersAndTeams(goliacConfig, mockUserPlugin, "none", false, false, nil)
 		assert.Nil(t, err)
 		assert.True(t, change)
 
@@ -784,7 +785,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 type UserSyncPluginMock struct {
 }
 
-func (us *UserSyncPluginMock) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
+func (us *UserSyncPluginMock) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
 	// let's return the current one (admin) + a new one
 	users := make(map[string]*entity.User)
 	users["admin"] = &entity.User{}
