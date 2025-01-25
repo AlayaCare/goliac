@@ -18,7 +18,7 @@ func NewUserSyncPluginShellScript() engine.UserSyncPlugin {
 	return &UserSyncPluginShellScript{}
 }
 
-func (p *UserSyncPluginShellScript) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
+func (p *UserSyncPluginShellScript) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 	cmd := exec.Command(repoconfig.UserSync.Path, filepath.Join(fs.Root(), orguserdirrectorypath))
 	_, err := cmd.CombinedOutput()
 	if err != nil {

@@ -79,7 +79,7 @@ type GraplQLUsersFromGithubOrgSaml struct {
 /*
  * This function works only for Github organization that have the Entreprise plan ANAD use SAML integration
  */
-func LoadUsersFromGithubOrgSaml(ctx context.Context, client github.GitHubClient, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
+func LoadUsersFromGithubOrgSaml(ctx context.Context, client github.GitHubClient, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 	users := make(map[string]*entity.User)
 
 	variables := make(map[string]interface{})
@@ -123,7 +123,7 @@ func LoadUsersFromGithubOrgSaml(ctx context.Context, client github.GitHubClient,
 		}
 
 		if feedback != nil {
-			feedback.LoadingAsset(len(gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.Edges))
+			feedback.LoadingAsset("github_saml", len(gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.Edges))
 		}
 
 		hasNextPage = gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.PageInfo.HasNextPage

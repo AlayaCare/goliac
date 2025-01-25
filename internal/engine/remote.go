@@ -44,8 +44,8 @@ type GoliacRemote interface {
 
 	IsEnterprise() bool // check if we are on an Enterprise version, or if we are on GHES 3.11+
 
-	CountAssets(ctx context.Context) (int, error)                    // return the number of (some) assets that will be loaded (to be used with the RemoteLoadFeedback/progress bar)
-	SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) // if you want to get feedback on the loading process
+	CountAssets(ctx context.Context) (int, error)                      // return the number of (some) assets that will be loaded (to be used with the RemoteObservability/progress bar)
+	SetRemoteObservability(feedback observability.RemoteObservability) // if you want to get feedback on the loading process
 }
 
 type GoliacRemoteExecutor interface {
@@ -92,7 +92,7 @@ type GoliacRemoteImpl struct {
 	ttlExpireRulesets     time.Time
 	ttlExpireAppIds       time.Time
 	isEnterprise          bool
-	feedback              observability.RemoteLoadFeedback
+	feedback              observability.RemoteObservability
 }
 
 type GHESInfo struct {
@@ -188,7 +188,7 @@ func (g *GoliacRemoteImpl) CountAssets(ctx context.Context) (int, error) {
 		gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.TotalCount, nil
 }
 
-func (g *GoliacRemoteImpl) SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) {
+func (g *GoliacRemoteImpl) SetRemoteObservability(feedback observability.RemoteObservability) {
 	g.feedback = feedback
 }
 
@@ -451,7 +451,7 @@ func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string,
 		}
 
 		if g.feedback != nil {
-			g.feedback.LoadingAsset(len(gResult.Data.Organization.MembersWithRole.Edges))
+			g.feedback.LoadingAsset("users", len(gResult.Data.Organization.MembersWithRole.Edges))
 		}
 
 		hasNextPage = gResult.Data.Organization.MembersWithRole.PageInfo.HasNextPage
@@ -589,7 +589,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 		}
 
 		if g.feedback != nil {
-			g.feedback.LoadingAsset(len(gResult.Data.Organization.Repositories.Nodes))
+			g.feedback.LoadingAsset("repositories", len(gResult.Data.Organization.Repositories.Nodes))
 		}
 
 		hasNextPage = gResult.Data.Organization.Repositories.PageInfo.HasNextPage
@@ -804,7 +804,7 @@ func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently(ctx context.Context) (ma
 			return teamRepos, err
 		}
 		if g.feedback != nil {
-			g.feedback.LoadingAsset(1)
+			g.feedback.LoadingAsset("teams_repos", 1)
 		}
 		teamsPerRepo[repository] = repos
 	}
@@ -874,7 +874,7 @@ func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGor
 		defer wg2.Done()
 		for r := range teamReposChan {
 			if g.feedback != nil {
-				g.feedback.LoadingAsset(1)
+				g.feedback.LoadingAsset("teams_repos", 1)
 			}
 			teamsPerRepo[r.repoName] = r.repos
 		}
@@ -892,15 +892,6 @@ func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGor
 	default:
 		//nop
 	}
-
-	// 	// No error, populate the teamRepos map
-	// 	for r := range teamReposChan {
-	// 		if g.feedback != nil {
-	// 			g.feedback.LoadingAsset(1)
-	// 		}
-	// 		teamsPerRepo[r.repoName] = r.repos
-	// 	}
-	// }
 
 	// we have all the teams per repo, now we need to invert the map
 	for repository, repos := range teamsPerRepo {
@@ -1054,7 +1045,7 @@ func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTea
 		}
 
 		if g.feedback != nil {
-			g.feedback.LoadingAsset(len(gResult.Data.Organization.Teams.Nodes))
+			g.feedback.LoadingAsset("teams", len(gResult.Data.Organization.Teams.Nodes))
 		}
 
 		hasNextPage = gResult.Data.Organization.Teams.PageInfo.HasNextPage
@@ -1068,54 +1059,108 @@ func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTea
 	}
 
 	// load team's members
-	for _, t := range teams {
-		variables["orgLogin"] = config.Config.GithubAppOrganization
-		variables["endCursor"] = nil
-		variables["teamSlug"] = t.Slug
-
-		hasNextPage := true
-		count := 0
-		for hasNextPage {
-			data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamMembersInOrg, variables)
+	if config.Config.GithubConcurrentThreads <= 1 {
+		for _, t := range teams {
+			err := g.loadTeamsMembers(ctx, t)
 			if err != nil {
 				return teams, teamSlugByName, err
 			}
-			var gResult GraplQLTeamMembers
-
-			// parse first page
-			err = json.Unmarshal(data, &gResult)
-			if err != nil {
-				return teams, teamSlugByName, err
+			if g.feedback != nil {
+				g.feedback.LoadingAsset("teams_members", 1)
 			}
-			if len(gResult.Errors) > 0 {
-				return teams, teamSlugByName, fmt.Errorf("graphql error on loadTeams members: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
-			}
+		}
+	} else {
+		var wg sync.WaitGroup
 
-			for _, c := range gResult.Data.Organization.Team.Members.Edges {
-				if c.Role == "MAINTAINER" {
-					t.Maintainers = append(t.Maintainers, c.Node.Login)
-				} else {
-					t.Members = append(t.Members, c.Node.Login)
+		// Create buffered channels
+		teamsChan := make(chan *GithubTeam, len(teams))
+		errChan := make(chan error, 1) // will hold the first error
+
+		// Create worker goroutines
+		for i := int64(0); i < config.Config.GithubConcurrentThreads; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for t := range teamsChan {
+					err := g.loadTeamsMembers(ctx, t)
+					if err != nil {
+						// Try to report the error
+						select {
+						case errChan <- err:
+						default:
+						}
+						return
+					}
+					if g.feedback != nil {
+						g.feedback.LoadingAsset("teams_members", 1)
+					}
 				}
-			}
-
-			hasNextPage = gResult.Data.Organization.Team.Members.PageInfo.HasNextPage
-			variables["endCursor"] = gResult.Data.Organization.Team.Members.PageInfo.EndCursor
-
-			count++
-			// sanity check to avoid loops
-			if count > FORLOOP_STOP {
-				break
-			}
+			}()
 		}
 
-		if g.feedback != nil {
-			g.feedback.LoadingAsset(1)
+		// Send teams to teamsChan
+		for _, t := range teams {
+			teamsChan <- t
 		}
+		close(teamsChan)
 
+		// Wait for all goroutines to finish
+		wg.Wait()
+
+		// Check if any goroutine returned an error
+		select {
+		case err := <-errChan:
+			return teams, teamSlugByName, err
+		default:
+			//nop
+		}
 	}
 
 	return teams, teamSlugByName, nil
+}
+
+func (g *GoliacRemoteImpl) loadTeamsMembers(ctx context.Context, t *GithubTeam) error {
+	variables := make(map[string]interface{})
+	variables["orgLogin"] = config.Config.GithubAppOrganization
+	variables["endCursor"] = nil
+	variables["teamSlug"] = t.Slug
+
+	hasNextPage := true
+	count := 0
+	for hasNextPage {
+		data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamMembersInOrg, variables)
+		if err != nil {
+			return err
+		}
+		var gResult GraplQLTeamMembers
+
+		// parse first page
+		err = json.Unmarshal(data, &gResult)
+		if err != nil {
+			return err
+		}
+		if len(gResult.Errors) > 0 {
+			return fmt.Errorf("graphql error on loadTeams members: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
+		}
+
+		for _, c := range gResult.Data.Organization.Team.Members.Edges {
+			if c.Role == "MAINTAINER" {
+				t.Maintainers = append(t.Maintainers, c.Node.Login)
+			} else {
+				t.Members = append(t.Members, c.Node.Login)
+			}
+		}
+
+		hasNextPage = gResult.Data.Organization.Team.Members.PageInfo.HasNextPage
+		variables["endCursor"] = gResult.Data.Organization.Team.Members.PageInfo.EndCursor
+
+		count++
+		// sanity check to avoid loops
+		if count > FORLOOP_STOP {
+			break
+		}
+	}
+	return nil
 }
 
 const listRulesets = `

@@ -55,7 +55,7 @@ type GoliacLocalGit interface {
 	// whenever the users list is changing, reload users and teams, and commit them
 	// (force will bypass the max_changesets check)
 	// return true if some changes were done
-	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteLoadFeedback) (bool, error)
+	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability) (bool, error)
 	Close(fs billy.Filesystem)
 
 	// Load and Validate from a local directory
@@ -547,7 +547,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
  * - collect the difference
  * - returns deleted users, and add/updated users
  */
-func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesystem, userplugin UserSyncPlugin, feedback observability.RemoteLoadFeedback) ([]string, []string, error) {
+func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesystem, userplugin UserSyncPlugin, feedback observability.RemoteObservability) ([]string, []string, error) {
 	usersOrgPath := filepath.Join("users", "org")
 	orgUsers, errs, _ := entity.ReadUserDirectory(fs, usersOrgPath)
 	if len(errs) > 0 {
@@ -609,7 +609,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 	return deletedusers, updatedusers, nil
 }
 
-func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteLoadFeedback) (bool, error) {
+func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability) (bool, error) {
 	if g.repo == nil {
 		return false, fmt.Errorf("git repository not cloned")
 	}

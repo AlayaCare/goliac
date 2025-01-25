@@ -146,7 +146,7 @@ func TestRepository(t *testing.T) {
 type ScrambleUserSync struct {
 }
 
-func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
+func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 	users := make(map[string]*entity.User)
 
 	// added
@@ -171,7 +171,7 @@ func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs b
 type ErroreUserSync struct {
 }
 
-func (p *ErroreUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
+func (p *ErroreUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 	return nil, fmt.Errorf("unknown error")
 }
 
@@ -181,7 +181,7 @@ func NewUserSyncPluginNoop() UserSyncPlugin {
 	return &UserSyncPluginNoop{}
 }
 
-func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
+func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 	users, errs, _ := entity.ReadUserDirectory(fs, orguserdirrectorypath)
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("cannot load org users (for example: %v)", errs[0])
@@ -785,7 +785,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 type UserSyncPluginMock struct {
 }
 
-func (us *UserSyncPluginMock) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
+func (us *UserSyncPluginMock) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 	// let's return the current one (admin) + a new one
 	users := make(map[string]*entity.User)
 	users["admin"] = &entity.User{}

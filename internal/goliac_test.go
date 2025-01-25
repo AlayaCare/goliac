@@ -569,7 +569,7 @@ func (e *GoliacRemoteExecutorMock) IsEnterprise() bool {
 func (m *GoliacRemoteExecutorMock) CountAssets(ctx context.Context) (int, error) {
 	return 4, nil
 }
-func (g *GoliacRemoteExecutorMock) SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) {
+func (g *GoliacRemoteExecutorMock) SetRemoteObservability(feedback observability.RemoteObservability) {
 }
 
 func (e *GoliacRemoteExecutorMock) AddUserToOrg(ctx context.Context, dryrun bool, ghuserid string) {

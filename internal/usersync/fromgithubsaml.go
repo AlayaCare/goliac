@@ -28,7 +28,7 @@ func NewUserSyncPluginFromGithubSaml(client github.GitHubClient) engine.UserSync
 	}
 }
 
-func (p *UserSyncPluginFromGithubSaml) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
+func (p *UserSyncPluginFromGithubSaml) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 
 	ctx := context.Background()
 	users, err := engine.LoadUsersFromGithubOrgSaml(ctx, p.client, feedback)

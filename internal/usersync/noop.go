@@ -18,7 +18,7 @@ func NewUserSyncPluginNoop() engine.UserSyncPlugin {
 	return &UserSyncPluginNoop{}
 }
 
-func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteLoadFeedback) (map[string]*entity.User, error) {
+func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 
 	users, errs, _ := entity.ReadUserDirectory(fs, orguserdirrectorypath)
 	if len(errs) > 0 {

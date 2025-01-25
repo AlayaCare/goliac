@@ -68,7 +68,7 @@ func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
 func (m *GoliacLocalMock) ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error {
 	return nil
 }
-func (m *GoliacLocalMock) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteLoadFeedback) (bool, error) {
+func (m *GoliacLocalMock) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability) (bool, error) {
 	return false, nil
 }
 func (m *GoliacLocalMock) Close(fs billy.Filesystem) {
@@ -126,7 +126,7 @@ func (m *GoliacRemoteMock) AppIds(ctx context.Context) map[string]int {
 func (m *GoliacRemoteMock) CountAssets(ctx context.Context) (int, error) {
 	return 3, nil
 }
-func (g *GoliacRemoteMock) SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) {
+func (g *GoliacRemoteMock) SetRemoteObservability(feedback observability.RemoteObservability) {
 }
 
 type ReconciliatorListenerRecorder struct {

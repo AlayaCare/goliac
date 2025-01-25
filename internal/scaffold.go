@@ -12,6 +12,7 @@ import (
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
@@ -19,11 +20,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type LoadGithubSamlUsers func() (map[string]*entity.User, error)
+type LoadGithubSamlUsers func(observability.RemoteObservability) (map[string]*entity.User, error)
 
 type Scaffold struct {
 	remote                     engine.GoliacRemote
 	loadUsersFromGithubOrgSaml LoadGithubSamlUsers
+	feedback                   observability.RemoteObservability
 	githubappname              string
 }
 
@@ -41,14 +43,30 @@ func NewScaffold() (*Scaffold, error) {
 
 	remote := engine.NewGoliacRemoteImpl(githubClient)
 
-	ctx := context.Background()
+	loadUsersFromGithubOrgSaml := func(feedback observability.RemoteObservability) (map[string]*entity.User, error) {
+		ctx := context.Background()
+		return engine.LoadUsersFromGithubOrgSaml(ctx, githubClient, feedback)
+	}
+
 	return &Scaffold{
-		remote: remote,
-		loadUsersFromGithubOrgSaml: func() (map[string]*entity.User, error) {
-			return engine.LoadUsersFromGithubOrgSaml(ctx, githubClient, nil)
-		},
-		githubappname: githubClient.GetAppSlug(),
+		remote:                     remote,
+		loadUsersFromGithubOrgSaml: loadUsersFromGithubOrgSaml,
+		feedback:                   nil,
+		githubappname:              githubClient.GetAppSlug(),
 	}, nil
+}
+
+func (s *Scaffold) SetRemoteObservability(feedback observability.RemoteObservability) error {
+	s.remote.SetRemoteObservability(feedback)
+	s.feedback = feedback
+	if feedback != nil {
+		nb, err := s.remote.CountAssets(context.Background())
+		if err != nil {
+			return fmt.Errorf("error when counting assets: %v", err)
+		}
+		feedback.Init(nb)
+	}
+	return nil
 }
 
 /*
@@ -349,7 +367,7 @@ func (s *Scaffold) generateUsers(ctx context.Context, fs billy.Filesystem, users
 
 	usermap := make(map[string]string)
 	// test SAML integration
-	users, err := s.loadUsersFromGithubOrgSaml()
+	users, err := s.loadUsersFromGithubOrgSaml(s.feedback)
 
 	if len(users) > 0 && err == nil {
 		logrus.Debug("SAML integration enabled")

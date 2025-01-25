@@ -22,11 +22,17 @@ const (
 	GOLIAC_GIT_TAG = "goliac"
 )
 
+type GoliacObservability interface {
+	SetRemoteObservability(feedback observability.RemoteObservability) error // if you want to get feedback on the loading process
+}
+
 /*
  * Goliac is the main interface of the application.
  * It is used to load and validate a goliac repository and apply it to github.
  */
 type Goliac interface {
+	GoliacObservability
+
 	// will run and apply the reconciliation,
 	// forcesync will force the sync of the latest commit, even if we have commits to apply
 	// it returns an error if something went wrong, and a detailed list of errors and warnings
@@ -39,9 +45,6 @@ type Goliac interface {
 	FlushCache()
 
 	GetLocal() engine.GoliacLocalResources
-
-	CountAssets(ctx context.Context) (int, error)                    // return the number of (some) assets that will be loaded (to be used with the RemoteLoadFeedback/progress bar)
-	SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) // if you want to get feedback on the loading process
 }
 
 type GoliacImpl struct {
@@ -50,7 +53,7 @@ type GoliacImpl struct {
 	localGithubClient  github.GitHubClient // github client for team repository operations
 	remoteGithubClient github.GitHubClient // github client for admin operations
 	repoconfig         *config.RepositoryConfig
-	feedback           observability.RemoteLoadFeedback
+	feedback           observability.RemoteObservability
 }
 
 func NewGoliacImpl() (Goliac, error) {
@@ -92,12 +95,18 @@ func (g *GoliacImpl) GetLocal() engine.GoliacLocalResources {
 	return g.local
 }
 
-func (g *GoliacImpl) CountAssets(ctx context.Context) (int, error) {
-	return g.remote.CountAssets(ctx)
-}
-func (g *GoliacImpl) SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) {
+func (g *GoliacImpl) SetRemoteObservability(feedback observability.RemoteObservability) error {
 	g.feedback = feedback
-	g.remote.SetRemoteLoadFeedback(feedback)
+	g.remote.SetRemoteObservability(feedback)
+
+	if feedback != nil {
+		nb, err := g.remote.CountAssets(context.Background())
+		if err != nil {
+			return fmt.Errorf("error when counting assets: %v", err)
+		}
+		feedback.Init(nb)
+	}
+	return nil
 }
 
 func (g *GoliacImpl) FlushCache() {

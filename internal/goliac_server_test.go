@@ -129,10 +129,8 @@ func (g *GoliacMock) FlushCache() {
 func (g *GoliacMock) GetLocal() engine.GoliacLocalResources {
 	return g.local
 }
-func (g *GoliacMock) CountAssets(ctx context.Context) (int, error) {
-	return 0, nil
-}
-func (g *GoliacMock) SetRemoteLoadFeedback(feedback observability.RemoteLoadFeedback) {
+func (g *GoliacMock) SetRemoteObservability(feedback observability.RemoteObservability) error {
+	return nil
 }
 func NewGoliacMock(local engine.GoliacLocalResources) Goliac {
 	mock := GoliacMock{
