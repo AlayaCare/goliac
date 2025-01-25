@@ -110,7 +110,7 @@ func TestLoadUsersFromGithubOrgSaml(t *testing.T) {
 	t.Run("happy path: load users from Enterprise Github", func(t *testing.T) {
 		client := NewGithubSamlGitHubClient()
 		ctx := context.TODO()
-		users, err := LoadUsersFromGithubOrgSaml(ctx, client)
+		users, err := LoadUsersFromGithubOrgSaml(ctx, client, nil)
 		assert.Nil(t, err)
 		assert.Equal(t, 4, len(users))
 	})

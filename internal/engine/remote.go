@@ -11,6 +11,7 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/gosimple/slug"
 	"github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
@@ -42,6 +43,9 @@ type GoliacRemote interface {
 	AppIds(ctx context.Context) map[string]int
 
 	IsEnterprise() bool // check if we are on an Enterprise version, or if we are on GHES 3.11+
+
+	CountAssets(ctx context.Context) (int, error)                      // return the number of (some) assets that will be loaded (to be used with the RemoteObservability/progress bar)
+	SetRemoteObservability(feedback observability.RemoteObservability) // if you want to get feedback on the loading process
 }
 
 type GoliacRemoteExecutor interface {
@@ -88,6 +92,7 @@ type GoliacRemoteImpl struct {
 	ttlExpireRulesets     time.Time
 	ttlExpireAppIds       time.Time
 	isEnterprise          bool
+	feedback              observability.RemoteObservability
 }
 
 type GHESInfo struct {
@@ -107,6 +112,84 @@ func getGHESVersion(ctx context.Context, client github.GitHubClient) (*GHESInfo,
 	}
 
 	return &info, nil
+}
+
+const getAssets = `
+query getAssets($orgLogin: String!) {
+	organization(login: $orgLogin) {
+		repositories{
+			totalCount
+		}
+		teams {
+			totalCount
+		}
+	    membersWithRole {
+    		totalCount
+    	}
+		samlIdentityProvider {
+			externalIdentities {
+				totalCount
+			}
+		}
+	}
+}
+`
+
+type GraplQLAssets struct {
+	Data struct {
+		Organization struct {
+			Repositories struct {
+				TotalCount int `json:"totalCount"`
+			} `json:"repositories"`
+			Teams struct {
+				TotalCount int `json:"totalCount"`
+			} `json:"teams"`
+			MembersWithRole struct {
+				TotalCount int `json:"totalCount"`
+			} `json:"membersWithRole"`
+			SamlIdentityProvider struct {
+				ExternalIdentities struct {
+					TotalCount int `json:"totalCount"`
+				} `json:"externalIdentities"`
+			} `json:"samlIdentityProvider"`
+		} `json:"organization"`
+	}
+	Errors []struct {
+		Path       []interface{} `json:"path"`
+		Extensions struct {
+			Code         string
+			ErrorMessage string
+		} `json:"extensions"`
+		Message string
+	} `json:"errors"`
+}
+
+func (g *GoliacRemoteImpl) CountAssets(ctx context.Context) (int, error) {
+	variables := make(map[string]interface{})
+	variables["orgLogin"] = config.Config.GithubAppOrganization
+
+	data, err := g.client.QueryGraphQLAPI(ctx, getAssets, variables)
+	if err != nil {
+		return 0, err
+	}
+	var gResult GraplQLAssets
+
+	// parse first page
+	err = json.Unmarshal(data, &gResult)
+	if err != nil {
+		return 0, err
+	}
+	if len(gResult.Errors) > 0 {
+		return 0, fmt.Errorf("graphql error on CountAssets: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
+	}
+	return 2*gResult.Data.Organization.Repositories.TotalCount + // we multiply by 2 because we have the repositories and the teams per repostiory to fetch
+		2*gResult.Data.Organization.Teams.TotalCount + // we multiply by 2 because we have the teams and the members per team to fetch
+		gResult.Data.Organization.MembersWithRole.TotalCount +
+		gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.TotalCount, nil
+}
+
+func (g *GoliacRemoteImpl) SetRemoteObservability(feedback observability.RemoteObservability) {
+	g.feedback = feedback
 }
 
 type OrgInfo struct {
@@ -174,6 +257,7 @@ func NewGoliacRemoteImpl(client github.GitHubClient) *GoliacRemoteImpl {
 		ttlExpireRulesets:     time.Now(),
 		ttlExpireAppIds:       time.Now(),
 		isEnterprise:          isEnterprise(ctx, config.Config.GithubAppOrganization, client),
+		feedback:              nil,
 	}
 }
 
@@ -366,6 +450,10 @@ func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string,
 			users[c.Node.Login] = c.Role
 		}
 
+		if g.feedback != nil {
+			g.feedback.LoadingAsset("users", len(gResult.Data.Organization.MembersWithRole.Edges))
+		}
+
 		hasNextPage = gResult.Data.Organization.MembersWithRole.PageInfo.HasNextPage
 		variables["endCursor"] = gResult.Data.Organization.MembersWithRole.PageInfo.EndCursor
 
@@ -498,6 +586,10 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 			}
 			repositories[c.Name] = repo
 			repositoriesByRefId[c.Id] = repo
+		}
+
+		if g.feedback != nil {
+			g.feedback.LoadingAsset("repositories", len(gResult.Data.Organization.Repositories.Nodes))
 		}
 
 		hasNextPage = gResult.Data.Organization.Repositories.PageInfo.HasNextPage
@@ -711,6 +803,9 @@ func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently(ctx context.Context) (ma
 		if err != nil {
 			return teamRepos, err
 		}
+		if g.feedback != nil {
+			g.feedback.LoadingAsset("teams_repos", 1)
+		}
 		teamsPerRepo[repository] = repos
 	}
 
@@ -735,6 +830,7 @@ func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGor
 	teamsPerRepo := make(map[string]map[string]*GithubTeamRepo)
 
 	var wg sync.WaitGroup
+	var wg2 sync.WaitGroup
 
 	// Create buffered channels
 	reposChan := make(chan string, len(g.repositories))
@@ -773,19 +869,28 @@ func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGor
 	}
 	close(reposChan)
 
+	wg2.Add(1)
+	go func() {
+		defer wg2.Done()
+		for r := range teamReposChan {
+			if g.feedback != nil {
+				g.feedback.LoadingAsset("teams_repos", 1)
+			}
+			teamsPerRepo[r.repoName] = r.repos
+		}
+	}()
+
 	// Wait for all goroutines to finish
 	wg.Wait()
 	close(teamReposChan)
+	wg2.Wait()
 
 	// Check if any goroutine returned an error
 	select {
 	case err := <-errChan:
 		return teamRepos, err
 	default:
-		// No error, populate the teamRepos map
-		for r := range teamReposChan {
-			teamsPerRepo[r.repoName] = r.repos
-		}
+		//nop
 	}
 
 	// we have all the teams per repo, now we need to invert the map
@@ -939,6 +1044,10 @@ func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTea
 			teamSlugByName[c.Name] = c.Slug
 		}
 
+		if g.feedback != nil {
+			g.feedback.LoadingAsset("teams", len(gResult.Data.Organization.Teams.Nodes))
+		}
+
 		hasNextPage = gResult.Data.Organization.Teams.PageInfo.HasNextPage
 		variables["endCursor"] = gResult.Data.Organization.Teams.PageInfo.EndCursor
 
@@ -950,49 +1059,108 @@ func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTea
 	}
 
 	// load team's members
-	for _, t := range teams {
-		variables["orgLogin"] = config.Config.GithubAppOrganization
-		variables["endCursor"] = nil
-		variables["teamSlug"] = t.Slug
-
-		hasNextPage := true
-		count := 0
-		for hasNextPage {
-			data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamMembersInOrg, variables)
+	if config.Config.GithubConcurrentThreads <= 1 {
+		for _, t := range teams {
+			err := g.loadTeamsMembers(ctx, t)
 			if err != nil {
 				return teams, teamSlugByName, err
 			}
-			var gResult GraplQLTeamMembers
-
-			// parse first page
-			err = json.Unmarshal(data, &gResult)
-			if err != nil {
-				return teams, teamSlugByName, err
+			if g.feedback != nil {
+				g.feedback.LoadingAsset("teams_members", 1)
 			}
-			if len(gResult.Errors) > 0 {
-				return teams, teamSlugByName, fmt.Errorf("graphql error on loadTeams members: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
-			}
+		}
+	} else {
+		var wg sync.WaitGroup
 
-			for _, c := range gResult.Data.Organization.Team.Members.Edges {
-				if c.Role == "MAINTAINER" {
-					t.Maintainers = append(t.Maintainers, c.Node.Login)
-				} else {
-					t.Members = append(t.Members, c.Node.Login)
+		// Create buffered channels
+		teamsChan := make(chan *GithubTeam, len(teams))
+		errChan := make(chan error, 1) // will hold the first error
+
+		// Create worker goroutines
+		for i := int64(0); i < config.Config.GithubConcurrentThreads; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for t := range teamsChan {
+					err := g.loadTeamsMembers(ctx, t)
+					if err != nil {
+						// Try to report the error
+						select {
+						case errChan <- err:
+						default:
+						}
+						return
+					}
+					if g.feedback != nil {
+						g.feedback.LoadingAsset("teams_members", 1)
+					}
 				}
-			}
+			}()
+		}
 
-			hasNextPage = gResult.Data.Organization.Team.Members.PageInfo.HasNextPage
-			variables["endCursor"] = gResult.Data.Organization.Team.Members.PageInfo.EndCursor
+		// Send teams to teamsChan
+		for _, t := range teams {
+			teamsChan <- t
+		}
+		close(teamsChan)
 
-			count++
-			// sanity check to avoid loops
-			if count > FORLOOP_STOP {
-				break
-			}
+		// Wait for all goroutines to finish
+		wg.Wait()
+
+		// Check if any goroutine returned an error
+		select {
+		case err := <-errChan:
+			return teams, teamSlugByName, err
+		default:
+			//nop
 		}
 	}
 
 	return teams, teamSlugByName, nil
+}
+
+func (g *GoliacRemoteImpl) loadTeamsMembers(ctx context.Context, t *GithubTeam) error {
+	variables := make(map[string]interface{})
+	variables["orgLogin"] = config.Config.GithubAppOrganization
+	variables["endCursor"] = nil
+	variables["teamSlug"] = t.Slug
+
+	hasNextPage := true
+	count := 0
+	for hasNextPage {
+		data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamMembersInOrg, variables)
+		if err != nil {
+			return err
+		}
+		var gResult GraplQLTeamMembers
+
+		// parse first page
+		err = json.Unmarshal(data, &gResult)
+		if err != nil {
+			return err
+		}
+		if len(gResult.Errors) > 0 {
+			return fmt.Errorf("graphql error on loadTeams members: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
+		}
+
+		for _, c := range gResult.Data.Organization.Team.Members.Edges {
+			if c.Role == "MAINTAINER" {
+				t.Maintainers = append(t.Maintainers, c.Node.Login)
+			} else {
+				t.Members = append(t.Members, c.Node.Login)
+			}
+		}
+
+		hasNextPage = gResult.Data.Organization.Team.Members.PageInfo.HasNextPage
+		variables["endCursor"] = gResult.Data.Organization.Team.Members.PageInfo.EndCursor
+
+		count++
+		// sanity check to avoid loops
+		if count > FORLOOP_STOP {
+			break
+		}
+	}
+	return nil
 }
 
 const listRulesets = `

@@ -44,22 +44,24 @@ type AuthorizedTransport struct {
 
 func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	t.client.mu.Lock()
-	defer t.client.mu.Unlock()
 
 	// Refresh the access token if necessary
 	if t.client.accessToken == "" || time.Until(t.client.tokenExpiration) < 5*time.Minute {
 		token, err := t.client.createJWT()
 		if err != nil {
+			t.client.mu.Unlock()
 			return nil, err
 		}
 
 		accessToken, expiresAt, err := t.client.getAccessTokenForInstallation(req.Context(), token)
 		if err != nil {
+			t.client.mu.Unlock()
 			return nil, err
 		}
 		t.client.accessToken = accessToken
 		t.client.tokenExpiration = expiresAt
 	}
+	t.client.mu.Unlock()
 
 	req.Header.Add("Authorization", "Bearer "+t.client.accessToken)
 
@@ -234,6 +236,7 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 			if err != nil {
 				return nil, err
 			}
+			retryAfter = retryAfter / 2 // ok we shouldn't be too aggressive
 			logrus.Debugf("2nd rate limit reached, waiting for %d seconds", retryAfter)
 			time.Sleep(time.Duration(retryAfter) * time.Second)
 		} else {

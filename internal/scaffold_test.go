@@ -7,6 +7,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/gosimple/slug"
@@ -55,6 +56,11 @@ func (s *ScaffoldGoliacRemoteMock) AppIds(ctx context.Context) map[string]int {
 }
 func (s *ScaffoldGoliacRemoteMock) IsEnterprise() bool {
 	return true
+}
+func (m *ScaffoldGoliacRemoteMock) CountAssets(ctx context.Context) (int, error) {
+	return 2*len(m.repos) + len(m.teams) + len(m.users), nil
+}
+func (g *ScaffoldGoliacRemoteMock) SetRemoteObservability(feedback observability.RemoteObservability) {
 }
 
 func NewScaffoldGoliacRemoteMock() engine.GoliacRemote {
@@ -187,7 +193,7 @@ func NewScaffoldGoliacRemoteMockWithMaintainers() engine.GoliacRemote {
 	return &mock
 }
 
-func LoadGithubSamlUsersMock() (map[string]*entity.User, error) {
+func LoadGithubSamlUsersMock(feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 	users := make(map[string]*entity.User)
 	user1 := &entity.User{}
 	user1.ApiVersion = "v1"
@@ -213,7 +219,7 @@ func LoadGithubSamlUsersMock() (map[string]*entity.User, error) {
 	return users, nil
 }
 
-func NoLoadGithubSamlUsersMock() (map[string]*entity.User, error) {
+func NoLoadGithubSamlUsersMock(feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 	return nil, fmt.Errorf("not able to fetch SAML data")
 }
 

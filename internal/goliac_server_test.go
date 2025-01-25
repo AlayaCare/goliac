@@ -10,6 +10,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/Alayacare/goliac/swagger_gen/restapi/operations/app"
 )
 
@@ -127,6 +128,9 @@ func (g *GoliacMock) FlushCache() {
 
 func (g *GoliacMock) GetLocal() engine.GoliacLocalResources {
 	return g.local
+}
+func (g *GoliacMock) SetRemoteObservability(feedback observability.RemoteObservability) error {
+	return nil
 }
 func NewGoliacMock(local engine.GoliacLocalResources) Goliac {
 	mock := GoliacMock{

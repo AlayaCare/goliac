@@ -8,6 +8,7 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/go-git/go-billy/v5"
 )
 
@@ -17,7 +18,7 @@ func NewUserSyncPluginShellScript() engine.UserSyncPlugin {
 	return &UserSyncPluginShellScript{}
 }
 
-func (p *UserSyncPluginShellScript) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string) (map[string]*entity.User, error) {
+func (p *UserSyncPluginShellScript) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 	cmd := exec.Command(repoconfig.UserSync.Path, filepath.Join(fs.Root(), orguserdirrectorypath))
 	_, err := cmd.CombinedOutput()
 	if err != nil {

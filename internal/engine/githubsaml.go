@@ -8,6 +8,7 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/github"
+	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/sirupsen/logrus"
 )
 
@@ -78,7 +79,7 @@ type GraplQLUsersFromGithubOrgSaml struct {
 /*
  * This function works only for Github organization that have the Entreprise plan ANAD use SAML integration
  */
-func LoadUsersFromGithubOrgSaml(ctx context.Context, client github.GitHubClient) (map[string]*entity.User, error) {
+func LoadUsersFromGithubOrgSaml(ctx context.Context, client github.GitHubClient, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 	users := make(map[string]*entity.User)
 
 	variables := make(map[string]interface{})
@@ -119,6 +120,10 @@ func LoadUsersFromGithubOrgSaml(ctx context.Context, client github.GitHubClient)
 			user.Spec.GithubID = c.Node.User.Login
 
 			users[c.Node.SamlIdentity.NameId] = user
+		}
+
+		if feedback != nil {
+			feedback.LoadingAsset("github_saml", len(gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.Edges))
 		}
 
 		hasNextPage = gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.PageInfo.HasNextPage
