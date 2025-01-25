@@ -9,7 +9,7 @@ RUN make build_ui
 ######################################
 # Prepare go_builder
 ######################################
-FROM golang:1.23-bullseye AS go_builder
+FROM golang:1.23-bookworm AS go_builder
 
 # GITHUB_REF is the current Gihhub tag
 ARG GITHUB_REF=unknown
@@ -21,7 +21,7 @@ RUN make build
 ######################################
 # Copy from builder to debian image
 ######################################
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 RUN mkdir /app
 WORKDIR /app
 
