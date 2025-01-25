@@ -2,8 +2,6 @@ module github.com/Alayacare/goliac
 
 go 1.22
 
-toolchain go1.23.2
-
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
