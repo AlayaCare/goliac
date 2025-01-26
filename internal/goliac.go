@@ -311,35 +311,15 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 	var unmanaged *engine.UnmanagedResources
 
 	commits, err := g.local.ListCommitsFromTag(GOLIAC_GIT_TAG)
-	// if we can get Goliac tag, let's fallback to the latest commit
+	// if we can get commits
 	if err != nil {
 		ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
 		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
-
-		commit, err := g.local.GetHeadCommit()
-
-		if err != nil {
-			return unmanaged, fmt.Errorf("error when getting head commit: %v", err)
-		}
-
-		err = g.local.CheckoutCommit(commit)
-		if err != nil {
-			return unmanaged, fmt.Errorf("error when checking out commit: %v", err)
-		}
-
-		errs, _ := g.local.LoadAndValidate()
-		if len(errs) > 0 {
-			for _, err := range errs {
-				logrus.Error(err)
-			}
-			return unmanaged, fmt.Errorf("not able to load and validate the goliac organization: see logs")
-		}
 
 		unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 		if err != nil {
 			return unmanaged, fmt.Errorf("error when reconciliating: %v", err)
 		}
-
 		// if we resync, and dont have commits, let's resync the latest (HEAD) commit
 		// or if are not in enterprise mode and cannot guarrantee that PR commits are squashed
 	} else if (len(commits) == 0 && forceresync) || !g.remote.IsEnterprise() {
@@ -348,21 +328,8 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
 		commit, err := g.local.GetHeadCommit()
 
-		if err != nil {
-			return unmanaged, fmt.Errorf("error when getting head commit: %v", err)
-		}
-
-		err = g.local.CheckoutCommit(commit)
-		if err != nil {
-			return unmanaged, fmt.Errorf("error when checking out commit: %v", err)
-		}
-
-		errs, _ := g.local.LoadAndValidate()
-		if len(errs) > 0 {
-			for _, err := range errs {
-				logrus.Error(err)
-			}
-			return unmanaged, fmt.Errorf("not able to load and validate the goliac organization: see logs")
+		if err == nil {
+			ctx = context.WithValue(ctx, engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
 		}
 
 		unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
