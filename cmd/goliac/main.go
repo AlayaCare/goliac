@@ -11,7 +11,7 @@ import (
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/notification"
 	"github.com/go-git/go-billy/v5/osfs"
-	progressbar "github.com/schollz/progressbar/v3"
+	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -20,6 +20,7 @@ var dryrunParameter bool
 var forceParameter bool
 var repositoryParameter string
 var branchParameter string
+var noProgressbar bool
 var goliacAdminTeamnameParameter string
 
 type ProgressBar struct {
@@ -101,13 +102,11 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			if progressbarBool, err := cmd.Flags().GetBool("progressbar"); err == nil {
-				if progressbarBool {
-					bar := CreateProgressBar()
-					err := goliac.SetRemoteObservability(bar)
-					if err != nil {
-						logrus.Warnf("failed to set remote observability: %s", err)
-					}
+			if !noProgressbar {
+				bar := CreateProgressBar()
+				err := goliac.SetRemoteObservability(bar)
+				if err != nil {
+					logrus.Warnf("failed to set remote observability: %s", err)
 				}
 			}
 
@@ -122,7 +121,7 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 
 	planCmd.Flags().StringVarP(&repositoryParameter, "repository", "r", config.Config.ServerGitRepository, "repository (default env variable GOLIAC_SERVER_GIT_REPOSITORY)")
 	planCmd.Flags().StringVarP(&branchParameter, "branch", "b", config.Config.ServerGitBranch, "branch (default env variable GOLIAC_SERVER_GIT_BRANCH)")
-	planCmd.Flags().BoolP("progressbar", "p", true, "display a progress bar")
+	planCmd.Flags().BoolVarP(&noProgressbar, "noprogressbar", "p", false, "display a progress bar")
 
 	applyCmd := &cobra.Command{
 		Use:   "apply [--repository https_team_repository_url] [--branch branch]",
@@ -150,13 +149,11 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
 
-			if progressbarBool, err := cmd.Flags().GetBool("progressbar"); err == nil {
-				if progressbarBool {
-					bar := CreateProgressBar()
-					err := goliac.SetRemoteObservability(bar)
-					if err != nil {
-						logrus.Warnf("failed to set remote observability: %s", err)
-					}
+			if !noProgressbar {
+				bar := CreateProgressBar()
+				err := goliac.SetRemoteObservability(bar)
+				if err != nil {
+					logrus.Warnf("failed to set remote observability: %s", err)
 				}
 			}
 
@@ -170,7 +167,7 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 	}
 	applyCmd.Flags().StringVarP(&repositoryParameter, "repository", "r", config.Config.ServerGitRepository, "repository (default env variable GOLIAC_SERVER_GIT_REPOSITORY)")
 	applyCmd.Flags().StringVarP(&branchParameter, "branch", "b", config.Config.ServerGitBranch, "branch (default env variable GOLIAC_SERVER_GIT_BRANCH)")
-	applyCmd.Flags().BoolP("progressbar", "p", true, "display a progress bar")
+	applyCmd.Flags().BoolVarP(&noProgressbar, "noprogressbar", "p", false, "display a progress bar")
 
 	postSyncUsersCmd := &cobra.Command{
 		Use:   "syncusers [--repository https_team_repository_url] [--branch branch] [--dryrun] [--force]",
@@ -232,13 +229,11 @@ The adminteam is your current team that contains Github administrator`,
 			}
 			fmt.Println("Generating the IAC structure, it can take several minutes to list everything. \u2615")
 
-			if progressbarBool, err := cmd.Flags().GetBool("progressbar"); err == nil {
-				if progressbarBool {
-					bar := CreateProgressBar()
-					err := scaffold.SetRemoteObservability(bar)
-					if err != nil {
-						logrus.Warnf("failed to set remote observability: %s", err)
-					}
+			if !noProgressbar {
+				bar := CreateProgressBar()
+				err := scaffold.SetRemoteObservability(bar)
+				if err != nil {
+					logrus.Warnf("failed to set remote observability: %s", err)
 				}
 			}
 
@@ -274,7 +269,7 @@ Now you can push this directory as a new repository to Github, like:
 		},
 	}
 	scaffoldcmd.Flags().StringVarP(&goliacAdminTeamnameParameter, "adminteam", "a", "goliac-admin", "name of the goliac admin team")
-	scaffoldcmd.Flags().BoolP("progressbar", "p", true, "display a progress bar")
+	scaffoldcmd.Flags().BoolVarP(&noProgressbar, "noprogressbar", "p", false, "display a progress bar")
 
 	servecmd := &cobra.Command{
 		Use:   "serve",
