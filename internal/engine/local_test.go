@@ -582,12 +582,6 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		// files, err := target.ReadDir("/")
-		// assert.Nil(t, err)
-		// for _, file := range files {
-		// 	fmt.Println(file.Name())
-		// }
-
 		goliacConfig, err := g.LoadRepoConfig()
 		assert.Nil(t, err)
 		assert.NotNil(t, goliacConfig)

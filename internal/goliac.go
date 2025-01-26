@@ -152,10 +152,14 @@ func (g *GoliacImpl) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool
 func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string) (error, []error, []entity.Warning) {
 	var errs []error
 	var warns []entity.Warning
-	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") {
-		accessToken, err := g.localGithubClient.GetAccessToken(ctx)
-		if err != nil {
-			return err, nil, nil
+	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") || strings.HasPrefix(repositoryUrl, "inmemory:///") {
+		accessToken := ""
+		var err error
+		if strings.HasPrefix(repositoryUrl, "https://") {
+			accessToken, err = g.localGithubClient.GetAccessToken(ctx)
+			if err != nil {
+				return err, nil, nil
+			}
 		}
 
 		err = g.local.Clone(fs, accessToken, repositoryUrl, branch)
@@ -307,25 +311,14 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 
 	ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
 	reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
+
 	commit, err := g.local.GetHeadCommit()
 	if err != nil {
 		return unmanaged, fmt.Errorf("error when getting head commit: %v", err)
 	}
 
-	err = g.local.CheckoutCommit(commit)
-	if err != nil {
-		return unmanaged, fmt.Errorf("error when checking out commit: %v", err)
-	}
-
-	errs, _ := g.local.LoadAndValidate()
-	if len(errs) > 0 {
-		for _, err := range errs {
-			logrus.Error(err)
-		}
-		return unmanaged, fmt.Errorf("not able to load and validate the goliac organization: see logs")
-	}
-
-	// if we have commits to apply
+	// the repo has already been cloned (to HEAD) and validated (see loadAndValidateGoliacOrganization)
+	// we can now apply the changes to the github team repository
 	unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
 	if err != nil {
 		return unmanaged, fmt.Errorf("error when reconciliating: %v", err)

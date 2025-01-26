@@ -139,6 +139,8 @@ func (g *GoliacLocalImpl) Clone(fs billy.Filesystem, accesstoken, repositoryUrl,
 			Username: "x-access-token", // This can be anything except an empty string
 			Password: accesstoken,
 		}
+	} else if strings.HasPrefix(repositoryUrl, "inmemory:///") {
+		auth = nil
 	} else {
 		// ssh clone not supported yet
 		return fmt.Errorf("not supported")
