@@ -544,7 +544,7 @@ func (g *GoliacServerImpl) PostFlushCache(app.PostFlushCacheParams) middleware.R
 }
 
 func (g *GoliacServerImpl) PostResync(app.PostResyncParams) middleware.Responder {
-	go g.triggerApply(true)
+	go g.triggerApply()
 	return app.NewPostResyncOK()
 }
 
@@ -584,7 +584,7 @@ func (g *GoliacServerImpl) Serve() {
 			config.Config.ServerGitBranch, func() {
 				// when receiving a Github webhook event
 				// let's start the apply process asynchronously
-				go g.triggerApply(false)
+				go g.triggerApply()
 			},
 		)
 		go func() {
@@ -617,7 +617,7 @@ func (g *GoliacServerImpl) Serve() {
 					// because we want to reconciliate even if there
 					// is no new commit
 					// (and also it will populate the lastUnmanaged structure)
-					g.triggerApply(true)
+					g.triggerApply()
 				}
 			}
 		}
@@ -638,13 +638,9 @@ triggerApply will trigger the apply process (by calling serveApply())
 inside serverApply, it will check if the lobby is free
 - if the lobby is free, it will start the apply process
 - if the lobby is busy, it will do nothing
-
-forceResync will force the apply process to resync with the remote repository
-even if the last commit seems to have been applied (Goliac will in fact
-reapply the last commit, ie HEAD)
 */
-func (g *GoliacServerImpl) triggerApply(forceresync bool) {
-	err, errs, warns, applied := g.serveApply(forceresync)
+func (g *GoliacServerImpl) triggerApply() {
+	err, errs, warns, applied := g.serveApply()
 	if !applied && err == nil {
 		// the run was skipped
 		g.syncInterval = config.Config.ServerApplyInterval
@@ -705,12 +701,7 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	return server, nil
 }
 
-/*
-forceResync will force the apply process to resync with the remote repository
-even if the last commit seems to have been applied (Goliac will in fact
-reapply the last commit, ie HEAD)
-*/
-func (g *GoliacServerImpl) serveApply(forceresync bool) (error, []error, []entity.Warning, bool) {
+func (g *GoliacServerImpl) serveApply() (error, []error, []entity.Warning, bool) {
 	// we want to run ApplyToGithub
 	// and queue one new run (the lobby) if a new run is asked
 	g.applyLobbyMutex.Lock()
@@ -760,7 +751,7 @@ func (g *GoliacServerImpl) serveApply(forceresync bool) (error, []error, []entit
 	ctx := context.WithValue(context.Background(), config.ContextKeyStatistics, &stats)
 
 	fs := osfs.New("/")
-	err, errs, warns, unmanaged := g.goliac.Apply(ctx, fs, false, repo, branch, forceresync)
+	err, errs, warns, unmanaged := g.goliac.Apply(ctx, fs, false, repo, branch)
 	if err != nil {
 		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), errs, warns, false
 	}

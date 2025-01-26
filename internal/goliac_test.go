@@ -677,7 +677,7 @@ func TestGoliacApply(t *testing.T) {
 			localGithubClient:  githubClient,
 			repoconfig:         repoconfig,
 		}
-		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///teams", "master", false)
+		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///teams", "master")
 		assert.Nil(t, err)
 		assert.Equal(t, len(errs), 0)
 		assert.Equal(t, len(warns), 0)
@@ -718,7 +718,7 @@ func TestGoliacApply(t *testing.T) {
 			localGithubClient:  githubClient,
 			repoconfig:         repoconfig,
 		}
-		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///teams", "master", false)
+		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///teams", "master")
 		assert.Nil(t, err)
 		assert.Equal(t, 0, len(errs))
 		assert.Equal(t, 0, len(warns))

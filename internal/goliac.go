@@ -34,9 +34,8 @@ type Goliac interface {
 	GoliacObservability
 
 	// will run and apply the reconciliation,
-	// forcesync will force the sync of the latest commit, even if we have commits to apply
 	// it returns an error if something went wrong, and a detailed list of errors and warnings
-	Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources)
+	Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string) (error, []error, []entity.Warning, *engine.UnmanagedResources)
 
 	// will clone run the user-plugin to sync users, and will commit to the team repository, return true if a change was done
 	UsersUpdate(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) (bool, error)
@@ -113,7 +112,7 @@ func (g *GoliacImpl) FlushCache() {
 	g.remote.FlushCache()
 }
 
-func (g *GoliacImpl) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string, forcesync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
+func (g *GoliacImpl) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
 	err, errs, warns := g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch)
 	defer g.local.Close(fs)
 	if err != nil {
@@ -139,7 +138,7 @@ func (g *GoliacImpl) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool
 		}
 	}
 
-	unmanaged, err := g.applyToGithub(ctx, dryrun, config.Config.GithubAppOrganization, teamreponame, branch, forcesync, config.Config.SyncUsersBeforeApply)
+	unmanaged, err := g.applyToGithub(ctx, dryrun, config.Config.GithubAppOrganization, teamreponame, branch, config.Config.SyncUsersBeforeApply)
 	for _, warn := range warns {
 		logrus.Warn(warn)
 	}
@@ -240,7 +239,7 @@ Apply the changes to the github team repository:
   - apply the changes
   - update the codeowners file
 */
-func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrganization string, teamreponame string, branch string, forceresync bool, syncusersbeforeapply bool) (*engine.UnmanagedResources, error) {
+func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrganization string, teamreponame string, branch string, syncusersbeforeapply bool) (*engine.UnmanagedResources, error) {
 	err := g.remote.Load(ctx, false)
 	if err != nil {
 		return nil, fmt.Errorf("error when fetching data from Github: %v", err)
@@ -266,10 +265,6 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 			}
 			if change {
 				g.remote.FlushCacheUsersTeamsOnly()
-
-				// if we changed the users, we need apply
-				// the latest commit to ensure that the users are in sync
-				forceresync = true
 			}
 		}
 	}
@@ -279,7 +274,7 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 	//
 
 	// we apply the changes to the github team repository
-	unmanaged, err := g.applyCommitsToGithub(ctx, dryrun, teamreponame, branch, forceresync)
+	unmanaged, err := g.applyCommitsToGithub(ctx, dryrun, teamreponame, branch)
 	if err != nil {
 		return unmanaged, fmt.Errorf("error when applying to github: %v", err)
 	}
@@ -303,79 +298,47 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 	return unmanaged, nil
 }
 
-func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, teamreponame string, branch string, forceresync bool) (*engine.UnmanagedResources, error) {
+func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, teamreponame string, branch string) (*engine.UnmanagedResources, error) {
 
 	// if the repo was just archived in a previous commit and we "resume it"
 	// so we keep a track of all repos that we want to archive until the end of the process
 	reposToArchive := make(map[string]*engine.GithubRepoComparable)
 	var unmanaged *engine.UnmanagedResources
 
-	commits, err := g.local.ListCommitsFromTag(GOLIAC_GIT_TAG)
-	// if we can get commits
+	ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
+	reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
+	commit, err := g.local.GetHeadCommit()
 	if err != nil {
-		ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
-		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
-
-		unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
-		if err != nil {
-			return unmanaged, fmt.Errorf("error when reconciliating: %v", err)
-		}
-		// if we resync, and dont have commits, let's resync the latest (HEAD) commit
-		// or if are not in enterprise mode and cannot guarrantee that PR commits are squashed
-	} else if (len(commits) == 0 && forceresync) || !g.remote.IsEnterprise() {
-
-		ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
-		reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
-		commit, err := g.local.GetHeadCommit()
-
-		if err == nil {
-			ctx = context.WithValue(ctx, engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
-		}
-
-		unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
-		if err != nil {
-			return unmanaged, fmt.Errorf("error when reconciliating: %v", err)
-		}
-	} else {
-		// we have 1 or more commits to apply
-		var lastErr error
-		for _, commit := range commits {
-			if err := g.local.CheckoutCommit(commit); err == nil {
-				errs, _ := g.local.LoadAndValidate()
-				if len(errs) > 0 {
-					for _, err := range errs {
-						logrus.Error(err)
-					}
-					continue
-				}
-				ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
-				reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
-
-				ctx := context.WithValue(ctx, engine.KeyAuthor, fmt.Sprintf("%s <%s>", commit.Author.Name, commit.Author.Email))
-				unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
-				if err != nil {
-					// we keep the last error and continue
-					// to see if the next commit can be applied without error
-					// (like if we reached the max changesets, but the next commit will fix it)
-					lastErr = fmt.Errorf("error when reconciliating: %v", err)
-				} else {
-					lastErr = nil
-				}
-				if !dryrun && err == nil {
-					accessToken, err := g.localGithubClient.GetAccessToken(ctx)
-					if err != nil {
-						return unmanaged, err
-					}
-					g.local.PushTag(GOLIAC_GIT_TAG, commit.Hash, accessToken)
-				}
-			} else {
-				logrus.Errorf("Not able to checkout commit %s: %v", commit.Hash.String(), err)
-			}
-		}
-		if lastErr != nil {
-			return unmanaged, lastErr
-		}
+		return unmanaged, fmt.Errorf("error when getting head commit: %v", err)
 	}
+
+	err = g.local.CheckoutCommit(commit)
+	if err != nil {
+		return unmanaged, fmt.Errorf("error when checking out commit: %v", err)
+	}
+
+	errs, _ := g.local.LoadAndValidate()
+	if len(errs) > 0 {
+		for _, err := range errs {
+			logrus.Error(err)
+		}
+		return unmanaged, fmt.Errorf("not able to load and validate the goliac organization: see logs")
+	}
+
+	// if we have commits to apply
+	unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, reposToArchive)
+	if err != nil {
+		return unmanaged, fmt.Errorf("error when reconciliating: %v", err)
+	}
+
+	if !dryrun {
+		accessToken, err := g.localGithubClient.GetAccessToken(ctx)
+		if err != nil {
+			return unmanaged, err
+		}
+		g.local.PushTag(GOLIAC_GIT_TAG, commit.Hash, accessToken)
+	}
+
 	accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 	if err != nil {
 		return unmanaged, err
