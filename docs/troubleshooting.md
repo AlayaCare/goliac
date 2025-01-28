@@ -47,3 +47,10 @@ This error is happening if a team does not have enough owners.
 Indeed a team must have at least 2 owners to be able to review and merge PRs (and the only owner cannot approve its own PRs).
 
 As an admin you should add more owners to the team.
+
+# Goliac is trying to add a user that is no longer part of the organization
+
+Maybe the user is still part of the SSO group, but not part of the organization anymore.
+The best way to solve it is to remove the user from the SSO group:
+
+As an admin try to go to `https://github.com/orgs/<your organization>/people/<github user>/sso` and revoke the user from the SSO group.

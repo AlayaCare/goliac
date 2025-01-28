@@ -138,3 +138,38 @@ func LoadUsersFromGithubOrgSaml(ctx context.Context, client github.GitHubClient,
 
 	return users, nil
 }
+
+/*
+Listing only pending invitations for the organization for login (and not email)
+*/
+func LoadGithubLoginPendingInvitations(ctx context.Context, client github.GitHubClient) (map[string]bool, error) {
+
+	logrus.Debug("loading pending invitations")
+	type PendingInvitation struct {
+		Login string
+		Email string
+	}
+	// https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#list-pending-organization-invitations
+	body, err := client.CallRestAPI(ctx, fmt.Sprintf("/orgs/%s/invitations", config.Config.GithubAppOrganization),
+		"GET",
+		nil)
+
+	if err != nil {
+		return nil, fmt.Errorf("not able to list github invitations: %v. %s", err, string(body))
+	}
+
+	var invitations []PendingInvitation
+	err = json.Unmarshal(body, &invitations)
+	if err != nil {
+		return nil, fmt.Errorf("not able to list github invitations: %v", err)
+	}
+
+	users := map[string]bool{}
+	for _, i := range invitations {
+		if i.Login != "" {
+			users[i.Login] = true
+		}
+	}
+
+	return users, nil
+}
