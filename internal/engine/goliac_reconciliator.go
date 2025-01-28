@@ -722,7 +722,7 @@ func (r *GoliacReconciliatorImpl) CreateTeam(ctx context.Context, dryrun bool, r
 		parenTeamId = fmt.Sprintf("%d", *parentTeam)
 	}
 
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "create_team"}).Infof("teamname: %s, parentTeam : %s, members: %s", teamname, parenTeamId, strings.Join(members, ","))
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "create_team"}).Infof("teamname: %s, parentTeam: %s, members: %s", teamname, parenTeamId, strings.Join(members, ","))
 	remote.CreateTeam(teamname, description, members)
 	if r.executor != nil {
 		r.executor.CreateTeam(ctx, dryrun, teamname, description, parentTeam, members)
