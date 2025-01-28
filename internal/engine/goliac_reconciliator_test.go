@@ -284,7 +284,7 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 2 members created
 		assert.Equal(t, 2, len(recorder.TeamsCreated["new"]))
@@ -328,7 +328,7 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 2 members created
 		assert.Equal(t, 2, len(recorder.TeamsCreated["nouveauté"]))
@@ -390,7 +390,7 @@ func TestReconciliation(t *testing.T) {
 		remote.teams["existing"+config.Config.GoliacTeamOwnerSuffix] = existingowners
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 members added
 		assert.Equal(t, 0, len(recorder.TeamsCreated))
@@ -453,7 +453,7 @@ func TestReconciliation(t *testing.T) {
 		remote.teams["exist-ing"+config.Config.GoliacTeamOwnerSuffix] = existingowners
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 members added
 		ctx := context.TODO()
@@ -501,7 +501,7 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 2 members created
 		assert.Equal(t, 2, len(recorder.TeamsCreated["new"]))
@@ -539,7 +539,7 @@ func TestReconciliation(t *testing.T) {
 		remote.teams["removing"] = removing
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 team deleted
 		assert.Equal(t, 0, len(recorder.TeamDeleted))
@@ -613,7 +613,7 @@ func TestReconciliation(t *testing.T) {
 		remote.teams["childteam"+config.Config.GoliacTeamOwnerSuffix] = childTeamOwners
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 0 parent updated
 		assert.Equal(t, 0, len(recorder.TeamParentUpdated))
@@ -691,7 +691,7 @@ func TestReconciliation(t *testing.T) {
 		remote.teams["childteam"+config.Config.GoliacTeamOwnerSuffix] = childTeamOwners
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 team parent updated
 		assert.Equal(t, 1, len(recorder.TeamParentUpdated))
@@ -724,7 +724,7 @@ func TestReconciliation(t *testing.T) {
 		remote.teams["removing"] = removing
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 team deleted
 		assert.Equal(t, 1, len(recorder.TeamDeleted))
@@ -755,9 +755,14 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 repo created
 		assert.Equal(t, 1, len(recorder.RepositoryCreated))
@@ -797,6 +802,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:    "existing",
 			Slug:    "existing",
@@ -805,7 +815,7 @@ func TestReconciliation(t *testing.T) {
 		remote.teams["existing"] = existing
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 repo created
 		assert.Equal(t, 1, len(recorder.RepositoryCreated))
@@ -845,6 +855,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:    "existing",
 			Slug:    "existing",
@@ -865,13 +880,13 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 team updated
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 1, len(recorder.RepositoryTeamRemoved))
-		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 2, len(recorder.RepositoryTeamAdded))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 	})
 
@@ -911,6 +926,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:    "existing",
 			Slug:    "existing",
@@ -931,14 +951,14 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 team updated
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
-		// we have a new "everyone" team for the repository
-		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded))
+		// we have a new "everyone" team for the repository + teams repo
+		assert.Equal(t, 2, len(recorder.RepositoryTeamAdded))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 	})
 
@@ -982,6 +1002,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:    "existing",
 			Slug:    "existing",
@@ -1008,13 +1033,13 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 team added
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
-		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 2, len(recorder.RepositoryTeamAdded))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 	})
 
@@ -1058,6 +1083,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:    "existing",
 			Slug:    "existing",
@@ -1089,13 +1119,13 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 team removed
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 1, len(recorder.RepositoryTeamRemoved))
-		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded)) // on teams repo
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 	})
 
@@ -1139,6 +1169,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:    "existing",
 			Slug:    "existing",
@@ -1159,13 +1194,13 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 member removed
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
-		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded)) // on teams repo
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 		assert.Equal(t, 1, len(recorder.TeamMemberRemoved))
 	})
@@ -1210,6 +1245,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:        "existing",
 			Slug:        "existing",
@@ -1231,13 +1271,13 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 member removed
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
-		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded)) // on teams repo
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 		fmt.Println("**debug", recorder.TeamMemberRemoved)
 		assert.Equal(t, 0, len(recorder.TeamMemberRemoved))
@@ -1283,6 +1323,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:    "existing",
 			Slug:    "existing",
@@ -1303,13 +1348,13 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 repo updated
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
-		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 2, len(recorder.RepositoryTeamAdded))
 	})
 
 	t.Run("happy path: add a externally managed team AND add it to an existing repo", func(t *testing.T) {
@@ -1350,6 +1395,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:    "existing",
 			Slug:    "existing",
@@ -1371,14 +1421,14 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 repo updated
 		assert.Equal(t, 1, len(recorder.TeamsCreated)) // the newerTeam-goliac-owners team
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
-		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 2, len(recorder.RepositoryTeamAdded))
 	})
 
 	t.Run("happy path: existing repo with new external write collaborator", func(t *testing.T) {
@@ -1422,6 +1472,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:    "existing",
 			Slug:    "existing",
@@ -1442,13 +1497,13 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 team updated
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
-		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded)) // on teams repo
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 		assert.Equal(t, 1, len(recorder.RepositoriesSetExternalUser))
 		assert.Equal(t, 0, len(recorder.RepositoriesRemoveExternalUser))
@@ -1491,6 +1546,11 @@ func TestReconciliation(t *testing.T) {
 			rulesets:   make(map[string]*GithubRuleSet),
 			appids:     make(map[string]int),
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		existing := &GithubTeam{
 			Name:    "existing",
 			Slug:    "existing",
@@ -1512,13 +1572,13 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 team updated
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
-		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded)) // on teams repo
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 		assert.Equal(t, 0, len(recorder.RepositoriesSetExternalUser))
 		assert.Equal(t, 1, len(recorder.RepositoriesRemoveExternalUser))
@@ -1572,6 +1632,11 @@ func TestReconciliation(t *testing.T) {
 			Slug:    "existing",
 			Members: []string{"existing_owner"},
 		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
 		remote.teams["existing"] = existing
 		rRepo := GithubRepository{
 			Name:           "myrepo",
@@ -1588,13 +1653,13 @@ func TestReconciliation(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 team updated
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
-		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded)) // on teams repo
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 		assert.Equal(t, 1, len(recorder.RepositoriesSetExternalUser))
 		assert.Equal(t, 0, len(recorder.RepositoriesRemoveExternalUser))
@@ -1627,7 +1692,7 @@ func TestReconciliation(t *testing.T) {
 		remote.repos["removing"] = removing
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 repo deleted
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
@@ -1663,7 +1728,7 @@ func TestReconciliation(t *testing.T) {
 		remote.repos["removing"] = removing
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 repo deleted
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
@@ -1700,7 +1765,7 @@ func TestReconciliation(t *testing.T) {
 		remote.repos["removing"] = removing
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 repo deleted
 		assert.Equal(t, 1, len(recorder.RepositoriesDeleted))
@@ -1744,7 +1809,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 ruleset created
 		assert.Equal(t, 0, len(recorder.RuleSetCreated))
@@ -1799,7 +1864,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		}
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 ruleset created
 		assert.Equal(t, 1, len(recorder.RuleSetCreated))
@@ -1862,7 +1927,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		remote.rulesets["update"] = rRuleset
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 ruleset created
 		assert.Equal(t, 0, len(recorder.RuleSetCreated))
@@ -1908,7 +1973,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		remote.rulesets["delete"] = rRuleset
 
 		toArchive := make(map[string]*GithubRepoComparable)
-		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, toArchive)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive)
 
 		// 1 ruleset created
 		assert.Equal(t, 0, len(recorder.RuleSetCreated))

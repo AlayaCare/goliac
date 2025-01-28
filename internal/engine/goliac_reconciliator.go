@@ -24,7 +24,7 @@ type UnmanagedResources struct {
  * GoliacReconciliator is here to sync the local state to the remote state
  */
 type GoliacReconciliator interface {
-	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, dryrun bool, reposToArchive map[string]*GithubRepoComparable) (*UnmanagedResources, error)
+	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable) (*UnmanagedResources, error)
 }
 
 type GoliacReconciliatorImpl struct {
@@ -41,7 +41,7 @@ func NewGoliacReconciliatorImpl(executor ReconciliatorExecutor, repoconfig *conf
 	}
 }
 
-func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, dryrun bool, reposToArchive map[string]*GithubRepoComparable) (*UnmanagedResources, error) {
+func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable) (*UnmanagedResources, error) {
 	rremote := NewMutableGoliacRemoteImpl(ctx, remote)
 	r.Begin(ctx, dryrun)
 	unmanaged := &UnmanagedResources{
@@ -59,11 +59,19 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 		return nil, err
 	}
 
-	err = r.reconciliateTeams(ctx, local, rremote, dryrun)
+	allOwners, err := r.reconciliateTeams(ctx, local, rremote, dryrun)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
 		return nil, err
 	}
+
+	// the teams repos must have the goliacAdminSlug and all owners as writer
+	// the writing operation will be controlled by the CODEOWNERS file
+	repos := local.Repositories()
+	teamsRepo := &entity.Repository{}
+	teamsRepo.Spec.Writers = append(allOwners, goliacAdminSlug)
+	teamsRepo.Spec.IsPublic = false
+	repos[teamsreponame] = teamsRepo
 
 	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, dryrun, reposToArchive)
 	if err != nil {
@@ -123,9 +131,10 @@ type GithubTeamComparable struct {
 /*
  * This function sync teams and team's members
  */
-func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) error {
+func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) ([]string, error) {
 	ghTeams := remote.Teams()
 	rUsers := remote.Users()
+	allOwners := []string{}
 
 	ghTeamsPerId := make(map[int]*GithubTeam)
 	for _, v := range ghTeams {
@@ -171,6 +180,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 
 	for teamname, teamvalue := range lTeams {
 		teamslug := slug.Make(teamname)
+		allOwners = append(allOwners, teamslug+config.Config.GoliacTeamOwnerSuffix)
 
 		// if the team is externally managed, we don't want to touch it
 		// we just remove it from the list
@@ -341,7 +351,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 
 	CompareEntities(slugTeams, rTeams, compareTeam, onAdded, onRemoved, onChanged)
 
-	return nil
+	return allOwners, nil
 }
 
 type GithubRepoComparable struct {
