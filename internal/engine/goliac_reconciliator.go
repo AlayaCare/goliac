@@ -342,10 +342,13 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 			(lTeam.ParentTeam != nil && rTeam.ParentTeam != nil && *lTeam.ParentTeam != *rTeam.ParentTeam) {
 
 			var parentTeam *int
+			parentTeamName := ""
 			if lTeam.ParentTeam != nil && ghTeams[*lTeam.ParentTeam] != nil {
 				parentTeam = &ghTeams[*lTeam.ParentTeam].Id
+				parentTeamName = *lTeam.ParentTeam
 			}
-			r.UpdateTeamSetParent(ctx, dryrun, remote, slugTeam, parentTeam, *lTeam.ParentTeam)
+
+			r.UpdateTeamSetParent(ctx, dryrun, remote, slugTeam, parentTeam, parentTeamName)
 		}
 	}
 
