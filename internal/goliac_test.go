@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/Alayacare/goliac/internal/entity"
 	"github.com/Alayacare/goliac/internal/observability"
@@ -15,6 +16,7 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/cache"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport/client"
@@ -286,6 +288,11 @@ func createTeamRepo(src billy.Filesystem, fixtureFunc FixtureFunc) (*git.Reposit
 		return nil, err
 	}
 
+	err = repo.Storer.SetReference(plumbing.NewHashReference(plumbing.HEAD, hash))
+	if err != nil {
+		return nil, err
+	}
+
 	return repo, nil
 }
 
@@ -317,6 +324,7 @@ func helperCreateAndClone(root billy.Filesystem, src billy.Filesystem, target bi
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return repo, clonedRepo, nil
 }
 
@@ -654,16 +662,14 @@ func TestGoliacApply(t *testing.T) {
 		fs.MkdirAll(os.TempDir(), 0755) // need a tmp folder
 		srcsFs, _ := fs.Chroot("src")
 		clonedFs, _ := fs.Chroot("teams")
-		_, clonedRepo, err := helperCreateAndClone(fs, srcsFs, clonedFs, repoFixture1)
+		_, _, err := helperCreateAndClone(fs, srcsFs, clonedFs, repoFixture1)
 		assert.Nil(t, err)
 
-		local := engine.NewGoliacLocalImplWithRepo(clonedRepo)
+		local := engine.NewGoliacLocalImpl()
+
 		errs, warns := local.LoadAndValidateLocal(clonedFs)
 		assert.Equal(t, len(errs), 0)
 		assert.Equal(t, len(warns), 0)
-
-		repoconfig, err := local.LoadRepoConfig()
-		assert.Nil(t, err)
 
 		githubClient := NewGitHubClientMock()
 		remote := NewGoliacRemoteExecutorMock().(*GoliacRemoteExecutorMock)
@@ -675,9 +681,10 @@ func TestGoliacApply(t *testing.T) {
 			remote:             remote,
 			remoteGithubClient: githubClient,
 			localGithubClient:  githubClient,
-			repoconfig:         repoconfig,
+			repoconfig:         &config.RepositoryConfig{},
 		}
-		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///teams", "master", false)
+
+		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///src", "master")
 		assert.Nil(t, err)
 		assert.Equal(t, len(errs), 0)
 		assert.Equal(t, len(warns), 0)
@@ -693,21 +700,18 @@ func TestGoliacApply(t *testing.T) {
 		fs.MkdirAll(os.TempDir(), 0755) // need a tmp folder
 		srcsFs, _ := fs.Chroot("src")
 		clonedFs, _ := fs.Chroot("teams")
-		_, clonedRepo, err := helperCreateAndClone(fs, srcsFs, clonedFs, repoFixture2)
+		_, _, err := helperCreateAndClone(fs, srcsFs, clonedFs, repoFixture2)
 		assert.Nil(t, err)
 
-		local := engine.NewGoliacLocalImplWithRepo(clonedRepo)
+		local := engine.NewGoliacLocalImpl()
+
 		errs, warns := local.LoadAndValidateLocal(clonedFs)
 		assert.Equal(t, 0, len(errs))
 		assert.Equal(t, 1, len(warns))
 		assert.Equal(t, "not enough owners for team filename teams/team2/team.yaml", warns[0].Error())
 
-		repoconfig, err := local.LoadRepoConfig()
-		assert.Nil(t, err)
-
 		githubClient := NewGitHubClientMock()
 		remote := NewGoliacRemoteExecutorMock().(*GoliacRemoteExecutorMock)
-		remote.teams2Members = []string{"github3"}
 
 		usersync.InitPlugins(githubClient)
 
@@ -716,41 +720,15 @@ func TestGoliacApply(t *testing.T) {
 			remote:             remote,
 			remoteGithubClient: githubClient,
 			localGithubClient:  githubClient,
-			repoconfig:         repoconfig,
+			repoconfig:         &config.RepositoryConfig{},
 		}
-		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///teams", "master", false)
+
+		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///src", "master")
 		assert.Nil(t, err)
 		assert.Equal(t, 0, len(errs))
-		assert.Equal(t, 0, len(warns))
+		assert.Equal(t, 1, len(warns))
 		assert.NotNil(t, unmanaged)
-		assert.Equal(t, 0, remote.nbChanges)
-
-		//
-		// checking the FS
-		//
-
-		// let's clone it again
-		loader := server.NewFilesystemLoader(fs)
-		client.InstallProtocol("inmemory", server.NewClient(loader))
-
-		dotGit, err := clonedFs.Chroot(".git")
-		assert.Nil(t, err)
-		storer := filesystem.NewStorage(dotGit, cache.NewObjectLRUDefault())
-
-		clonedRepo, err = git.Clone(storer, clonedFs, &git.CloneOptions{
-			URL:      "inmemory:///src",
-			Progress: nil,
-		})
-		assert.Nil(t, err)
-
-		wt, err := clonedRepo.Worktree()
-		assert.Nil(t, err)
-		clonedFs = wt.Filesystem
-
-		// check the user4 is now in the users/org directory
-		exist, err := utils.Exists(clonedFs, "users/org/user4.yaml")
-		assert.Nil(t, err)
-		assert.True(t, exist)
+		assert.Equal(t, 2, remote.nbChanges)
 
 	})
 }

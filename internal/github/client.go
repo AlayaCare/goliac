@@ -214,12 +214,6 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 	}
 	defer resp.Body.Close()
 
-	// fmt.Println(string(body))
-	// fmt.Println(resp.StatusCode)
-	// for k, v := range resp.Header {
-	// 	fmt.Println(k, v)
-	// }
-
 	if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusForbidden {
 		if stats != nil {
 			goliacStats := stats.(*config.GoliacStatistics)

@@ -110,7 +110,7 @@ type GoliacMock struct {
 	local engine.GoliacLocalResources
 }
 
-func (g *GoliacMock) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repo string, branch string, forceresync bool) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
+func (g *GoliacMock) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repo string, branch string) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
 	unmanaged := &engine.UnmanagedResources{
 		Users:        make(map[string]bool),
 		Teams:        make(map[string]bool),

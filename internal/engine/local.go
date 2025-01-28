@@ -139,6 +139,8 @@ func (g *GoliacLocalImpl) Clone(fs billy.Filesystem, accesstoken, repositoryUrl,
 			Username: "x-access-token", // This can be anything except an empty string
 			Password: accesstoken,
 		}
+	} else if strings.HasPrefix(repositoryUrl, "inmemory:///") {
+		auth = nil
 	} else {
 		// ssh clone not supported yet
 		return fmt.Errorf("not supported")
@@ -658,7 +660,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		logrus.Info("some users and/or teams must be commited")
 
 		for _, u := range deletedusers {
-			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "remove_user_from_repository"}).Infof("user: %s", u)
+			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "remove_user_from_repository"}).Infof("user: %s", u)
 			_, err = w.Remove(u)
 			if err != nil {
 				return false, err
@@ -666,7 +668,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		}
 
 		for _, u := range addedusers {
-			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "add_user_to_repository"}).Infof("user: %s", u)
+			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_user_to_repository"}).Infof("user: %s", u)
 			_, err = w.Add(u)
 			if err != nil {
 				return false, err
@@ -674,7 +676,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		}
 
 		for _, t := range teamschanged {
-			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "author": "goliac", "command": "update_team_to_repository"}).Infof("team: %s", t)
+			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_to_repository"}).Infof("team: %s", t)
 			_, err = w.Add(t)
 			if err != nil {
 				return false, err
