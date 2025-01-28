@@ -342,10 +342,13 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 			(lTeam.ParentTeam != nil && rTeam.ParentTeam != nil && *lTeam.ParentTeam != *rTeam.ParentTeam) {
 
 			var parentTeam *int
+			parentTeamName := ""
 			if lTeam.ParentTeam != nil && ghTeams[*lTeam.ParentTeam] != nil {
 				parentTeam = &ghTeams[*lTeam.ParentTeam].Id
+				parentTeamName = *lTeam.ParentTeam
 			}
-			r.UpdateTeamSetParent(ctx, dryrun, remote, slugTeam, parentTeam, *lTeam.ParentTeam)
+
+			r.UpdateTeamSetParent(ctx, dryrun, remote, slugTeam, parentTeam, parentTeamName)
 		}
 	}
 
@@ -389,6 +392,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
+		// rRepos[slug.Make(k)] = repo
 		rRepos[k] = repo
 	}
 
@@ -447,7 +451,8 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
-		lRepos[slug.Make(reponame)] = &GithubRepoComparable{
+		// lRepos[slug.Make(reponame)] = &GithubRepoComparable{
+		lRepos[reponame] = &GithubRepoComparable{
 			BoolProperties: map[string]bool{
 				"private":                !lRepo.Spec.IsPublic,
 				"archived":               lRepo.Archived,
