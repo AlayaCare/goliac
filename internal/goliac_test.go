@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"regexp"
 	"testing"
@@ -503,6 +504,19 @@ func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context) map[string]*engine
 }
 func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]*engine.GithubRepository {
 	return map[string]*engine.GithubRepository{
+		"src": &engine.GithubRepository{
+			Name:  "src", // this is the "teams" repository
+			Id:    0,
+			RefId: "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
+			BoolProperties: map[string]bool{
+				"archived":               false,
+				"private":                true,
+				"allow_auto_merge":       false,
+				"delete_branch_on_merge": false,
+				"allow_update_branch":    false,
+			},
+			ExternalUsers: map[string]string{},
+		},
 		"repo1": &engine.GithubRepository{
 			Name:  "repo1",
 			Id:    1,
@@ -545,6 +559,24 @@ func (e *GoliacRemoteExecutorMock) TeamRepositories(ctx context.Context) map[str
 				Permission: "WRITE",
 			},
 		},
+		"team1-goliac-owners": {
+			"src": &engine.GithubTeamRepo{ // the teams repository
+				Name:       "src",
+				Permission: "WRITE",
+			},
+		},
+		"team2-goliac-owners": {
+			"src": &engine.GithubTeamRepo{ // the teams repository
+				Name:       "src",
+				Permission: "WRITE",
+			},
+		},
+		"admin": {
+			"src": &engine.GithubTeamRepo{ // the teams repository
+				Name:       "src",
+				Permission: "WRITE",
+			},
+		},
 	}
 }
 func (e *GoliacRemoteExecutorMock) RuleSets(ctx context.Context) map[string]*engine.GithubRuleSet {
@@ -562,7 +594,7 @@ func (e *GoliacRemoteExecutorMock) RuleSets(ctx context.Context) map[string]*eng
 					RequiredApprovingReviewCount: 1,
 				},
 			},
-			Repositories: []string{"repo1", "repo2"},
+			Repositories: []string{"repo1", "repo2", "src"},
 		},
 	}
 }
@@ -581,62 +613,81 @@ func (g *GoliacRemoteExecutorMock) SetRemoteObservability(feedback observability
 }
 
 func (e *GoliacRemoteExecutorMock) AddUserToOrg(ctx context.Context, dryrun bool, ghuserid string) {
+	fmt.Println("*** AddUserToOrg", ghuserid)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) RemoveUserFromOrg(ctx context.Context, dryrun bool, ghuserid string) {
+	fmt.Println("*** RemoveUserFromOrg", ghuserid)
 	e.nbChanges++
 }
 
 func (e *GoliacRemoteExecutorMock) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
+	fmt.Println("*** CreateTeam", teamname, description, parentTeam, members)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateTeamAddMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
+	fmt.Println("*** UpdateTeamAddMember", teamslug, username, role)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateTeamUpdateMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
+	fmt.Println("*** UpdateTeamUpdateMember", teamslug, username, role)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string) {
+	fmt.Println("*** UpdateTeamRemoveMember", teamslug, username)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateTeamSetParent(ctx context.Context, dryrun bool, teamslug string, parentTeam *int) {
+	fmt.Println("*** UpdateTeamSetParent", teamslug, parentTeam)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) DeleteTeam(ctx context.Context, dryrun bool, teamslug string) {
+	fmt.Println("*** DeleteTeam", teamslug)
 	e.nbChanges++
 }
 
 func (e *GoliacRemoteExecutorMock) CreateRepository(ctx context.Context, dryrun bool, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
+	fmt.Println("*** CreateRepository", reponame, descrition, writers, readers, boolProperties)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateBoolProperty(ctx context.Context, dryrun bool, reponame string, propertyName string, propertyValue bool) {
+	fmt.Println("*** UpdateRepositoryUpdateBoolProperty", reponame, propertyName, propertyValue)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryAddTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
+	fmt.Println("*** UpdateRepositoryAddTeamAccess", reponame, teamslug, permission)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
+	fmt.Println("*** UpdateRepositoryUpdateTeamAccess", reponame, teamslug, permission)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string) {
+	fmt.Println("*** UpdateRepositoryRemoveTeamAccess", reponame, teamslug)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) AddRuleset(ctx context.Context, dryrun bool, ruleset *engine.GithubRuleSet) {
+	fmt.Println("*** AddRuleset", ruleset.Name)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRuleset(ctx context.Context, dryrun bool, ruleset *engine.GithubRuleSet) {
+	fmt.Println("*** UpdateRuleset", ruleset.Name)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) DeleteRuleset(ctx context.Context, dryrun bool, rulesetid int) {
+	fmt.Println("*** DeleteRuleset", rulesetid)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string, permission string) {
+	fmt.Println("*** UpdateRepositorySetExternalUser", reponame, githubid, permission)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
+	fmt.Println("*** UpdateRepositoryRemoveExternalUser", reponame, githubid)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) DeleteRepository(ctx context.Context, dryrun bool, reponame string) {
+	fmt.Println("*** DeleteRepository", reponame)
 	e.nbChanges++
 }
 
