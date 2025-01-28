@@ -345,7 +345,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 			if lTeam.ParentTeam != nil && ghTeams[*lTeam.ParentTeam] != nil {
 				parentTeam = &ghTeams[*lTeam.ParentTeam].Id
 			}
-			r.UpdateTeamSetParent(ctx, dryrun, remote, slugTeam, parentTeam)
+			r.UpdateTeamSetParent(ctx, dryrun, remote, slugTeam, parentTeam, *lTeam.ParentTeam)
 		}
 	}
 
@@ -692,7 +692,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 }
 
 func (r *GoliacReconciliatorImpl) AddUserToOrg(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, ghuserid string) {
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_user_to_org"}).Infof("ghusername: %s", ghuserid)
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_user_to_org"}).Infof("ghuserid: %s", ghuserid)
 	remote.AddUserToOrg(ghuserid)
 	if r.executor != nil {
 		r.executor.AddUserToOrg(ctx, dryrun, ghuserid)
@@ -701,7 +701,7 @@ func (r *GoliacReconciliatorImpl) AddUserToOrg(ctx context.Context, dryrun bool,
 
 func (r *GoliacReconciliatorImpl) RemoveUserFromOrg(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, ghuserid string) {
 	if r.repoconfig.DestructiveOperations.AllowDestructiveUsers {
-		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "remove_user_from_org"}).Infof("ghusername: %s", ghuserid)
+		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "remove_user_from_org"}).Infof("ghuserid: %s", ghuserid)
 		remote.RemoveUserFromOrg(ghuserid)
 		if r.executor != nil {
 			r.executor.RemoveUserFromOrg(ctx, dryrun, ghuserid)
@@ -723,34 +723,34 @@ func (r *GoliacReconciliatorImpl) CreateTeam(ctx context.Context, dryrun bool, r
 		r.executor.CreateTeam(ctx, dryrun, teamname, description, parentTeam, members)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateTeamAddMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, username string, role string) {
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_add_member"}).Infof("teamslug: %s, username: %s, role: %s", teamslug, username, role)
-	remote.UpdateTeamAddMember(teamslug, username, "member")
+func (r *GoliacReconciliatorImpl) UpdateTeamAddMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, ghuserid string, role string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_add_member"}).Infof("teamslug: %s, ghuserid: %s, role: %s", teamslug, ghuserid, role)
+	remote.UpdateTeamAddMember(teamslug, ghuserid, "member")
 	if r.executor != nil {
-		r.executor.UpdateTeamAddMember(ctx, dryrun, teamslug, username, "member")
+		r.executor.UpdateTeamAddMember(ctx, dryrun, teamslug, ghuserid, "member")
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, username string) {
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_remove_member"}).Infof("teamslug: %s, username: %s", teamslug, username)
-	remote.UpdateTeamRemoveMember(teamslug, username)
+func (r *GoliacReconciliatorImpl) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, ghuserid string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_remove_member"}).Infof("teamslug: %s, ghuserid: %s", teamslug, ghuserid)
+	remote.UpdateTeamRemoveMember(teamslug, ghuserid)
 	if r.executor != nil {
-		r.executor.UpdateTeamRemoveMember(ctx, dryrun, teamslug, username)
+		r.executor.UpdateTeamRemoveMember(ctx, dryrun, teamslug, ghuserid)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateTeamChangeMaintainerToMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, username string) {
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_change_maintainer_to_member"}).Infof("teamslug: %s, username: %s", teamslug, username)
-	remote.UpdateTeamUpdateMember(teamslug, username, "member")
+func (r *GoliacReconciliatorImpl) UpdateTeamChangeMaintainerToMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, ghuserid string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_change_maintainer_to_member"}).Infof("teamslug: %s, ghuserid: %s", teamslug, ghuserid)
+	remote.UpdateTeamUpdateMember(teamslug, ghuserid, "member")
 	if r.executor != nil {
-		r.executor.UpdateTeamUpdateMember(ctx, dryrun, teamslug, username, "member")
+		r.executor.UpdateTeamUpdateMember(ctx, dryrun, teamslug, ghuserid, "member")
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateTeamSetParent(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, parentTeam *int) {
+func (r *GoliacReconciliatorImpl) UpdateTeamSetParent(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, parentTeam *int, parentTeamName string) {
 	parenTeamId := "nil"
 	if parentTeam != nil {
 		parenTeamId = fmt.Sprintf("%d", *parentTeam)
 	}
 
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_parentteam"}).Infof("teamslug: %s, parentteam: %s", teamslug, parenTeamId)
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_parentteam"}).Infof("teamslug: %s, parentteam: %s (%s)", teamslug, parenTeamId, parentTeamName)
 	remote.UpdateTeamSetParent(ctx, dryrun, teamslug, parentTeam)
 	if r.executor != nil {
 		r.executor.UpdateTeamSetParent(ctx, dryrun, teamslug, parentTeam)
