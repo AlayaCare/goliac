@@ -28,14 +28,28 @@ func NewUserSyncPluginFromGithubSaml(client github.GitHubClient) engine.UserSync
 	}
 }
 
+/*
+Return a map of [username]*entity.User
+*/
 func (p *UserSyncPluginFromGithubSaml) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 
 	ctx := context.Background()
+	pendingLogin, err := engine.LoadGithubLoginPendingInvitations(ctx, p.client)
+	if err != nil {
+		return nil, err
+	}
 	users, err := engine.LoadUsersFromGithubOrgSaml(ctx, p.client, feedback)
 
-	if len(users) == 0 {
+	finalUsers := make(map[string]*entity.User)
+	for name, user := range users {
+		if _, ok := pendingLogin[user.Spec.GithubID]; !ok {
+			finalUsers[name] = user
+		}
+	}
+
+	if len(finalUsers) == 0 {
 		return nil, fmt.Errorf("not able to find any SAML identities")
 	}
 
-	return users, err
+	return finalUsers, err
 }

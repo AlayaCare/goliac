@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -422,6 +423,9 @@ func (c *GitHubClientMock) QueryGraphQLAPI(ctx context.Context, query string, va
 }
 
 func (c *GitHubClientMock) CallRestAPI(ctx context.Context, endpoint, method string, body map[string]interface{}) ([]byte, error) {
+	if strings.HasSuffix(endpoint, "/invitations") {
+		return []byte(`[]`), nil
+	}
 	return nil, nil
 }
 func (c *GitHubClientMock) GetAccessToken(context.Context) (string, error) {
