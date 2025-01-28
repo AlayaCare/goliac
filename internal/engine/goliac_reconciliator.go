@@ -392,6 +392,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
+		// rRepos[slug.Make(k)] = repo
 		rRepos[k] = repo
 	}
 
@@ -450,7 +451,8 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
-		lRepos[slug.Make(reponame)] = &GithubRepoComparable{
+		// lRepos[slug.Make(reponame)] = &GithubRepoComparable{
+		lRepos[reponame] = &GithubRepoComparable{
 			BoolProperties: map[string]bool{
 				"private":                !lRepo.Spec.IsPublic,
 				"archived":               lRepo.Archived,
