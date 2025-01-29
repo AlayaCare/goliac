@@ -363,6 +363,7 @@ type GithubRepoComparable struct {
 	Readers             []string
 	ExternalUserReaders []string // githubids
 	ExternalUserWriters []string // githubids
+	InternalUsers       []string // githubids
 }
 
 /*
@@ -372,6 +373,7 @@ type GithubRepoComparable struct {
 func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, dryrun bool, toArchive map[string]*GithubRepoComparable) error {
 	ghRepos := remote.Repositories()
 	rRepos := make(map[string]*GithubRepoComparable)
+
 	for k, v := range ghRepos {
 		repo := &GithubRepoComparable{
 			BoolProperties:      map[string]bool{},
@@ -379,6 +381,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			Readers:             []string{},
 			ExternalUserReaders: []string{},
 			ExternalUserWriters: []string{},
+			InternalUsers:       []string{},
 		}
 		for pk, pv := range v.BoolProperties {
 			repo.BoolProperties[pk] = pv
@@ -390,6 +393,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			} else {
 				repo.ExternalUserReaders = append(repo.ExternalUserReaders, cGithubid)
 			}
+		}
+
+		// we dont want internal collaborators
+		for cGithubid := range v.InternalUsers {
+			repo.InternalUsers = append(repo.InternalUsers, cGithubid)
 		}
 
 		// rRepos[slug.Make(k)] = repo
@@ -464,6 +472,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			Writers:             writers,
 			ExternalUserReaders: eReaders,
 			ExternalUserWriters: eWriters,
+			InternalUsers:       []string{},
 		}
 	}
 
@@ -481,6 +490,10 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		}
 
 		if res, _, _ := entity.StringArrayEquivalent(lRepo.Writers, rRepo.Writers); !res {
+			return false
+		}
+
+		if len(rRepo.InternalUsers) != 0 {
 			return false
 		}
 
@@ -521,6 +534,12 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
+		// internal users
+		for _, internalUser := range rRepo.InternalUsers {
+			r.UpdateRepositoryRemoveInternalUser(ctx, dryrun, remote, reponame, internalUser)
+		}
+
+		// external users
 		resEreader, ereaderToRemove, ereaderToAdd := entity.StringArrayEquivalent(lRepo.ExternalUserReaders, rRepo.ExternalUserReaders)
 		resEWriter, ewriteToRemove, ewriteToAdd := entity.StringArrayEquivalent(lRepo.ExternalUserWriters, rRepo.ExternalUserWriters)
 
@@ -847,6 +866,13 @@ func (r *GoliacReconciliatorImpl) UpdateRepositorySetExternalUser(ctx context.Co
 	remote.UpdateRepositorySetExternalUser(reponame, collaboatorGithubId, permission)
 	if r.executor != nil {
 		r.executor.UpdateRepositorySetExternalUser(ctx, dryrun, reponame, collaboatorGithubId, permission)
+	}
+}
+func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_remove_internal_user"}).Infof("repositoryname: %s collaborator:%s", reponame, collaboatorGithubId)
+	remote.UpdateRepositoryRemoveInternalUser(reponame, collaboatorGithubId)
+	if r.executor != nil {
+		r.executor.UpdateRepositoryRemoveInternalUser(ctx, dryrun, reponame, collaboatorGithubId)
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string) {

@@ -149,6 +149,7 @@ type ReconciliatorListenerRecorder struct {
 	RepositoriesUpdateArchived     map[string]bool
 	RepositoriesSetExternalUser    map[string]string
 	RepositoriesRemoveExternalUser map[string]bool
+	RepositoriesRemoveInternalUser map[string]bool
 
 	RuleSetCreated map[string]*GithubRuleSet
 	RuleSetUpdated map[string]*GithubRuleSet
@@ -174,6 +175,7 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 		RepositoriesUpdateArchived:     make(map[string]bool),
 		RepositoriesSetExternalUser:    make(map[string]string),
 		RepositoriesRemoveExternalUser: make(map[string]bool),
+		RepositoriesRemoveInternalUser: make(map[string]bool),
 		RuleSetCreated:                 make(map[string]*GithubRuleSet),
 		RuleSetUpdated:                 make(map[string]*GithubRuleSet),
 		RuleSetDeleted:                 make([]int, 0),
@@ -227,6 +229,9 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(ctx cont
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
 	r.RepositoriesRemoveExternalUser[githubid] = true
+}
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
+	r.RepositoriesRemoveInternalUser[githubid] = true
 }
 func (r *ReconciliatorListenerRecorder) AddRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
 	r.RuleSetCreated[ruleset.Name] = ruleset

@@ -59,6 +59,7 @@ type GithubRepository struct {
 	RefId          string
 	BoolProperties map[string]bool   // archived, private, allow_auto_merge, delete_branch_on_merge, allow_update_branch
 	ExternalUsers  map[string]string // [githubid]permission
+	InternalUsers  map[string]string // [githubid]permission
 }
 
 type GithubTeam struct {
@@ -470,7 +471,7 @@ func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string,
 const listAllReposInOrg = `
 query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
     organization(login: $orgLogin) {
-      repositories(first: 100, after: $endCursor) {
+      repositories(first: 10, after: $endCursor) {
         nodes {
           name
 		  id
@@ -480,7 +481,15 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
 		  autoMergeAllowed
           deleteBranchOnMerge
           allowUpdateBranch
-          collaborators(affiliation: OUTSIDE, first: 100) {
+          directCollaborators: collaborators(affiliation: DIRECT, first: 100) {
+            edges {
+              node {
+                login
+              }
+              permission
+            }
+          }
+          outsideCollaborators: collaborators(affiliation: OUTSIDE, first: 100) {
             edges {
               node {
                 login
@@ -512,7 +521,15 @@ type GraplQLRepositories struct {
 					AutoMergeAllowed    bool
 					DeleteBranchOnMerge bool
 					AllowUpdateBranch   bool
-					Collaborators       struct {
+					DirectCollaborators struct {
+						Edges []struct {
+							Node struct {
+								Login string
+							}
+							Permission string
+						}
+					}
+					OutsideCollaborators struct {
 						Edges []struct {
 							Node struct {
 								Login string
@@ -580,9 +597,13 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 					"allow_update_branch":    c.AllowUpdateBranch,
 				},
 				ExternalUsers: make(map[string]string),
+				InternalUsers: make(map[string]string),
 			}
-			for _, collaborator := range c.Collaborators.Edges {
-				repo.ExternalUsers[collaborator.Node.Login] = collaborator.Permission
+			for _, outsideCollaborator := range c.OutsideCollaborators.Edges {
+				repo.ExternalUsers[outsideCollaborator.Node.Login] = outsideCollaborator.Permission
+			}
+			for _, internalCollaborator := range c.DirectCollaborators.Edges {
+				repo.InternalUsers[internalCollaborator.Node.Login] = internalCollaborator.Permission
 			}
 			repositories[c.Name] = repo
 			repositoriesByRefId[c.Id] = repo
@@ -2044,7 +2065,7 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, 
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
+func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#remove-a-repository-collaborator
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -2061,6 +2082,14 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(ctx context.Contex
 	if repo, ok := g.repositories[reponame]; ok {
 		delete(repo.ExternalUsers, githubid)
 	}
+}
+
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
+	g.updateRepositoryRemoveUser(ctx, dryrun, reponame, githubid)
+}
+
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
+	g.updateRepositoryRemoveUser(ctx, dryrun, reponame, githubid)
 }
 
 func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, dryrun bool, reponame string) {

@@ -230,7 +230,9 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 			if err != nil {
 				return nil, err
 			}
-			retryAfter = retryAfter / 2 // ok we shouldn't be too aggressive
+			if retryAfter > 30 {
+				retryAfter = retryAfter / 2 // ok we shouldn't be too aggressive
+			}
 			logrus.Debugf("2nd rate limit reached, waiting for %d seconds", retryAfter)
 			time.Sleep(time.Duration(retryAfter) * time.Second)
 		} else {

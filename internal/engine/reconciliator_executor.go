@@ -23,6 +23,7 @@ type ReconciliatorExecutor interface {
 	DeleteRuleset(ctx context.Context, dryrun bool, rulesetid int)
 	UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string, permission string) // permission can be "pull" or "push"
 	UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string)
+	UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, reponame string, githubid string)
 	DeleteRepository(ctx context.Context, dryrun bool, reponame string)
 
 	Begin(dryrun bool)

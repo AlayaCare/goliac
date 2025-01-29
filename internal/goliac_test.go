@@ -690,6 +690,10 @@ func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveExternalUser(ctx contex
 	fmt.Println("*** UpdateRepositoryRemoveExternalUser", reponame, githubid)
 	e.nbChanges++
 }
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
+	fmt.Println("*** UpdateRepositoryRemoveInternalUser", reponame, githubid)
+	e.nbChanges++
+}
 func (e *GoliacRemoteExecutorMock) DeleteRepository(ctx context.Context, dryrun bool, reponame string) {
 	fmt.Println("*** DeleteRepository", reponame)
 	e.nbChanges++
