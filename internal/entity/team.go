@@ -178,7 +178,7 @@ func (t *Team) Validate(dirname string, users map[string]*User) (error, []Warnin
 
 	// warnings
 
-	if len(t.Spec.Owners) < 2 {
+	if len(t.Spec.Owners) < 2 && !t.Spec.ExternallyManaged {
 		warnings = append(warnings, fmt.Errorf("not enough owners for team filename %s/team.yaml", dirname))
 	}
 
