@@ -187,6 +187,15 @@ func (g *GithubBatchExecutor) UpdateRepositoryRemoveExternalUser(ctx context.Con
 	})
 }
 
+func (g *GithubBatchExecutor) UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositoryRemoveInternalUser{
+		client:   g.client,
+		dryrun:   dryrun,
+		reponame: reponame,
+		githubid: githubid,
+	})
+}
+
 func (g *GithubBatchExecutor) DeleteRepository(ctx context.Context, dryrun bool, reponame string) {
 	g.commands = append(g.commands, &GithubCommandDeleteRepository{
 		client:   g.client,
@@ -359,6 +368,17 @@ type GithubCommandUpdateRepositoryRemoveExternalUser struct {
 
 func (g *GithubCommandUpdateRepositoryRemoveExternalUser) Apply(ctx context.Context) {
 	g.client.UpdateRepositoryRemoveExternalUser(ctx, g.dryrun, g.reponame, g.githubid)
+}
+
+type GithubCommandUpdateRepositoryRemoveInternalUser struct {
+	client   engine.ReconciliatorExecutor
+	dryrun   bool
+	reponame string
+	githubid string
+}
+
+func (g *GithubCommandUpdateRepositoryRemoveInternalUser) Apply(ctx context.Context) {
+	g.client.UpdateRepositoryRemoveInternalUser(ctx, g.dryrun, g.reponame, g.githubid)
 }
 
 type GithubCommandUpdateRepositoryUpdateBoolProperty struct {
