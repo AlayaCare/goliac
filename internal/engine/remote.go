@@ -743,19 +743,6 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error {
 	var retErr error
 
-	if time.Now().After(g.ttlExpireRulesets) {
-		rulesets, err := g.loadRulesets(ctx)
-		if err != nil {
-			if !continueOnError {
-				return err
-			}
-			logrus.Debugf("Error loading rulesets: %v", err)
-			retErr = fmt.Errorf("error loading rulesets: %v", err)
-		}
-		g.rulesets = rulesets
-		g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
-	}
-
 	if time.Now().After(g.ttlExpireAppIds) {
 		appIds, err := g.loadAppIds(ctx)
 		if err != nil {
@@ -794,6 +781,20 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 		g.repositories = repositories
 		g.repositoriesByRefId = repositoriesByRefId
 		g.ttlExpireRepositories = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
+	}
+
+	// let's load the rulesets after the repositories because I need the repository refs
+	if time.Now().After(g.ttlExpireRulesets) {
+		rulesets, err := g.loadRulesets(ctx)
+		if err != nil {
+			if !continueOnError {
+				return err
+			}
+			logrus.Debugf("Error loading rulesets: %v", err)
+			retErr = fmt.Errorf("error loading rulesets: %v", err)
+		}
+		g.rulesets = rulesets
+		g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
 	if time.Now().After(g.ttlExpireTeams) {
@@ -1369,7 +1370,7 @@ type GithubRuleSet struct {
 	Repositories []string
 }
 
-func (g *GoliacRemoteImpl) fromGraphQLToGithubRulset(src *GraphQLGithubRuleSet) *GithubRuleSet {
+func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet) *GithubRuleSet {
 	ruleset := GithubRuleSet{
 		Name:         src.Name,
 		Id:           src.DatabaseId,
@@ -1435,7 +1436,7 @@ func (g *GoliacRemoteImpl) loadRulesets(ctx context.Context) (map[string]*Github
 		}
 
 		for _, c := range gResult.Data.Organization.Rulesets.Nodes {
-			rulesets[c.Name] = g.fromGraphQLToGithubRulset(&c)
+			rulesets[c.Name] = g.fromGraphQLToGithubRuleset(&c)
 		}
 
 		hasNextPage = gResult.Data.Organization.Rulesets.PageInfo.HasNextPage

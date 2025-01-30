@@ -647,8 +647,8 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 			grs.Rules[r.Ruletype] = r.Parameters
 		}
 		for reponame := range repositories {
-			if match.Match([]byte(slug.Make(reponame))) {
-				grs.Repositories = append(grs.Repositories, slug.Make(reponame))
+			if match.Match([]byte(reponame)) {
+				grs.Repositories = append(grs.Repositories, reponame)
 			}
 		}
 		lgrs[rs.Name] = &grs
