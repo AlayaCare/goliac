@@ -422,7 +422,7 @@ func (c *GitHubClientMock) QueryGraphQLAPI(ctx context.Context, query string, va
 	return nil, nil
 }
 
-func (c *GitHubClientMock) CallRestAPI(ctx context.Context, endpoint, method string, body map[string]interface{}) ([]byte, error) {
+func (c *GitHubClientMock) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}) ([]byte, error) {
 	if strings.HasSuffix(endpoint, "/invitations") {
 		return []byte(`[]`), nil
 	}

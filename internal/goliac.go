@@ -201,7 +201,10 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs b
  * Else we may append to apply commits that are part of a PR, but wasn't the final PR commit state
  */
 func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamreponame string, branchname string) error {
-	_, err := g.remoteGithubClient.CallRestAPI(ctx, fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, teamreponame), "PATCH",
+	_, err := g.remoteGithubClient.CallRestAPI(ctx,
+		fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, teamreponame),
+		"",
+		"PATCH",
 		map[string]interface{}{
 			"allow_merge_commit": false,
 			"allow_rebase_merge": false,
@@ -217,7 +220,10 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 	if config.Config.ServerGitBranchProtectionRequiredCheck != "" {
 		contexts = append(contexts, config.Config.ServerGitBranchProtectionRequiredCheck)
 	}
-	_, err = g.remoteGithubClient.CallRestAPI(ctx, fmt.Sprintf("/repos/%s/%s/branches/%s/protection", config.Config.GithubAppOrganization, teamreponame, branchname), "PUT",
+	_, err = g.remoteGithubClient.CallRestAPI(ctx,
+		fmt.Sprintf("/repos/%s/%s/branches/%s/protection", config.Config.GithubAppOrganization, teamreponame, branchname),
+		"",
+		"PUT",
 		map[string]interface{}{
 			"required_status_checks": map[string]interface{}{
 				"strict":   true,     // // This ensures branches are up to date before merging

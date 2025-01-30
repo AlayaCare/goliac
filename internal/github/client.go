@@ -21,7 +21,7 @@ import (
 
 type GitHubClient interface {
 	QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error)
-	CallRestAPI(ctx context.Context, endpoint, method string, body map[string]interface{}) ([]byte, error)
+	CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}) ([]byte, error)
 	GetAccessToken(ctx context.Context) (string, error)
 	GetAppSlug() string
 }
@@ -264,7 +264,7 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
  * }
  * responseBody, err := client.CallRestAPIWithBody("orgs/my-org/repos", "POST", body)
  */
-func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, method string, body map[string]interface{}) ([]byte, error) {
+func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}) ([]byte, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
@@ -282,6 +282,10 @@ func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, metho
 	if stats != nil {
 		goliacStats := stats.(*config.GoliacStatistics)
 		goliacStats.GithubApiCalls++
+	}
+
+	if parameters != "" {
+		urlpath = urlpath + "?" + parameters
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, urlpath, bodyReader)
@@ -309,7 +313,7 @@ func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, metho
 		}
 
 		// Retry the request.
-		return client.CallRestAPI(ctx, endpoint, method, body)
+		return client.CallRestAPI(ctx, endpoint, parameters, method, body)
 	} else {
 		responseBody, err := io.ReadAll(resp.Body)
 		if err != nil {
