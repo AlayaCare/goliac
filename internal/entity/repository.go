@@ -79,7 +79,7 @@ func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname s
 				continue
 			}
 			if !strings.HasSuffix(entry.Name(), ".yaml") {
-				warning = append(warning, fmt.Errorf("File %s doesn't have a .yaml extension", entry.Name()))
+				warning = append(warning, fmt.Errorf("file %s doesn't have a .yaml extension", entry.Name()))
 				continue
 			}
 			repo, err := NewRepository(fs, filepath.Join(archivedDirname, entry.Name()))
@@ -206,6 +206,10 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		if _, ok := externalUsers[externalUserWriter]; !ok {
 			return fmt.Errorf("invalid externalUserWriter: %s doesn't exist in repository filename %s", externalUserWriter, filename)
 		}
+	}
+
+	if utils.GithubAnsiString(r.Name) != r.Name {
+		return fmt.Errorf("invalid name: %s will be changed to %s (check repository filename %s)", r.Name, utils.GithubAnsiString(r.Name), filename)
 	}
 
 	return nil

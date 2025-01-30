@@ -8,6 +8,7 @@ import (
 
 	"github.com/Alayacare/goliac/internal/config"
 	"github.com/Alayacare/goliac/internal/entity"
+	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
 )
@@ -400,7 +401,6 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			repo.InternalUsers = append(repo.InternalUsers, cGithubid)
 		}
 
-		// rRepos[slug.Make(k)] = repo
 		rRepos[k] = repo
 	}
 
@@ -459,8 +459,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
-		// lRepos[slug.Make(reponame)] = &GithubRepoComparable{
-		lRepos[reponame] = &GithubRepoComparable{
+		lRepos[utils.GithubAnsiString(reponame)] = &GithubRepoComparable{
 			BoolProperties: map[string]bool{
 				"private":                !lRepo.Spec.IsPublic,
 				"archived":               lRepo.Archived,
