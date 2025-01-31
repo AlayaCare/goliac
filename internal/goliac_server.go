@@ -103,7 +103,7 @@ func (g *GoliacServerImpl) GetUnmanaged(app.GetUnmanagedParams) middleware.Respo
 		}
 		rulesets := make([]string, 0, len(g.lastUnmanaged.RuleSets))
 		for r := range g.lastUnmanaged.RuleSets {
-			rulesets = append(rulesets, fmt.Sprintf("%d", r))
+			rulesets = append(rulesets, r)
 		}
 		return app.NewGetUnmanagedOK().WithPayload(&models.Unmanaged{
 			Repos:                  repos,
