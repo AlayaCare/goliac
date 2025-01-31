@@ -261,7 +261,7 @@ func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responde
 		}
 	}
 
-	repositories := make([]*models.Repository, 0)
+	repositories := make([]*models.Repository, 0, len(repos))
 	for reponame, repo := range repos {
 		r := models.Repository{
 			Name:                reponame,

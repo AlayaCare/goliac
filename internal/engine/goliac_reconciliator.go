@@ -54,7 +54,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 	}
 	r.unmanaged = unmanaged
 
-	err := r.reconciliateUsers(ctx, local, rremote, dryrun, unmanaged)
+	err := r.reconciliateUsers(ctx, local, rremote, dryrun)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
 		return nil, err
@@ -65,19 +65,6 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 		r.Rollback(ctx, dryrun, err)
 		return nil, err
 	}
-
-	// We add the teamsreponame because it shoudn't be part of the unmanaged repositories
-	// (and should be part of the ruleset).
-	// The teams repos must have the goliacAdminSlug and all owners as writer
-	// the writing operation will be controlled by the CODEOWNERS file
-	// repos := local.Repositories()
-	// teamsRepo := &entity.Repository{}
-	// teamsRepo.ApiVersion = "v1"
-	// teamsRepo.Kind = "Repository"
-	// teamsRepo.Name = teamsreponame
-	// teamsRepo.Spec.Writers = append(allOwners, goliacAdminSlug)
-	// teamsRepo.Spec.IsPublic = false
-	// repos[teamsreponame] = teamsRepo
 
 	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, dryrun, reposToArchive)
 	if err != nil {
@@ -99,7 +86,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 /*
  * This function sync teams and team's members
  */
-func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool, unmanaged *UnmanagedResources) error {
+func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) error {
 	ghUsers := remote.Users()
 
 	rUsers := make(map[string]string)
@@ -136,7 +123,6 @@ type GithubTeamComparable struct {
 
 /*
 This function sync teams and team's members,
-it returns the list of all '*-goliac-owners' teams
 */
 func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) error {
 	ghTeams := remote.Teams()
