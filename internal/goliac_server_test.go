@@ -115,7 +115,7 @@ func (g *GoliacMock) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool
 		Users:        make(map[string]bool),
 		Teams:        make(map[string]bool),
 		Repositories: make(map[string]bool),
-		RuleSets:     make(map[int]bool),
+		RuleSets:     make(map[string]bool),
 	}
 	unmanaged.Users["unmanaged"] = true
 	return nil, nil, nil, unmanaged

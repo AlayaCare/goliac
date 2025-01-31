@@ -152,48 +152,53 @@
       getUnmanaged() {
           Axios.get(`${API_URL}/unmanaged`).then(response => {
                 let unmanaged = response.data;
+                let userNext = "";
+                if (unmanaged.users && unmanaged.users.length > 20) {
+                  userNext = ", ...";
+                }
+                let externallyNext = "";
+                if (unmanaged.externally_managed_teams && unmanaged.externally_managed_teams.length > 20) {
+                  externallyNext = ", ...";
+                }
+                let teamsNext = "";
+                if (unmanaged.teams && unmanaged.teams.length > 20) {
+                  teamsNext = ", ...";
+                }
+                let reposNext = "";
+                if (unmanaged.repos && unmanaged.repos.length > 20) {
+                  reposNext = ", ...";
+                }
+                let rulesetsNext = "";
+                if (unmanaged.rulesets && unmanaged.rulesets.length > 20) {
+                  rulesetsNext = ", ...";
+                }
                 this.unmanagedTable = [
                     {
                         key: "Unmanaged Users",
                         nb: unmanaged.users ? unmanaged.users.length : "unknown",
-                        values: unmanaged.users ? unmanaged.users.slice(0, 20).join(",") : "unknown",
+                        values: unmanaged.users ? unmanaged.users.slice(0, 20).join(",") + userNext : "unknown",
                     },
                     {
                         key: "Externally Managed Teams",
                         nb: unmanaged.externally_managed_teams ? unmanaged.externally_managed_teams.length : "unknown",
-                        values: unmanaged.externally_managed_teams ? unmanaged.externally_managed_teams.slice(0, 20).join(",") : "unknown",
+                        values: unmanaged.externally_managed_teams ? unmanaged.externally_managed_teams.slice(0, 20).join(",") + externallyNext : "unknown",
                     },
                     {
                         key: "Unmanaged Teams",
                         nb: unmanaged.teams ? unmanaged.teams.length : "unknown",
-                        values: unmanaged.teams ? unmanaged.teams.slice(0, 20).join(",") : "unknown",
+                        values: unmanaged.teams ? unmanaged.teams.slice(0, 20).join(",") + teamsNext : "unknown",
                     },
                     {
                         key: "Unmanaged Repositories",
                         nb: unmanaged.repos ? unmanaged.repos.length : "unknown",
-                        values: unmanaged.repos ? unmanaged.repos.slice(0, 20).join(",") : "unknown",
+                        values: unmanaged.repos ? unmanaged.repos.slice(0, 20).join(",") + reposNext : "unknown",
                     },
                     {
                         key: "Unmanaged Rulesets",
                         nb: unmanaged.rulesets ? unmanaged.rulesets.length : "unknown",
-                        values: unmanaged.rulesets ? unmanaged.rulesets.slice(0, 20).join(",") : "unknown",
+                        values: unmanaged.rulesets ? unmanaged.rulesets.slice(0, 20).join(",") + rulesetsNext : "unknown",
                     },
                 ]
-                if (unmanaged.users && unmanaged.users.length > 20) {
-                    this.unmanagedTable.users += ", ...";
-                }
-                if (unmanaged.externally_managed_teams && unmanaged.externally_managed_teams.length > 20) {
-                    this.unmanagedTable.externally_managed_teams += ", ...";
-                }
-                if (unmanaged.teams && unmanaged.teams.length > 20) {
-                    this.unmanagedTable.teams += ", ...";
-                }
-                if (unmanaged.repos && unmanaged.repos.length > 20) {
-                    this.unmanagedTable.repos += ", ...";
-                }
-                if (unmanaged.rulesets && unmanaged.rulesets.length > 20) {
-                    this.unmanagedTable.rulesets += ", ...";
-                }
           }, handleErr.bind(this));
         },
       getStatistics() {

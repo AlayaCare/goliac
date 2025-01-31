@@ -18,7 +18,7 @@ type UnmanagedResources struct {
 	ExternallyManagedTeams map[string]bool
 	Teams                  map[string]bool
 	Repositories           map[string]bool
-	RuleSets               map[int]bool
+	RuleSets               map[string]bool
 }
 
 /*
@@ -50,7 +50,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 		ExternallyManagedTeams: make(map[string]bool),
 		Teams:                  make(map[string]bool),
 		Repositories:           make(map[string]bool),
-		RuleSets:               make(map[int]bool),
+		RuleSets:               make(map[string]bool),
 	}
 	r.unmanaged = unmanaged
 
@@ -60,19 +60,24 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 		return nil, err
 	}
 
-	allOwners, err := r.reconciliateTeams(ctx, local, rremote, dryrun)
+	err = r.reconciliateTeams(ctx, local, rremote, dryrun)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
 		return nil, err
 	}
 
-	// the teams repos must have the goliacAdminSlug and all owners as writer
+	// We add the teamsreponame because it shoudn't be part of the unmanaged repositories
+	// (and should be part of the ruleset).
+	// The teams repos must have the goliacAdminSlug and all owners as writer
 	// the writing operation will be controlled by the CODEOWNERS file
-	repos := local.Repositories()
-	teamsRepo := &entity.Repository{}
-	teamsRepo.Spec.Writers = append(allOwners, goliacAdminSlug)
-	teamsRepo.Spec.IsPublic = false
-	repos[teamsreponame] = teamsRepo
+	// repos := local.Repositories()
+	// teamsRepo := &entity.Repository{}
+	// teamsRepo.ApiVersion = "v1"
+	// teamsRepo.Kind = "Repository"
+	// teamsRepo.Name = teamsreponame
+	// teamsRepo.Spec.Writers = append(allOwners, goliacAdminSlug)
+	// teamsRepo.Spec.IsPublic = false
+	// repos[teamsreponame] = teamsRepo
 
 	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, dryrun, reposToArchive)
 	if err != nil {
@@ -81,7 +86,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 	}
 
 	if remote.IsEnterprise() {
-		err = r.reconciliateRulesets(ctx, local, rremote, r.repoconfig, dryrun)
+		err = r.reconciliateRulesets(ctx, local, rremote, teamsreponame, r.repoconfig, dryrun)
 		if err != nil {
 			r.Rollback(ctx, dryrun, err)
 			return nil, err
@@ -130,12 +135,12 @@ type GithubTeamComparable struct {
 }
 
 /*
- * This function sync teams and team's members
- */
-func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) ([]string, error) {
+This function sync teams and team's members,
+it returns the list of all '*-goliac-owners' teams
+*/
+func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) error {
 	ghTeams := remote.Teams()
 	rUsers := remote.Users()
-	allOwners := []string{}
 
 	ghTeamsPerId := make(map[int]*GithubTeam)
 	for _, v := range ghTeams {
@@ -181,7 +186,6 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 
 	for teamname, teamvalue := range lTeams {
 		teamslug := slug.Make(teamname)
-		allOwners = append(allOwners, teamslug+config.Config.GoliacTeamOwnerSuffix)
 
 		// if the team is externally managed, we don't want to touch it
 		// we just remove it from the list
@@ -355,7 +359,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 
 	CompareEntities(slugTeams, rTeams, compareTeam, onAdded, onRemoved, onChanged)
 
-	return allOwners, nil
+	return nil
 }
 
 type GithubRepoComparable struct {
@@ -418,7 +422,23 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	}
 
 	lRepos := make(map[string]*GithubRepoComparable)
-	for reponame, lRepo := range local.Repositories() {
+
+	localRepositories := make(map[string]*entity.Repository)
+	for reponame, repo := range local.Repositories() {
+		localRepositories[reponame] = repo
+	}
+
+	// adding the teams repo
+	teamsRepo := &entity.Repository{}
+	teamsRepo.ApiVersion = "v1"
+	teamsRepo.Kind = "Repository"
+	teamsRepo.Name = teamsreponame
+	teamsRepo.Spec.Writers = []string{r.repoconfig.AdminTeam}
+	teamsRepo.Spec.Readers = []string{}
+	teamsRepo.Spec.IsPublic = false
+	localRepositories[teamsreponame] = teamsRepo
+
+	for reponame, lRepo := range localRepositories {
 		writers := make([]string, 0)
 		for _, w := range lRepo.Spec.Writers {
 			writers = append(writers, slug.Make(w))
@@ -617,7 +637,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	return nil
 }
 
-func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, conf *config.RepositoryConfig, dryrun bool) error {
+func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, conf *config.RepositoryConfig, dryrun bool) error {
 	repositories := local.Repositories()
 
 	lgrs := map[string]*GithubRuleSet{}
@@ -650,6 +670,9 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 			if match.Match([]byte(reponame)) {
 				grs.Repositories = append(grs.Repositories, reponame)
 			}
+		}
+		if match.Match([]byte(teamsreponame)) {
+			grs.Repositories = append(grs.Repositories, teamsreponame)
 		}
 		lgrs[rs.Name] = &grs
 	}
@@ -700,7 +723,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 
 	onRemoved := func(rulesetname string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
 		// DELETE ruleset
-		r.DeleteRuleset(ctx, dryrun, rRuleset.Id)
+		r.DeleteRuleset(ctx, dryrun, rRuleset)
 	}
 
 	onChanged := func(rulesetname string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
@@ -850,14 +873,14 @@ func (r *GoliacReconciliatorImpl) UpdateRuleset(ctx context.Context, dryrun bool
 		r.executor.UpdateRuleset(ctx, dryrun, ruleset)
 	}
 }
-func (r *GoliacReconciliatorImpl) DeleteRuleset(ctx context.Context, dryrun bool, rulesetid int) {
+func (r *GoliacReconciliatorImpl) DeleteRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
 	if r.repoconfig.DestructiveOperations.AllowDestructiveRulesets {
-		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_ruleset"}).Infof("ruleset id:%d", rulesetid)
+		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_ruleset"}).Infof("ruleset id:%d", ruleset.Id)
 		if r.executor != nil {
-			r.executor.DeleteRuleset(ctx, dryrun, rulesetid)
+			r.executor.DeleteRuleset(ctx, dryrun, ruleset.Id)
 		}
 	} else {
-		r.unmanaged.RuleSets[rulesetid] = true
+		r.unmanaged.RuleSets[ruleset.Name] = true
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string, permission string) {
