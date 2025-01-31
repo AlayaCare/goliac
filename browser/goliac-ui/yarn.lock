@@ -2339,7 +2339,7 @@ caniuse-api@^3.0.0:
 
 caniuse-lite@^1.0.0, caniuse-lite@^1.0.30001517, caniuse-lite@^1.0.30001520:
   version "1.0.30001696"
-  resolved "https://alayacare-406883902139.d.codeartifact.us-east-1.amazonaws.com/npm/alaya-npm/caniuse-lite/-/caniuse-lite-1.0.30001696.tgz"
+  resolved "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001696.tgz"
   integrity sha512-pDCPkvzfa39ehJtJ+OwGT/2yvT2SbjfHhiIW2LWOAcMQ7BzwxT/XuyUp4OTOd0XFWA6BKw0JalnBHgSi5DGJBQ==
 
 case-sensitive-paths-webpack-plugin@^2.3.0:
