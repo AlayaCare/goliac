@@ -7,7 +7,7 @@ import (
 )
 
 func TestGithubAnsiString(t *testing.T) {
-	t.Run("happy path: no chabge", func(t *testing.T) {
+	t.Run("happy path: no change", func(t *testing.T) {
 		str := "test"
 		assert.Equal(t, "test", GithubAnsiString(str))
 	})
