@@ -620,9 +620,6 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		return false, err
 	}
 
-	// read the organization files
-	rootDir := w.Filesystem.Root()
-
 	//
 	// let's update org users
 	//
@@ -642,7 +639,7 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		return false, fmt.Errorf("cannot read users (for example: %v)", errors[0])
 	}
 
-	teamschanged, err := entity.ReadAndAdjustTeamDirectory(w.Filesystem, filepath.Join(rootDir, "teams"), g.users)
+	teamschanged, err := entity.ReadAndAdjustTeamDirectory(w.Filesystem, "teams", g.users)
 	if err != nil {
 		return false, err
 	}

@@ -283,7 +283,7 @@ func (t *Team) Update(fs billy.Filesystem, filename string, users map[string]*Us
 
 	file, err := fs.Create(filename)
 	if err != nil {
-		return changed, fmt.Errorf("Not able to create file %s: %v", filename, err)
+		return changed, fmt.Errorf("not able to create file %s: %v", filename, err)
 	}
 	defer file.Close()
 
@@ -291,7 +291,7 @@ func (t *Team) Update(fs billy.Filesystem, filename string, users map[string]*Us
 	encoder.SetIndent(2)
 	err = encoder.Encode(t)
 	if err != nil {
-		return changed, fmt.Errorf("Not able to write file %s: %v", filename, err)
+		return changed, fmt.Errorf("not able to write file %s: %v", filename, err)
 	}
 	return changed, err
 }
