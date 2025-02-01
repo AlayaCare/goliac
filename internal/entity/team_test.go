@@ -360,7 +360,7 @@ spec:
 		assert.Nil(t, err)
 		assert.Equal(t, 0, len(changed))
 	})
-	t.Run("not happy path: missing member ", func(t *testing.T) {
+	t.Run("not happy path: missing member", func(t *testing.T) {
 		fs := memfs.New()
 		users := make(map[string]*User)
 		for _, username := range []string{"owner1", "owner2", "owner3", "owner3", "member1", "member2"} {
@@ -386,5 +386,37 @@ spec:
 		changed, err := ReadAndAdjustTeamDirectory(fs, "/teams", users)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(changed))
+	})
+
+	t.Run("happy path: do not output parentTeam", func(t *testing.T) {
+		fs := memfs.New()
+
+		parentTeam := "aparent"
+		team := Team{
+			ParentTeam: &parentTeam,
+		}
+		team.Spec.Owners = []string{"owner2", "owner3"}
+		team.Name = "ateam"
+
+		users := make(map[string]*User)
+		for _, username := range []string{"owner1", "owner2"} {
+			u := User{}
+			u.Name = username
+			u.Spec.GithubID = username
+			users[username] = &u
+		}
+		team.Update(fs, "team.yaml", users)
+
+		// check that the parentTeam is not output
+		// and users have changed
+		f, err := utils.ReadFile(fs, "team.yaml")
+		assert.Nil(t, err)
+
+		var checkTeam Team
+		yaml.Unmarshal(f, &checkTeam)
+
+		assert.Nil(t, checkTeam.ParentTeam)
+		assert.Equal(t, 1, len(checkTeam.Spec.Owners))
+		assert.Equal(t, "owner2", checkTeam.Spec.Owners[0])
 	})
 }
