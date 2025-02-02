@@ -26,6 +26,7 @@ deps:
 
 doc:
 	npm run docs:build
+	rm -rf ghpages
 	rsync -av docs/.vitepress/dist/ ghpages
 
 ################################
