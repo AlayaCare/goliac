@@ -19,3 +19,5 @@
 /cover.html
 /coverage.txt
 
+docs/.vitepress/cache
+docs/.vitepress/dist

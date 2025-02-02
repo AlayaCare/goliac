@@ -72,7 +72,7 @@ func (s *Scaffold) SetRemoteObservability(feedback observability.RemoteObservabi
 /*
  * Generate will generate a full teams directory structure compatible with Goliac
  */
-func (s *Scaffold) Generate(rootpath string, adminteam string) error {
+func (s *Scaffold) Generate(rootpath string, adminteam string, usersOnly bool) error {
 	if _, err := os.Stat(rootpath); os.IsNotExist(err) {
 		// Create the directory if it does not exist
 		err := os.MkdirAll(rootpath, 0755)
@@ -87,10 +87,10 @@ func (s *Scaffold) Generate(rootpath string, adminteam string) error {
 		logrus.Warnf("Not able to load all information from Github: %v, but I will try to continue", err)
 	}
 
-	return s.generate(ctx, fs, adminteam)
+	return s.generate(ctx, fs, adminteam, usersOnly)
 }
 
-func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam string) error {
+func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam string, usersOnly bool) error {
 	utils.RemoveAll(fs, "users")
 	utils.RemoveAll(fs, "teams")
 	utils.RemoveAll(fs, "rulesets")
@@ -105,7 +105,7 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 		return fmt.Errorf("error creaing the users directory: %v", err)
 	}
 
-	err = s.generateTeams(ctx, fs, "teams", usermap, adminteam)
+	err = s.generateTeams(ctx, fs, "teams", usermap, adminteam, usersOnly)
 	if err != nil {
 		return fmt.Errorf("error creating the teams directory: %v", err)
 	}
@@ -129,7 +129,7 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 	return nil
 }
 
-func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teamspath string, usermap map[string]string, adminteam string) error {
+func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teamspath string, usermap map[string]string, adminteam string, usersOnly bool) error {
 	teamsRepositories := s.remote.TeamRepositories(ctx)
 	teams := s.remote.Teams(ctx)
 	teamsSlugByName := s.remote.TeamSlugByName(ctx)
@@ -214,6 +214,10 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 			if strings.HasSuffix(team, config.Config.GoliacTeamOwnerSuffix) {
 				continue
 			}
+			// if usersOnly
+			if usersOnly && team != adminteam {
+				continue
+			}
 			lTeam := entity.Team{}
 			lTeam.ApiVersion = "v1"
 			lTeam.Kind = "Team"
@@ -252,6 +256,11 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 				logrus.Errorf("not able to write team file %s in %s: %v", team, teamPath, err)
 			}
 
+			// if usersOnly
+			if usersOnly {
+				continue
+			}
+
 			// write repos
 			for _, r := range repos {
 				lRepo := entity.Repository{}
@@ -280,6 +289,11 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 				}
 			}
 		}
+	}
+
+	// if usersOnly
+	if usersOnly {
+		return nil
 	}
 
 	for teamName, slugName := range teamsSlugByName {

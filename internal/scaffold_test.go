@@ -331,7 +331,7 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 4, len(users))
 
-		err = scaffold.generateTeams(ctx, fs, "/teams", users, "admin")
+		err = scaffold.generateTeams(ctx, fs, "/teams", users, "admin", false)
 		assert.Nil(t, err)
 
 		found, err := utils.Exists(fs, "/teams/admin/team.yaml")
@@ -357,7 +357,7 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 3, len(users))
 
-		err = scaffold.generateTeams(ctx, fs, "/teams", users, "admin")
+		err = scaffold.generateTeams(ctx, fs, "/teams", users, "admin", false)
 		assert.Nil(t, err)
 
 		found, err := utils.Exists(fs, "/teams/admin/team.yaml")
@@ -411,7 +411,7 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, 4, len(users))
 
-		err = scaffold.generateTeams(ctx, fs, "/teams", users, "admin")
+		err = scaffold.generateTeams(ctx, fs, "/teams", users, "admin", false)
 		assert.Nil(t, err)
 
 		found, err := utils.Exists(fs, "/teams/regular/team.yaml")
