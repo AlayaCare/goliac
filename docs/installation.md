@@ -15,7 +15,7 @@ Optionally, you can:
 
 Note: if you want an more restricted Github app, see [Security hardening](./security.md#security-hardening)
 
-In GitHub
+In GitHub:
 - Register new GitHub App
   - in your profile settings, go to `Developer settings`/`GitHub Apps`
   - Click on `New GitHub App`
@@ -39,13 +39,13 @@ In GitHub
 
 ## 2. Creating the IAC github repository
 
-In your GitHub organization, you need to create a git repository. Usually it is called `teams`.
+In your GitHub organization, you need to create a git repository. Usually it is called `goliac-teams`.
 
 You have different way to initialize it.
 
 ### Manual initialization
 
-You can check https://github.com/goliac-project/teams
+You can check https://github.com/goliac-project/goliac-teams as an example
 
 You need the following structure:
 ```
@@ -84,13 +84,15 @@ You need the following structure:
 
 ### Assisted initialization
 
-You will need the goliac binary, either from docker image, or from Github release.
+You will need the goliac binary:
 
 ```shell
 curl -o goliac -L https://github.com/Alayacare/goliac/releases/latest/download/goliac-`uname -s`-`uname -m` && chmod +x goliac
 ```
 
-You can use the goliac application to assist you:
+You will need as well to have created an admin team in your Github organization (in our example, the team is called `goliac-admin` ).
+
+And now you can use the goliac application to assist you:
 
 ```shell
 export GOLIAC_GITHUB_APP_ID=<appid>
@@ -102,11 +104,11 @@ export GOLIAC_GITHUB_APP_ORGANIZATION=<your github organization>
 So something like
 
 ```shell
-mkdir teams
+mkdir goliac-teams
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
-./goliac scaffold teams goliac-admin
+./goliac scaffold goliac-teams goliac-admin
 ```
 
 The application will connect to your GitHub organization and will try to guess
@@ -114,22 +116,22 @@ The application will connect to your GitHub organization and will try to guess
 - your teams
 - the repos associated with your teams
 
-And it will create the corresponding structure
+And it will create the corresponding structure into the "goliac-teams" directory
 
 ### the goliac.yaml configuration file
 
 To make Goliac working you can configure the `/goliac.yaml` file
 
 ```yaml
-admin_team: admin # the name of the team (in the `/teams` directory ) that can admin this repository
+admin_team: goliac-admin # the name of the team (in the `/teams` directory ) that can admin this repository
 everyone_team_enabled: false # if you want all members to have read access to all repositories
 
-rulesets:
+rulesets: # if you want to have organization-wide enforced rules (see the /rulesets directory)
   - pattern: .*
     ruleset: default
 
 max_changesets: 50 # protection measure: how many changes Goliac can do at once before considering that suspicious
-archive_on_delete: true # dont delete directly repository, but archive them first
+archive_on_delete: true # allow to not delete directly repository, but archive them first. (only usefull if destructive_operations.repository = true. See below)
 
 destructive_operations:
   repositories: false # can Goliac remove repositories not listed in this repository
@@ -164,20 +166,20 @@ spec:
 Before commiting your new structure you can use `goliac verify <path to teams repo>` to test the validity:
 
 ```
-goliac verify teams/
+goliac verify goliac-teams/
 ```
 
 ### Applying manually
 
-After merging your team IAC teams repository, you can begin to test and apply
+After merging your team IAC goliac-teams repository, you can begin to test and apply
 
 ```shell
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
-export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
+export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-teams
 
-./goliac plan --repository https://github.com/goliac-project/teams --branch main
+./goliac plan --repository https://github.com/goliac-project/goliac-teams --branch main
 ```
 
 and you can apply the change "manually"
@@ -186,23 +188,23 @@ and you can apply the change "manually"
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
-export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
+export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-teams
 
-./goliac apply --repository https://github.com/goliac-project/teams --branch main
+./goliac apply --repository https://github.com/goliac-project/goliac-teams --branch main
 ```
 
 If it works for you, you can put in place the goliac service to fetch and apply automatically (like every 10 minute). See below
 
 ### The goliac application
 
-By using the docker container (`ghcr.io/nzin/goliac`) or the standalone application, goliac comes with different commands
+By using the standalone application, goliac comes with different commands
 
 | Command  | Description                                                                    |
 |----------|--------------------------------------------------------------------------------|
 | scaffold | help you bootstrap an IAC structure, based on your current GitHub organization |
 | verify   | check the validity of a local IAC structure. Used for the CI (for example)  to valiate a PR |
-| plan     | download a teams IAC repository, and show changes to apply                     |
-| apply    | download a teams IAC repository, and apply it to GitHub                        |
+| plan     | download a goliac teams IAC repository, and show changes to apply              |
+| apply    | download a goliac teams IAC repository, and apply it to GitHub                 |
 | serve    | starts a server (and a UI) and apply automaticall every 10 minutes             |
 | syncusers| get the definition of users outside and put it back to the IAC structure       |
 
@@ -218,17 +220,17 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_GITHUB_APP_ORGANIZATION   |             | (mandatory) name of your github org     |
 | GOLIAC_GITHUB_APP_ID             |             | (mandatory) app id of Goliac GitHub App |
 | GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE |           | (mandatory) path to private key       |
-| GOLIAC_GITHUB_TEAM_APP_ID             |             | (optional) dedicated app id of Goliac GitHub App for teams repo (see security.md) |
-| GOLIAC_GITHUB_TEAM_APP_PRIVATE_KEY_FILE |           | (optional) dedicated path to private key for teams repo (see security.md) |
+| GOLIAC_GITHUB_TEAM_APP_ID             |             | (optional) dedicated app id of Goliac GitHub App for goliac teams repo (see security.md) |
+| GOLIAC_GITHUB_TEAM_APP_PRIVATE_KEY_FILE |           | (optional) dedicated path to private key for goliac teams repo (see security.md) |
 | GOLIAC_EMAIL                     | goliac@alayacare.com | author name used by Goliac to commit (Codeowners) |
-| GOLIAC_GITHUB_CONCURRENT_THREADS | 1           | You can increase, like '4' |
+| GOLIAC_GITHUB_CONCURRENT_THREADS | 5           | You can increase, like '10' |
 | GOLIAC_GITHUB_CACHE_TTL          |  86400      | GitHub remote cache seconds retention |
 | GOLIAC_SERVER_APPLY_INTERVAL     | 600         | How often (seconds) Goliac try to apply |
-| GOLIAC_SERVER_GIT_REPOSITORY     |             | (mandatory) teams repo name in your organization |
-| GOLIAC_SERVER_GIT_BRANCH         | main        | teams repo default branch name to use |
+| GOLIAC_SERVER_GIT_REPOSITORY     |             | (mandatory) goliac teams repo name in your organization |
+| GOLIAC_SERVER_GIT_BRANCH         | main        | goliac teams repo default branch name to use |
 | GOLIAC_SERVER_HOST               |localhost    | it is set as `0.0.0.0` in the Dockerfile |
 | GOLIAC_SERVER_PORT               | 18000       |                            |
-| GOLIAC_SERVER_GIT_BRANCH_PROTECTION_REQUIRED_CHECK | validate | ci check to enforce when evaluating a PR (used for CI mode) |
+| GOLIAC_SERVER_PR_REQUIRED_CHECK  | validate    | ci check to enforce when evaluating a PR (used for CI mode) |
 | GOLIAC_MAX_CHANGESETS_OVERRIDE    | false          | if you need to override the `max_changesets` setting in the `goliac.yaml` file. Useful in particular using the `goliac apply` CLI  |
 | GOLIAC_SYNC_USERS_BEFORE_APPLY    | true          | to sync users before applying the changes |
 | GOLIAC_SLACK_TOKEN                |               | (optional) Slack token to send notification (ususally error messages if any) |
@@ -240,6 +242,11 @@ You can run the goliac server as a service or a docker container. It needs sever
 then you just need to start it with
 
 ```shell
+export GOLIAC_GITHUB_APP_ID=355525
+export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
+export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
+export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-teams
+
 ./goliac serve
 ```
 
@@ -247,8 +254,8 @@ You can connect (eventually) to the UI for some statistic to `http://GOLIAC_SERV
 
 ### Using docker container
 
-```
-docker run -ti -v `pwd`/goliac-project-app.2023-07-03.private-key.pem:/app/private-key.pem -e GOLIAC_GITHUB_APP_ID=355525 -e GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=/app/private-key.pem -e GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project -e GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams -e GOLIAC_SERVER_HOST=0.0.0.0 -p 18000:18000 ghcr.io/nzin/goliac serve
+```shell
+docker run -ti -v `pwd`/goliac-project-app.2023-07-03.private-key.pem:/app/private-key.pem -e GOLIAC_GITHUB_APP_ID=355525 -e GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=/app/private-key.pem -e GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project -e GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-teams -e GOLIAC_SERVER_HOST=0.0.0.0 -p 18000:18000 ghcr.io/nzin/goliac serve
 ```
 
 ### Using docker-compose
@@ -262,7 +269,7 @@ services:
             - GOLIAC_GITHUB_APP_ID=355525
             - GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=/app/private-key.pem
             - GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
-            - GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/teams
+            - GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-teams
             - GOLIAC_SERVER_HOST=0.0.0.0
         ports:
             - 18000:18000
@@ -300,7 +307,7 @@ spec:
             - name: GOLIAC_LOGRUS_LEVEL
               value: warning
             - name: GOLIAC_SERVER_GIT_REPOSITORY
-              value: 'https://github.com/goliac-project/teams'
+              value: 'https://github.com/goliac-project/goliac-teams'
           envFrom:
             - secretRef:
                 name: goliac-secrets
@@ -439,7 +446,7 @@ You need to
 
 ## Optional: GitHub webhook
 
-By default Goliac works by polling the state of the teams GitHub repository (by default every 10 minutes).
+By default Goliac works by polling the state of the goliac teams GitHub repository (by default every 10 minutes).
  But you can configure a webhook to be notified of changes in your GitHub organization.
 
 To do so, you need to update the GitHub App configuration:

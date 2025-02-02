@@ -1,0 +1,9 @@
+
+:root {
+    --vp-sidebar-width: 200px;
+}
+
+.VPDoc .content-container {
+    max-width: 1000px !important;
+}
+

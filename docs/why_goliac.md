@@ -1,17 +1,23 @@
 # Why Goliac
 
 Goliac can improve your Github organization management in several ways:
-- cost
 - security
 - developer friendly
+- cost
 
-## Cost
+## How it works
 
-Goliac is a free opensource project. You can install it on your own infrastructure, and it is designed to be run easily into a kubernetes environment.
+![goliac workflow](images/goliac_basic_workflow.png)
 
-A comparable solution is to use Terraform (and a git repository) to achieve almost the same result, except that
-- if you are using Terraform Cloud, you will have to pay for each resource you manage
-- with terraform, you still need to centrally managed all operations via your IT team, which can be a bottleneck, and also less flexible
+Goliac use a [GitOps](https://www.redhat.com/en/topics/devops/what-is-gitops) approach:
+- you define into one Github repository (usually called `teams`),through yaml files, organized into a file hiearchry, the state you want your Github organization to be. You define
+  - your security rules
+  - your users (or you import/link them from another external source)
+  - your teams
+  - the repositories owned by each teams
+- when Goliac runs, it will apply these state to your Github organization (and enforce it)
+- each change you want to bring is done via a Github Pull Request, that needs to be reviewed and validated, and can be auditing via the Git commit history
+- each team can change part of the `teams` structure they own (a sub directory)
 
 
 ## Security friendly
@@ -31,16 +37,14 @@ Once a team of developers has been created, the team can
 - via **simple** yaml files. You dont need to learn a new specific definition langage.
 - but restricted by global policies defined previously by the security team. For example you can specifiy a organization-wide policy asking for peer-review across all Github repositories, before any Pull Request being merged. Or you can ask a specific CI test to pass for all Github repositories, or a specific subset of Github repositoties
 
-## How it works
+## Cost
 
-Goliac use a [GitOps](https://www.redhat.com/en/topics/devops/what-is-gitops) approach:
-- you define into one Github repository (usually called `teams`),through yaml files, organized into a file hiearchry, the state you want your Github organization to be. You define
-  - your security rules
-  - your users (or you import/link them from another external source)
-  - your teams
-  - the repositories owned by each teams
-- when Goliac runs, it will apply these state to your Github organization (and enforce it)
-- each change you want to bring is done via a Github Pull Request, that needs to be reviewed and validated, and can be auditing via the Git commit history
+Goliac is a free opensource project. You can install it on your own infrastructure, and it is designed to be run easily into a kubernetes environment.
+
+A comparable solution is to use Terraform (and a git repository) to achieve almost the same result, except that
+- if you are using Terraform Cloud, you will have to pay for each resource you manage
+- with terraform, you still need to centrally managed all operations via your IT team, which can be a bottleneck, and also less flexible
+
 
 ## Why not using other tools?
 
@@ -69,9 +73,9 @@ To use the full capabilities of Goliac, through the Github Rulesets features you
 ## Cost and installation
 
 - Goliac is a free opensource project.
-- currently Goliac manasges 1 Github organization per instance
+- currently Goliac manages 1 Github organization per instance
 - The installation is relatively easy:
-  - either you install a stanadlone application
-  - or you use Goliac docker image that you can build yourself or use pre-built images (https://github.com/nzin/goliac/pkgs/container/goliac), and it has been designed to be run easily into a kubernetes environment
-  - you need to create a definition of what Goliac manages: either partial or full definition of your Github organization
-- the definition (and the maintenance) of the definition of your Github organization is done via simple yaml file, and dont requires special skills or langage know-how
+  - either you install a standalone application (Goliac app comes as a single binary)
+  - or you deploy Goliac docker image (via docker-compose or in kubernetes). You can build yourself the docker image or use pre-built images (https://github.com/nzin/goliac/pkgs/container/goliac).
+  - you need to create a definition of what Goliac manages: aka the goliac "teams" repository. With it you can define and managed either partially or totally your Github organization
+- the definition (and the maintenance) of your Github organization is done via simple yaml file, and dont requires special skills or langage know-how
