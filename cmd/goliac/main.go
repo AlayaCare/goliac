@@ -22,6 +22,7 @@ var repositoryParameter string
 var branchParameter string
 var noProgressbar bool
 var goliacAdminTeamnameParameter string
+var usersOnly bool
 
 type ProgressBar struct {
 	bar *progressbar.ProgressBar
@@ -211,7 +212,7 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 	postSyncUsersCmd.Flags().BoolVarP(&forceParameter, "force", "f", false, "force mode")
 
 	scaffoldcmd := &cobra.Command{
-		Use:   "scaffold <directory> [--adminteam goliac_admin_team_name]",
+		Use:   "scaffold <directory> [--adminteam goliac_admin_team_name] [--users-only]",
 		Short: "Will create a base directory based on your current Github organization",
 		Long: `Base on your Github organization, this command will try to scaffold a
 goliac directory to let you start with something.
@@ -237,7 +238,7 @@ The adminteam is your current team that contains Github administrator`,
 				}
 			}
 
-			err = scaffold.Generate(directory, adminteam)
+			err = scaffold.Generate(directory, adminteam, usersOnly)
 			if err != nil {
 				logrus.Fatalf("failed to create scaffold direcrory: %s", err)
 			} else {
@@ -270,6 +271,7 @@ Now you can push this directory as a new repository to Github, like:
 	}
 	scaffoldcmd.Flags().StringVarP(&goliacAdminTeamnameParameter, "adminteam", "a", "goliac-admin", "name of the goliac admin team")
 	scaffoldcmd.Flags().BoolVarP(&noProgressbar, "noprogressbar", "p", false, "display a progress bar")
+	scaffoldcmd.Flags().BoolVarP(&usersOnly, "users-only", "u", false, "do not scaffold teams (except the admin) and repositories")
 
 	servecmd := &cobra.Command{
 		Use:   "serve",

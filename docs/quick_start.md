@@ -36,7 +36,7 @@ curl -o goliac -L https://github.com/Alayacare/goliac/releases/latest/download/g
 
 ### Create a goliac admin team
 
-If you dont have yet one, you will need to creat a team in Github, where you will add your IT/Github admins (in our example, the team is called `goliac-admin` ).
+If you dont have yet one, you will need to create a team in Github, where you will add your IT/Github admins (in our example, the team is called `goliac-admin` ).
 
 ## Scaffold and test
 
@@ -66,17 +66,27 @@ The application will connect to your GitHub organization and will try to guess
 - your teams
 - the repos associated with your teams
 
-And it will create the corresponding structure into the "teams" directory.
+And it will create the corresponding structure into the Goliac "teams" directory.
 
-### Publish the new goliac teams repository
+### Clean up to start
 
-Let's remove for now all repositories:
+If you want, you can remove (for now) part or all repositories:
 
-```
+```shell
 find goliac-teams/teams -name "*.yaml" ! -name "team.yaml" -print0 | xargs -0 rm
 ```
 
-Create a new Github repository called (for example) `goliac-teams`.
+### Verify
+
+You can run the 
+
+```shell
+goliac verify <goliac-team directory>
+```
+
+### Publish the goliac teams repo
+
+In Github create a new repository called (for example) `goliac-teams`.
 
 And commit the new structure:
 
@@ -88,9 +98,9 @@ git commit -m "Initial commit"
 git push
 ```
 
-### Adjust
+### Adjust (i.e. plan)
 
-Run as much as you want
+Run as much as you want, and check what Goliac will do
 
 ```shell
 mkdir teams
