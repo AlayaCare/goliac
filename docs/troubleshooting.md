@@ -48,7 +48,7 @@ Indeed a team must have at least 2 owners to be able to review and merge PRs (an
 
 As an admin you should add more owners to the team.
 
-# Goliac is trying to add a user that is no longer part of the organization
+## Goliac is trying to add a user that is no longer part of the organization
 
 Maybe the user is still part of the SSO group, but not part of the organization anymore.
 The best way to solve it is to remove the user from the SSO group:
