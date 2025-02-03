@@ -24,20 +24,26 @@ concurrency:
 jobs:
   check-pages:
     runs-on: ubuntu-latest
+    outputs:
+      pages_enabled: ${{ steps.check.outputs.pages_enabled }}
     steps:
       - name: Check if GitHub Pages is enabled
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/pages")
 
-          if [[ "$STATUS" -ne 200 ]]; then
-            echo "GitHub Pages is not enabled. Exiting workflow."
-            exit 78  # Exit code 78 tells GitHub Actions to cancel the workflow.
+          if [[ "$STATUS" -eq 200 ]]; then
+            echo "pages_enabled=true" >> $GITHUB_ENV
+            echo "pages_enabled=true"
+          else
+            echo "pages_enabled=false" >> $GITHUB_ENV
+            echo "pages_enabled=false"
           fi
 
   # Build job
   build:
     needs: check-pages
+    if: needs.check-pages.outputs.pages_enabled == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
