@@ -11,14 +11,14 @@ hero:
     alt: 'Goliac logo'
   actions:
     - theme: brand
+      text: Why Goliac
+      link: /why_goliac
+    - theme: alt
       text: Quick start
       link: /quick_start
     - theme: alt
-      text: Documentation
+      text: Full installation
       link: /installation
-    - theme: alt
-      text: Why Goliac
-      link: /why_goliac
 
 features:
   - title: GitOps
