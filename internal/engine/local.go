@@ -316,7 +316,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 	sort.Strings(teamsnames)
 
 	for _, t := range teamsnames {
-		teampath := fmt.Sprintf("/teams/%s/*", t)
+		teampath := fmt.Sprintf("/teams/%s/*", g.buildTeamPath(t))
 		if strings.Contains(teampath, " ") {
 			teampath = strings.ReplaceAll(teampath, " ", "\\ ")
 		}
@@ -324,6 +324,14 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 	}
 
 	return codeowners
+}
+
+func (g *GoliacLocalImpl) buildTeamPath(teamname string) string {
+	team := g.teams[teamname]
+	if team.ParentTeam == nil || *team.ParentTeam == "" {
+		return teamname
+	}
+	return g.buildTeamPath(*team.ParentTeam) + "/" + teamname
 }
 
 func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error {
