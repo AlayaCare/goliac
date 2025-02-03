@@ -14,8 +14,16 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Documentation', link: '/installation' }
-    ],
+      { text: 'Documentation',
+        items: [
+            { text: 'Why Goliac', link: '/why_goliac' },
+            { text: 'Quick start', link: '/quick_start' },
+            { text: 'Installation', link: '/installation' },
+            { text: 'Security', link: '/security' },
+            { text: 'Troubleshooting', link: '/troubleshooting' }
+          ]
+        }
+      ],
 
     sidebar: [
       {
