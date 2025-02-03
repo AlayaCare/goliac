@@ -27,6 +27,7 @@ jobs:
       pages_enabled: ${{ steps.check.outputs.pages_enabled }}
     steps:
       - name: Check if GitHub Pages is enabled
+        id: check
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/pages")
