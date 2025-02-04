@@ -234,7 +234,8 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 			},
 			"enforce_admins": nil,
 			"required_pull_request_reviews": map[string]interface{}{
-				"require_last_push_approval": true, // Optional: Require approval from the author of the latest commit.
+				"required_approving_review_count": 1,    // Number of approvals required. Set this to 1 for one review.
+				"require_last_push_approval":      true, // most recent push must be approved by someone other than the person who pushed it
 			},
 			// required_pull_request_reviews could have been
 			//{
