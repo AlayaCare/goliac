@@ -516,7 +516,7 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 				"archived":               false,
 				"private":                true,
 				"allow_auto_merge":       false,
-				"delete_branch_on_merge": false,
+				"delete_branch_on_merge": true,
 				"allow_update_branch":    false,
 			},
 			ExternalUsers: map[string]string{},

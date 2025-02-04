@@ -422,6 +422,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	teamsRepo.Spec.Writers = []string{r.repoconfig.AdminTeam}
 	teamsRepo.Spec.Readers = []string{}
 	teamsRepo.Spec.IsPublic = false
+	teamsRepo.Spec.DeleteBranchOnMerge = true
 	localRepositories[teamsreponame] = teamsRepo
 
 	for reponame, lRepo := range localRepositories {

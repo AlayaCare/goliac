@@ -150,6 +150,7 @@ func (s *GithubWebhookServerImpl) handlePushEvent(w http.ResponseWriter, body []
 		s.callback()
 	} else {
 		http.Error(w, "Parse push event: wrong branch", http.StatusBadRequest)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
