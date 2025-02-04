@@ -662,6 +662,49 @@ func TestBasicGitops(t *testing.T) {
 		// check the content of the CODEOWNERS file
 		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @Alayacare/github-admins\n/teams/github\\ admins/* @Alayacare/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @Alayacare/github-admins\n", content)
 	})
+
+	t.Run("codeowners_regenerate with a parent", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+		// get commits
+		adminTeam := entity.Team{}
+		adminTeam.ApiVersion = "v1"
+		adminTeam.Kind = "Team"
+		adminTeam.Name = "github-admins"
+		adminTeam.Spec.Owners = []string{"admin"}
+
+		subTeam := entity.Team{}
+		subTeam.ApiVersion = "v1"
+		subTeam.Kind = "Team"
+		subTeam.Name = "subteam"
+		subTeam.Spec.Owners = []string{"admin"}
+		parentTeam := "github-admins"
+		subTeam.ParentTeam = &parentTeam
+
+		g := GoliacLocalImpl{
+			teams: map[string]*entity.Team{
+				"github-admins": &adminTeam,
+				"subteam":       &subTeam,
+			},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
+
+		content := g.codeowners_regenerate("github-admins", "Alayacare")
+
+		// check the content of the CODEOWNERS file
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @Alayacare/github-admins\n/teams/github-admins/* @Alayacare/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @Alayacare/github-admins\n/teams/github-admins/subteam/* @Alayacare/subteam"+config.Config.GoliacTeamOwnerSuffix+" @Alayacare/github-admins\n", content)
+	})
 }
 
 func TestGoliacLocalImpl(t *testing.T) {
