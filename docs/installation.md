@@ -452,6 +452,7 @@ By default Goliac works by polling the state of the goliac teams GitHub reposito
 To do so, you need to update the GitHub App configuration:
 - in General:
   - enable the active Webhook
+  - change the Content-Type for `application/json`
   - set a webhook secret
   - set the webhook URL to be able to reach `http://GOLIAC_SERVER_HOST:GOLIAC_SERVER_PORT/webhook`
 - in Subscribe to events
