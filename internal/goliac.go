@@ -201,14 +201,16 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs b
  * Else we may append to apply commits that are part of a PR, but wasn't the final PR commit state
  */
 func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamreponame string, branchname string) error {
+	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
 	_, err := g.remoteGithubClient.CallRestAPI(ctx,
 		fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, teamreponame),
 		"",
 		"PATCH",
 		map[string]interface{}{
-			"allow_merge_commit": false,
-			"allow_rebase_merge": false,
-			"allow_squash_merge": true,
+			"allow_merge_commit":     false, // allow merging pull requests with a merge commit
+			"allow_rebase_merge":     false, // allow rebase-merging pull requests
+			"allow_squash_merge":     true,  // allow squash-merging pull requests
+			"delete_branch_on_merge": true,  // automatically deleting head branches when pull requests are merged
 		})
 	if err != nil {
 		return err
@@ -220,6 +222,7 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 	if config.Config.ServerGitBranchProtectionRequiredCheck != "" {
 		contexts = append(contexts, config.Config.ServerGitBranchProtectionRequiredCheck)
 	}
+	// https://docs.github.com/en/rest/branches/branch-protection?apiVersion=2022-11-28#update-branch-protection
 	_, err = g.remoteGithubClient.CallRestAPI(ctx,
 		fmt.Sprintf("/repos/%s/%s/branches/%s/protection", config.Config.GithubAppOrganization, teamreponame, branchname),
 		"",
@@ -229,8 +232,10 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 				"strict":   true,     // // This ensures branches are up to date before merging
 				"contexts": contexts, // Status checks to enforce, see scaffold.go for the job name
 			},
-			"enforce_admins":                nil,
-			"required_pull_request_reviews": nil,
+			"enforce_admins": nil,
+			"required_pull_request_reviews": map[string]interface{}{
+				"require_last_push_approval": true, // Optional: Require approval from the author of the latest commit.
+			},
 			// required_pull_request_reviews could have been
 			//{
 			// "dismiss_stale_reviews": true,   // Optional: Whether or not approved reviews are dismissed when a new commit is pushed.
