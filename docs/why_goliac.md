@@ -1,4 +1,17 @@
-# Why Goliac
+# What is Goliac
+
+Goliac is a tool to manage your Github organization in a GitOps way, a bit like [ArgoCD](https://argoproj.github.io/argo-cd/), (or [Terraform](https://www.terraform.io/) ) but for Github organization.
+
+It allows you to
+- define your Github organization structure (teams, users, repositories) into a git repository, and to apply this structure to your Github organization.
+- enforce security rules (like [Github Rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)) across your Github organization
+- allow your developers to manage their team and their repositories (and only them) autonomously
+
+You will get the most of Goliac if you are on an Enterprise plan (especially to be able to use [Github Ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)), and it runs well for organization with ~ 1000-2000 repos, ~ 500-1000 users, ~ 300-500 teams or below. It should works well above these numbers, but you may need to adapt the way you use it (because it may need to do a lot of API calls to Github).
+
+Goliac is a free opensource project, that you can install on your own infrastructure, and that is designed to be run easily into a kubernetes environment.
+
+## Why Goliac
 
 Goliac can improve your Github organization management in several ways:
 - security
