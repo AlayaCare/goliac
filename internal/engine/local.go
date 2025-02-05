@@ -327,6 +327,9 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 	sort.Slice(codeownersrules, func(i, j int) bool {
 		iPath := strings.Split(codeownersrules[i], "*")[0]
 		jPath := strings.Split(codeownersrules[j], "*")[0]
+		if len(iPath) == len(jPath) {
+			return iPath < jPath
+		}
 		return len(iPath) > len(jPath)
 	})
 
