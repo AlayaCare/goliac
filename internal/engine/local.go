@@ -313,14 +313,26 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 	for _, t := range g.teams {
 		teamsnames = append(teamsnames, t.Name)
 	}
-	sort.Strings(teamsnames)
 
+	codeownersrules := make([]string, 0)
 	for _, t := range teamsnames {
 		teampath := fmt.Sprintf("/teams/%s/*", g.buildTeamPath(t))
 		if strings.Contains(teampath, " ") {
 			teampath = strings.ReplaceAll(teampath, " ", "\\ ")
 		}
-		codeowners += fmt.Sprintf("%s @%s/%s%s %s\n", teampath, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix, adminteamname)
+		codeownersrules = append(codeownersrules, fmt.Sprintf("%s @%s/%s%s %s\n", teampath, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix, adminteamname))
+	}
+
+	// sort by path length
+	// because CODEOWNERS is read from top to bottom
+	sort.Slice(codeownersrules, func(i, j int) bool {
+		iPath := strings.Split(codeownersrules[i], "*")[0]
+		jPath := strings.Split(codeownersrules[j], "*")[0]
+		return len(iPath) > len(jPath)
+	})
+
+	for _, r := range codeownersrules {
+		codeowners += r
 	}
 
 	return codeowners

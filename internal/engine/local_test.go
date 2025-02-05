@@ -703,7 +703,7 @@ func TestBasicGitops(t *testing.T) {
 		content := g.codeowners_regenerate("github-admins", "Alayacare")
 
 		// check the content of the CODEOWNERS file
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @Alayacare/github-admins\n/teams/github-admins/* @Alayacare/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @Alayacare/github-admins\n/teams/github-admins/subteam/* @Alayacare/subteam"+config.Config.GoliacTeamOwnerSuffix+" @Alayacare/github-admins\n", content)
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @Alayacare/github-admins\n/teams/github-admins/subteam/* @Alayacare/subteam-goliac-owners @Alayacare/github-admins\n/teams/github-admins/* @Alayacare/github-admins-goliac-owners @Alayacare/github-admins\n", content)
 	})
 }
 
