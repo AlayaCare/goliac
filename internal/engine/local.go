@@ -307,7 +307,6 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 	adminteamname := fmt.Sprintf("@%s/%s", githubOrganization, slug.Make(adminteam))
 
 	codeowners := "# DO NOT MODIFY THIS FILE MANUALLY\n"
-	codeowners += fmt.Sprintf("* %s\n", adminteamname)
 
 	teamsnames := make([]string, 0)
 	for _, t := range g.teams {
@@ -334,6 +333,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 	for _, r := range codeownersrules {
 		codeowners += r
 	}
+	codeowners += fmt.Sprintf("* %s\n", adminteamname)
 
 	return codeowners
 }
