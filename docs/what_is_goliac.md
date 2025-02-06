@@ -7,7 +7,7 @@ It allows you to
 - enforce security rules (like [Github Rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)) across your Github organization
 - allow your developers to manage their team and their repositories (and only them) autonomously
 
-You will get the most of Goliac if you are on an Enterprise plan (especially to be able to use [Github Ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)), and it runs well for organization with ~ 1000-2000 repos, ~ 500-1000 users, ~ 300-500 teams or below. It should works well above these numbers, but you may need to adapt the way you use it (because it may need to do a lot of API calls to Github).
+You will get the most of Goliac if you are on an Enterprise plan, or on prem (especially to be able to use [Github Ruleset](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)), and it runs well for organization with ~ 1000-2000 repos, ~ 500-1000 users, ~ 300-500 teams or below. It should works well above these numbers, but you may need to adapt the way you use it (because it may need to do a lot of API calls to Github).
 
 Goliac is a free opensource project, that you can install on your own infrastructure, and that is designed to be run easily into a kubernetes environment.
 
@@ -23,14 +23,14 @@ Goliac can improve your Github organization management in several ways:
 ![goliac workflow](images/goliac_basic_workflow.png)
 
 Goliac use a [GitOps](https://www.redhat.com/en/topics/devops/what-is-gitops) approach:
-- you define into one Github repository (usually called `teams`),through yaml files, organized into a file hiearchry, the state you want your Github organization to be. You define
+- you define into one Github repository (usually called `goliac-teams`), through yaml files, organized into a file hierarchy, the state you want your Github organization to be. You define
   - your security rules
   - your users (or you import/link them from another external source)
   - your teams
   - the repositories owned by each teams
 - when Goliac runs, it will apply these state to your Github organization (and enforce it)
 - each change you want to bring is done via a Github Pull Request, that needs to be reviewed and validated, and can be auditing via the Git commit history
-- each team can change part of the `teams` structure they own (a sub directory)
+- each team can change part of the `goliac-teams` structure they own (a sub directory)
 
 
 ## Security friendly
@@ -39,7 +39,7 @@ Goliac allows your company to pass security compliance audit by:
 - defining global rules (based on [Github Rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets) if you are on Github Enterprise plan)
 - allowing users to manage their team and the repositories they own (and only them)
 - bringing auditing of who has done what in 2 places:
-  - via a git history of a git repository
+  - via a git history of the `goliac-teams` repository
   - via logs of Goliac service (but you need to have a good log management system in place)
 - via a [GitOps](https://www.redhat.com/en/topics/devops/what-is-gitops) approach: i.e. via a clear directory structure stored into a git repository
 

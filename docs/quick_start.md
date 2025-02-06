@@ -66,7 +66,7 @@ The application will connect to your GitHub organization and will try to guess
 - your teams
 - the repos associated with your teams
 
-And it will create the corresponding structure into the Goliac "teams" directory.
+And it will create the corresponding structure into the "goliac-teams" directory.
 
 ### Clean up to start
 
@@ -103,7 +103,6 @@ git push
 Run as much as you want, and check what Goliac will do
 
 ```shell
-mkdir teams
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
@@ -115,7 +114,6 @@ export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 If you are happy with the new structure:
 
 ```shell
-mkdir teams
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
@@ -145,7 +143,7 @@ And you can access the dashboard UI at http://localhost:18000
 Now everyone can enroll existing (or new) repositories.
 
 Let's imagine you want to control the `myrepository` repository for the existing team `ateam`, one of the `ateam` member (or you) can
-- create a new branch into the `goiac-teams` repository
+- create a new branch into the `goliac-teams` repository
 - add the repository definition
 - push and create a PullRequest
 - one of the team "owner" or one of the `goliac-admin` member will be able to approve and merge

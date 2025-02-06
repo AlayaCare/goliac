@@ -11,8 +11,8 @@ hero:
     alt: 'Goliac logo'
   actions:
     - theme: brand
-      text: Why Goliac
-      link: /why_goliac
+      text: What is Goliac
+      link: /what_is_goliac
     - theme: alt
       text: Quick start
       link: /quick_start
