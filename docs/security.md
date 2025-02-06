@@ -3,17 +3,17 @@
 ## Security hardening
 
 If you want to narrow down what Goliac is doing, you can create 2 github apps
-- one to access only the team's repository
+- one to access only the `goliac-team`'s repository
 - another one that dont have repository access, but only to the organization administrative APIs
 
-### Teams GitHub App
+### Goliac-Teams GitHub App
 
 You need to 
-- Register new teams GitHub App
+- Register new goliac-teams GitHub App
   - in your profile settings, go to `Developer settings`/`GitHub Apps`
   - Click on `New GitHub App`
 - Give basic information:
-  - GitHub App  name can be `<yourorg>-goliac-app-teams`
+  - GitHub App  name can be `<yourorg>-goliac-teams-app`
   - Homepage URL can be `https://github.com/Alayacare/goliac`
   - Disable the active Webhook
 - Under Repository permissions
@@ -26,7 +26,7 @@ You need to
   - Generate (and collect) a private key (file)
 - Go to the left tab "Install App"
   - Click on "Install"
-  - On Repository access, select "Only select repositories", and select the team's repository
+  - On Repository access, select "Only select repositories", and select the goliac-team's repository
 
 We will set ip up in Goliac with
 - `GOLIAC_GITHUB_TEAM_APP_ID` environment variable

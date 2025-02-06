@@ -16,9 +16,10 @@ export default defineConfig({
       { text: 'Home', link: '/' },
       { text: 'Documentation',
         items: [
-            { text: 'Why Goliac', link: '/why_goliac' },
+            { text: 'What is Goliac', link: '/what_is_goliac' },
             { text: 'Quick start', link: '/quick_start' },
             { text: 'Installation', link: '/installation' },
+            { text: 'Day to day Usage', link: '/usage' },
             { text: 'Security', link: '/security' },
             { text: 'Troubleshooting', link: '/troubleshooting' }
           ]
@@ -29,9 +30,10 @@ export default defineConfig({
       {
         text: 'Documentation',
         items: [
-          { text: 'Why Goliac', link: '/why_goliac' },
+          { text: 'What is Goliac', link: '/what_is_goliac' },
           { text: 'Quick start', link: '/quick_start' },
           { text: 'Installation', link: '/installation' },
+          { text: 'Day to day Usage', link: '/usage' },
           { text: 'Security', link: '/security' },
           { text: 'Troubleshooting', link: '/troubleshooting' }
         ]
@@ -40,6 +42,11 @@ export default defineConfig({
 
     socialLinks: [
       { icon: 'github', link: 'https://github.com/Alayacare/goliac' }
-    ]
+    ],
+    
+    footer: {
+      message: 'Sponsored by <a href="https://www.alayacare.com">AlayaCare</a>',
+      copyright: '<a href="https://github.com/AlayaCare/goliac/blob/main/LICENSE">MIT License</a>'
+    }
   }
 })

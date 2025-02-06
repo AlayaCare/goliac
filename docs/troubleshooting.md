@@ -2,7 +2,7 @@
 
 ## How to resolve the error "more than X changesets to apply (total of Y), this is suspicious. Aborting"
 
-This error is happening if a changeset (a team's PR) introduce more than X changesets. This is a safety mechanism to avoid applying a huge number of changesets at once.
+This error is happening if a changeset (a goliac-team's PR) introduce more than X changesets. This is a safety mechanism to avoid applying a huge number of changesets at once.
 
 If it is a legitimate change, you can
 - either increase the `max_changesets` in the `goliac.yaml` file, but that's not the best approach.
@@ -13,7 +13,7 @@ If it is a legitimate change, you can
 export GOLIAC_GITHUB_APP_ORGANIZATION=<your organization>
 export GOLIAC_GITHUB_APP_ID=<github app id>
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=<github app private key filename>
-GOLIAC_MAX_CHANGESETS_OVERRIDE=true ./goliac apply <github teams url> <branch>
+GOLIAC_MAX_CHANGESETS_OVERRIDE=true ./goliac apply <goliac-team url> <branch>
 ```
 
 For example:
@@ -22,7 +22,7 @@ For example:
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 export GOLIAC_GITHUB_APP_ID=123456
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=github-app-private-key.pem
-GOLIAC_MAX_CHANGESETS_OVERRIDE=true ./goliac apply https://github.com/goliac-project/teams main
+GOLIAC_MAX_CHANGESETS_OVERRIDE=true ./goliac apply https://github.com/goliac-project/goliac-teams main
 ```
 
 Note: it is possible that Goliac will be a bit confused after your force changes. You will certainly need to restart Goliac (app/kubernetes pod) just after running this command,
