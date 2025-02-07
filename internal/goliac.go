@@ -319,6 +319,8 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 	// if the repo was just archived in a previous commit and we "resume it"
 	// so we keep a track of all repos that we want to archive until the end of the process
 	reposToArchive := make(map[string]*engine.GithubRepoComparable)
+	// map[directory]*entity.Repository
+	reposToRename := make(map[string]*entity.Repository)
 	var unmanaged *engine.UnmanagedResources
 
 	ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
@@ -331,7 +333,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 
 	// the repo has already been cloned (to HEAD) and validated (see loadAndValidateGoliacOrganization)
 	// we can now apply the changes to the github team repository
-	unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, g.repoconfig.AdminTeam, reposToArchive)
+	unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, g.repoconfig.AdminTeam, reposToArchive, reposToRename)
 	if err != nil {
 		return unmanaged, fmt.Errorf("error when reconciliating: %v", err)
 	}
@@ -349,13 +351,13 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 		return unmanaged, err
 	}
 
-	// if we have repos to create as archived
-	if len(reposToArchive) > 0 && !dryrun {
+	// if we have repos to create as archived or to rename
+	if (len(reposToArchive) > 0 || len(reposToRename) > 0) && !dryrun {
 		reposToArchiveList := make([]string, 0)
 		for reponame := range reposToArchive {
 			reposToArchiveList = append(reposToArchiveList, reponame)
 		}
-		err = g.local.ArchiveRepos(reposToArchiveList, accessToken, branch, GOLIAC_GIT_TAG)
+		err = g.local.UpdateRepos(reposToArchiveList, reposToRename, accessToken, branch, GOLIAC_GIT_TAG)
 		if err != nil {
 			return unmanaged, fmt.Errorf("error when archiving repos: %v", err)
 		}

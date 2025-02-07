@@ -2170,6 +2170,29 @@ func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, dryrun bool, re
 	}
 
 }
+func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, dryrun bool, reponame string, newname string) {
+	// update repository
+	// https://docs.github.com/fr/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, reponame),
+			"",
+			"PATCH",
+			map[string]interface{}{"name": newname},
+		)
+		if err != nil {
+			logrus.Errorf("failed to rename the repository %s (to %s): %v. %s", reponame, newname, err, string(body))
+		}
+	}
+
+	// update the repositories list
+	if r, ok := g.repositories[reponame]; ok {
+		delete(g.repositories, reponame)
+		r.Name = newname
+		g.repositories[reponame] = r
+	}
+}
 func (g *GoliacRemoteImpl) Begin(dryrun bool) {
 }
 func (g *GoliacRemoteImpl) Rollback(dryrun bool, err error) {
