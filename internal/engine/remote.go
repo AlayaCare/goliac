@@ -2184,13 +2184,25 @@ func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, dryrun bool, re
 		if err != nil {
 			logrus.Errorf("failed to rename the repository %s (to %s): %v. %s", reponame, newname, err, string(body))
 		}
-	}
 
-	// update the repositories list
-	if r, ok := g.repositories[reponame]; ok {
-		delete(g.repositories, reponame)
-		r.Name = newname
-		g.repositories[reponame] = r
+		// update the repositories list
+		if r, ok := g.repositories[reponame]; ok {
+			delete(g.repositoriesByRefId, r.RefId)
+			delete(g.repositories, reponame)
+			r.Name = newname
+			g.repositories[newname] = r
+			g.repositoriesByRefId[r.RefId] = r
+
+			for _, tr := range g.teamRepos {
+				for rname, r := range tr {
+					if rname == reponame {
+						delete(tr, rname)
+						r.Name = newname
+						tr[newname] = r
+					}
+				}
+			}
+		}
 	}
 }
 func (g *GoliacRemoteImpl) Begin(dryrun bool) {

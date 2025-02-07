@@ -204,6 +204,8 @@ func (m *MutableGoliacRemoteImpl) DeleteRepository(reponame string) {
 
 func (m *MutableGoliacRemoteImpl) RenameRepository(reponame string, newname string) {
 	r := m.repositories[reponame]
+
+	// it is not supposed to be nil
 	if r == nil {
 		return
 	}

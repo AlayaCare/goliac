@@ -362,9 +362,34 @@ type GithubRepoComparable struct {
  * It returns the list of deleted repos that must not be deleted but archived
  */
 func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, dryrun bool, toArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) error {
-	ghRepos := remote.Repositories()
+
+	// let's start with the local cloned github-teams repo
+	lRepos := make(map[string]*GithubRepoComparable)
+
+	localRepositories := make(map[string]*entity.Repository)
+	for reponame, repo := range local.Repositories() {
+
+		// we rename the repository before we start to reconciliate
+		if repo.RenameTo != "" {
+			renamedRepo := *repo
+			renamedRepo.Name = repo.RenameTo
+			renamedRepo.RenameTo = ""
+			reponame = repo.RenameTo
+
+			r.RenameRepository(ctx, dryrun, remote, repo.Name, repo.RenameTo)
+
+			// in the post action we have to also update the git repository
+			reposToRename[repo.DirectoryPath] = repo
+			repo = &renamedRepo
+		}
+
+		localRepositories[reponame] = repo
+	}
+
+	// let's get the remote now
 	rRepos := make(map[string]*GithubRepoComparable)
 
+	ghRepos := remote.Repositories()
 	for k, v := range ghRepos {
 		repo := &GithubRepoComparable{
 			BoolProperties:      map[string]bool{},
@@ -405,26 +430,6 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 				}
 			}
 		}
-	}
-
-	lRepos := make(map[string]*GithubRepoComparable)
-
-	localRepositories := make(map[string]*entity.Repository)
-	for reponame, repo := range local.Repositories() {
-
-		// we rename the repository before we start to reconciliate
-		if repo.RenameTo != "" {
-			renamedRepo := *repo
-			renamedRepo.Name = repo.RenameTo
-			renamedRepo.RenameTo = ""
-
-			r.RenameRepository(ctx, dryrun, remote, repo.Name, repo.RenameTo)
-
-			reposToRename[repo.DirectoryPath] = repo
-			repo = &renamedRepo
-		}
-
-		localRepositories[reponame] = repo
 	}
 
 	// adding the teams repo
