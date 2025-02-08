@@ -131,7 +131,7 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 
 func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teamspath string, usermap map[string]string, adminteam string, usersOnly bool) error {
 	teamsRepositories := s.remote.TeamRepositories(ctx)
-	teams := s.remote.Teams(ctx)
+	teams := s.remote.Teams(ctx, false)
 	teamsSlugByName := s.remote.TeamSlugByName(ctx)
 
 	teamsNameBySlug := make(map[string]string)

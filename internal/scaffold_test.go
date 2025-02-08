@@ -39,7 +39,7 @@ func (s *ScaffoldGoliacRemoteMock) TeamSlugByName(ctx context.Context) map[strin
 	}
 	return slugbyname
 }
-func (s *ScaffoldGoliacRemoteMock) Teams(ctx context.Context) map[string]*engine.GithubTeam {
+func (s *ScaffoldGoliacRemoteMock) Teams(ctx context.Context, current bool) map[string]*engine.GithubTeam {
 	return s.teams
 }
 func (s *ScaffoldGoliacRemoteMock) Repositories(ctx context.Context) map[string]*engine.GithubRepository {

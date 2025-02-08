@@ -403,7 +403,7 @@ func (e *GoliacRemoteExecutorMock) TeamSlugByName(ctx context.Context) map[strin
 	}
 }
 
-func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context) map[string]*engine.GithubTeam {
+func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context, current bool) map[string]*engine.GithubTeam {
 	return map[string]*engine.GithubTeam{
 		"team1": {
 			Slug:        "team1",

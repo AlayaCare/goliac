@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-git/go-billy/v5"
+	"github.com/gosimple/slug"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/Alayacare/goliac/internal/engine"
@@ -38,7 +39,8 @@ func (g *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 	return g.rulesets
 }
 
-func fixtureGoliacLocal() *GoliacLocalMock {
+func fixtureGoliacLocal() (*GoliacLocalMock, *GoliacRemoteMock) {
+	// local mock
 	l := GoliacLocalMock{
 		teams:         make(map[string]*entity.Team),
 		repositories:  make(map[string]*entity.Repository),
@@ -82,8 +84,15 @@ func fixtureGoliacLocal() *GoliacLocalMock {
 	mixteam.Spec.Owners = []string{"user1"}
 	mixteam.Spec.Members = []string{"userE1"}
 
+	externallyManaged := entity.Team{}
+	externallyManaged.Name = "externallyManaged"
+	externallyManaged.Spec.ExternallyManaged = true
+	externallyManaged.Spec.Owners = []string{}
+	externallyManaged.Spec.Members = []string{}
+
 	l.teams["ateam"] = &ateam
 	l.teams["mixteam"] = &mixteam
+	l.teams["externallyManaged"] = &externallyManaged
 
 	// repositories
 	repoA := entity.Repository{}
@@ -103,11 +112,31 @@ func fixtureGoliacLocal() *GoliacLocalMock {
 	l.repositories["repoA"] = &repoA
 	l.repositories["repoB"] = &repoB
 
-	return &l
+	// remote mock
+	r := GoliacRemoteMock{
+		teams: make(map[string]*engine.GithubTeam),
+	}
+
+	r.teams[slug.Make("externallyManaged")] = &engine.GithubTeam{
+		Name:    "externallyManaged",
+		Slug:    slug.Make("externallyManaged"),
+		Members: []string{"github1"},
+	}
+
+	return &l, &r
+}
+
+type GoliacRemoteMock struct {
+	teams map[string]*engine.GithubTeam
+}
+
+func (g *GoliacRemoteMock) Teams(ctx context.Context, current bool) map[string]*engine.GithubTeam {
+	return g.teams
 }
 
 type GoliacMock struct {
-	local engine.GoliacLocalResources
+	local  engine.GoliacLocalResources
+	remote engine.GoliacRemoteResources
 }
 
 func (g *GoliacMock) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repo string, branch string) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
@@ -129,19 +158,23 @@ func (g *GoliacMock) FlushCache() {
 func (g *GoliacMock) GetLocal() engine.GoliacLocalResources {
 	return g.local
 }
+func (g *GoliacMock) GetRemote() engine.GoliacRemoteResources {
+	return g.remote
+}
 func (g *GoliacMock) SetRemoteObservability(feedback observability.RemoteObservability) error {
 	return nil
 }
-func NewGoliacMock(local engine.GoliacLocalResources) Goliac {
+func NewGoliacMock(local engine.GoliacLocalResources, remote engine.GoliacRemoteResources) Goliac {
 	mock := GoliacMock{
-		local: local,
+		local:  local,
+		remote: remote,
 	}
 	return &mock
 }
 
 func TestAppGetUsers(t *testing.T) {
-	fixture := fixtureGoliacLocal()
-	goliac := NewGoliacMock(fixture)
+	localfixture, remotefixture := fixtureGoliacLocal()
+	goliac := NewGoliacMock(localfixture, remotefixture)
 	now := time.Now()
 	server := GoliacServerImpl{
 		goliac:        goliac,
@@ -154,7 +187,7 @@ func TestAppGetUsers(t *testing.T) {
 		res := server.GetStatus(app.GetStatusParams{})
 		payload := res.(*app.GetStatusOK)
 		assert.Equal(t, int64(2), payload.Payload.NbRepos)
-		assert.Equal(t, int64(2), payload.Payload.NbTeams)
+		assert.Equal(t, int64(3), payload.Payload.NbTeams)
 		assert.Equal(t, int64(3), payload.Payload.NbUsers)
 		assert.Equal(t, int64(1), payload.Payload.NbUsersExternal)
 	})
@@ -174,8 +207,8 @@ func TestAppGetUsers(t *testing.T) {
 	})
 }
 func TestAppGetTeams(t *testing.T) {
-	fixture := fixtureGoliacLocal()
-	goliac := NewGoliacMock(fixture)
+	localfixture, remotefixture := fixtureGoliacLocal()
+	goliac := NewGoliacMock(localfixture, remotefixture)
 	now := time.Now()
 	server := GoliacServerImpl{
 		goliac:        goliac,
@@ -187,7 +220,7 @@ func TestAppGetTeams(t *testing.T) {
 	t.Run("happy path: get teams", func(t *testing.T) {
 		res := server.GetTeams(app.GetTeamsParams{})
 		payload := res.(*app.GetTeamsOK)
-		assert.Equal(t, 2, len(payload.Payload))
+		assert.Equal(t, 3, len(payload.Payload))
 	})
 
 	t.Run("happy path: get team ", func(t *testing.T) {
@@ -201,11 +234,19 @@ func TestAppGetTeams(t *testing.T) {
 		res := server.GetTeam(app.GetTeamParams{TeamID: "unknown"})
 		assert.NotZero(t, res.(*app.GetTeamDefault))
 	})
+
+	t.Run("happy path: get externally managemed team members", func(t *testing.T) {
+		res := server.GetTeam(app.GetTeamParams{TeamID: "externallyManaged"})
+		payload := res.(*app.GetTeamOK)
+		assert.Equal(t, "externallyManaged", payload.Payload.Name)
+		assert.Equal(t, 1, len(payload.Payload.Owners))
+		assert.Equal(t, 0, len(payload.Payload.Members))
+	})
 }
 
 func TestAppGetRepositories(t *testing.T) {
-	fixture := fixtureGoliacLocal()
-	goliac := NewGoliacMock(fixture)
+	localfixture, remotefixture := fixtureGoliacLocal()
+	goliac := NewGoliacMock(localfixture, remotefixture)
 	now := time.Now()
 	server := GoliacServerImpl{
 		goliac:        goliac,

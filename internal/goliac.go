@@ -44,6 +44,7 @@ type Goliac interface {
 	FlushCache()
 
 	GetLocal() engine.GoliacLocalResources
+	GetRemote() engine.GoliacRemoteResources
 }
 
 type GoliacImpl struct {
@@ -52,7 +53,7 @@ type GoliacImpl struct {
 	localGithubClient  github.GitHubClient // github client for team repository operations
 	remoteGithubClient github.GitHubClient // github client for admin operations
 	repoconfig         *config.RepositoryConfig
-	feedback           observability.RemoteObservability
+	feedback           observability.RemoteObservability // mostly used for UI progressbar
 }
 
 func NewGoliacImpl() (Goliac, error) {
@@ -92,6 +93,10 @@ func NewGoliacImpl() (Goliac, error) {
 
 func (g *GoliacImpl) GetLocal() engine.GoliacLocalResources {
 	return g.local
+}
+
+func (g *GoliacImpl) GetRemote() engine.GoliacRemoteResources {
+	return g.remote
 }
 
 func (g *GoliacImpl) SetRemoteObservability(feedback observability.RemoteObservability) error {
