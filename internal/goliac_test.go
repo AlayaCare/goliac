@@ -405,25 +405,25 @@ func (e *GoliacRemoteExecutorMock) TeamSlugByName(ctx context.Context) map[strin
 
 func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context) map[string]*engine.GithubTeam {
 	return map[string]*engine.GithubTeam{
-		"team1": &engine.GithubTeam{
+		"team1": {
 			Slug:        "team1",
 			Name:        "team1",
 			Members:     e.teams1Members,
 			Maintainers: []string{},
 		},
-		"team2": &engine.GithubTeam{
+		"team2": {
 			Slug:        "team2",
 			Name:        "team2",
 			Members:     e.teams2Members,
 			Maintainers: []string{},
 		},
-		"team1-goliac-owners": &engine.GithubTeam{
+		"team1-goliac-owners": {
 			Slug:        "team1-goliac-owners",
 			Name:        "team1-goliac-owners",
 			Members:     e.teams1Members,
 			Maintainers: []string{},
 		},
-		"team2-goliac-owners": &engine.GithubTeam{
+		"team2-goliac-owners": {
 			Slug:        "team2-goliac-owners",
 			Name:        "team2-goliac-owners",
 			Members:     e.teams2Members,
@@ -433,7 +433,7 @@ func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context) map[string]*engine
 }
 func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]*engine.GithubRepository {
 	return map[string]*engine.GithubRepository{
-		"src": &engine.GithubRepository{
+		"src": {
 			Name:  "src", // this is the "teams" repository
 			Id:    0,
 			RefId: "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
@@ -446,7 +446,7 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 			},
 			ExternalUsers: map[string]string{},
 		},
-		"repo1": &engine.GithubRepository{
+		"repo1": {
 			Name:  "repo1",
 			Id:    1,
 			RefId: "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
@@ -459,7 +459,7 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 			},
 			ExternalUsers: map[string]string{},
 		},
-		"repo2": &engine.GithubRepository{
+		"repo2": {
 			Name:  "repo2",
 			Id:    2,
 			RefId: "MDEwOlJlcG9zaXRvcnkaNTcwNDA4Ng==",

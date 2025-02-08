@@ -404,6 +404,27 @@ func (m *MockGithubClient) CallRestAPI(ctx context.Context, endpoint, parameters
 		}
 		return []byte(fmt.Sprintf(`[{"name":"team_1","permission":"push","slug":"slug-%d"},{"name":"team_2","permission":"push","slug":"slug-2"}]`, repoId)), nil
 	}
+	if strings.HasSuffix(endpoint, "installations") {
+
+		type Installation struct {
+			TotalCount    int `json:"total_count"`
+			Installations []struct {
+				Id      int    `json:"id"`
+				AppId   int    `json:"app_id"`
+				Name    string `json:"name"`
+				AppSlug string `json:"app_slug"`
+			} `json:"installations"`
+		}
+
+		installation := Installation{
+			TotalCount: 0,
+		}
+		body, err := json.Marshal(&installation)
+		if err == nil {
+			return body, nil
+		}
+
+	}
 	return nil, nil
 }
 

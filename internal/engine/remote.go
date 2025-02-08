@@ -682,7 +682,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 	logrus.Debug("loading appIds")
 	appIds := map[string]int{}
 	type Installation struct {
-		TotalClount   int `json:"total_count"`
+		TotalCount    int `json:"total_count"`
 		Installations []struct {
 			Id      int    `json:"id"`
 			AppId   int    `json:"app_id"`
@@ -703,7 +703,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 	}
 
 	var installations Installation
-	json.Unmarshal(body, &installations)
+	err = json.Unmarshal(body, &installations)
 	if err != nil {
 		return nil, fmt.Errorf("not able to list github apps: %v", err)
 	}
@@ -712,9 +712,9 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 		appIds[i.AppSlug] = i.AppId
 	}
 
-	if installations.TotalClount > 30 {
+	if installations.TotalCount > 30 {
 		// we need to paginate
-		for i := 2; i <= (installations.TotalClount/30)+1; i++ {
+		for i := 2; i <= (installations.TotalCount/30)+1; i++ {
 			body, err := g.client.CallRestAPI(ctx,
 				fmt.Sprintf("/orgs/%s/installations", config.Config.GithubAppOrganization),
 				fmt.Sprintf("page=%d&per_page=30", i),
@@ -726,7 +726,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 			}
 
 			var installations Installation
-			json.Unmarshal(body, &installations)
+			err = json.Unmarshal(body, &installations)
 			if err != nil {
 				return nil, fmt.Errorf("not able to list github apps: %v", err)
 			}
