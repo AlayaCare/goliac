@@ -68,7 +68,7 @@ In this last example:
 - the repository allows to update the branch
 - other teams have write (`anotherteamA`, `anotherteamB`) or read (`anotherteamC`, `anotherteamD`) access
 
-## Renale a repository
+## Rename a repository
 
 You need to add a `renameTo` to the repository, and Goliac will rename it (and update the `goliac-teams` repository):
 
