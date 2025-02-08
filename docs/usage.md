@@ -9,7 +9,7 @@ As a regular user, you want to be able to
 
 If you want to create a new team (like `foobar`), you need to create a PR with a `/teams/foobar/team.yaml` file:
 
-```
+```yaml
 apiVersion: v1
 kind: Team
 name: foobar
@@ -32,7 +32,7 @@ The users name used are the one defined in the `/users` sub directories (like `a
 
 On a given team subdirectory you can create a repository definition via a yaml file (like `/teams/foobar/awesome-repository.yaml`):
 
-```
+```yaml
 apiVersion: v1
 kind: Repository
 name: awesome-repository
@@ -44,7 +44,7 @@ This will create a `awesome-repository` repository under your organization, that
 
 You can of course tweak that:
 
-```
+```yaml
 apiVersion: v1
 kind: Repository
 name: awesome-repository
@@ -67,6 +67,21 @@ In this last example:
 - the repository will delete the branch on merge
 - the repository allows to update the branch
 - other teams have write (`anotherteamA`, `anotherteamB`) or read (`anotherteamC`, `anotherteamD`) access
+
+## Renale a repository
+
+You need to add a `renameTo` to the repository, and Goliac will rename it (and update the `goliac-teams` repository):
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  public: true
+  ...
+renameTo: anotherName
+```
+
 
 ## Archive a repository
 

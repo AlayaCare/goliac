@@ -682,7 +682,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 	logrus.Debug("loading appIds")
 	appIds := map[string]int{}
 	type Installation struct {
-		TotalClount   int `json:"total_count"`
+		TotalCount    int `json:"total_count"`
 		Installations []struct {
 			Id      int    `json:"id"`
 			AppId   int    `json:"app_id"`
@@ -703,7 +703,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 	}
 
 	var installations Installation
-	json.Unmarshal(body, &installations)
+	err = json.Unmarshal(body, &installations)
 	if err != nil {
 		return nil, fmt.Errorf("not able to list github apps: %v", err)
 	}
@@ -712,9 +712,9 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 		appIds[i.AppSlug] = i.AppId
 	}
 
-	if installations.TotalClount > 30 {
+	if installations.TotalCount > 30 {
 		// we need to paginate
-		for i := 2; i <= (installations.TotalClount/30)+1; i++ {
+		for i := 2; i <= (installations.TotalCount/30)+1; i++ {
 			body, err := g.client.CallRestAPI(ctx,
 				fmt.Sprintf("/orgs/%s/installations", config.Config.GithubAppOrganization),
 				fmt.Sprintf("page=%d&per_page=30", i),
@@ -726,7 +726,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 			}
 
 			var installations Installation
-			json.Unmarshal(body, &installations)
+			err = json.Unmarshal(body, &installations)
 			if err != nil {
 				return nil, fmt.Errorf("not able to list github apps: %v", err)
 			}
@@ -2169,6 +2169,41 @@ func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, dryrun bool, re
 		delete(g.repositories, reponame)
 	}
 
+}
+func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, dryrun bool, reponame string, newname string) {
+	// update repository
+	// https://docs.github.com/fr/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/repos/%s/%s", config.Config.GithubAppOrganization, reponame),
+			"",
+			"PATCH",
+			map[string]interface{}{"name": newname},
+		)
+		if err != nil {
+			logrus.Errorf("failed to rename the repository %s (to %s): %v. %s", reponame, newname, err, string(body))
+		}
+
+		// update the repositories list
+		if r, ok := g.repositories[reponame]; ok {
+			delete(g.repositoriesByRefId, r.RefId)
+			delete(g.repositories, reponame)
+			r.Name = newname
+			g.repositories[newname] = r
+			g.repositoriesByRefId[r.RefId] = r
+
+			for _, tr := range g.teamRepos {
+				for rname, r := range tr {
+					if rname == reponame {
+						delete(tr, rname)
+						r.Name = newname
+						tr[newname] = r
+					}
+				}
+			}
+		}
+	}
 }
 func (g *GoliacRemoteImpl) Begin(dryrun bool) {
 }

@@ -148,43 +148,11 @@ spec:
 // - missing user4 in the teams repo
 // - using the `fromgithubsaml` user sync plugin
 func repoFixture2(fs billy.Filesystem) {
-	fs.MkdirAll("teams", 0755)
-	fs.MkdirAll("archived", 0755)
+	repoFixture1(fs)
 
-	// create users
-	fs.MkdirAll("users/external", 0755)
-	fs.MkdirAll("users/org", 0755)
-	fs.MkdirAll("users/protected", 0755)
-	utils.WriteFile(fs, "users/org/user1.yaml", []byte(`apiVersion: v1
-kind: User
-name: user1
-spec:
-  githubID: github1
-`), 0644)
-	utils.WriteFile(fs, "users/org/user2.yaml", []byte(`apiVersion: v1
-kind: User
-name: user2
-spec:
-  githubID: github2
-`), 0644)
-	utils.WriteFile(fs, "users/org/user3.yaml", []byte(`apiVersion: v1
-kind: User
-name: user3
-spec:
-  githubID: github3
-`), 0644)
+	fs.Remove("users/org/user4.yaml")
 
-	// create teams
-	fs.MkdirAll("teams/team1", 0755)
-	utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`apiVersion: v1
-kind: Team
-name: team1
-spec:
-  owners:
-    - user1
-    - user2
-`), 0644)
-	fs.MkdirAll("teams/team2", 0755)
+	// without user4 owner
 	utils.WriteFile(fs, "teams/team2/team.yaml", []byte(`apiVersion: v1
 kind: Team
 name: team2
@@ -193,61 +161,18 @@ spec:
     - user3
 `), 0644)
 
-	// create repositories
-	utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`apiVersion: v1
-kind: Repository
-name: repo1
-`), 0644)
+}
+
+// create a working simple teams repository
+func repoFixtureRename(fs billy.Filesystem) {
+	repoFixture1(fs)
+
 	utils.WriteFile(fs, "teams/team2/repo2.yaml", []byte(`apiVersion: v1
 kind: Repository
 name: repo2
+renameTo: repo3
 `), 0644)
 
-	// create goliac.yaml
-	utils.WriteFile(fs, "goliac.yaml", []byte(`admin_team: admin
-
-rulesets:
-  - pattern: .*
-    ruleset: default
-
-max_changesets: 50
-archive_on_delete: true
-
-destructive_operations:
-  repositories: false
-  teams: false
-  users: false
-  rulesets: false
-
-usersync:
-  plugin: fromgithubsaml
-`), 0644)
-	// rulesets
-	fs.MkdirAll("rulesets", 0755)
-	utils.WriteFile(fs, "rulesets/default.yaml", []byte(`apiVersion: v1
-kind: Ruleset
-name: default
-spec:
-  enforcement: active
-  bypassapps:
-    - appname: goliac-project-app
-      mode: always
-  on:
-    include: 
-      - "~DEFAULT_BRANCH"
-
-  rules:
-    - ruletype: pull_request
-      parameters:
-        requiredApprovingReviewCount: 1
-`), 0644)
-
-	// create .github/CODEOWNERS
-	utils.WriteFile(fs, ".github/CODEOWNERS", []byte(`# DO NOT MODIFY THIS FILE MANUALLY
-* @goliac-project/admin
-/teams/team1/* @goliac-project/team1-goliac-owners @goliac-project/admin
-/teams/team2/* @goliac-project/team2-goliac-owners @goliac-project/admin
-`), 0644)
 }
 
 func createTeamRepo(src billy.Filesystem, fixtureFunc FixtureFunc) (*git.Repository, error) {
@@ -480,25 +405,25 @@ func (e *GoliacRemoteExecutorMock) TeamSlugByName(ctx context.Context) map[strin
 
 func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context) map[string]*engine.GithubTeam {
 	return map[string]*engine.GithubTeam{
-		"team1": &engine.GithubTeam{
+		"team1": {
 			Slug:        "team1",
 			Name:        "team1",
 			Members:     e.teams1Members,
 			Maintainers: []string{},
 		},
-		"team2": &engine.GithubTeam{
+		"team2": {
 			Slug:        "team2",
 			Name:        "team2",
 			Members:     e.teams2Members,
 			Maintainers: []string{},
 		},
-		"team1-goliac-owners": &engine.GithubTeam{
+		"team1-goliac-owners": {
 			Slug:        "team1-goliac-owners",
 			Name:        "team1-goliac-owners",
 			Members:     e.teams1Members,
 			Maintainers: []string{},
 		},
-		"team2-goliac-owners": &engine.GithubTeam{
+		"team2-goliac-owners": {
 			Slug:        "team2-goliac-owners",
 			Name:        "team2-goliac-owners",
 			Members:     e.teams2Members,
@@ -508,7 +433,7 @@ func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context) map[string]*engine
 }
 func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]*engine.GithubRepository {
 	return map[string]*engine.GithubRepository{
-		"src": &engine.GithubRepository{
+		"src": {
 			Name:  "src", // this is the "teams" repository
 			Id:    0,
 			RefId: "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
@@ -521,7 +446,7 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 			},
 			ExternalUsers: map[string]string{},
 		},
-		"repo1": &engine.GithubRepository{
+		"repo1": {
 			Name:  "repo1",
 			Id:    1,
 			RefId: "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
@@ -534,7 +459,7 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 			},
 			ExternalUsers: map[string]string{},
 		},
-		"repo2": &engine.GithubRepository{
+		"repo2": {
 			Name:  "repo2",
 			Id:    2,
 			RefId: "MDEwOlJlcG9zaXRvcnkaNTcwNDA4Ng==",
@@ -698,6 +623,10 @@ func (e *GoliacRemoteExecutorMock) DeleteRepository(ctx context.Context, dryrun 
 	fmt.Println("*** DeleteRepository", reponame)
 	e.nbChanges++
 }
+func (e *GoliacRemoteExecutorMock) RenameRepository(ctx context.Context, dryrun bool, reponame string, newname string) {
+	fmt.Println("*** RenameRepository", reponame, newname)
+	e.nbChanges++
+}
 
 func (e *GoliacRemoteExecutorMock) Begin(dryrun bool) {
 }
@@ -749,6 +678,44 @@ func TestGoliacApply(t *testing.T) {
 		assert.Equal(t, len(warns), 0)
 		assert.NotNil(t, unmanaged)
 		assert.Equal(t, 0, remote.nbChanges)
+	})
+
+	t.Run("happy path: rename a repo", func(t *testing.T) {
+
+		fs := memfs.New()
+		fs.MkdirAll("src", 0755)        // create a fake bare repository
+		fs.MkdirAll("teams", 0755)      // create a fake cloned repository
+		fs.MkdirAll(os.TempDir(), 0755) // need a tmp folder
+		srcsFs, _ := fs.Chroot("src")
+		clonedFs, _ := fs.Chroot("teams")
+		_, _, err := helperCreateAndClone(fs, srcsFs, clonedFs, repoFixtureRename)
+		assert.Nil(t, err)
+
+		local := engine.NewGoliacLocalImpl()
+
+		errs, warns := local.LoadAndValidateLocal(clonedFs)
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+
+		githubClient := NewGitHubClientMock()
+		remote := NewGoliacRemoteExecutorMock().(*GoliacRemoteExecutorMock)
+
+		usersync.InitPlugins(githubClient)
+
+		goliac := GoliacImpl{
+			local:              local,
+			remote:             remote,
+			remoteGithubClient: githubClient,
+			localGithubClient:  githubClient,
+			repoconfig:         &config.RepositoryConfig{},
+		}
+
+		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///src", "master")
+		assert.Nil(t, err)
+		assert.Equal(t, len(errs), 0)
+		assert.Equal(t, len(warns), 0)
+		assert.NotNil(t, unmanaged)
+		assert.Equal(t, 1, remote.nbChanges) // 1 team renamed
 	})
 
 	t.Run("happy path: user4 to sync", func(t *testing.T) {

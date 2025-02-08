@@ -25,7 +25,7 @@ type UnmanagedResources struct {
  * GoliacReconciliator is here to sync the local state to the remote state
  */
 type GoliacReconciliator interface {
-	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable) (*UnmanagedResources, error)
+	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error)
 }
 
 type GoliacReconciliatorImpl struct {
@@ -42,7 +42,7 @@ func NewGoliacReconciliatorImpl(executor ReconciliatorExecutor, repoconfig *conf
 	}
 }
 
-func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable) (*UnmanagedResources, error) {
+func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error) {
 	rremote := NewMutableGoliacRemoteImpl(ctx, remote)
 	r.Begin(ctx, dryrun)
 	unmanaged := &UnmanagedResources{
@@ -66,7 +66,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 		return nil, err
 	}
 
-	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, dryrun, reposToArchive)
+	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, dryrun, reposToArchive, reposToRename)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
 		return nil, err
@@ -361,10 +361,35 @@ type GithubRepoComparable struct {
  * This function sync repositories and team's repositories permissions
  * It returns the list of deleted repos that must not be deleted but archived
  */
-func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, dryrun bool, toArchive map[string]*GithubRepoComparable) error {
-	ghRepos := remote.Repositories()
+func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, dryrun bool, toArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) error {
+
+	// let's start with the local cloned github-teams repo
+	lRepos := make(map[string]*GithubRepoComparable)
+
+	localRepositories := make(map[string]*entity.Repository)
+	for reponame, repo := range local.Repositories() {
+
+		// we rename the repository before we start to reconciliate
+		if repo.RenameTo != "" {
+			renamedRepo := *repo
+			renamedRepo.Name = repo.RenameTo
+			renamedRepo.RenameTo = ""
+			reponame = repo.RenameTo
+
+			r.RenameRepository(ctx, dryrun, remote, repo.Name, repo.RenameTo)
+
+			// in the post action we have to also update the git repository
+			reposToRename[repo.DirectoryPath] = repo
+			repo = &renamedRepo
+		}
+
+		localRepositories[reponame] = repo
+	}
+
+	// let's get the remote now
 	rRepos := make(map[string]*GithubRepoComparable)
 
+	ghRepos := remote.Repositories()
 	for k, v := range ghRepos {
 		repo := &GithubRepoComparable{
 			BoolProperties:      map[string]bool{},
@@ -405,13 +430,6 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 				}
 			}
 		}
-	}
-
-	lRepos := make(map[string]*GithubRepoComparable)
-
-	localRepositories := make(map[string]*entity.Repository)
-	for reponame, repo := range local.Repositories() {
-		localRepositories[reponame] = repo
 	}
 
 	// adding the teams repo
@@ -841,6 +859,15 @@ func (r *GoliacReconciliatorImpl) DeleteRepository(ctx context.Context, dryrun b
 		r.unmanaged.Repositories[reponame] = true
 	}
 }
+
+func (r *GoliacReconciliatorImpl) RenameRepository(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, newname string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "rename_repository"}).Infof("repositoryname: %s newname: %s", reponame, newname)
+	remote.RenameRepository(reponame, newname)
+	if r.executor != nil {
+		r.executor.RenameRepository(ctx, dryrun, reponame, newname)
+	}
+}
+
 func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue bool) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_update_bool_property"}).Infof("repositoryname: %s %s:%v", reponame, propertyName, propertyValue)
 	remote.UpdateRepositoryUpdateBoolProperty(reponame, propertyName, propertyValue)

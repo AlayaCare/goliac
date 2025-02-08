@@ -25,6 +25,7 @@ type ReconciliatorExecutor interface {
 	UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string)
 	UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, reponame string, githubid string)
 	DeleteRepository(ctx context.Context, dryrun bool, reponame string)
+	RenameRepository(ctx context.Context, dryrun bool, reponame string, newname string)
 
 	Begin(dryrun bool)
 	Rollback(dryrun bool, err error)

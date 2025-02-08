@@ -202,6 +202,28 @@ func (m *MutableGoliacRemoteImpl) DeleteRepository(reponame string) {
 	delete(m.repositories, reponame)
 }
 
+func (m *MutableGoliacRemoteImpl) RenameRepository(reponame string, newname string) {
+	r := m.repositories[reponame]
+
+	// it is not supposed to be nil
+	if r == nil {
+		return
+	}
+	delete(m.repositories, reponame)
+	r.Name = newname
+	m.repositories[newname] = r
+
+	for _, tr := range m.teamRepos {
+		for rname, r := range tr {
+			if rname == reponame {
+				delete(tr, rname)
+				r.Name = newname
+				tr[newname] = r
+			}
+		}
+	}
+}
+
 /*
 UpdateRepositoryUpdateBoolProperty is used for
 - private

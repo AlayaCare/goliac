@@ -50,8 +50,8 @@ type GoliacLocalGit interface {
 	LoadAndValidate() ([]error, []entity.Warning)
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
 	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error
-	// whenever repos are not deleted but archived
-	ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error
+	// whenever repos are not deleted but archived, or need to be renamed
+	UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, accesstoken string, branch string, tagname string) error
 	// whenever the users list is changing, reload users and teams, and commit them
 	// (force will bypass the max_changesets check)
 	// return true if some changes were done
@@ -349,7 +349,7 @@ func (g *GoliacLocalImpl) buildTeamPath(teamname string) string {
 	return g.buildTeamPath(*team.ParentTeam) + "/" + teamname
 }
 
-func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken string, branch string, tagname string) error {
+func (g *GoliacLocalImpl) UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, accesstoken string, branch string, tagname string) error {
 	if g.repo == nil {
 		return fmt.Errorf("git repository not cloned")
 	}
@@ -382,54 +382,101 @@ func (g *GoliacLocalImpl) ArchiveRepos(reposToArchiveList []string, accesstoken 
 		return err
 	}
 
-	err = w.Filesystem.MkdirAll("archived", 0755)
-	if err != nil {
-		return err
-	}
-
-	for _, reponame := range reposToArchiveList {
-		repo := entity.Repository{}
-		repo.ApiVersion = "v1"
-		repo.Kind = "Repository"
-		repo.Name = reponame
-
-		filename := filepath.Join("archived", reponame+".yaml")
-		file, err := w.Filesystem.Create(filename)
-		if err != nil {
-			return fmt.Errorf("not able to create file %s: %v", filename, err)
-		}
-		defer file.Close()
-
-		encoder := yaml.NewEncoder(file)
-		encoder.SetIndent(2)
-		err = encoder.Encode(&repo)
-		if err != nil {
-			return fmt.Errorf("not able to write to file %s: %v", filename, err)
-		}
-
-		_, err = w.Add(filename)
+	if len(reposToArchiveList) != 0 {
+		err = w.Filesystem.MkdirAll("archived", 0755)
 		if err != nil {
 			return err
 		}
 
-		// last, if the repository was not present in Goliac (it was removed from Goliac
-		// but still present in Github, and we want to archive it), we must add it back
-		// to the list of repositories we manage
-		if _, ok := g.repositories[reponame]; !ok {
-			g.repositories[reponame] = &repo
+		for _, reponame := range reposToArchiveList {
+			repo := entity.Repository{}
+			repo.ApiVersion = "v1"
+			repo.Kind = "Repository"
+			repo.Name = reponame
+
+			filename := filepath.Join("archived", reponame+".yaml")
+			file, err := w.Filesystem.Create(filename)
+			if err != nil {
+				return fmt.Errorf("not able to create file %s: %v", filename, err)
+			}
+			defer file.Close()
+
+			encoder := yaml.NewEncoder(file)
+			encoder.SetIndent(2)
+			err = encoder.Encode(&repo)
+			if err != nil {
+				return fmt.Errorf("not able to write to file %s: %v", filename, err)
+			}
+
+			_, err = w.Add(filename)
+			if err != nil {
+				return err
+			}
+
+			// last, if the repository was not present in Goliac (it was removed from Goliac
+			// but still present in Github, and we want to archive it), we must add it back
+			// to the list of repositories we manage
+			if _, ok := g.repositories[reponame]; !ok {
+				g.repositories[reponame] = &repo
+			}
+		}
+
+		_, err = w.Commit("moving deleted repositories as archived", &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "Goliac",
+				Email: config.Config.GoliacEmail,
+				When:  time.Now(),
+			},
+		})
+
+		if err != nil {
+			return err
 		}
 	}
 
-	_, err = w.Commit("moving deleted repositories as archived", &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  "Goliac",
-			Email: config.Config.GoliacEmail,
-			When:  time.Now(),
-		},
-	})
+	if len(reposToRename) != 0 {
 
-	if err != nil {
-		return err
+		for directoryPath, repository := range reposToRename {
+			newRepository := *repository
+			newRepository.Name = repository.RenameTo
+			newRepository.RenameTo = ""
+
+			filename := filepath.Join(directoryPath, newRepository.Name+".yaml")
+			file, err := w.Filesystem.Create(filename)
+			if err != nil {
+				return fmt.Errorf("not able to create file %s: %v", filename, err)
+			}
+			defer file.Close()
+
+			encoder := yaml.NewEncoder(file)
+			encoder.SetIndent(2)
+			err = encoder.Encode(&newRepository)
+			if err != nil {
+				return fmt.Errorf("not able to write to file %s: %v", filename, err)
+			}
+
+			_, err = w.Add(filename)
+			if err != nil {
+				return err
+			}
+
+			_, err = w.Remove(filepath.Join(directoryPath, repository.Name+".yaml"))
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = w.Commit("renaming repositories", &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "Goliac",
+				Email: config.Config.GoliacEmail,
+				When:  time.Now(),
+			},
+		})
+
+		if err != nil {
+			return err
+		}
 	}
 
 	err = g.repo.Push(&git.PushOptions{

@@ -204,6 +204,15 @@ func (g *GithubBatchExecutor) DeleteRepository(ctx context.Context, dryrun bool,
 	})
 }
 
+func (g *GithubBatchExecutor) RenameRepository(ctx context.Context, dryrun bool, reponame string, newname string) {
+	g.commands = append(g.commands, &GithubCommandRenameRepository{
+		client:   g.client,
+		dryrun:   dryrun,
+		reponame: reponame,
+		newname:  newname,
+	})
+}
+
 func (g *GithubBatchExecutor) AddRuleset(ctx context.Context, dryrun bool, ruleset *engine.GithubRuleSet) {
 	g.commands = append(g.commands, &GithubCommandAddRuletset{
 		client:  g.client,
@@ -290,6 +299,17 @@ type GithubCommandDeleteRepository struct {
 
 func (g *GithubCommandDeleteRepository) Apply(ctx context.Context) {
 	g.client.DeleteRepository(ctx, g.dryrun, g.reponame)
+}
+
+type GithubCommandRenameRepository struct {
+	client   engine.ReconciliatorExecutor
+	dryrun   bool
+	reponame string
+	newname  string
+}
+
+func (g *GithubCommandRenameRepository) Apply(ctx context.Context) {
+	g.client.RenameRepository(ctx, g.dryrun, g.reponame, g.newname)
 }
 
 type GithubCommandDeleteTeam struct {

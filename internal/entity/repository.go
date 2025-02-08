@@ -22,8 +22,10 @@ type Repository struct {
 		DeleteBranchOnMerge bool     `yaml:"delete_branch_on_merge,omitempty"`
 		AllowUpdateBranch   bool     `yaml:"allow_update_branch,omitempty"`
 	} `yaml:"spec,omitempty"`
-	Archived bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
-	Owner    *string `yaml:"owner,omitempty"`    // implicit. team name owning the repo (if any)
+	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
+	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
+	RenameTo      string  `yaml:"renameTo,omitempty"`
+	DirectoryPath string  `yaml:"-"` // used to know where to rename the repository
 }
 
 /*
@@ -41,6 +43,7 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
 	if err != nil {
 		return nil, err
 	}
+	repository.DirectoryPath = filepath.Dir(filename)
 
 	return repository, nil
 }

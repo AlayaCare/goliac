@@ -3,7 +3,6 @@ package config
 import (
 	"net/http"
 
-	negronilogrus "github.com/meatballhat/negroni-logrus"
 	"github.com/phyber/negroni-gzip/gzip"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
@@ -24,7 +23,7 @@ func SetupGlobalMiddleware(handler http.Handler) http.Handler {
 	}
 
 	if Config.MiddlewareVerboseLoggerEnabled {
-		middleware := negronilogrus.NewMiddlewareFromLogger(logrus.StandardLogger(), "goliac")
+		middleware := NewMiddlewareFromLogger(logrus.StandardLogger(), logrus.DebugLevel, "goliac")
 
 		for _, u := range Config.MiddlewareVerboseLoggerExcludeURLs {
 			middleware.ExcludeURL(u)
