@@ -98,6 +98,7 @@ type GoliacRemoteImpl struct {
 	ttlExpireAppIds       time.Time
 	isEnterprise          bool
 	feedback              observability.RemoteObservability
+	loadTeamsMutex        sync.Mutex
 }
 
 type GHESInfo struct {
@@ -334,9 +335,11 @@ Used to get the teams (and load it if needed)
 if current is true, it will return the current in memory teams without checking the TTL (useful for the UI)
 */
 func (g *GoliacRemoteImpl) Teams(ctx context.Context, current bool) map[string]*GithubTeam {
-	if current {
+	if current && len(g.teams) > 0 {
 		return g.teams
 	}
+	g.loadTeamsMutex.Lock()
+	defer g.loadTeamsMutex.Unlock()
 	if time.Now().After(g.ttlExpireTeams) {
 		teams, teamSlugByName, err := g.loadTeams(ctx)
 		if err == nil {
@@ -751,6 +754,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 	return appIds, nil
 }
 
+// Load from a github repository. continueOnError is used for scaffolding
 func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error {
 	var retErr error
 
@@ -767,10 +771,12 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 		g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
+	g.loadTeamsMutex.Lock()
 	if time.Now().After(g.ttlExpireTeams) {
 		teams, teamSlugByName, err := g.loadTeams(ctx)
 		if err != nil {
 			if !continueOnError {
+				g.loadTeamsMutex.Unlock()
 				return err
 			}
 			logrus.Debugf("Error loading teams: %v", err)
@@ -780,6 +786,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 		g.teamSlugByName = teamSlugByName
 		g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
+	g.loadTeamsMutex.Unlock()
 
 	if time.Now().After(g.ttlExpireUsers) {
 		users, err := g.loadOrgUsers(ctx)
