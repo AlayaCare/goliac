@@ -163,7 +163,7 @@ spec:
 
 ### Testing your IAC github repository
 
-Before commiting your new structure you can use `goliac verify <path to teams repo>` to test the validity:
+Before commiting your new structure you can use `goliac verify <path to goliac-teams repo>` to test the validity:
 
 ```
 goliac verify goliac-teams/
