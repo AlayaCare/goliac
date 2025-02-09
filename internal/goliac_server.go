@@ -238,9 +238,9 @@ func (g *GoliacServerImpl) GetTeams(app.GetTeamsParams) middleware.Responder {
 					for _, u := range team.Members {
 						// u is the githubid
 						if user, ok := githubidToUser[u]; ok {
-							t.Owners = append(t.Members, user)
+							t.Owners = append(t.Owners, user)
 						} else {
-							t.Owners = append(t.Members, "githubid:"+u)
+							t.Owners = append(t.Owners, "githubid:"+u)
 						}
 					}
 				}
