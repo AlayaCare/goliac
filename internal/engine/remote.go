@@ -767,6 +767,20 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 		g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
+	if time.Now().After(g.ttlExpireTeams) {
+		teams, teamSlugByName, err := g.loadTeams(ctx)
+		if err != nil {
+			if !continueOnError {
+				return err
+			}
+			logrus.Debugf("Error loading teams: %v", err)
+			retErr = fmt.Errorf("error loading teams: %v", err)
+		}
+		g.teams = teams
+		g.teamSlugByName = teamSlugByName
+		g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
+	}
+
 	if time.Now().After(g.ttlExpireUsers) {
 		users, err := g.loadOrgUsers(ctx)
 		if err != nil {
@@ -806,20 +820,6 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 		}
 		g.rulesets = rulesets
 		g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
-	}
-
-	if time.Now().After(g.ttlExpireTeams) {
-		teams, teamSlugByName, err := g.loadTeams(ctx)
-		if err != nil {
-			if !continueOnError {
-				return err
-			}
-			logrus.Debugf("Error loading teams: %v", err)
-			retErr = fmt.Errorf("error loading teams: %v", err)
-		}
-		g.teams = teams
-		g.teamSlugByName = teamSlugByName
-		g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
 	if time.Now().After(g.ttlExpireTeamsRepos) {
