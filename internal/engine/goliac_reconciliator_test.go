@@ -108,7 +108,7 @@ func (m *GoliacRemoteMock) TeamSlugByName(ctx context.Context) map[string]string
 	}
 	return slugs
 }
-func (m *GoliacRemoteMock) Teams(ctx context.Context) map[string]*GithubTeam {
+func (m *GoliacRemoteMock) Teams(ctx context.Context, current bool) map[string]*GithubTeam {
 	return m.teams
 }
 func (m *GoliacRemoteMock) Repositories(ctx context.Context) map[string]*GithubRepository {

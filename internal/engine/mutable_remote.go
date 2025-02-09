@@ -31,7 +31,7 @@ func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacRemote) *Mutab
 		rTeamSlugByName[k] = v
 	}
 	rTeams := make(map[string]*GithubTeam)
-	for k, v := range remote.Teams(ctx) {
+	for k, v := range remote.Teams(ctx, false) {
 		ght := *v
 		rTeams[k] = &ght
 	}

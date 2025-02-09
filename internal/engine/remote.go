@@ -19,6 +19,10 @@ import (
 
 const FORLOOP_STOP = 100
 
+type GoliacRemoteResources interface {
+	Teams(ctx context.Context, current bool) map[string]*GithubTeam
+}
+
 /*
  * GoliacRemote
  * This interface is used to load the goliac organization from a Github
@@ -36,7 +40,7 @@ type GoliacRemote interface {
 
 	Users(ctx context.Context) map[string]string // key is the login, value is the role (member, admin)
 	TeamSlugByName(ctx context.Context) map[string]string
-	Teams(ctx context.Context) map[string]*GithubTeam                           // the key is the team slug
+	Teams(ctx context.Context, current bool) map[string]*GithubTeam             // the key is the team slug
 	Repositories(ctx context.Context) map[string]*GithubRepository              // the key is the repository name
 	TeamRepositories(ctx context.Context) map[string]map[string]*GithubTeamRepo // key is team slug, second key is repo name
 	RuleSets(ctx context.Context) map[string]*GithubRuleSet
@@ -325,7 +329,14 @@ func (g *GoliacRemoteImpl) TeamSlugByName(ctx context.Context) map[string]string
 	return g.teamSlugByName
 }
 
-func (g *GoliacRemoteImpl) Teams(ctx context.Context) map[string]*GithubTeam {
+/*
+Used to get the teams (and load it if needed)
+if current is true, it will return the current in memory teams without checking the TTL (useful for the UI)
+*/
+func (g *GoliacRemoteImpl) Teams(ctx context.Context, current bool) map[string]*GithubTeam {
+	if current {
+		return g.teams
+	}
 	if time.Now().After(g.ttlExpireTeams) {
 		teams, teamSlugByName, err := g.loadTeams(ctx)
 		if err == nil {

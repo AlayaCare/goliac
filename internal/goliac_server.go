@@ -21,6 +21,7 @@ import (
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-openapi/loads"
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
 )
 
@@ -212,6 +213,13 @@ func (g *GoliacServerImpl) GetTeams(app.GetTeamsParams) middleware.Responder {
 	teams := make(models.Teams, 0)
 
 	local := g.goliac.GetLocal()
+	remote := g.goliac.GetRemote()
+
+	githubidToUser := make(map[string]string)
+	for _, u := range local.Users() {
+		githubidToUser[u.Spec.GithubID] = u.Name
+	}
+
 	for teamname, team := range local.Teams() {
 		t := models.Team{
 			Name:    teamname,
@@ -219,6 +227,26 @@ func (g *GoliacServerImpl) GetTeams(app.GetTeamsParams) middleware.Responder {
 			Owners:  team.Spec.Owners,
 			Path:    teamname,
 		}
+
+		// if the team is externally managed, we dont have the info locally
+		// we need to get the members from the remote
+		if team.Spec.ExternallyManaged {
+			rteams := remote.Teams(context.TODO(), true)
+			if rteams != nil {
+				teamSlug := slug.Make(team.Name)
+				if team, ok := rteams[teamSlug]; ok {
+					for _, u := range team.Members {
+						// u is the githubid
+						if user, ok := githubidToUser[u]; ok {
+							t.Owners = append(t.Members, user)
+						} else {
+							t.Owners = append(t.Members, "githubid:"+u)
+						}
+					}
+				}
+			}
+		}
+
 		// prevent any issue, but it shoudn't happen
 		maxRec := 100
 		for team.ParentTeam != nil && maxRec > 0 {
@@ -324,7 +352,41 @@ func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responde
 				External: false,
 			}
 		}
+	}
 
+	remote := g.goliac.GetRemote()
+	// if the team is externally managed, we dont have the info locally
+	// we need to get the members from the remote
+	if team.Spec.ExternallyManaged {
+		teams := remote.Teams(context.TODO(), true)
+		if teams != nil {
+			teamSlug := slug.Make(team.Name)
+			if t, ok := teams[teamSlug]; ok {
+				for _, t := range t.Members {
+					// t is the githubid
+					githubidToUser := make(map[string]string)
+					for _, u := range local.Users() {
+						githubidToUser[u.Spec.GithubID] = u.Name
+					}
+
+					if user, ok := githubidToUser[t]; ok {
+						tDetail := models.TeamDetailsOwnersItems0{
+							Name:     user,
+							Githubid: t,
+							External: false,
+						}
+						teamDetails.Owners = append(teamDetails.Owners, &tDetail)
+					} else {
+						tDetail := models.TeamDetailsOwnersItems0{
+							Name:     "unknown",
+							Githubid: t,
+							External: false,
+						}
+						teamDetails.Owners = append(teamDetails.Owners, &tDetail)
+					}
+				}
+			}
+		}
 	}
 
 	return app.NewGetTeamOK().WithPayload(&teamDetails)
