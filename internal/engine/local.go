@@ -323,20 +323,20 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 	}
 
 	// sort by path length
-	// because CODEOWNERS is read from top to bottom
+	// because CODEOWNERS is read from top to bottom and take the latest match
 	sort.Slice(codeownersrules, func(i, j int) bool {
 		iPath := strings.Split(codeownersrules[i], "*")[0]
 		jPath := strings.Split(codeownersrules[j], "*")[0]
 		if len(iPath) == len(jPath) {
 			return iPath < jPath
 		}
-		return len(iPath) > len(jPath)
+		return len(iPath) < len(jPath)
 	})
 
+	codeowners += fmt.Sprintf("* %s\n", adminteamname)
 	for _, r := range codeownersrules {
 		codeowners += r
 	}
-	codeowners += fmt.Sprintf("* %s\n", adminteamname)
 
 	return codeowners
 }
