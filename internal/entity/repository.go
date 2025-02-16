@@ -30,8 +30,8 @@ type Repository struct {
 }
 
 type RepositoryRuleSet struct {
-	RuleSetDefinition
-	Name string `yaml:"name"`
+	RuleSetDefinition `yaml:",inline"`
+	Name              string `yaml:"name"`
 }
 
 /*

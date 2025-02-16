@@ -461,7 +461,6 @@ spec:
   conditions:
     include: 
     - "~DEFAULT_BRANCH"
-
   rules:
     - ruletype: pull_request
       parameters:
