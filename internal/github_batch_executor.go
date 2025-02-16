@@ -237,6 +237,33 @@ func (g *GithubBatchExecutor) DeleteRuleset(ctx context.Context, dryrun bool, ru
 	})
 }
 
+func (g *GithubBatchExecutor) AddRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *engine.GithubRuleSet) {
+	g.commands = append(g.commands, &GithubCommandAddRepositoryRuletset{
+		client:   g.client,
+		dryrun:   dryrun,
+		reponame: reponame,
+		ruleset:  ruleset,
+	})
+}
+
+func (g *GithubBatchExecutor) UpdateRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *engine.GithubRuleSet) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositoryRuletset{
+		client:   g.client,
+		dryrun:   dryrun,
+		reponame: reponame,
+		ruleset:  ruleset,
+	})
+}
+
+func (g *GithubBatchExecutor) DeleteRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, rulesetid int) {
+	g.commands = append(g.commands, &GithubCommandDeleteRepositoryRuletset{
+		client:    g.client,
+		dryrun:    dryrun,
+		reponame:  reponame,
+		rulesetid: rulesetid,
+	})
+}
+
 func (g *GithubBatchExecutor) Begin(dryrun bool) {
 	g.commands = make([]GithubCommand, 0)
 }
@@ -457,6 +484,39 @@ type GithubCommandUpdateTeamSetParent struct {
 
 func (g *GithubCommandUpdateTeamSetParent) Apply(ctx context.Context) {
 	g.client.UpdateTeamSetParent(ctx, g.dryrun, g.teamslug, g.parentTeam)
+}
+
+type GithubCommandAddRepositoryRuletset struct {
+	client   engine.ReconciliatorExecutor
+	dryrun   bool
+	reponame string
+	ruleset  *engine.GithubRuleSet
+}
+
+func (g *GithubCommandAddRepositoryRuletset) Apply(ctx context.Context) {
+	g.client.AddRepositoryRuleset(ctx, g.dryrun, g.reponame, g.ruleset)
+}
+
+type GithubCommandUpdateRepositoryRuletset struct {
+	client   engine.ReconciliatorExecutor
+	dryrun   bool
+	reponame string
+	ruleset  *engine.GithubRuleSet
+}
+
+func (g *GithubCommandUpdateRepositoryRuletset) Apply(ctx context.Context) {
+	g.client.UpdateRepositoryRuleset(ctx, g.dryrun, g.reponame, g.ruleset)
+}
+
+type GithubCommandDeleteRepositoryRuletset struct {
+	client    engine.ReconciliatorExecutor
+	dryrun    bool
+	reponame  string
+	rulesetid int
+}
+
+func (g *GithubCommandDeleteRepositoryRuletset) Apply(ctx context.Context) {
+	g.client.DeleteRepositoryRuleset(ctx, g.dryrun, g.reponame, g.rulesetid)
 }
 
 type GithubCommandAddRuletset struct {

@@ -595,6 +595,18 @@ func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveTeamAccess(ctx context.
 	fmt.Println("*** UpdateRepositoryRemoveTeamAccess", reponame, teamslug)
 	e.nbChanges++
 }
+func (e *GoliacRemoteExecutorMock) AddRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *engine.GithubRuleSet) {
+	fmt.Println("*** AddRepositoryRuleset", reponame, ruleset.Name)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *engine.GithubRuleSet) {
+	fmt.Println("*** UpdateRepositoryRuleset", reponame, ruleset.Name)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) DeleteRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, rulesetid int) {
+	fmt.Println("*** DeleteRepositoryRuleset", reponame, rulesetid)
+	e.nbChanges++
+}
 func (e *GoliacRemoteExecutorMock) AddRuleset(ctx context.Context, dryrun bool, ruleset *engine.GithubRuleSet) {
 	fmt.Println("*** AddRuleset", ruleset.Name)
 	e.nbChanges++

@@ -55,28 +55,30 @@ func CompareRulesetParameters(ruletype string, left RuleSetParameters, right Rul
 	return false
 }
 
+type RuleSetDefinition struct {
+	// Target // branch, tag
+	Enforcement string // disabled, active, evaluate
+	BypassApps  []struct {
+		AppName string
+		Mode    string // always, pull_request
+	}
+	On struct {
+		Include []string // ~DEFAULT_BRANCH, ~ALL, branch_name, ...
+		Exclude []string //  branch_name, ...
+	}
+
+	Rules []struct {
+		Ruletype   string // required_signatures, pull_request, required_status_checks...
+		Parameters RuleSetParameters
+	} `yaml:"rules"`
+}
+
 /*
  * Ruleset are applied per repos based on the goliac configuration file (pattern x ruleset name)
  */
 type RuleSet struct {
 	Entity `yaml:",inline"`
-	Spec   struct {
-		// Target // branch, tag
-		Enforcement string // disabled, active, evaluate
-		BypassApps  []struct {
-			AppName string
-			Mode    string // always, pull_request
-		}
-		On struct {
-			Include []string // ~DEFAULT_BRANCH, ~ALL, branch_name, ...
-			Exclude []string //  branch_name, ...
-		}
-
-		Rules []struct {
-			Ruletype   string // required_signatures, pull_request, required_status_checks...
-			Parameters RuleSetParameters
-		} `yaml:"rules"`
-	} `yaml:"spec"`
+	Spec   RuleSetDefinition `yaml:"spec"`
 }
 
 /*

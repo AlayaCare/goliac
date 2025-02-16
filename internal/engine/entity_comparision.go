@@ -4,7 +4,7 @@ type Comparable interface {
 	*GithubTeamComparable | *GithubRepoComparable | *GithubRuleSet
 }
 
-type CompareEqualAB[A Comparable, B Comparable] func(value1 A, value2 B) bool
+type CompareEqualAB[A Comparable, B Comparable] func(key string, value1 A, value2 B) bool
 
 type CompareCallback[A Comparable, B Comparable] func(key string, value1 A, value2 B)
 
@@ -12,7 +12,7 @@ func CompareEntities[A Comparable, B Comparable](a map[string]A, b map[string]B,
 	// Check for removed or changed keys
 	for key, value := range b {
 		if oldValue, ok := a[key]; ok {
-			if !compareFunction(oldValue, value) {
+			if !compareFunction(key, oldValue, value) {
 				onChanged(key, oldValue, value)
 			}
 		} else {
