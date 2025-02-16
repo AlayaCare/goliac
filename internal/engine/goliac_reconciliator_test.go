@@ -1954,7 +1954,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		newRuleset.Spec.Enforcement = "evaluate"
 		newRuleset.Spec.Rules = append(newRuleset.Spec.Rules, struct {
 			Ruletype   string
-			Parameters entity.RuleSetParameters
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
 			"required_signatures", entity.RuleSetParameters{},
 		})
@@ -2009,7 +2009,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		newRuleset.Spec.Enforcement = "evaluate"
 		newRuleset.Spec.Rules = append(newRuleset.Spec.Rules, struct {
 			Ruletype   string
-			Parameters entity.RuleSetParameters
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
 			"required_signatures", entity.RuleSetParameters{},
 		})
@@ -2064,7 +2064,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		lRuleset.Spec.Enforcement = "evaluate"
 		lRuleset.Spec.Rules = append(lRuleset.Spec.Rules, struct {
 			Ruletype   string
-			Parameters entity.RuleSetParameters
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
 			"required_signatures", entity.RuleSetParameters{},
 		})
@@ -2165,10 +2165,10 @@ func TestReconciliationRulesets(t *testing.T) {
 			Name: "myruleset",
 		}
 		lruleset.Enforcement = "active"
-		lruleset.On.Include = []string{"~DEFAULT_BRANCH"}
+		lruleset.Conditions.Include = []string{"~DEFAULT_BRANCH"}
 		lruleset.Rules = append(lruleset.Rules, struct {
 			Ruletype   string
-			Parameters entity.RuleSetParameters
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
 			"required_signatures", entity.RuleSetParameters{},
 		})
@@ -2260,10 +2260,10 @@ func TestReconciliationRulesets(t *testing.T) {
 			Name: "myruleset",
 		}
 		lruleset.Enforcement = "active"
-		lruleset.On.Include = []string{"~DEFAULT_BRANCH"}
+		lruleset.Conditions.Include = []string{"~DEFAULT_BRANCH"}
 		lruleset.Rules = append(lruleset.Rules, struct {
 			Ruletype   string
-			Parameters entity.RuleSetParameters
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
 			"required_signatures", entity.RuleSetParameters{},
 		})

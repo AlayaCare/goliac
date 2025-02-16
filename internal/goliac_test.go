@@ -126,7 +126,7 @@ spec:
   bypassapps:
     - appname: goliac-project-app
       mode: always
-  on:
+  conditions:
     include: 
       - "~DEFAULT_BRANCH"
 

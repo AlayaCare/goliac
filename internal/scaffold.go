@@ -262,6 +262,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 			}
 
 			// write repos
+			rRepos := s.remote.Repositories(ctx)
 			for _, r := range repos {
 				lRepo := entity.Repository{}
 				lRepo.ApiVersion = "v1"
@@ -269,6 +270,43 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 				lRepo.Name = r
 				lRepo.Spec.Writers = repoWrite[r]
 				lRepo.Spec.Readers = repoRead[r]
+
+				// scaffoldling repository rulesets
+				if rRepo, ok := rRepos[r]; ok {
+					rRulesets := rRepo.RuleSets
+					if rRulesets != nil {
+						lRepo.Spec.Rulesets = make([]entity.RepositoryRuleSet, 0, len(rRulesets))
+
+						for rRulesetname, rRuleset := range rRulesets {
+							lRuleset := entity.RepositoryRuleSet{
+								Name: rRulesetname,
+							}
+							lRuleset.Enforcement = rRuleset.Enforcement
+							for appname, mode := range rRuleset.BypassApps {
+								lRuleset.BypassApps = append(lRuleset.BypassApps, struct {
+									AppName string
+									Mode    string
+								}{
+									AppName: appname,
+									Mode:    mode,
+								})
+							}
+							lRuleset.Conditions.Include = rRuleset.OnInclude
+							lRuleset.Conditions.Exclude = rRuleset.OnExclude
+							for rulename, rulespec := range rRuleset.Rules {
+								lRuleset.Rules = append(lRuleset.Rules, struct {
+									Ruletype   string
+									Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
+								}{
+									Ruletype:   rulename,
+									Parameters: rulespec,
+								})
+							}
+
+							lRepo.Spec.Rulesets = append(lRepo.Spec.Rulesets, lRuleset)
+						}
+					}
+				}
 
 				// removing team name from writer
 				for i, t := range lRepo.Spec.Writers {
@@ -420,7 +458,7 @@ spec:
   bypassapps:
     - appname: %s
       mode: always
-  on:
+  conditions:
     include: 
     - "~DEFAULT_BRANCH"
 

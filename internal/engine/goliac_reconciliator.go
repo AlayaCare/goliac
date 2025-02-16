@@ -492,8 +492,8 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 				Name:        rs.Name,
 				Enforcement: rs.Enforcement,
 				BypassApps:  map[string]string{},
-				OnInclude:   rs.On.Include,
-				OnExclude:   rs.On.Exclude,
+				OnInclude:   rs.Conditions.Include,
+				OnExclude:   rs.Conditions.Exclude,
 				Rules:       map[string]entity.RuleSetParameters{},
 			}
 			for _, b := range rs.BypassApps {
@@ -740,8 +740,8 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 			Name:        rs.Name,
 			Enforcement: rs.Spec.Enforcement,
 			BypassApps:  map[string]string{},
-			OnInclude:   rs.Spec.On.Include,
-			OnExclude:   rs.Spec.On.Exclude,
+			OnInclude:   rs.Spec.Conditions.Include,
+			OnExclude:   rs.Spec.Conditions.Exclude,
 			Rules:       map[string]entity.RuleSetParameters{},
 		}
 		for _, b := range rs.Spec.BypassApps {

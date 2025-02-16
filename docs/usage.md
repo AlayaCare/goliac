@@ -102,7 +102,7 @@ spec:
   rulesets:
     - name: myruleset
       enforcement: active # disabled, active, evaluate
-      on:
+      conditions:
         include: 
           - "~DEFAULT_BRANCH" # ~DEFAULT_BRANCH, ~ALL, branch_name, ...
       rules:
@@ -121,7 +121,7 @@ spec:
   rulesets:
     - name: myruleset
       enforcement: active # disabled, active, evaluate
-      on:
+      conditions:
         include: 
           - develop
       rules:
@@ -144,7 +144,7 @@ spec:
   rulesets:
     - name: myruleset
       enforcement: active # disabled, active, evaluate
-      on:
+      conditions:
         include: 
           - "~ALL"
       rules:

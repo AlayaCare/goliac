@@ -222,6 +222,9 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		if ruleset.Name == "" {
 			return fmt.Errorf("invalid ruleset: each ruleset must have a name")
 		}
+		if ruleset.Enforcement != "disable" && ruleset.Enforcement != "active" && ruleset.Enforcement != "evaluate" {
+			return fmt.Errorf("invalid ruleset %s enforcement: it must be 'disable','active' or 'evaluate'", ruleset.Name)
+		}
 		if _, ok := rulesetname[ruleset.Name]; ok {
 			return fmt.Errorf("invalid ruleset: each ruleset must have a uniq name, found 2 times %s", ruleset.Name)
 		}
