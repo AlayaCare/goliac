@@ -86,3 +86,70 @@ renameTo: anotherName
 ## Archive a repository
 
 You can archive a repository, by a PR that move the yaml repository file into the `/archived` directory
+
+## Adding repository ruleset
+
+You can add different rules on a specific repository (like branch protection) using the new Github rulesets.
+Few rules are currently supported (but the software can be easily extended): `pull_request`, `required_signatures`, `required_status_checks`
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  public: true
+  ...
+  rulesets:
+    - name: myruleset
+      enforcement: active # disabled, active, evaluate
+      on:
+        include: 
+          - "~DEFAULT_BRANCH" # ~DEFAULT_BRANCH, ~ALL, branch_name, ...
+      rules:
+        - ruletype: required_signatures
+```
+
+`pull_request` example
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  public: true
+  ...
+  rulesets:
+    - name: myruleset
+      enforcement: active # disabled, active, evaluate
+      on:
+        include: 
+          - develop
+      rules:
+        - ruletype: pull_request
+          parameters: # dismissStaleReviewsOnPush, requireCodeOwnerReview, requiredApprovingReviewCount, requiredReviewThreadResolution, requireLastPushApproval
+            requiredApprovingReviewCount: 1
+            requireLastPushApproval: true
+            ...
+```
+
+`required_status_checks` example
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  public: true
+  ...
+  rulesets:
+    - name: myruleset
+      enforcement: active # disabled, active, evaluate
+      on:
+        include: 
+          - "~ALL"
+      rules:
+        - ruletype: required_status_checks
+          parameters: # requiredStatusChecks, strictRequiredStatusChecksPolicy
+            requiredStatusChecks:
+              - my_check
+```
