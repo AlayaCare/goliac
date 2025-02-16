@@ -13,19 +13,25 @@ import (
 type Repository struct {
 	Entity `yaml:",inline"`
 	Spec   struct {
-		Writers             []string `yaml:"writers,omitempty"`
-		Readers             []string `yaml:"readers,omitempty"`
-		ExternalUserReaders []string `yaml:"externalUserReaders,omitempty"`
-		ExternalUserWriters []string `yaml:"externalUserWriters,omitempty"`
-		IsPublic            bool     `yaml:"public,omitempty"`
-		AllowAutoMerge      bool     `yaml:"allow_auto_merge,omitempty"`
-		DeleteBranchOnMerge bool     `yaml:"delete_branch_on_merge,omitempty"`
-		AllowUpdateBranch   bool     `yaml:"allow_update_branch,omitempty"`
+		Writers             []string            `yaml:"writers,omitempty"`
+		Readers             []string            `yaml:"readers,omitempty"`
+		ExternalUserReaders []string            `yaml:"externalUserReaders,omitempty"`
+		ExternalUserWriters []string            `yaml:"externalUserWriters,omitempty"`
+		IsPublic            bool                `yaml:"public,omitempty"`
+		AllowAutoMerge      bool                `yaml:"allow_auto_merge,omitempty"`
+		DeleteBranchOnMerge bool                `yaml:"delete_branch_on_merge,omitempty"`
+		AllowUpdateBranch   bool                `yaml:"allow_update_branch,omitempty"`
+		Rulesets            []RepositoryRuleSet `yaml:"rulesets,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
 	RenameTo      string  `yaml:"renameTo,omitempty"`
 	DirectoryPath string  `yaml:"-"` // used to know where to rename the repository
+}
+
+type RepositoryRuleSet struct {
+	RuleSetDefinition `yaml:",inline"`
+	Name              string `yaml:"name"`
 }
 
 /*
@@ -209,6 +215,20 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		if _, ok := externalUsers[externalUserWriter]; !ok {
 			return fmt.Errorf("invalid externalUserWriter: %s doesn't exist in repository filename %s", externalUserWriter, filename)
 		}
+	}
+
+	rulesetname := make(map[string]bool)
+	for _, ruleset := range r.Spec.Rulesets {
+		if ruleset.Name == "" {
+			return fmt.Errorf("invalid ruleset: each ruleset must have a name")
+		}
+		if ruleset.Enforcement != "disable" && ruleset.Enforcement != "active" && ruleset.Enforcement != "evaluate" {
+			return fmt.Errorf("invalid ruleset %s enforcement: it must be 'disable','active' or 'evaluate'", ruleset.Name)
+		}
+		if _, ok := rulesetname[ruleset.Name]; ok {
+			return fmt.Errorf("invalid ruleset: each ruleset must have a uniq name, found 2 times %s", ruleset.Name)
+		}
+		rulesetname[ruleset.Name] = true
 	}
 
 	if utils.GithubAnsiString(r.Name) != r.Name {

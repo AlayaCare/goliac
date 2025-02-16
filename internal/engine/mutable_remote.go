@@ -252,6 +252,26 @@ func (m *MutableGoliacRemoteImpl) UpdateRepositoryRemoveInternalUser(reponame st
 		delete(r.InternalUsers, collaboatorGithubId)
 	}
 }
+func (m *MutableGoliacRemoteImpl) AddRepositoryRuleset(reponame string, ruleset *GithubRuleSet) {
+	if r, ok := m.repositories[reponame]; ok {
+		r.RuleSets[ruleset.Name] = ruleset
+	}
+}
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryRuleset(reponame string, ruleset *GithubRuleSet) {
+	if r, ok := m.repositories[reponame]; ok {
+		r.RuleSets[ruleset.Name] = ruleset
+	}
+}
+func (m *MutableGoliacRemoteImpl) DeleteRepositoryRuleset(reponame string, rulesetid int) {
+	if r, ok := m.repositories[reponame]; ok {
+		for _, rs := range r.RuleSets {
+			if rs.Id == rulesetid {
+				delete(r.RuleSets, rs.Name)
+				break
+			}
+		}
+	}
+}
 
 func (m *MutableGoliacRemoteImpl) AddRuleset(ruleset *GithubRuleSet) {
 

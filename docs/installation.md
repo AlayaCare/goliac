@@ -151,7 +151,7 @@ spec:
   bypassapps:
     - appname: goliac-project-app
       mode: always # always or pull_request
-  on:
+  conditions:
     include:
       - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
 

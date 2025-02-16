@@ -11,15 +11,15 @@ import (
 
 type RuleSetParameters struct {
 	// PullRequestParameters
-	DismissStaleReviewsOnPush      bool `yaml:"dismissStaleReviewsOnPush"`
-	RequireCodeOwnerReview         bool `yaml:"requireCodeOwnerReview"`
-	RequiredApprovingReviewCount   int  `yaml:"requiredApprovingReviewCount"`
-	RequiredReviewThreadResolution bool `yaml:"requiredReviewThreadResolution"`
-	RequireLastPushApproval        bool `yaml:"requireLastPushApproval"`
+	DismissStaleReviewsOnPush      bool `yaml:"dismissStaleReviewsOnPush,omitempty"`
+	RequireCodeOwnerReview         bool `yaml:"requireCodeOwnerReview,omitempty"`
+	RequiredApprovingReviewCount   int  `yaml:"requiredApprovingReviewCount,omitempty"`
+	RequiredReviewThreadResolution bool `yaml:"requiredReviewThreadResolution,omitempty"`
+	RequireLastPushApproval        bool `yaml:"requireLastPushApproval,omitempty"`
 
 	// RequiredStatusChecksParameters
-	RequiredStatusChecks             []string `yaml:"requiredStatusChecks"`
-	StrictRequiredStatusChecksPolicy bool     `yaml:"strictRequiredStatusChecksPolicy"`
+	RequiredStatusChecks             []string `yaml:"requiredStatusChecks,omitempty"`
+	StrictRequiredStatusChecksPolicy bool     `yaml:"strictRequiredStatusChecksPolicy,omitempty"`
 }
 
 func CompareRulesetParameters(ruletype string, left RuleSetParameters, right RuleSetParameters) bool {
@@ -55,28 +55,30 @@ func CompareRulesetParameters(ruletype string, left RuleSetParameters, right Rul
 	return false
 }
 
+type RuleSetDefinition struct {
+	// Target // branch, tag
+	Enforcement string // disabled, active, evaluate
+	BypassApps  []struct {
+		AppName string
+		Mode    string // always, pull_request
+	} `yaml:"bypassapps,omitempty"`
+	Conditions struct {
+		Include []string `yaml:"include,omitempty"` // ~DEFAULT_BRANCH, ~ALL, branch_name, ...
+		Exclude []string `yaml:"exclude,omitempty"` //  branch_name, ...
+	} `yaml:"conditions,omitempty"`
+
+	Rules []struct {
+		Ruletype   string            // required_signatures, pull_request, required_status_checks...
+		Parameters RuleSetParameters `yaml:"parameters,omitempty"`
+	} `yaml:"rules"`
+}
+
 /*
  * Ruleset are applied per repos based on the goliac configuration file (pattern x ruleset name)
  */
 type RuleSet struct {
 	Entity `yaml:",inline"`
-	Spec   struct {
-		// Target // branch, tag
-		Enforcement string // disabled, active, evaluate
-		BypassApps  []struct {
-			AppName string
-			Mode    string // always, pull_request
-		}
-		On struct {
-			Include []string // ~DEFAULT_BRANCH, ~ALL, branch_name, ...
-			Exclude []string //  branch_name, ...
-		}
-
-		Rules []struct {
-			Ruletype   string // required_signatures, pull_request, required_status_checks...
-			Parameters RuleSetParameters
-		} `yaml:"rules"`
-	} `yaml:"spec"`
+	Spec   RuleSetDefinition `yaml:"spec"`
 }
 
 /*
@@ -183,9 +185,14 @@ func (r *RuleSet) Validate(filename string) error {
 			return fmt.Errorf("invalid mode: %s for bypassapp %s in ruleset filename %s", ba.Mode, ba.AppName, filename)
 		}
 	}
-	for _, on := range r.Spec.On.Include {
-		if on[0] == '~' && (on != "~DEFAULT_BRANCH" && on != "~ALL") {
-			return fmt.Errorf("invalid include: %s in ruleset filename %s", on, filename)
+	for _, include := range r.Spec.Conditions.Include {
+		if include[0] == '~' && (include != "~DEFAULT_BRANCH" && include != "~ALL") {
+			return fmt.Errorf("invalid include: %s in ruleset filename %s", include, filename)
+		}
+	}
+	for _, exclude := range r.Spec.Conditions.Exclude {
+		if exclude[0] == '~' && (exclude != "~DEFAULT_BRANCH" && exclude != "~ALL") {
+			return fmt.Errorf("invalid exclude: %s in ruleset filename %s", exclude, filename)
 		}
 	}
 

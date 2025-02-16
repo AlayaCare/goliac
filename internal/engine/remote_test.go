@@ -368,6 +368,7 @@ func (m *MockGithubClient) QueryGraphQLAPI(ctx context.Context, query string, va
 
 	// Check for parsing error.
 	if err != nil {
+		fmt.Println("debug1", err)
 		return nil, err
 	}
 
@@ -423,7 +424,6 @@ func (m *MockGithubClient) CallRestAPI(ctx context.Context, endpoint, parameters
 		if err == nil {
 			return body, nil
 		}
-
 	}
 	return nil, nil
 }

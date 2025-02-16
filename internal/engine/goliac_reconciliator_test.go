@@ -151,6 +151,9 @@ type ReconciliatorListenerRecorder struct {
 	RepositoriesSetExternalUser    map[string]string
 	RepositoriesRemoveExternalUser map[string]bool
 	RepositoriesRemoveInternalUser map[string]bool
+	RepositoryRuleSetCreated       map[string]map[string]*GithubRuleSet
+	RepositoryRuleSetUpdated       map[string]map[string]*GithubRuleSet
+	RepositoryRuleSetDeleted       map[string][]int
 
 	RuleSetCreated map[string]*GithubRuleSet
 	RuleSetUpdated map[string]*GithubRuleSet
@@ -178,6 +181,9 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 		RepositoriesSetExternalUser:    make(map[string]string),
 		RepositoriesRemoveExternalUser: make(map[string]bool),
 		RepositoriesRemoveInternalUser: make(map[string]bool),
+		RepositoryRuleSetCreated:       make(map[string]map[string]*GithubRuleSet),
+		RepositoryRuleSetUpdated:       make(map[string]map[string]*GithubRuleSet),
+		RepositoryRuleSetDeleted:       make(map[string][]int, 0),
 		RuleSetCreated:                 make(map[string]*GithubRuleSet),
 		RuleSetUpdated:                 make(map[string]*GithubRuleSet),
 		RuleSetDeleted:                 make([]int, 0),
@@ -212,7 +218,6 @@ func (r *ReconciliatorListenerRecorder) CreateRepository(ctx context.Context, dr
 	r.RepositoryCreated[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
-	fmt.Printf(">%s< >%s<\n", reponame, teamslug)
 	r.RepositoryTeamAdded[reponame] = append(r.RepositoryTeamAdded[reponame], teamslug)
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
@@ -239,6 +244,30 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveExternalUser(ctx c
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
 	r.RepositoriesRemoveInternalUser[githubid] = true
 }
+func (r *ReconciliatorListenerRecorder) AddRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+	repo := r.RepositoryRuleSetCreated[reponame]
+	if repo == nil {
+		repo = make(map[string]*GithubRuleSet)
+		r.RepositoryRuleSetCreated[reponame] = repo
+	}
+	repo[ruleset.Name] = ruleset
+}
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+	repo := r.RepositoryRuleSetUpdated[reponame]
+	if repo == nil {
+		repo = make(map[string]*GithubRuleSet)
+		r.RepositoryRuleSetUpdated[reponame] = repo
+	}
+	repo[ruleset.Name] = ruleset
+}
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, rulesetid int) {
+	repo := r.RepositoryRuleSetDeleted[reponame]
+	if repo == nil {
+		repo = make([]int, 0)
+	}
+	repo = append(repo, rulesetid)
+	r.RepositoryRuleSetDeleted[reponame] = repo
+}
 func (r *ReconciliatorListenerRecorder) AddRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
 	r.RuleSetCreated[ruleset.Name] = ruleset
 }
@@ -257,7 +286,6 @@ func (r *ReconciliatorListenerRecorder) Commit(ctx context.Context, dryrun bool)
 }
 
 func TestReconciliation(t *testing.T) {
-
 	t.Run("happy path: new team", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
@@ -1926,7 +1954,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		newRuleset.Spec.Enforcement = "evaluate"
 		newRuleset.Spec.Rules = append(newRuleset.Spec.Rules, struct {
 			Ruletype   string
-			Parameters entity.RuleSetParameters
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
 			"required_signatures", entity.RuleSetParameters{},
 		})
@@ -1981,7 +2009,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		newRuleset.Spec.Enforcement = "evaluate"
 		newRuleset.Spec.Rules = append(newRuleset.Spec.Rules, struct {
 			Ruletype   string
-			Parameters entity.RuleSetParameters
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
 			"required_signatures", entity.RuleSetParameters{},
 		})
@@ -2036,7 +2064,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		lRuleset.Spec.Enforcement = "evaluate"
 		lRuleset.Spec.Rules = append(lRuleset.Spec.Rules, struct {
 			Ruletype   string
-			Parameters entity.RuleSetParameters
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
 			"required_signatures", entity.RuleSetParameters{},
 		})
@@ -2112,5 +2140,186 @@ func TestReconciliationRulesets(t *testing.T) {
 		assert.Equal(t, 0, len(recorder.RuleSetCreated))
 		assert.Equal(t, 0, len(recorder.RuleSetUpdated))
 		assert.Equal(t, 1, len(recorder.RuleSetDeleted))
+	})
+
+	t.Run("happy path: repo with ruleset", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+		newRepo := &entity.Repository{}
+		newRepo.Name = "myrepo"
+		newRepo.Spec.Readers = []string{}
+		newRepo.Spec.Writers = []string{}
+		owner := "existing"
+		newRepo.Owner = &owner
+
+		lruleset := entity.RepositoryRuleSet{
+			Name: "myruleset",
+		}
+		lruleset.Enforcement = "active"
+		lruleset.Conditions.Include = []string{"~DEFAULT_BRANCH"}
+		lruleset.Rules = append(lruleset.Rules, struct {
+			Ruletype   string
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
+		}{
+			"required_signatures", entity.RuleSetParameters{},
+		})
+		newRepo.Spec.Rulesets = []entity.RepositoryRuleSet{lruleset}
+		local.repos["myrepo"] = newRepo
+
+		existingTeam := &entity.Team{}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{"existing_member"}
+		local.teams["existing"] = existingTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
+		existing := &GithubTeam{
+			Name:    "existing",
+			Slug:    "existing",
+			Members: []string{"existing_owner", "existing_member"},
+		}
+		remote.teams["existing"] = existing
+
+		myrepo := &GithubRepository{
+			Name:  "myrepo",
+			Id:    1234,
+			RefId: "sdfsf",
+			BoolProperties: map[string]bool{
+				"private":                true,
+				"allow_update_branch":    false,
+				"archived":               false,
+				"allow_auto_merge":       false,
+				"delete_branch_on_merge": false,
+			},
+			ExternalUsers: make(map[string]string),
+			InternalUsers: make(map[string]string),
+			RuleSets:      map[string]*GithubRuleSet{},
+		}
+		rruleset := GithubRuleSet{
+			Name:        "myruleset",
+			Enforcement: "active",
+			OnInclude:   []string{"~DEFAULT_BRANCH"},
+			Rules: map[string]entity.RuleSetParameters{
+				"required_signatures": {},
+			},
+		}
+		myrepo.RuleSets["myruleset"] = &rruleset
+
+		remote.repos["myrepo"] = myrepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		assert.Equal(t, 0, len(recorder.RepositoryCreated))
+		assert.Equal(t, 0, len(recorder.RepositoryRuleSetCreated["myrepo"]))
+		assert.Equal(t, 0, len(recorder.RepositoryRuleSetUpdated["myrepo"]))
+		assert.Equal(t, 0, len(recorder.RepositoryRuleSetDeleted["myrepo"]))
+	})
+
+	t.Run("happy path: repo with new ruleset", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+		newRepo := &entity.Repository{}
+		newRepo.Name = "myrepo"
+		newRepo.Spec.Readers = []string{}
+		newRepo.Spec.Writers = []string{}
+		owner := "existing"
+		newRepo.Owner = &owner
+
+		lruleset := entity.RepositoryRuleSet{
+			Name: "myruleset",
+		}
+		lruleset.Enforcement = "active"
+		lruleset.Conditions.Include = []string{"~DEFAULT_BRANCH"}
+		lruleset.Rules = append(lruleset.Rules, struct {
+			Ruletype   string
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
+		}{
+			"required_signatures", entity.RuleSetParameters{},
+		})
+		newRepo.Spec.Rulesets = []entity.RepositoryRuleSet{lruleset}
+		local.repos["myrepo"] = newRepo
+
+		existingTeam := &entity.Team{}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{"existing_member"}
+		local.teams["existing"] = existingTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+		remote.repos["teams"] = &GithubRepository{
+			Name:           "teams",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+		}
+		existing := &GithubTeam{
+			Name:    "existing",
+			Slug:    "existing",
+			Members: []string{"existing_owner", "existing_member"},
+		}
+		remote.teams["existing"] = existing
+
+		myrepo := &GithubRepository{
+			Name:  "myrepo",
+			Id:    1234,
+			RefId: "sdfsf",
+			BoolProperties: map[string]bool{
+				"private":                true,
+				"allow_update_branch":    false,
+				"archived":               false,
+				"allow_auto_merge":       false,
+				"delete_branch_on_merge": false,
+			},
+			ExternalUsers: make(map[string]string),
+			InternalUsers: make(map[string]string),
+			RuleSets:      map[string]*GithubRuleSet{},
+		}
+
+		remote.repos["myrepo"] = myrepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		r.Reconciliate(context.TODO(), &local, &remote, "teams", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		assert.Equal(t, 0, len(recorder.RepositoryCreated))
+		assert.Equal(t, 1, len(recorder.RepositoryRuleSetCreated["myrepo"]))
+		assert.Equal(t, 0, len(recorder.RepositoryRuleSetUpdated["myrepo"]))
+		assert.Equal(t, 0, len(recorder.RepositoryRuleSetDeleted["myrepo"]))
 	})
 }

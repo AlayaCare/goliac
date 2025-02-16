@@ -20,7 +20,7 @@ spec:
   bypassapps:
     - appname: goliac-project-app
       mode: always
-  on:
+  conditions:
     include: 
     - "~DEFAULT_BRANCH"
 
@@ -40,7 +40,7 @@ spec:
   bypassapps:
     - appname: goliac-project-app
       mode: always
-  on:
+  conditions:
     include: 
     - "~DEFAULT_BRANCH"
 

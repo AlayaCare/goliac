@@ -61,9 +61,10 @@ type GithubRepository struct {
 	Name           string
 	Id             int
 	RefId          string
-	BoolProperties map[string]bool   // archived, private, allow_auto_merge, delete_branch_on_merge, allow_update_branch
-	ExternalUsers  map[string]string // [githubid]permission
-	InternalUsers  map[string]string // [githubid]permission
+	BoolProperties map[string]bool           // archived, private, allow_auto_merge, delete_branch_on_merge, allow_update_branch
+	ExternalUsers  map[string]string         // [githubid]permission
+	InternalUsers  map[string]string         // [githubid]permission
+	RuleSets       map[string]*GithubRuleSet // [name]ruleset
 }
 
 type GithubTeam struct {
@@ -188,7 +189,7 @@ func (g *GoliacRemoteImpl) CountAssets(ctx context.Context) (int, error) {
 	if len(gResult.Errors) > 0 {
 		return 0, fmt.Errorf("graphql error on CountAssets: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 	}
-	return 2*gResult.Data.Organization.Repositories.TotalCount + // we multiply by 2 because we have the repositories and the teams per repostiory to fetch
+	return 2*gResult.Data.Organization.Repositories.TotalCount + // we multiply by 2 because we have the repositories, and the teams per repostiory to fetch
 		2*gResult.Data.Organization.Teams.TotalCount + // we multiply by 2 because we have the teams and the members per team to fetch
 		gResult.Data.Organization.MembersWithRole.TotalCount +
 		gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.TotalCount, nil
@@ -511,6 +512,45 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
               permission
             }
           }
+          rulesets(first: 100) {
+            nodes {
+              databaseId
+              name
+              target
+              enforcement
+              bypassActors(first:100) {
+                app:nodes {
+                  actor {
+                    ... on App {
+                      databaseId
+                      name
+                    }
+                  }
+                  bypassMode
+                }
+              }
+              conditions {
+                refName {
+                  include
+                  exclude
+                }
+              }
+              rules(first:100) {
+                nodes {
+                  parameters {
+                    ... on PullRequestParameters {
+                      dismissStaleReviewsOnPush
+                      requireCodeOwnerReview
+                      requiredApprovingReviewCount
+                      requiredReviewThreadResolution
+                      requireLastPushApproval
+                    }
+                  }
+                  type
+                }
+              }
+            }
+          }
         }
         pageInfo {
           hasNextPage
@@ -550,6 +590,9 @@ type GraplQLRepositories struct {
 							}
 							Permission string
 						}
+					}
+					Rulesets struct {
+						Nodes []GraphQLGithubRuleSet
 					}
 				} `json:"nodes"`
 				PageInfo struct {
@@ -612,12 +655,16 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 				},
 				ExternalUsers: make(map[string]string),
 				InternalUsers: make(map[string]string),
+				RuleSets:      make(map[string]*GithubRuleSet),
 			}
 			for _, outsideCollaborator := range c.OutsideCollaborators.Edges {
 				repo.ExternalUsers[outsideCollaborator.Node.Login] = outsideCollaborator.Permission
 			}
 			for _, internalCollaborator := range c.DirectCollaborators.Edges {
 				repo.InternalUsers[internalCollaborator.Node.Login] = internalCollaborator.Permission
+			}
+			for _, ruleset := range c.Rulesets.Nodes {
+				repo.RuleSets[c.Name] = g.fromGraphQLToGithubRuleset(&ruleset)
 			}
 			repositories[c.Name] = repo
 			repositoriesByRefId[c.Id] = repo
@@ -862,7 +909,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 }
 
 func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently(ctx context.Context) (map[string]map[string]*GithubTeamRepo, error) {
-	logrus.Debug("loading teamReposNonConcurrentlyV2")
+	logrus.Debug("loading teamReposNonConcurrently")
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
 
 	teamsPerRepo := make(map[string]map[string]*GithubTeamRepo)
@@ -892,7 +939,7 @@ func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently(ctx context.Context) (ma
 }
 
 func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGoroutines int64) (map[string]map[string]*GithubTeamRepo, error) {
-	logrus.Debug("loading teamReposConcurrentlyV2")
+	logrus.Debug("loading teamReposConcurrently")
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
 
 	teamsPerRepo := make(map[string]map[string]*GithubTeamRepo)
@@ -1385,7 +1432,7 @@ type GithubRuleSet struct {
 
 	Rules map[string]entity.RuleSetParameters
 
-	Repositories []string
+	Repositories []string // only used for organization rulesets
 }
 
 func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet) *GithubRuleSet {
@@ -1562,7 +1609,7 @@ func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, dryrun bool, ruleset 
 }
 
 func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
-	// add ruleset
+	// update ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#update-an-organization-repository-ruleset
 
 	if !dryrun {
@@ -1594,7 +1641,7 @@ func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, dryrun bool, rules
 			nil,
 		)
 		if err != nil {
-			logrus.Errorf("failed to remove ruleset to org: %v", err)
+			logrus.Errorf("failed to remove ruleset from org: %v", err)
 		}
 	}
 
@@ -1602,6 +1649,78 @@ func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, dryrun bool, rules
 		if r.Id == rulesetid {
 			delete(g.rulesets, r.Name)
 			break
+		}
+	}
+}
+
+func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+	// add repository ruleset
+	// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#create-a-repository-ruleset
+
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/orgs/%s/%s/rulesets", config.Config.GithubAppOrganization, reponame),
+			"",
+			"POST",
+			g.prepareRuleset(ruleset),
+		)
+		if err != nil {
+			logrus.Errorf("failed to add ruleset to repository: %v. %s", err, string(body))
+		}
+	}
+	repo := g.repositories[reponame]
+	if repo != nil {
+		repo.RuleSets[ruleset.Name] = ruleset
+	}
+}
+
+func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+	// update repository ruleset
+	// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#update-a-repository-ruleset
+
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/orgs/%s/%s/rulesets/%d", config.Config.GithubAppOrganization, reponame, ruleset.Id),
+			"",
+			"PUT",
+			g.prepareRuleset(ruleset),
+		)
+		if err != nil {
+			logrus.Errorf("failed to update ruleset %d to repository: %v. %s", ruleset.Id, err, string(body))
+		}
+	}
+	repo := g.repositories[reponame]
+	if repo != nil {
+		repo.RuleSets[ruleset.Name] = ruleset
+	}
+}
+
+func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, rulesetid int) {
+	// remove repository ruleset
+	// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#delete-a-repository-ruleset
+
+	if !dryrun {
+		_, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/orgs/%s/%s/rulesets/%d", config.Config.GithubAppOrganization, reponame, rulesetid),
+			"",
+			"DELETE",
+			nil,
+		)
+		if err != nil {
+			logrus.Errorf("failed to remove ruleset from repository: %v", err)
+		}
+	}
+
+	repo := g.repositories[reponame]
+	if repo != nil {
+		for _, r := range repo.RuleSets {
+			if r.Id == rulesetid {
+				delete(repo.RuleSets, r.Name)
+				break
+			}
 		}
 	}
 }
