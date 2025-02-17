@@ -512,30 +512,24 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
               permission
             }
           }
-          rulesets(first: 100) {
+          rulesets(first: 20) {
             nodes {
               databaseId
+              source {
+                ... on Repository {
+				  name
+                }
+              }
               name
               target
               enforcement
-              bypassActors(first:100) {
-                app:nodes {
-                  actor {
-                    ... on App {
-                      databaseId
-                      name
-                    }
-                  }
-                  bypassMode
-                }
-              }
               conditions {
                 refName {
                   include
                   exclude
                 }
               }
-              rules(first:100) {
+              rules(first:20) {
                 nodes {
                   parameters {
                     ... on PullRequestParameters {
@@ -664,7 +658,11 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 				repo.InternalUsers[internalCollaborator.Node.Login] = internalCollaborator.Permission
 			}
 			for _, ruleset := range c.Rulesets.Nodes {
-				repo.RuleSets[c.Name] = g.fromGraphQLToGithubRuleset(&ruleset)
+				// if the source is the repository itself, it is not a organization ruleset
+				// we add the ruleset
+				if ruleset.Source.Name == c.Name {
+					repo.RuleSets[c.Name] = g.fromGraphQLToGithubRuleset(&ruleset)
+				}
 			}
 			repositories[c.Name] = repo
 			repositoriesByRefId[c.Id] = repo
@@ -1372,7 +1370,10 @@ type GithubRuleSetRule struct {
 }
 
 type GraphQLGithubRuleSet struct {
-	DatabaseId   int
+	DatabaseId int
+	Source     struct {
+		Name string
+	}
 	Name         string
 	Target       string // BRANCH, TAG
 	Enforcement  string // DISABLED, ACTIVE, EVALUATE
