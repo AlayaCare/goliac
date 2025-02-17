@@ -661,7 +661,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 				// if the source is the repository itself, it is not a organization ruleset
 				// we add the ruleset
 				if ruleset.Source.Name == c.Name {
-					repo.RuleSets[c.Name] = g.fromGraphQLToGithubRuleset(&ruleset)
+					repo.RuleSets[ruleset.Name] = g.fromGraphQLToGithubRuleset(&ruleset)
 				}
 			}
 			repositories[c.Name] = repo
