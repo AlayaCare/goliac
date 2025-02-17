@@ -1564,6 +1564,18 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 			rules = append(rules, map[string]interface{}{
 				"type": "required_signatures",
 			})
+		case "creation":
+			rules = append(rules, map[string]interface{}{
+				"type": "creation",
+			})
+		case "update":
+			rules = append(rules, map[string]interface{}{
+				"type": "update",
+			})
+		case "deletion":
+			rules = append(rules, map[string]interface{}{
+				"type": "deletion",
+			})
 		case "pull_request":
 			rules = append(rules, map[string]interface{}{
 				"type": "pull_request",
@@ -1573,6 +1585,14 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 					"required_approving_review_count":   rule.RequiredApprovingReviewCount,
 					"required_review_thread_resolution": rule.RequiredReviewThreadResolution,
 					"require_last_push_approval":        rule.RequireLastPushApproval,
+				},
+			})
+		case "required_status_checks":
+			rules = append(rules, map[string]interface{}{
+				"type": "required_status_checks",
+				"parameters": map[string]interface{}{
+					"required_status_checks":               rule.RequiredStatusChecks,
+					"strict_required_status_checks_policy": rule.StrictRequiredStatusChecksPolicy,
 				},
 			})
 		}

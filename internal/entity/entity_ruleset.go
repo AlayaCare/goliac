@@ -26,6 +26,14 @@ func CompareRulesetParameters(ruletype string, left RuleSetParameters, right Rul
 	switch ruletype {
 	case "required_signatures":
 		return true
+	case "creation":
+		return true
+	case "update":
+		return true
+	case "deletion":
+		return true
+	case "non_fast_forward":
+		return true
 	case "pull_request":
 		if left.DismissStaleReviewsOnPush != right.DismissStaleReviewsOnPush {
 			return false
@@ -68,7 +76,7 @@ type RuleSetDefinition struct {
 	} `yaml:"conditions,omitempty"`
 
 	Rules []struct {
-		Ruletype   string            // required_signatures, pull_request, required_status_checks...
+		Ruletype   string            // required_signatures, pull_request, required_status_checks, creation, update, deletion, non_fast_forward
 		Parameters RuleSetParameters `yaml:"parameters,omitempty"`
 	} `yaml:"rules"`
 }
@@ -171,7 +179,13 @@ func (r *RuleSet) Validate(filename string) error {
 	}
 
 	for _, rule := range r.Spec.Rules {
-		if rule.Ruletype != "required_signatures" && rule.Ruletype != "pull_request" && rule.Ruletype != "required_status_checks" {
+		if rule.Ruletype != "required_signatures" &&
+			rule.Ruletype != "pull_request" &&
+			rule.Ruletype != "required_status_checks" &&
+			rule.Ruletype != "creation" &&
+			rule.Ruletype != "update" &&
+			rule.Ruletype != "deletion" &&
+			rule.Ruletype != "non_fast_forward" {
 			return fmt.Errorf("invalid rulettype: %s for ruleset filename %s", rule.Ruletype, filename)
 		}
 	}
