@@ -1,3 +1,7 @@
+## Goliac v0.13.3
+
+- introducing ruleset rules `creation`, `update`, `deletion` and `non_fast_forward`
+
 ## Goliac v0.13.2
 
 - bugfix on repository rulesets (name of the repository vs of the ruleset)

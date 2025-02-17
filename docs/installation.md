@@ -156,7 +156,7 @@ spec:
       - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
 
   rules:
-    - ruletype: pull_request # currently supported: pull_request, required_signatures,required_status_checks
+    - ruletype: pull_request # currently supported: pull_request, required_signatures,required_status_checks, creation, update, deletion, non_fast_forward
       parameters:
         requiredApprovingReviewCount: 1
 ```
