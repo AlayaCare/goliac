@@ -19,7 +19,6 @@ require (
 	github.com/gosimple/slug v1.15.0
 	github.com/hashicorp/go-version v1.7.0
 	github.com/jessevdk/go-flags v1.6.1
-	github.com/meatballhat/negroni-logrus v1.1.1
 	github.com/phyber/negroni-gzip v1.0.0
 	github.com/rs/cors v1.11.1
 	github.com/schollz/progressbar/v3 v3.18.0
@@ -27,7 +26,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/negroni v1.0.0
-	github.com/vektah/gqlparser/v2 v2.5.6
+	github.com/vektah/gqlparser/v2 v2.5.22
 	golang.org/x/net v0.35.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -36,7 +35,7 @@ require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.1.5 // indirect
-	github.com/acomagu/bufpipe v1.0.4 // indirect
+	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/cloudflare/circl v1.6.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
@@ -50,7 +49,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
-	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
