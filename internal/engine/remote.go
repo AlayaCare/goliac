@@ -1681,7 +1681,7 @@ func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, dryrun bool
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
 			ctx,
-			fmt.Sprintf("/orgs/%s/%s/rulesets", config.Config.GithubAppOrganization, reponame),
+			fmt.Sprintf("/repos/%s/%s/rulesets", config.Config.GithubAppOrganization, reponame),
 			"",
 			"POST",
 			g.prepareRuleset(ruleset),
@@ -1703,7 +1703,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, dryrun b
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
 			ctx,
-			fmt.Sprintf("/orgs/%s/%s/rulesets/%d", config.Config.GithubAppOrganization, reponame, ruleset.Id),
+			fmt.Sprintf("/repos/%s/%s/rulesets/%d", config.Config.GithubAppOrganization, reponame, ruleset.Id),
 			"",
 			"PUT",
 			g.prepareRuleset(ruleset),
@@ -1725,7 +1725,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, dryrun b
 	if !dryrun {
 		_, err := g.client.CallRestAPI(
 			ctx,
-			fmt.Sprintf("/orgs/%s/%s/rulesets/%d", config.Config.GithubAppOrganization, reponame, rulesetid),
+			fmt.Sprintf("/repos/%s/%s/rulesets/%d", config.Config.GithubAppOrganization, reponame, rulesetid),
 			"",
 			"DELETE",
 			nil,
