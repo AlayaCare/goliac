@@ -1,3 +1,12 @@
+## Goliac v0.14.1
+
+- different security updates (golang/npm)
+- bugfix: wrong api path for repository rulesets
+
+## Goliac v0.14.0
+
+- moving the project to goliac-project Github organization
+
 ## Goliac v0.13.3
 
 - introducing ruleset rules `creation`, `update`, `deletion` and `non_fast_forward`
