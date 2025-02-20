@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/entity"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/gosimple/slug"
 	"github.com/stretchr/testify/assert"
 )

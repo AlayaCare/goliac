@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Alayacare/goliac/internal"
-	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/notification"
 	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/goliac-project/goliac/internal"
+	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/notification"
 	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

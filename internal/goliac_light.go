@@ -3,9 +3,9 @@ package internal
 import (
 	"fmt"
 
-	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/engine"
 	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/engine"
 	"github.com/sirupsen/logrus"
 )
 

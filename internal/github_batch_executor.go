@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/engine"
+	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/engine"
 )
 
 /**

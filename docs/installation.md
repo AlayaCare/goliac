@@ -21,7 +21,7 @@ In GitHub:
   - Click on `New GitHub App`
 - Give basic information:
   - GitHub App  name can be `<yourorg>-goliac-app` (it will be used in the rulesets later)
-  - Homepage URL can be `https://github.com/Alayacare/goliac`
+  - Homepage URL can be `https://github.com/goliac-project/goliac`
   - Disable the active Webhook
 - Under Organization permissions
   - Give Read/Write access to `Administration`
@@ -87,7 +87,7 @@ You need the following structure:
 You will need the goliac binary:
 
 ```shell
-curl -o goliac -L https://github.com/Alayacare/goliac/releases/latest/download/goliac-`uname -s`-`uname -m` && chmod +x goliac
+curl -o goliac -L https://github.com/goliac-project/goliac/releases/latest/download/goliac-`uname -s`-`uname -m` && chmod +x goliac
 ```
 
 You will need as well to have created an admin team in your Github organization (in our example, the team is called `goliac-admin` ).
@@ -222,7 +222,7 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE |           | (mandatory) path to private key       |
 | GOLIAC_GITHUB_TEAM_APP_ID             |             | (optional) dedicated app id of Goliac GitHub App for goliac teams repo (see security.md) |
 | GOLIAC_GITHUB_TEAM_APP_PRIVATE_KEY_FILE |           | (optional) dedicated path to private key for goliac teams repo (see security.md) |
-| GOLIAC_EMAIL                     | goliac@alayacare.com | author name used by Goliac to commit (Codeowners) |
+| GOLIAC_EMAIL                     | goliac@goliac-project.com | author name used by Goliac to commit (Codeowners) |
 | GOLIAC_GITHUB_CONCURRENT_THREADS | 5           | You can increase, like '10' |
 | GOLIAC_GITHUB_CACHE_TTL          |  86400      | GitHub remote cache seconds retention |
 | GOLIAC_SERVER_APPLY_INTERVAL     | 600         | How often (seconds) Goliac try to apply |
@@ -255,7 +255,7 @@ You can connect (eventually) to the UI for some statistic to `http://GOLIAC_SERV
 ### Using docker container
 
 ```shell
-docker run -ti -v `pwd`/goliac-project-app.2023-07-03.private-key.pem:/app/private-key.pem -e GOLIAC_GITHUB_APP_ID=355525 -e GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=/app/private-key.pem -e GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project -e GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-teams -e GOLIAC_SERVER_HOST=0.0.0.0 -p 18000:18000 ghcr.io/nzin/goliac serve
+docker run -ti -v `pwd`/goliac-project-app.2023-07-03.private-key.pem:/app/private-key.pem -e GOLIAC_GITHUB_APP_ID=355525 -e GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=/app/private-key.pem -e GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project -e GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-teams -e GOLIAC_SERVER_HOST=0.0.0.0 -p 18000:18000 ghcr.io/goliac-project/goliac serve
 ```
 
 ### Using docker-compose
@@ -273,7 +273,7 @@ services:
             - GOLIAC_SERVER_HOST=0.0.0.0
         ports:
             - 18000:18000
-        image: ghcr.io/nzin/goliac
+        image: ghcr.io/goliac-project/goliac
         command: serve
 ```
 
@@ -311,7 +311,7 @@ spec:
           envFrom:
             - secretRef:
                 name: goliac-secrets
-          image: ghcr.io/nzin/goliac
+          image: ghcr.io/goliac-project/goliac
           livenessProbe:
             failureThreshold: 3
             httpGet:
@@ -414,7 +414,7 @@ display_information:
   name: Goliac
   description: GitHub Organization Leveraged by Infrastructure As Code
   background_color: "#616161"
-  long_description: "https://github.com/AlayaCare/goliac\r
+  long_description: "https://github.com/goliac-project/goliac\r
 
     \r
 

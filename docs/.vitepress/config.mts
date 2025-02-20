@@ -41,12 +41,11 @@ export default defineConfig({
     ],
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/Alayacare/goliac' }
+      { icon: 'github', link: 'https://github.com/goliac-project/goliac' }
     ],
     
     footer: {
-      message: 'Sponsored by <a href="https://www.alayacare.com">AlayaCare</a>',
-      copyright: '<a href="https://github.com/AlayaCare/goliac/blob/main/LICENSE">MIT License</a>'
+      copyright: '<a href="https://github.com/goliac-project/goliac/blob/main/LICENSE">MIT License</a>'
     }
   }
 })

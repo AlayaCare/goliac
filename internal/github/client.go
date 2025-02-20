@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Alayacare/goliac/internal/config"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/sirupsen/logrus"
 )
 

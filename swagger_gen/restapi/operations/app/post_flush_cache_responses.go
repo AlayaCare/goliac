@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"github.com/Alayacare/goliac/swagger_gen/models"
+	"github.com/goliac-project/goliac/swagger_gen/models"
 )
 
 // PostFlushCacheOKCode is the HTTP code returned for type PostFlushCacheOK

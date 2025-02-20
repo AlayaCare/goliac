@@ -14,7 +14,7 @@ You need to
   - Click on `New GitHub App`
 - Give basic information:
   - GitHub App  name can be `<yourorg>-goliac-teams-app`
-  - Homepage URL can be `https://github.com/Alayacare/goliac`
+  - Homepage URL can be `https://github.com/goliac-project/goliac`
   - Disable the active Webhook
 - Under Repository permissions
   - Give Read/Write access to `Administration` (needed to bypass the 'vaidate' check)
@@ -42,7 +42,7 @@ Else you need to
   - Click on `New GitHub App`
 - Give basic information:
   - GitHub App  name can be `<yourorg>-goliac-app` (it will be used in the rulesets later)
-  - Homepage URL can be `https://github.com/Alayacare/goliac`
+  - Homepage URL can be `https://github.com/goliac-project/goliac`
   - Disable the active Webhook
 - Under Repository permissions
   - Give Read/Write access to `Administration`

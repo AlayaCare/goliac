@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
+	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/utils"
 	"gopkg.in/yaml.v3"
 )
 

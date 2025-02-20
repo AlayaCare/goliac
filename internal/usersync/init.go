@@ -1,8 +1,8 @@
 package usersync
 
 import (
-	"github.com/Alayacare/goliac/internal/engine"
-	"github.com/Alayacare/goliac/internal/github"
+	"github.com/goliac-project/goliac/internal/engine"
+	"github.com/goliac-project/goliac/internal/github"
 )
 
 func InitPlugins(client github.GitHubClient) {

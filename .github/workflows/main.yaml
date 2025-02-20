@@ -34,11 +34,11 @@ jobs:
       - name: Build binaries
         run: |
           mkdir -p dist
-          GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Linux-x86_64 ./cmd/goliac
-          GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Linux-aarch64 ./cmd/goliac
-          GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Darwin-arm64 ./cmd/goliac
-          GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Darwin-x86_64 ./cmd/goliac
-          GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-win-x86_64 ./cmd/goliac
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/goliac-project/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Linux-x86_64 ./cmd/goliac
+          GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/goliac-project/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Linux-aarch64 ./cmd/goliac
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-X github.com/goliac-project/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Darwin-arm64 ./cmd/goliac
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-X github.com/goliac-project/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-Darwin-x86_64 ./cmd/goliac
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X github.com/goliac-project/goliac/internal/config.GoliacBuildVersion=${{ github.ref_name }}" -o dist/goliac-win-x86_64 ./cmd/goliac
 
       # Publish binaries as release assets
       - name: Upload binaries to GitHub Release

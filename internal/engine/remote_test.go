@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/github"
+	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/github"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/vektah/gqlparser/v2/ast"
