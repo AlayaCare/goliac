@@ -1,4 +1,4 @@
-module github.com/Alayacare/goliac
+module github.com/goliac-project/goliac
 
 go 1.22
 

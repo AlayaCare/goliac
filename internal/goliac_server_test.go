@@ -9,10 +9,10 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Alayacare/goliac/internal/engine"
-	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/observability"
-	"github.com/Alayacare/goliac/swagger_gen/restapi/operations/app"
+	"github.com/goliac-project/goliac/internal/engine"
+	"github.com/goliac-project/goliac/internal/entity"
+	"github.com/goliac-project/goliac/internal/observability"
+	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/app"
 )
 
 type GoliacLocalMock struct {

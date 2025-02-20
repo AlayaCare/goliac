@@ -12,7 +12,7 @@ As a Github org admin, in GitHub:
   - Click on `New GitHub App`
 - Give basic information:
   - GitHub App  name can be `<yourorg>-goliac-app` (it will be used in the rulesets later)
-  - Homepage URL can be `https://github.com/Alayacare/goliac`
+  - Homepage URL can be `https://github.com/goliac-project/goliac`
   - Disable the active Webhook
 - Under Organization permissions
   - Give Read/Write access to `Administration`
@@ -31,7 +31,7 @@ As a Github org admin, in GitHub:
 ### Get the Goliac binary
 
 ```shell
-curl -o goliac -L https://github.com/Alayacare/goliac/releases/latest/download/goliac-`uname -s`-`uname -m` && chmod +x goliac
+curl -o goliac -L https://github.com/goliac-project/goliac/releases/latest/download/goliac-`uname -s`-`uname -m` && chmod +x goliac
 ```
 
 ### Create a goliac admin team

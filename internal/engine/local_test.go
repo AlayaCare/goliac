@@ -5,10 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/observability"
-	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-billy/v5/util"
@@ -20,6 +16,10 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/server"
 	"github.com/go-git/go-git/v5/storage/filesystem"
 	"github.com/go-git/go-git/v5/storage/memory"
+	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/entity"
+	"github.com/goliac-project/goliac/internal/observability"
+	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -118,7 +118,7 @@ func TestRepository(t *testing.T) {
 		_, err = w.Commit("initial commit", &git.CommitOptions{
 			Author: &object.Signature{
 				Name:  "goliac",
-				Email: "goliac@alayacare.com",
+				Email: "goliac@goliac-project.com",
 				When:  time.Now(),
 			},
 		})
@@ -623,10 +623,10 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		content := g.codeowners_regenerate("github-admins", "Alayacare")
+		content := g.codeowners_regenerate("github-admins", "goliac-project")
 
 		// check the content of the CODEOWNERS file
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @Alayacare/github-admins\n/teams/github-admins/* @Alayacare/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @Alayacare/github-admins\n", content)
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github-admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @goliac-project/github-admins\n", content)
 	})
 
 	t.Run("codeowners_regenerate with a team path with a space", func(t *testing.T) {
@@ -657,10 +657,10 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		content := g.codeowners_regenerate("github admins", "Alayacare")
+		content := g.codeowners_regenerate("github admins", "goliac-project")
 
 		// check the content of the CODEOWNERS file
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @Alayacare/github-admins\n/teams/github\\ admins/* @Alayacare/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @Alayacare/github-admins\n", content)
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github\\ admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @goliac-project/github-admins\n", content)
 	})
 
 	t.Run("codeowners_regenerate with a parent", func(t *testing.T) {
@@ -700,10 +700,10 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		content := g.codeowners_regenerate("github-admins", "Alayacare")
+		content := g.codeowners_regenerate("github-admins", "goliac-project")
 
 		// check the content of the CODEOWNERS file
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @Alayacare/github-admins\n/teams/github-admins/* @Alayacare/github-admins-goliac-owners @Alayacare/github-admins\n/teams/github-admins/subteam/* @Alayacare/subteam-goliac-owners @Alayacare/github-admins\n", content)
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github-admins/* @goliac-project/github-admins-goliac-owners @goliac-project/github-admins\n/teams/github-admins/subteam/* @goliac-project/subteam-goliac-owners @goliac-project/github-admins\n", content)
 	})
 }
 
@@ -771,13 +771,13 @@ func TestGoliacLocalImpl(t *testing.T) {
 		assert.NotNil(t, goliacConfig)
 
 		// update and commit the CODEOWNERS file
-		err = g.UpdateAndCommitCodeOwners(goliacConfig, false, "none", "master", "foobar", "Alayacare")
+		err = g.UpdateAndCommitCodeOwners(goliacConfig, false, "none", "master", "foobar", "goliac-project")
 		assert.Nil(t, err)
 
 		// check the content of the CODEOWNERS file
 		content, err := utils.ReadFile(target, ".github/CODEOWNERS")
 		assert.Nil(t, err)
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @Alayacare/github-admins\n/teams/github-admins/* @Alayacare/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @Alayacare/github-admins\n", string(content))
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github-admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @goliac-project/github-admins\n", string(content))
 	})
 
 	t.Run("SyncUsersAndTeams", func(t *testing.T) {

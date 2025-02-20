@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/engine"
-	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/github"
-	"github.com/Alayacare/goliac/internal/observability"
-	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/osfs"
+	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/engine"
+	"github.com/goliac-project/goliac/internal/entity"
+	"github.com/goliac-project/goliac/internal/github"
+	"github.com/goliac-project/goliac/internal/observability"
+	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -520,7 +520,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Verify
-        run: docker run -v ${{ github.workspace }}:/work --rm ghcr.io/nzin/goliac verify /work
+        run: docker run -v ${{ github.workspace }}:/work --rm ghcr.io/goliac-project/goliac verify /work
 `
 	if err := writeFile(filepath.Join(rootpath, ".github", "workflows", "pr.yaml"), []byte(workflow), fs); err != nil {
 		return err
@@ -532,7 +532,7 @@ func (s *Scaffold) generateReadme(fs billy.Filesystem, rootpath string) error {
 	readme := `
 # teams
 
-This repository manage the Github organization through [Goliac](https://github.com/alayacare/goliac) application
+This repository manage the Github organization through [Goliac](https://github.com/goliac-project/goliac) application
 
 ## Create a repository
 

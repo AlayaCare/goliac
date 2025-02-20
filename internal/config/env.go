@@ -15,7 +15,7 @@ var Config = struct {
 	GithubAppPrivateKeyFile     string `env:"GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE" envDefault:"github-app-private-key.pem"`
 	GithubTeamAppID             int64  `env:"GOLIAC_GITHUB_TEAM_APP_ID"`
 	GithubTeamAppPrivateKeyFile string `env:"GOLIAC_GITHUB_TEAM_APP_PRIVATE_KEY_FILE"`
-	GoliacEmail                 string `env:"GOLIAC_EMAIL" envDefault:"goliac@alayacare.com"`
+	GoliacEmail                 string `env:"GOLIAC_EMAIL" envDefault:"goliac@goliac-project.com"`
 	GoliacTeamOwnerSuffix       string `env:"GOLIAC_TEAM_OWNER_SUFFIX" envDefault:"-goliac-owners"`
 
 	GithubConcurrentThreads int64 `env:"GOLIAC_GITHUB_CONCURRENT_THREADS" envDefault:"5"`
@@ -71,5 +71,5 @@ var Config = struct {
 }{}
 
 // to be overrided at build time with
-// go build -ldflags "-X github.com/Alayacare/goliac/internal/config.GoliacBuildVersion=...
+// go build -ldflags "-X github.com/goliac-project/goliac/internal/config.GoliacBuildVersion=...
 var GoliacBuildVersion = "unknown"

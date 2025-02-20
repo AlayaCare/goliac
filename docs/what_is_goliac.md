@@ -89,6 +89,6 @@ To use the full capabilities of Goliac, through the Github Rulesets features you
 - currently Goliac manages 1 Github organization per instance
 - The installation is relatively easy:
   - either you install a standalone application (Goliac app comes as a single binary)
-  - or you deploy Goliac docker image (via docker-compose or in kubernetes). You can build yourself the docker image or use pre-built images (https://github.com/nzin/goliac/pkgs/container/goliac).
+  - or you deploy Goliac docker image (via docker-compose or in kubernetes). You can build yourself the docker image or use pre-built images (https://github.com/goliac-project/goliac/pkgs/container/goliac).
   - you need to create a definition of what Goliac manages: aka the goliac "teams" repository. With it you can define and managed either partially or totally your Github organization
 - the definition (and the maintenance) of your Github organization is done via simple yaml file, and dont requires special skills or langage know-how

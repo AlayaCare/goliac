@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/utils"
+	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/entity"
+	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
 )

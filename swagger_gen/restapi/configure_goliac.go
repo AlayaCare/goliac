@@ -6,12 +6,12 @@ import (
 	"crypto/tls"
 	"net/http"
 
-	"github.com/Alayacare/goliac/internal/config"
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Alayacare/goliac/swagger_gen/restapi/operations"
+	"github.com/goliac-project/goliac/swagger_gen/restapi/operations"
 )
 
 //go:generate swagger generate server --target ../../swagger_gen --name Goliac --spec ../../../docs/api_docs/bundle.yaml --principal interface{}

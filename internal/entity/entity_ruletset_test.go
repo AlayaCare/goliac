@@ -3,9 +3,9 @@ package entity
 import (
 	"testing"
 
-	"github.com/Alayacare/goliac/internal/utils"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
 

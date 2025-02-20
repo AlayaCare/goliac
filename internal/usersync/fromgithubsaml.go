@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Alayacare/goliac/internal/config"
-	"github.com/Alayacare/goliac/internal/engine"
-	"github.com/Alayacare/goliac/internal/entity"
-	"github.com/Alayacare/goliac/internal/github"
-	"github.com/Alayacare/goliac/internal/observability"
 	"github.com/go-git/go-billy/v5"
+	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/engine"
+	"github.com/goliac-project/goliac/internal/entity"
+	"github.com/goliac-project/goliac/internal/github"
+	"github.com/goliac-project/goliac/internal/observability"
 )
 
 /*
