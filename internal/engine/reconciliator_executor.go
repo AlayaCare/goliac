@@ -24,6 +24,9 @@ type ReconciliatorExecutor interface {
 	AddRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet)
 	UpdateRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet)
 	DeleteRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, rulesetid int)
+	AddRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection)
+	UpdateRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection)
+	DeleteRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection)
 	UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string, permission string) // permission can be "pull" or "push"
 	UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string)
 	UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, reponame string, githubid string)

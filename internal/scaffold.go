@@ -271,8 +271,14 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 				lRepo.Spec.Writers = repoWrite[r]
 				lRepo.Spec.Readers = repoRead[r]
 
-				// scaffoldling repository rulesets
 				if rRepo, ok := rRepos[r]; ok {
+					// basic repository properties
+					lRepo.Spec.IsPublic = rRepo.BoolProperties["public"]
+					lRepo.Spec.AllowAutoMerge = rRepo.BoolProperties["allow_auto_merge"]
+					lRepo.Spec.DeleteBranchOnMerge = rRepo.BoolProperties["delete_branch_on_merge"]
+					lRepo.Spec.AllowUpdateBranch = rRepo.BoolProperties["allow_update_branch"]
+
+					// scaffoldling repository rulesets
 					rRulesets := rRepo.RuleSets
 					if rRulesets != nil {
 						lRepo.Spec.Rulesets = make([]entity.RepositoryRuleSet, 0, len(rRulesets))
@@ -304,6 +310,33 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 							}
 
 							lRepo.Spec.Rulesets = append(lRepo.Spec.Rulesets, lRuleset)
+						}
+					}
+
+					// scaffoldling repository branch protections
+					rBranchprotection := rRepo.BranchProtections
+					if rBranchprotection != nil {
+						lRepo.Spec.BranchProtections = make([]entity.RepositoryBranchProtection, 0, len(rBranchprotection))
+
+						for rBranchprotectionPattern, rBranchprotection := range rBranchprotection {
+							lbranchprotection := entity.RepositoryBranchProtection{
+								Pattern: rBranchprotectionPattern,
+							}
+							lbranchprotection.RequiresApprovingReviews = rBranchprotection.RequiresApprovingReviews
+							lbranchprotection.RequiredApprovingReviewCount = rBranchprotection.RequiredApprovingReviewCount
+							lbranchprotection.DismissesStaleReviews = rBranchprotection.DismissesStaleReviews
+							lbranchprotection.RequiresCodeOwnerReviews = rBranchprotection.RequiresCodeOwnerReviews
+							lbranchprotection.RequireLastPushApproval = rBranchprotection.RequireLastPushApproval
+							lbranchprotection.RequiresStatusChecks = rBranchprotection.RequiresStatusChecks
+							lbranchprotection.RequiresStrictStatusChecks = rBranchprotection.RequiresStrictStatusChecks
+							lbranchprotection.RequiredStatusCheckContexts = rBranchprotection.RequiredStatusCheckContexts
+							lbranchprotection.RequiresConversationResolution = rBranchprotection.RequiresConversationResolution
+							lbranchprotection.RequiresCommitSignatures = rBranchprotection.RequiresCommitSignatures
+							lbranchprotection.RequiresLinearHistory = rBranchprotection.RequiresLinearHistory
+							lbranchprotection.AllowsForcePushes = rBranchprotection.AllowsForcePushes
+							lbranchprotection.AllowsDeletions = rBranchprotection.AllowsDeletions
+
+							lRepo.Spec.BranchProtections = append(lRepo.Spec.BranchProtections, lbranchprotection)
 						}
 					}
 				}

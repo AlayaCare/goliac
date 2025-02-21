@@ -25,7 +25,7 @@ type UnmanagedResources struct {
  * GoliacReconciliator is here to sync the local state to the remote state
  */
 type GoliacReconciliator interface {
-	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error)
+	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, branch string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error)
 }
 
 type GoliacReconciliatorImpl struct {
@@ -42,7 +42,7 @@ func NewGoliacReconciliatorImpl(executor ReconciliatorExecutor, repoconfig *conf
 	}
 }
 
-func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error) {
+func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, branch string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error) {
 	rremote := NewMutableGoliacRemoteImpl(ctx, remote)
 	r.Begin(ctx, dryrun)
 	unmanaged := &UnmanagedResources{
@@ -66,7 +66,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 		return nil, err
 	}
 
-	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, dryrun, reposToArchive, reposToRename)
+	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, branch, dryrun, reposToArchive, reposToRename)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
 		return nil, err
@@ -356,13 +356,14 @@ type GithubRepoComparable struct {
 	ExternalUserWriters []string // githubids
 	InternalUsers       []string // githubids
 	Rulesets            map[string]*GithubRuleSet
+	BranchProtections   map[string]*GithubBranchProtection
 }
 
 /*
  * This function sync repositories and team's repositories permissions
  * It returns the list of deleted repos that must not be deleted but archived
  */
-func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, dryrun bool, toArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) error {
+func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, branch string, dryrun bool, toArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) error {
 
 	// let's start with the local cloned github-teams repo
 	lRepos := make(map[string]*GithubRepoComparable)
@@ -400,6 +401,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			ExternalUserWriters: []string{},
 			InternalUsers:       []string{},
 			Rulesets:            v.RuleSets,
+			BranchProtections:   v.BranchProtections,
 		}
 		for pk, pv := range v.BoolProperties {
 			repo.BoolProperties[pk] = pv
@@ -434,7 +436,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		}
 	}
 
-	// adding the teams repo
+	// adding the goliac-teams repo
 	teamsRepo := &entity.Repository{}
 	teamsRepo.ApiVersion = "v1"
 	teamsRepo.Kind = "Repository"
@@ -443,6 +445,20 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	teamsRepo.Spec.Readers = []string{}
 	teamsRepo.Spec.IsPublic = false
 	teamsRepo.Spec.DeleteBranchOnMerge = true
+	// cf goliac.go:L231-252
+	bp := entity.RepositoryBranchProtection{
+		Pattern:                      branch,
+		RequiresApprovingReviews:     true,
+		RequiredApprovingReviewCount: 1,
+		RequiresStatusChecks:         true,
+		RequiresStrictStatusChecks:   true,
+		RequiredStatusCheckContexts:  []string{},
+		RequireLastPushApproval:      true,
+	}
+	if config.Config.ServerGitBranchProtectionRequiredCheck != "" {
+		bp.RequiredStatusCheckContexts = append(bp.RequiredStatusCheckContexts, config.Config.ServerGitBranchProtectionRequiredCheck)
+	}
+	teamsRepo.Spec.BranchProtections = []entity.RepositoryBranchProtection{bp}
 	localRepositories[teamsreponame] = teamsRepo
 
 	for reponame, lRepo := range localRepositories {
@@ -505,6 +521,28 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			rulesets[rs.Name] = &ruleset
 		}
 
+		branchprotections := make(map[string]*GithubBranchProtection)
+		for _, bp := range lRepo.Spec.BranchProtections {
+			branchprotection := GithubBranchProtection{
+				DatabaseId:                     0,
+				Pattern:                        bp.Pattern,
+				RequiresApprovingReviews:       bp.RequiresApprovingReviews,
+				RequiredApprovingReviewCount:   bp.RequiredApprovingReviewCount,
+				DismissesStaleReviews:          bp.DismissesStaleReviews,
+				RequiresCodeOwnerReviews:       bp.RequiresCodeOwnerReviews,
+				RequireLastPushApproval:        bp.RequireLastPushApproval,
+				RequiresStatusChecks:           bp.RequiresStatusChecks,
+				RequiresStrictStatusChecks:     bp.RequiresStrictStatusChecks,
+				RequiredStatusCheckContexts:    bp.RequiredStatusCheckContexts,
+				RequiresConversationResolution: bp.RequiresConversationResolution,
+				RequiresCommitSignatures:       bp.RequiresCommitSignatures,
+				RequiresLinearHistory:          bp.RequiresLinearHistory,
+				AllowsForcePushes:              bp.AllowsForcePushes,
+				AllowsDeletions:                bp.AllowsDeletions,
+			}
+			branchprotections[bp.Pattern] = &branchprotection
+		}
+
 		lRepos[utils.GithubAnsiString(reponame)] = &GithubRepoComparable{
 			BoolProperties: map[string]bool{
 				"private":                !lRepo.Spec.IsPublic,
@@ -519,6 +557,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			ExternalUserWriters: eWriters,
 			InternalUsers:       []string{},
 			Rulesets:            rulesets,
+			BranchProtections:   branchprotections,
 		}
 	}
 
@@ -542,6 +581,24 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			r.UpdateRepositoryRuleset(ctx, dryrun, reponame, lRuleset)
 		}
 		CompareEntities(lRepo.Rulesets, rRepo.Rulesets, compareRulesets, onRulesetAdded, onRulesetRemoved, onRulesetChange)
+
+		//
+		// "recursive" branchprotections comparison
+		//
+		onBranchProtectionAdded := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
+			// CREATE repo branchprotection
+			r.AddRepositoryBranchProtection(ctx, dryrun, reponame, lBp)
+		}
+		onBranchProtectionRemoved := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
+			// DELETE repo branchprotection
+			r.DeleteRepositoryBranchProtection(ctx, dryrun, reponame, rBp)
+		}
+		onBranchProtectionChange := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
+			// UPDATE branchprotection
+			lBp.DatabaseId = rBp.DatabaseId
+			r.UpdateRepositoryBranchProtection(ctx, dryrun, reponame, lBp)
+		}
+		CompareEntities(lRepo.BranchProtections, rRepo.BranchProtections, compareBranchProtections, onBranchProtectionAdded, onBranchProtectionRemoved, onBranchProtectionChange)
 
 		//
 		// now, comparing repo properties
@@ -683,6 +740,52 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	CompareEntities(lRepos, rRepos, compareRepos, onAdded, onRemoved, onChanged)
 
 	return nil
+}
+
+func compareBranchProtections(bpname string, lbp *GithubBranchProtection, rbp *GithubBranchProtection) bool {
+	if lbp.Pattern != rbp.Pattern {
+		return false
+	}
+	if lbp.RequiresApprovingReviews != rbp.RequiresApprovingReviews {
+		return false
+	}
+	if lbp.RequiredApprovingReviewCount != rbp.RequiredApprovingReviewCount {
+		return false
+	}
+	if lbp.DismissesStaleReviews != rbp.DismissesStaleReviews {
+		return false
+	}
+	if lbp.RequiresCodeOwnerReviews != rbp.RequiresCodeOwnerReviews {
+		return false
+	}
+	if lbp.RequireLastPushApproval != rbp.RequireLastPushApproval {
+		return false
+	}
+	if lbp.RequiresStatusChecks != rbp.RequiresStatusChecks {
+		return false
+	}
+	if lbp.RequiresStrictStatusChecks != rbp.RequiresStrictStatusChecks {
+		return false
+	}
+	if res, _, _ := entity.StringArrayEquivalent(lbp.RequiredStatusCheckContexts, rbp.RequiredStatusCheckContexts); !res {
+		return false
+	}
+	if lbp.RequiresConversationResolution != rbp.RequiresConversationResolution {
+		return false
+	}
+	if lbp.RequiresCommitSignatures != rbp.RequiresCommitSignatures {
+		return false
+	}
+	if lbp.RequiresLinearHistory != rbp.RequiresLinearHistory {
+		return false
+	}
+	if lbp.AllowsForcePushes != rbp.AllowsForcePushes {
+		return false
+	}
+	if lbp.AllowsDeletions != rbp.AllowsDeletions {
+		return false
+	}
+	return true
 }
 
 /*
@@ -959,6 +1062,24 @@ func (r *GoliacReconciliatorImpl) DeleteRepositoryRuleset(ctx context.Context, d
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_repository_ruleset"}).Infof("repository: %s, ruleset id:%d", reponame, ruleset.Id)
 	if r.executor != nil {
 		r.executor.DeleteRepositoryRuleset(ctx, dryrun, reponame, ruleset.Id)
+	}
+}
+func (r *GoliacReconciliatorImpl) AddRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_repository_branchprotection"}).Infof("repository: %s, branchprotection: %s", reponame, branchprotection.Pattern)
+	if r.executor != nil {
+		r.executor.AddRepositoryBranchProtection(ctx, dryrun, reponame, branchprotection)
+	}
+}
+func (r *GoliacReconciliatorImpl) UpdateRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_branchprotection"}).Infof("repository: %s, branchprotection: %s", reponame, branchprotection.Pattern)
+	if r.executor != nil {
+		r.executor.UpdateRepositoryBranchProtection(ctx, dryrun, reponame, branchprotection)
+	}
+}
+func (r *GoliacReconciliatorImpl) DeleteRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_repository_branchprotection"}).Infof("repository: %s, branchprotection: %s", reponame, branchprotection.Pattern)
+	if r.executor != nil {
+		r.executor.DeleteRepositoryBranchProtection(ctx, dryrun, reponame, branchprotection)
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string, permission string) {

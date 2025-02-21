@@ -445,6 +445,17 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 				"allow_update_branch":    false,
 			},
 			ExternalUsers: map[string]string{},
+			BranchProtections: map[string]*engine.GithubBranchProtection{
+				"master": {
+					Pattern:                      "master",
+					RequiresApprovingReviews:     true,
+					RequiredApprovingReviewCount: 1,
+					RequireLastPushApproval:      true,
+					RequiresStatusChecks:         true,
+					RequiresStrictStatusChecks:   true,
+					RequiredStatusCheckContexts:  []string{"validate"},
+				},
+			},
 		},
 		"repo1": {
 			Name:  "repo1",
@@ -605,6 +616,18 @@ func (e *GoliacRemoteExecutorMock) UpdateRepositoryRuleset(ctx context.Context, 
 }
 func (e *GoliacRemoteExecutorMock) DeleteRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, rulesetid int) {
 	fmt.Println("*** DeleteRepositoryRuleset", reponame, rulesetid)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) AddRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
+	fmt.Println("*** AddRepositoryBranchProtection", reponame, branchprotection.Pattern)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
+	fmt.Println("*** UpdateRepositoryBranchProtection", reponame, branchprotection.Pattern)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) DeleteRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
+	fmt.Println("*** DeleteRepositoryBranchProtection", reponame, branchprotection.Pattern)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) AddRuleset(ctx context.Context, dryrun bool, ruleset *engine.GithubRuleSet) {
