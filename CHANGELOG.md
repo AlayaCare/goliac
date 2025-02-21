@@ -1,3 +1,11 @@
+## Goliac v0.15.1
+
+- branch protections bugfixes
+
+## Goliac v0.15.0
+
+- introducing branch protections
+
 ## Goliac v0.14.1
 
 - different security updates (golang/npm)

@@ -524,7 +524,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		branchprotections := make(map[string]*GithubBranchProtection)
 		for _, bp := range lRepo.Spec.BranchProtections {
 			branchprotection := GithubBranchProtection{
-				DatabaseId:                     0,
+				Id:                             "",
 				Pattern:                        bp.Pattern,
 				RequiresApprovingReviews:       bp.RequiresApprovingReviews,
 				RequiredApprovingReviewCount:   bp.RequiredApprovingReviewCount,
@@ -595,7 +595,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		}
 		onBranchProtectionChange := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
 			// UPDATE branchprotection
-			lBp.DatabaseId = rBp.DatabaseId
+			lBp.Id = rBp.Id
 			r.UpdateRepositoryBranchProtection(ctx, dryrun, reponame, lBp)
 		}
 		CompareEntities(lRepo.BranchProtections, rRepo.BranchProtections, compareBranchProtections, onBranchProtectionAdded, onBranchProtectionRemoved, onBranchProtectionChange)
@@ -749,8 +749,10 @@ func compareBranchProtections(bpname string, lbp *GithubBranchProtection, rbp *G
 	if lbp.RequiresApprovingReviews != rbp.RequiresApprovingReviews {
 		return false
 	}
-	if lbp.RequiredApprovingReviewCount != rbp.RequiredApprovingReviewCount {
-		return false
+	if lbp.RequiresApprovingReviews {
+		if lbp.RequiredApprovingReviewCount != rbp.RequiredApprovingReviewCount {
+			return false
+		}
 	}
 	if lbp.DismissesStaleReviews != rbp.DismissesStaleReviews {
 		return false
@@ -764,11 +766,14 @@ func compareBranchProtections(bpname string, lbp *GithubBranchProtection, rbp *G
 	if lbp.RequiresStatusChecks != rbp.RequiresStatusChecks {
 		return false
 	}
-	if lbp.RequiresStrictStatusChecks != rbp.RequiresStrictStatusChecks {
-		return false
-	}
-	if res, _, _ := entity.StringArrayEquivalent(lbp.RequiredStatusCheckContexts, rbp.RequiredStatusCheckContexts); !res {
-		return false
+	if lbp.RequiresStatusChecks {
+		if lbp.RequiresStrictStatusChecks != rbp.RequiresStrictStatusChecks {
+			return false
+		}
+		if res, _, _ := entity.StringArrayEquivalent(lbp.RequiredStatusCheckContexts, rbp.RequiredStatusCheckContexts); !res {
+			fmt.Println("false")
+			return false
+		}
 	}
 	if lbp.RequiresConversationResolution != rbp.RequiresConversationResolution {
 		return false
