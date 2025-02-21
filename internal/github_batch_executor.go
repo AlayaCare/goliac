@@ -196,6 +196,31 @@ func (g *GithubBatchExecutor) UpdateRepositoryRemoveInternalUser(ctx context.Con
 	})
 }
 
+func (g *GithubBatchExecutor) AddRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
+	g.commands = append(g.commands, &GithubCommandAddRepositoryBranchProtection{
+		client:           g.client,
+		dryrun:           dryrun,
+		reponame:         reponame,
+		branchprotection: branchprotection,
+	})
+}
+func (g *GithubBatchExecutor) UpdateRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositoryBranchProtection{
+		client:           g.client,
+		dryrun:           dryrun,
+		reponame:         reponame,
+		branchprotection: branchprotection,
+	})
+}
+func (g *GithubBatchExecutor) DeleteRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
+	g.commands = append(g.commands, &GithubCommandDeleteRepositoryBranchProtection{
+		client:           g.client,
+		dryrun:           dryrun,
+		reponame:         reponame,
+		branchprotection: branchprotection,
+	})
+}
+
 func (g *GithubBatchExecutor) DeleteRepository(ctx context.Context, dryrun bool, reponame string) {
 	g.commands = append(g.commands, &GithubCommandDeleteRepository{
 		client:   g.client,
@@ -517,6 +542,39 @@ type GithubCommandDeleteRepositoryRuletset struct {
 
 func (g *GithubCommandDeleteRepositoryRuletset) Apply(ctx context.Context) {
 	g.client.DeleteRepositoryRuleset(ctx, g.dryrun, g.reponame, g.rulesetid)
+}
+
+type GithubCommandAddRepositoryBranchProtection struct {
+	client           engine.ReconciliatorExecutor
+	dryrun           bool
+	reponame         string
+	branchprotection *engine.GithubBranchProtection
+}
+
+func (g *GithubCommandAddRepositoryBranchProtection) Apply(ctx context.Context) {
+	g.client.AddRepositoryBranchProtection(ctx, g.dryrun, g.reponame, g.branchprotection)
+}
+
+type GithubCommandUpdateRepositoryBranchProtection struct {
+	client           engine.ReconciliatorExecutor
+	dryrun           bool
+	reponame         string
+	branchprotection *engine.GithubBranchProtection
+}
+
+func (g *GithubCommandUpdateRepositoryBranchProtection) Apply(ctx context.Context) {
+	g.client.UpdateRepositoryBranchProtection(ctx, g.dryrun, g.reponame, g.branchprotection)
+}
+
+type GithubCommandDeleteRepositoryBranchProtection struct {
+	client           engine.ReconciliatorExecutor
+	dryrun           bool
+	reponame         string
+	branchprotection *engine.GithubBranchProtection
+}
+
+func (g *GithubCommandDeleteRepositoryBranchProtection) Apply(ctx context.Context) {
+	g.client.DeleteRepositoryBranchProtection(ctx, g.dryrun, g.reponame, g.branchprotection)
 }
 
 type GithubCommandAddRuletset struct {

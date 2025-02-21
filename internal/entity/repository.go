@@ -13,15 +13,16 @@ import (
 type Repository struct {
 	Entity `yaml:",inline"`
 	Spec   struct {
-		Writers             []string            `yaml:"writers,omitempty"`
-		Readers             []string            `yaml:"readers,omitempty"`
-		ExternalUserReaders []string            `yaml:"externalUserReaders,omitempty"`
-		ExternalUserWriters []string            `yaml:"externalUserWriters,omitempty"`
-		IsPublic            bool                `yaml:"public,omitempty"`
-		AllowAutoMerge      bool                `yaml:"allow_auto_merge,omitempty"`
-		DeleteBranchOnMerge bool                `yaml:"delete_branch_on_merge,omitempty"`
-		AllowUpdateBranch   bool                `yaml:"allow_update_branch,omitempty"`
-		Rulesets            []RepositoryRuleSet `yaml:"rulesets,omitempty"`
+		Writers             []string                     `yaml:"writers,omitempty"`
+		Readers             []string                     `yaml:"readers,omitempty"`
+		ExternalUserReaders []string                     `yaml:"externalUserReaders,omitempty"`
+		ExternalUserWriters []string                     `yaml:"externalUserWriters,omitempty"`
+		IsPublic            bool                         `yaml:"public,omitempty"`
+		AllowAutoMerge      bool                         `yaml:"allow_auto_merge,omitempty"`
+		DeleteBranchOnMerge bool                         `yaml:"delete_branch_on_merge,omitempty"`
+		AllowUpdateBranch   bool                         `yaml:"allow_update_branch,omitempty"`
+		Rulesets            []RepositoryRuleSet          `yaml:"rulesets,omitempty"`
+		BranchProtections   []RepositoryBranchProtection `yaml:"branch_protections,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
@@ -32,6 +33,23 @@ type Repository struct {
 type RepositoryRuleSet struct {
 	RuleSetDefinition `yaml:",inline"`
 	Name              string `yaml:"name"`
+}
+
+type RepositoryBranchProtection struct {
+	Pattern                        string   `yaml:"pattern"` // branch name pattern like "master" or "release/*"
+	RequiresApprovingReviews       bool     `yaml:"requires_approving_reviews,omitempty"`
+	RequiredApprovingReviewCount   int      `yaml:"required_approving_review_count,omitempty"`
+	DismissesStaleReviews          bool     `yaml:"dismisses_stale_reviews,omitempty"`
+	RequiresCodeOwnerReviews       bool     `yaml:"requires_code_owner_reviews,omitempty"`
+	RequireLastPushApproval        bool     `yaml:"require_last_push_approval,omitempty"`
+	RequiresStatusChecks           bool     `yaml:"requires_status_checks,omitempty"`
+	RequiresStrictStatusChecks     bool     `yaml:"requires_strict_status_checks,omitempty"`  // if true, only the status checks in required_status_check_contexts will be considered
+	RequiredStatusCheckContexts    []string `yaml:"required_status_check_contexts,omitempty"` // list of status check contexts like "continuous-integration/travis-ci"
+	RequiresConversationResolution bool     `yaml:"requires_conversation_resolution,omitempty"`
+	RequiresCommitSignatures       bool     `yaml:"requires_commit_signatures,omitempty"`
+	RequiresLinearHistory          bool     `yaml:"requires_linear_history,omitempty"`
+	AllowsForcePushes              bool     `yaml:"allows_force_pushes,omitempty"`
+	AllowsDeletions                bool     `yaml:"allows_deletions,omitempty"`
 }
 
 /*

@@ -338,7 +338,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 
 	// the repo has already been cloned (to HEAD) and validated (see loadAndValidateGoliacOrganization)
 	// we can now apply the changes to the github team repository
-	unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, dryrun, g.repoconfig.AdminTeam, reposToArchive, reposToRename)
+	unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, branch, dryrun, g.repoconfig.AdminTeam, reposToArchive, reposToRename)
 	if err != nil {
 		return unmanaged, fmt.Errorf("error when reconciliating: %v", err)
 	}

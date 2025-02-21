@@ -58,13 +58,14 @@ type GoliacRemoteExecutor interface {
 }
 
 type GithubRepository struct {
-	Name           string
-	Id             int
-	RefId          string
-	BoolProperties map[string]bool           // archived, private, allow_auto_merge, delete_branch_on_merge, allow_update_branch
-	ExternalUsers  map[string]string         // [githubid]permission
-	InternalUsers  map[string]string         // [githubid]permission
-	RuleSets       map[string]*GithubRuleSet // [name]ruleset
+	Name              string
+	Id                int
+	RefId             string
+	BoolProperties    map[string]bool                    // archived, private, allow_auto_merge, delete_branch_on_merge, allow_update_branch
+	ExternalUsers     map[string]string                  // [githubid]permission
+	InternalUsers     map[string]string                  // [githubid]permission
+	RuleSets          map[string]*GithubRuleSet          // [name]ruleset
+	BranchProtections map[string]*GithubBranchProtection // [pattern]branch protection
 }
 
 type GithubTeam struct {
@@ -539,10 +540,34 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
                       requiredReviewThreadResolution
                       requireLastPushApproval
                     }
+                    ... on RequiredStatusChecksParameters {
+                      requiredStatusChecks {
+                        context
+                      }
+					}
                   }
                   type
                 }
               }
+            }
+          }
+          branchProtectionRules(first:50) {
+            nodes{
+			  databaseId
+              pattern 
+              requiresApprovingReviews
+              requiredApprovingReviewCount
+              dismissesStaleReviews
+              requiresCodeOwnerReviews
+              requireLastPushApproval
+              requiresStatusChecks
+              requiresStrictStatusChecks
+              requiredStatusCheckContexts 
+              requiresConversationResolution
+              requiresCommitSignatures
+              requiresLinearHistory
+              allowsForcePushes
+              allowsDeletions
             }
           }
         }
@@ -555,6 +580,24 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
     }
   }
 `
+
+type GithubBranchProtection struct {
+	DatabaseId                     int
+	Pattern                        string
+	RequiresApprovingReviews       bool
+	RequiredApprovingReviewCount   int
+	DismissesStaleReviews          bool
+	RequiresCodeOwnerReviews       bool
+	RequireLastPushApproval        bool
+	RequiresStatusChecks           bool
+	RequiresStrictStatusChecks     bool
+	RequiredStatusCheckContexts    []string
+	RequiresConversationResolution bool
+	RequiresCommitSignatures       bool
+	RequiresLinearHistory          bool
+	AllowsForcePushes              bool
+	AllowsDeletions                bool
+}
 
 type GraplQLRepositories struct {
 	Data struct {
@@ -587,6 +630,9 @@ type GraplQLRepositories struct {
 					}
 					Rulesets struct {
 						Nodes []GraphQLGithubRuleSet
+					}
+					BranchProtectionRules struct {
+						Nodes []GithubBranchProtection
 					}
 				} `json:"nodes"`
 				PageInfo struct {
@@ -647,9 +693,10 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 					"delete_branch_on_merge": c.DeleteBranchOnMerge,
 					"allow_update_branch":    c.AllowUpdateBranch,
 				},
-				ExternalUsers: make(map[string]string),
-				InternalUsers: make(map[string]string),
-				RuleSets:      make(map[string]*GithubRuleSet),
+				ExternalUsers:     make(map[string]string),
+				InternalUsers:     make(map[string]string),
+				RuleSets:          make(map[string]*GithubRuleSet),
+				BranchProtections: make(map[string]*GithubBranchProtection),
 			}
 			for _, outsideCollaborator := range c.OutsideCollaborators.Edges {
 				repo.ExternalUsers[outsideCollaborator.Node.Login] = outsideCollaborator.Permission
@@ -663,6 +710,9 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 				if ruleset.Source.Name == c.Name {
 					repo.RuleSets[ruleset.Name] = g.fromGraphQLToGithubRuleset(&ruleset)
 				}
+			}
+			for _, branchProtection := range c.BranchProtectionRules.Nodes {
+				repo.BranchProtections[branchProtection.Pattern] = &branchProtection
 			}
 			repositories[c.Name] = repo
 			repositoriesByRefId[c.Id] = repo
@@ -1324,6 +1374,11 @@ query listRulesets ($orgLogin: String!) {
 						requiredReviewThreadResolution
 						requireLastPushApproval
 					}
+					... on RequiredStatusChecksParameters {
+						requiredStatusChecks {
+							context
+						}
+					}
 				}
 				type
 			}
@@ -1348,8 +1403,8 @@ type GithubRuleSetApp struct {
 }
 
 type GithubRuleSetRuleStatusCheck struct {
-	Context       string
-	IntegrationId int
+	Context string
+	// IntegrationId int
 }
 
 type GithubRuleSetRule struct {
@@ -1442,11 +1497,26 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 		Id:           src.DatabaseId,
 		Enforcement:  strings.ToLower(src.Enforcement),
 		BypassApps:   map[string]string{},
-		OnInclude:    src.Conditions.RefName.Include,
-		OnExclude:    src.Conditions.RefName.Exclude,
+		OnInclude:    []string{},
+		OnExclude:    []string{},
 		Rules:        map[string]entity.RuleSetParameters{},
 		Repositories: []string{},
 	}
+	for _, include := range src.Conditions.RefName.Include {
+		if strings.HasPrefix(include, "refs/heads/") {
+			ruleset.OnInclude = append(ruleset.OnInclude, include[11:])
+		} else {
+			ruleset.OnInclude = append(ruleset.OnInclude, include)
+		}
+	}
+	for _, exclude := range src.Conditions.RefName.Exclude {
+		if strings.HasPrefix(exclude, "refs/heads/") {
+			ruleset.OnInclude = append(ruleset.OnInclude, exclude[11:])
+		} else {
+			ruleset.OnInclude = append(ruleset.OnInclude, exclude)
+		}
+	}
+
 	for _, b := range src.BypassActors.App {
 		ruleset.BypassApps[b.Actor.Name] = strings.ToLower(b.BypassMode)
 	}
@@ -1743,6 +1813,231 @@ func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, dryrun b
 				break
 			}
 		}
+	}
+}
+
+const createBranchProtectionRule = `
+mutation createBranchProtectionRule(
+	$repositoryId: ID!,
+	$pattern: String!,
+	$requiresApprovingReviews: Boolean!,
+	$requiredApprovingReviewCount: Int!,
+	$dismissesStaleReviews: Boolean!,
+	$requiresCodeOwnerReviews: Boolean!,
+	$requireLastPushApproval: Boolean!,
+	$requiresStatusChecks: Boolean!,
+	$requiresStrictStatusChecks: Boolean!,
+	$requiredStatusCheckContexts: [String!],
+	$requiresConversationResolution: Boolean!,
+	$requiresCommitSignatures: Boolean!,
+	$requiresLinearHistory: Boolean!,
+	$allowsForcePushes: Boolean!,
+	$allowsDeletions: Boolean!) {
+  createBranchProtectionRule(input: {
+		repositoryId: $repositoryId,
+    	pattern: $pattern,
+		requiresApprovingReviews: $requiresApprovingReviews,
+		requiredApprovingReviewCount: $requriedApprovingReviewCount,
+		dismissesStaleReviews: $dismissesStaleReviews,
+		requiresCodeOwnerReviews: $requiresCodeOwnerReviews,
+		requireLastPushApproval: $requireLastPushApproval,
+		requiresStatusChecks: $requiresStatusChecks,
+		requiresStrictStatusChecks: $requiresStrictStatusChecks,
+		requiredStatusCheckContexts: $requiredStatusCheckContexts,
+		requiresConversationResolution: $requiresConversationResolution,
+		requiresCommitSignatures: $requiresCommitSignatures,
+		requiresLinearHistory: $requiresLinearHistory,
+		allowsForcePushes: $allowsForcePushes,
+		allowsDeletions: $allowsDeletions
+  }) {
+    branchProtectionRule {
+	  databaseId
+    }
+  }
+}`
+
+type GraphqlBranchProtectionRuleCreationResponse struct {
+	Data struct {
+		CreateBranchProtectionRule struct {
+			BranchProtectionRule struct {
+				DatabaseId int
+			}
+		}
+	}
+	Errors []struct {
+		Path       []interface{} `json:"path"`
+		Extensions struct {
+			Code         string
+			ErrorMessage string
+		} `json:"extensions"`
+		Message string
+	} `json:"errors"`
+}
+
+func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+	// add repository branch protection
+	// https://docs.github.com/en/graphql/reference/mutations#createbranchprotectionrule
+
+	repo := g.repositories[reponame]
+	if repo == nil {
+		logrus.Errorf("repository %s not found", reponame)
+		return
+	}
+
+	if !dryrun {
+		body, err := g.client.QueryGraphQLAPI(
+			ctx,
+			createBranchProtectionRule,
+			map[string]interface{}{
+				"repositoryId":                   repo.Id,
+				"pattern":                        branchprotection.Pattern,
+				"requiresApprovingReviews":       branchprotection.RequiresApprovingReviews,
+				"requiredApprovingReviewCount":   branchprotection.RequiredApprovingReviewCount,
+				"dismissesStaleReviews":          branchprotection.DismissesStaleReviews,
+				"requiresCodeOwnerReviews":       branchprotection.RequiresCodeOwnerReviews,
+				"requireLastPushApproval":        branchprotection.RequireLastPushApproval,
+				"requiresStatusChecks":           branchprotection.RequiresStatusChecks,
+				"requiresStrictStatusChecks":     branchprotection.RequiresStrictStatusChecks,
+				"requiredStatusCheckContexts":    branchprotection.RequiredStatusCheckContexts,
+				"requiresConversationResolution": branchprotection.RequiresConversationResolution,
+				"requiresCommitSignatures":       branchprotection.RequiresCommitSignatures,
+				"requiresLinearHistory":          branchprotection.RequiresLinearHistory,
+				"allowsForcePushes":              branchprotection.AllowsForcePushes,
+				"allowsDeletions":                branchprotection.AllowsDeletions,
+			},
+		)
+		if err != nil {
+			logrus.Errorf("failed to add branch protection to repository %s: %v. %s", reponame, err, string(body))
+		}
+
+		var res GraphqlBranchProtectionRuleCreationResponse
+		err = json.Unmarshal(body, &res)
+		if err != nil {
+			logrus.Errorf("failed to add branch protection to repository %s: %v", reponame, err)
+		}
+
+		branchprotection.DatabaseId = res.Data.CreateBranchProtectionRule.BranchProtectionRule.DatabaseId
+	}
+
+	repo.BranchProtections[branchprotection.Pattern] = branchprotection
+}
+
+const updateBranchProtectionRule = `
+mutation updateBranchProtectionRule(
+	$branchProtectionRuleId: ID!,
+	$pattern: String!,
+	$requiresApprovingReviews: Boolean!,
+	$requiredApprovingReviewCount: Int!,
+	$dismissesStaleReviews: Boolean!,
+	$requiresCodeOwnerReviews: Boolean!,
+	$requireLastPushApproval: Boolean!,
+	$requiresStatusChecks: Boolean!,
+	$requiresStrictStatusChecks: Boolean!,
+	$requiredStatusCheckContexts: [String!],
+	$requiresConversationResolution: Boolean!,
+	$requiresCommitSignatures: Boolean!,
+	$requiresLinearHistory: Boolean!,
+	$allowsForcePushes: Boolean!,
+	$allowsDeletions: Boolean!) {
+  updateBranchProtectionRule(input: {
+		branchProtectionRuleId: $branchProtectionRuleId,
+    	pattern: $pattern,
+		requiresApprovingReviews: $requiresApprovingReviews,
+		requiredApprovingReviewCount: $requriedApprovingReviewCount,
+		dismissesStaleReviews: $dismissesStaleReviews,
+		requiresCodeOwnerReviews: $requiresCodeOwnerReviews,
+		requireLastPushApproval: $requireLastPushApproval,
+		requiresStatusChecks: $requiresStatusChecks,
+		requiresStrictStatusChecks: $requiresStrictStatusChecks,
+		requiredStatusCheckContexts: $requiredStatusCheckContexts,
+		requiresConversationResolution: $requiresConversationResolution,
+		requiresCommitSignatures: $requiresCommitSignatures,
+		requiresLinearHistory: $requiresLinearHistory,
+		allowsForcePushes: $allowsForcePushes,
+		allowsDeletions: $allowsDeletions
+  }) {
+  }
+}`
+
+func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+	// update repository branch protection
+	// https://docs.github.com/en/graphql/reference/mutations#updatebranchprotectionrule
+
+	if !dryrun {
+		body, err := g.client.QueryGraphQLAPI(
+			ctx,
+			updateBranchProtectionRule,
+			map[string]interface{}{
+				"branchProtectionRuleId":         branchprotection.DatabaseId,
+				"pattern":                        branchprotection.Pattern,
+				"requiresApprovingReviews":       branchprotection.RequiresApprovingReviews,
+				"requiredApprovingReviewCount":   branchprotection.RequiredApprovingReviewCount,
+				"dismissesStaleReviews":          branchprotection.DismissesStaleReviews,
+				"requiresCodeOwnerReviews":       branchprotection.RequiresCodeOwnerReviews,
+				"requireLastPushApproval":        branchprotection.RequireLastPushApproval,
+				"requiresStatusChecks":           branchprotection.RequiresStatusChecks,
+				"requiresStrictStatusChecks":     branchprotection.RequiresStrictStatusChecks,
+				"requiredStatusCheckContexts":    branchprotection.RequiredStatusCheckContexts,
+				"requiresConversationResolution": branchprotection.RequiresConversationResolution,
+				"requiresCommitSignatures":       branchprotection.RequiresCommitSignatures,
+				"requiresLinearHistory":          branchprotection.RequiresLinearHistory,
+				"allowsForcePushes":              branchprotection.AllowsForcePushes,
+				"allowsDeletions":                branchprotection.AllowsDeletions,
+			},
+		)
+		if err != nil {
+			logrus.Errorf("failed to update branch protection for repository %s: %v. %s", reponame, err, string(body))
+		}
+
+		var res GraphqlBranchProtectionRuleCreationResponse
+		err = json.Unmarshal(body, &res)
+		if err != nil {
+			logrus.Errorf("failed to update branch protection for repository %s: %v", reponame, err)
+		}
+	}
+
+	repo := g.repositories[reponame]
+	if repo != nil {
+		repo.BranchProtections[branchprotection.Pattern] = branchprotection
+	}
+}
+
+const deleteBranchProtectionRule = `
+mutation deleteBranchProtectionRule(
+	$branchProtectionRuleId: ID!) {
+  deleteBranchProtectionRule(input: {
+		branchProtectionRuleId: $branchProtectionRuleId
+	}) {
+  }
+}
+`
+
+func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+	// remove repository branch protection
+	// https://docs.github.com/en/graphql/reference/mutations#deletebranchprotectionrule
+
+	if !dryrun {
+		body, err := g.client.QueryGraphQLAPI(
+			ctx,
+			deleteBranchProtectionRule,
+			map[string]interface{}{
+				"branchProtectionRuleId": branchprotection.DatabaseId,
+			},
+		)
+		if err != nil {
+			logrus.Errorf("failed to delete branch protection for repository %s: %v. %s", reponame, err, string(body))
+		}
+
+		var res GraphqlBranchProtectionRuleCreationResponse
+		err = json.Unmarshal(body, &res)
+		if err != nil {
+			logrus.Errorf("failed to delete branch protection for repository %s: %v", reponame, err)
+		}
+	}
+
+	repo := g.repositories[reponame]
+	if repo != nil {
+		delete(repo.BranchProtections, branchprotection.Pattern)
 	}
 }
 

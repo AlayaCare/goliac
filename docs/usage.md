@@ -155,3 +155,50 @@ spec:
             requiredStatusChecks:
               - my_check
 ```
+
+## Adding repository branch protection
+
+On top of repository ruleset, you can also you the older bbranch protection.
+
+Most but not all branch protection features are currently supported (but the software can be easily extended): `requires_approving_reviews`, `required_approving_review_count`, `dismisses_stale_reviews`, `requires_code_owner_reviews`, `require_last_push_approval`, `requires_status_checks`, `requires_strict_status_checks`, `required_status_check_contexts`, `requires_conversation_resolution`, `requires_commit_signatures`, `requires_linear_history`, `allows_force_pushes`, `allows_deletions`
+
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  public: true
+  ...
+  branch_protections:
+    - pattern: master
+      requires_approving_reviews: true
+      required_approving_review_count: 1
+      dismisses_stale_reviews: true
+      requires_code_owner_reviews: true
+      require_last_push_approval: true
+      requires_status_checks: true
+      requires_strict_status_checks: true
+      required_status_check_contexts:
+        - my_check
+      requires_conversation_resolution: true
+      requires_commit_signatures: true
+      requires_linear_history: true
+      allows_force_pushes: false
+      allows_deletions: false
+```
+
+`pull_request` example
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  public: true
+  ...
+  branch_protections:
+    - pattern: master
+      requires_approving_reviews: true
+      required_approving_review_count: 1
+```
