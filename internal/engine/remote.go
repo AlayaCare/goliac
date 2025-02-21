@@ -553,7 +553,7 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
           }
           branchProtectionRules(first:50) {
             nodes{
-			  databaseId
+			  id
               pattern 
               requiresApprovingReviews
               requiredApprovingReviewCount
@@ -582,7 +582,7 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
 `
 
 type GithubBranchProtection struct {
-	DatabaseId                     int
+	Id                             string
 	Pattern                        string
 	RequiresApprovingReviews       bool
 	RequiredApprovingReviewCount   int
@@ -1837,7 +1837,7 @@ mutation createBranchProtectionRule(
 		repositoryId: $repositoryId,
     	pattern: $pattern,
 		requiresApprovingReviews: $requiresApprovingReviews,
-		requiredApprovingReviewCount: $requriedApprovingReviewCount,
+		requiredApprovingReviewCount: $requiredApprovingReviewCount,
 		dismissesStaleReviews: $dismissesStaleReviews,
 		requiresCodeOwnerReviews: $requiresCodeOwnerReviews,
 		requireLastPushApproval: $requireLastPushApproval,
@@ -1851,7 +1851,7 @@ mutation createBranchProtectionRule(
 		allowsDeletions: $allowsDeletions
   }) {
     branchProtectionRule {
-	  databaseId
+	  id
     }
   }
 }`
@@ -1860,7 +1860,7 @@ type GraphqlBranchProtectionRuleCreationResponse struct {
 	Data struct {
 		CreateBranchProtectionRule struct {
 			BranchProtectionRule struct {
-				DatabaseId int
+				Id string
 			}
 		}
 	}
@@ -1889,7 +1889,7 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, dr
 			ctx,
 			createBranchProtectionRule,
 			map[string]interface{}{
-				"repositoryId":                   repo.Id,
+				"repositoryId":                   repo.RefId,
 				"pattern":                        branchprotection.Pattern,
 				"requiresApprovingReviews":       branchprotection.RequiresApprovingReviews,
 				"requiredApprovingReviewCount":   branchprotection.RequiredApprovingReviewCount,
@@ -1916,7 +1916,7 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, dr
 			logrus.Errorf("failed to add branch protection to repository %s: %v", reponame, err)
 		}
 
-		branchprotection.DatabaseId = res.Data.CreateBranchProtectionRule.BranchProtectionRule.DatabaseId
+		branchprotection.Id = res.Data.CreateBranchProtectionRule.BranchProtectionRule.Id
 	}
 
 	repo.BranchProtections[branchprotection.Pattern] = branchprotection
@@ -1943,7 +1943,7 @@ mutation updateBranchProtectionRule(
 		branchProtectionRuleId: $branchProtectionRuleId,
     	pattern: $pattern,
 		requiresApprovingReviews: $requiresApprovingReviews,
-		requiredApprovingReviewCount: $requriedApprovingReviewCount,
+		requiredApprovingReviewCount: $requiredApprovingReviewCount,
 		dismissesStaleReviews: $dismissesStaleReviews,
 		requiresCodeOwnerReviews: $requiresCodeOwnerReviews,
 		requireLastPushApproval: $requireLastPushApproval,
@@ -1956,6 +1956,9 @@ mutation updateBranchProtectionRule(
 		allowsForcePushes: $allowsForcePushes,
 		allowsDeletions: $allowsDeletions
   }) {
+	branchProtectionRule {
+      id
+    }
   }
 }`
 
@@ -1968,7 +1971,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 			ctx,
 			updateBranchProtectionRule,
 			map[string]interface{}{
-				"branchProtectionRuleId":         branchprotection.DatabaseId,
+				"branchProtectionRuleId":         branchprotection.Id,
 				"pattern":                        branchprotection.Pattern,
 				"requiresApprovingReviews":       branchprotection.RequiresApprovingReviews,
 				"requiredApprovingReviewCount":   branchprotection.RequiredApprovingReviewCount,
@@ -2021,7 +2024,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 			ctx,
 			deleteBranchProtectionRule,
 			map[string]interface{}{
-				"branchProtectionRuleId": branchprotection.DatabaseId,
+				"branchProtectionRuleId": branchprotection.Id,
 			},
 		)
 		if err != nil {
