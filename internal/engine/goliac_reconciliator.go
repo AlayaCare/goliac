@@ -565,42 +565,44 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	// now we compare local (slugTeams) and remote (rTeams)
 
 	compareRepos := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) bool {
-		//
-		// "recursive" rulesets comparison
-		//
-		onRulesetAdded := func(rulename string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
-			// CREATE repo ruleset
-			r.AddRepositoryRuleset(ctx, errorCollector, dryrun, reponame, lRuleset)
-		}
-		onRulesetRemoved := func(rulename string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
-			// DELETE repo ruleset
-			r.DeleteRepositoryRuleset(ctx, errorCollector, dryrun, reponame, rRuleset)
-		}
-		onRulesetChange := func(rulename string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
-			// UPDATE ruleset
-			lRuleset.Id = rRuleset.Id
-			r.UpdateRepositoryRuleset(ctx, errorCollector, dryrun, reponame, lRuleset)
-		}
-		CompareEntities(lRepo.Rulesets, rRepo.Rulesets, compareRulesets, onRulesetAdded, onRulesetRemoved, onRulesetChange)
+		archived := lRepo.BoolProperties["archived"]
+		if !archived {
+			//
+			// "recursive" rulesets comparison
+			//
+			onRulesetAdded := func(rulename string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
+				// CREATE repo ruleset
+				r.AddRepositoryRuleset(ctx, errorCollector, dryrun, reponame, lRuleset)
+			}
+			onRulesetRemoved := func(rulename string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
+				// DELETE repo ruleset
+				r.DeleteRepositoryRuleset(ctx, errorCollector, dryrun, reponame, rRuleset)
+			}
+			onRulesetChange := func(rulename string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
+				// UPDATE ruleset
+				lRuleset.Id = rRuleset.Id
+				r.UpdateRepositoryRuleset(ctx, errorCollector, dryrun, reponame, lRuleset)
+			}
+			CompareEntities(lRepo.Rulesets, rRepo.Rulesets, compareRulesets, onRulesetAdded, onRulesetRemoved, onRulesetChange)
 
-		//
-		// "recursive" branchprotections comparison
-		//
-		onBranchProtectionAdded := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
-			// CREATE repo branchprotection
-			r.AddRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, lBp)
+			//
+			// "recursive" branchprotections comparison
+			//
+			onBranchProtectionAdded := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
+				// CREATE repo branchprotection
+				r.AddRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, lBp)
+			}
+			onBranchProtectionRemoved := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
+				// DELETE repo branchprotection
+				r.DeleteRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, rBp)
+			}
+			onBranchProtectionChange := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
+				// UPDATE branchprotection
+				lBp.Id = rBp.Id
+				r.UpdateRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, lBp)
+			}
+			CompareEntities(lRepo.BranchProtections, rRepo.BranchProtections, compareBranchProtections, onBranchProtectionAdded, onBranchProtectionRemoved, onBranchProtectionChange)
 		}
-		onBranchProtectionRemoved := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
-			// DELETE repo branchprotection
-			r.DeleteRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, rBp)
-		}
-		onBranchProtectionChange := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
-			// UPDATE branchprotection
-			lBp.Id = rBp.Id
-			r.UpdateRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, lBp)
-		}
-		CompareEntities(lRepo.BranchProtections, rRepo.BranchProtections, compareBranchProtections, onBranchProtectionAdded, onBranchProtectionRemoved, onBranchProtectionChange)
-
 		//
 		// now, comparing repo properties
 		//
