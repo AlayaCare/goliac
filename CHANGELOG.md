@@ -2,6 +2,7 @@
 
 - refactor error handling
 - fix ruleset repository_ids API call
+- dont enforce ruleset/branch protections on archived repositories
 
 ## Goliac v0.15.1
 

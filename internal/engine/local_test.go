@@ -811,7 +811,6 @@ func TestGoliacLocalImpl(t *testing.T) {
 		// sync users and teams
 		errorCollector := observability.NewErrorCollection()
 		change := g.SyncUsersAndTeams(goliacConfig, mockUserPlugin, "none", false, false, nil, errorCollector)
-		fmt.Println(errorCollector)
 		assert.False(t, errorCollector.HasErrors())
 		assert.True(t, change)
 
