@@ -90,7 +90,7 @@ You can archive a repository, by a PR that move the yaml repository file into th
 ## Adding repository ruleset
 
 You can add different rules on a specific repository (like branch protection) using the new Github rulesets.
-Few rules are currently supported (but the software can be easily extended): `pull_request`, `required_signatures`, `required_status_checks`, `creation`, `update`, `deletion`, `non_fast_forward`
+Few rules are currently supported (but the software can be easily extended): `pull_request`, `required_signatures`, `required_status_checks`, `creation`, `update`, `deletion`, `non_fast_forward`, `required_linear_history`
 
 Note: team or app bypass is not supported yet
 
