@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -62,9 +63,10 @@ func TestRuleset(t *testing.T) {
 		fs := memfs.New()
 		fixtureCreateRuleSet(t, fs)
 
-		rulesets, errs, warns := ReadRuleSetDirectory(fs, "rulesets")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		rulesets := ReadRuleSetDirectory(fs, "rulesets", errorCollector)
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, false, errorCollector.HasWarns())
 		assert.NotNil(t, rulesets)
 		assert.Equal(t, 2, len(rulesets))
 
@@ -79,9 +81,10 @@ func TestRulesetParametersComparison(t *testing.T) {
 		fs := memfs.New()
 		fixtureCreateRuleSet(t, fs)
 
-		rulesets, errs, warns := ReadRuleSetDirectory(fs, "rulesets")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		rulesets := ReadRuleSetDirectory(fs, "rulesets", errorCollector)
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, false, errorCollector.HasWarns())
 		assert.NotNil(t, rulesets)
 
 		res := CompareRulesetParameters(rulesets["ruleset1"].Spec.Rules[0].Ruletype, rulesets["ruleset1"].Spec.Rules[0].Parameters, rulesets["ruleset2"].Spec.Rules[0].Parameters)

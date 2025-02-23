@@ -31,14 +31,19 @@ func NewUserSyncPluginFromGithubSaml(client github.GitHubClient) engine.UserSync
 /*
 Return a map of [username]*entity.User
 */
-func (p *UserSyncPluginFromGithubSaml) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability) (map[string]*entity.User, error) {
+func (p *UserSyncPluginFromGithubSaml) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) map[string]*entity.User {
 
 	ctx := context.Background()
 	pendingLogin, err := engine.LoadGithubLoginPendingInvitations(ctx, p.client)
 	if err != nil {
-		return nil, err
+		errorCollector.AddError(fmt.Errorf("not able to load pending invitations: %w", err))
+		return nil
 	}
 	users, err := engine.LoadUsersFromGithubOrgSaml(ctx, p.client, feedback)
+	if err != nil {
+		errorCollector.AddError(fmt.Errorf("not able to load users from Github: %w", err))
+		return nil
+	}
 
 	finalUsers := make(map[string]*entity.User)
 	for name, user := range users {
@@ -48,8 +53,8 @@ func (p *UserSyncPluginFromGithubSaml) UpdateUsers(repoconfig *config.Repository
 	}
 
 	if len(finalUsers) == 0 {
-		return nil, fmt.Errorf("not able to find any SAML identities")
+		return nil
 	}
 
-	return finalUsers, err
+	return finalUsers
 }

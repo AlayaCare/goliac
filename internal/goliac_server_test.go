@@ -139,7 +139,7 @@ type GoliacMock struct {
 	remote engine.GoliacRemoteResources
 }
 
-func (g *GoliacMock) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repo string, branch string) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
+func (g *GoliacMock) Apply(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, dryrun bool, repo string, branch string) *engine.UnmanagedResources {
 	unmanaged := &engine.UnmanagedResources{
 		Users:        make(map[string]bool),
 		Teams:        make(map[string]bool),
@@ -147,10 +147,10 @@ func (g *GoliacMock) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool
 		RuleSets:     make(map[string]bool),
 	}
 	unmanaged.Users["unmanaged"] = true
-	return nil, nil, nil, unmanaged
+	return unmanaged
 }
-func (g *GoliacMock) UsersUpdate(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) (bool, error) {
-	return false, nil
+func (g *GoliacMock) UsersUpdate(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) bool {
+	return false
 }
 func (g *GoliacMock) FlushCache() {
 }

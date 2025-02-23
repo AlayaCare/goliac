@@ -16,6 +16,7 @@ import (
 	"github.com/goliac-project/goliac/internal/engine"
 	"github.com/goliac-project/goliac/internal/entity"
 	"github.com/goliac-project/goliac/internal/notification"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/swagger_gen/models"
 	"github.com/goliac-project/goliac/swagger_gen/restapi"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations"
@@ -60,7 +61,7 @@ type GoliacServerImpl struct {
 	lastSyncTime        *time.Time
 	lastSyncError       error
 	detailedErrors      []error
-	detailedWarnings    []entity.Warning
+	detailedWarnings    []observability.Warning
 	syncInterval        int64 // in seconds time remaining between 2 sync
 	notificationService notification.NotificationService
 	lastStatistics      config.GoliacStatistics
@@ -702,21 +703,25 @@ inside serverApply, it will check if the lobby is free
 - if the lobby is busy, it will do nothing
 */
 func (g *GoliacServerImpl) triggerApply() {
-	err, errs, warns, applied := g.serveApply()
-	if !applied && err == nil {
+	errorCollector := observability.NewErrorCollection()
+	applied := g.serveApply(errorCollector)
+	if !applied && !errorCollector.HasErrors() {
 		// the run was skipped
 		g.syncInterval = config.Config.ServerApplyInterval
 	} else {
 		now := time.Now()
 		g.lastSyncTime = &now
 		previousError := g.lastSyncError
-		g.lastSyncError = err
-		g.detailedErrors = errs
-		g.detailedWarnings = warns
+		g.lastSyncError = nil
+		if errorCollector.HasErrors() {
+			g.lastSyncError = errorCollector.Errors[len(errorCollector.Errors)-1]
+		}
+		g.detailedErrors = errorCollector.Errors
+		g.detailedWarnings = errorCollector.Warns
 		// log the error only if it's a new one
-		if err != nil && (previousError == nil || err.Error() != previousError.Error()) {
-			logrus.Error(err)
-			if err := g.notificationService.SendNotification(fmt.Sprintf("Goliac error when syncing: %s", err)); err != nil {
+		if g.lastSyncError != nil && (previousError == nil || g.lastSyncError.Error() != previousError.Error()) {
+			logrus.Error(g.lastSyncError)
+			if err := g.notificationService.SendNotification(fmt.Sprintf("Goliac error when syncing: %s", g.lastSyncError)); err != nil {
 				logrus.Error(err)
 			}
 		}
@@ -763,14 +768,14 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	return server, nil
 }
 
-func (g *GoliacServerImpl) serveApply() (error, []error, []entity.Warning, bool) {
+func (g *GoliacServerImpl) serveApply(errorCollector *observability.ErrorCollection) bool {
 	// we want to run ApplyToGithub
 	// and queue one new run (the lobby) if a new run is asked
 	g.applyLobbyMutex.Lock()
 	// we already have a current run, and another waiting in the lobby
 	if g.applyLobby {
 		g.applyLobbyMutex.Unlock()
-		return nil, nil, nil, false
+		return false
 	}
 
 	if !g.applyCurrent {
@@ -799,10 +804,12 @@ func (g *GoliacServerImpl) serveApply() (error, []error, []entity.Warning, bool)
 	branch := config.Config.ServerGitBranch
 
 	if repo == "" {
-		return fmt.Errorf("GOLIAC_SERVER_GIT_REPOSITORY env variable not set"), nil, nil, false
+		errorCollector.AddError(fmt.Errorf("GOLIAC_SERVER_GIT_REPOSITORY env variable not set"))
+		return false
 	}
 	if branch == "" {
-		return fmt.Errorf("GOLIAC_SERVER_GIT_BRANCH env variable not set"), nil, nil, false
+		errorCollector.AddError(fmt.Errorf("GOLIAC_SERVER_GIT_BRANCH env variable not set"))
+		return false
 	}
 
 	// we are ready (to give local state, and to sync with remote)
@@ -813,9 +820,9 @@ func (g *GoliacServerImpl) serveApply() (error, []error, []entity.Warning, bool)
 	ctx := context.WithValue(context.Background(), config.ContextKeyStatistics, &stats)
 
 	fs := osfs.New("/")
-	err, errs, warns, unmanaged := g.goliac.Apply(ctx, fs, false, repo, branch)
-	if err != nil {
-		return fmt.Errorf("failed to apply on branch %s: %s", branch, err), errs, warns, false
+	unmanaged := g.goliac.Apply(ctx, errorCollector, fs, false, repo, branch)
+	if errorCollector.HasErrors() {
+		return false
 	}
 	endTime := time.Now()
 	g.lastTimeToApply = endTime.Sub(startTime)
@@ -838,5 +845,5 @@ func (g *GoliacServerImpl) serveApply() (error, []error, []entity.Warning, bool)
 		g.lastUnmanaged = unmanaged
 	}
 
-	return nil, errs, warns, true
+	return true
 }

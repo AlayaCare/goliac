@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,9 +24,11 @@ spec:
   githubID: github1
 `), 0644)
 		assert.Nil(t, err)
-		users, errs, warns := ReadUserDirectory(fs, "users")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+
+		errorCollector := observability.NewErrorCollection()
+		users := ReadUserDirectory(fs, "users", errorCollector)
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, false, errorCollector.HasWarns())
 		assert.NotNil(t, users)
 		assert.Equal(t, len(users), 1)
 		user1 := users["user1"]
@@ -45,9 +48,10 @@ spec:
   githubID: github1
 `), 0644)
 		assert.Nil(t, err)
-		users, errs, warns := ReadUserDirectory(fs, "users")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		users := ReadUserDirectory(fs, "users", errorCollector)
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, false, errorCollector.HasWarns())
 		assert.NotNil(t, users)
 		assert.Equal(t, len(users), 1)
 		user1 := users["user1"]
@@ -58,9 +62,10 @@ spec:
 	t.Run("not happy path: no users directory", func(t *testing.T) {
 		// create a new user starting with "---"
 		fs := memfs.New()
-		_, errs, warns := ReadUserDirectory(fs, "users")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		ReadUserDirectory(fs, "users", errorCollector)
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, false, errorCollector.HasWarns())
 	})
 
 	t.Run("not happy path: missing metadata", func(t *testing.T) {
@@ -74,9 +79,10 @@ spec:
   githubID: github1
 `), 0644)
 		assert.Nil(t, err)
-		_, errs, warns := ReadUserDirectory(fs, "users")
-		assert.Equal(t, len(errs), 1)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		ReadUserDirectory(fs, "users", errorCollector)
+		assert.Equal(t, 1, len(errorCollector.Errors))
+		assert.Equal(t, false, errorCollector.HasWarns())
 	})
 }
 

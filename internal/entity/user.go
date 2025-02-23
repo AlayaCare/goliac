@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -42,25 +43,22 @@ func NewUser(fs billy.Filesystem, filename string) (*User, error) {
  * - a slice of errors that must stop the vlidation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadUserDirectory(fs billy.Filesystem, dirname string) (map[string]*User, []error, []Warning) {
-	errors := []error{}
-	warning := []Warning{}
+func ReadUserDirectory(fs billy.Filesystem, dirname string, errorCollection *observability.ErrorCollection) map[string]*User {
 	users := make(map[string]*User)
 
 	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
-		errors = append(errors, err)
-		return users, errors, warning
+		errorCollection.AddError(err)
 	}
 	if !exist {
-		return users, errors, warning
+		return users
 	}
 
 	// Parse all the users in the dirname directory
 	entries, err := fs.ReadDir(dirname)
 	if err != nil {
-		errors = append(errors, err)
-		return users, errors, warning
+		errorCollection.AddError(err)
+		return users
 	}
 
 	for _, e := range entries {
@@ -76,18 +74,18 @@ func ReadUserDirectory(fs billy.Filesystem, dirname string) (map[string]*User, [
 		}
 		user, err := NewUser(fs, filepath.Join(dirname, e.Name()))
 		if err != nil {
-			errors = append(errors, err)
+			errorCollection.AddError(err)
 		} else {
 			err = user.Validate(filepath.Join(dirname, e.Name()))
 			if err != nil {
-				errors = append(errors, err)
+				errorCollection.AddError(err)
 			} else {
 				users[user.Name] = user
 			}
 		}
 
 	}
-	return users, errors, warning
+	return users
 }
 
 func (u *User) Validate(filename string) error {

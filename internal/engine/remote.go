@@ -1679,7 +1679,7 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 	return payload
 }
 
-func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *GithubRuleSet) {
 	// add ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#create-an-organization-repository-ruleset
 
@@ -1692,14 +1692,15 @@ func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, dryrun bool, ruleset 
 			g.prepareRuleset(ruleset),
 		)
 		if err != nil {
-			logrus.Errorf("failed to add ruleset to org: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to add ruleset to org: %v. %s", err, string(body)))
+			return
 		}
 	}
 
 	g.rulesets[ruleset.Name] = ruleset
 }
 
-func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *GithubRuleSet) {
 	// update ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#update-an-organization-repository-ruleset
 
@@ -1712,14 +1713,15 @@ func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, dryrun bool, rules
 			g.prepareRuleset(ruleset),
 		)
 		if err != nil {
-			logrus.Errorf("failed to update ruleset %d to org: %v. %s", ruleset.Id, err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to update ruleset %d to org: %v. %s", ruleset.Id, err, string(body)))
+			return
 		}
 	}
 
 	g.rulesets[ruleset.Name] = ruleset
 }
 
-func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, dryrun bool, rulesetid int) {
+func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, rulesetid int) {
 	// remove ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#delete-an-organization-repository-ruleset
 
@@ -1732,7 +1734,8 @@ func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, dryrun bool, rules
 			nil,
 		)
 		if err != nil {
-			logrus.Errorf("failed to remove ruleset from org: %v", err)
+			errorCollector.AddError(fmt.Errorf("failed to remove ruleset from org: %v", err))
+			return
 		}
 	}
 
@@ -1744,7 +1747,7 @@ func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, dryrun bool, rules
 	}
 }
 
-func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
 	// add repository ruleset
 	// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#create-a-repository-ruleset
 
@@ -1757,7 +1760,8 @@ func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, dryrun bool
 			g.prepareRuleset(ruleset),
 		)
 		if err != nil {
-			logrus.Errorf("failed to add ruleset to repository: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to add ruleset to repository: %v. %s", err, string(body)))
+			return
 		}
 	}
 	repo := g.repositories[reponame]
@@ -1766,7 +1770,7 @@ func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, dryrun bool
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
 	// update repository ruleset
 	// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#update-a-repository-ruleset
 
@@ -1779,7 +1783,8 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, dryrun b
 			g.prepareRuleset(ruleset),
 		)
 		if err != nil {
-			logrus.Errorf("failed to update ruleset %d to repository: %v. %s", ruleset.Id, err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to update ruleset %d to repository: %v. %s", ruleset.Id, err, string(body)))
+			return
 		}
 	}
 	repo := g.repositories[reponame]
@@ -1788,7 +1793,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, dryrun b
 	}
 }
 
-func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, rulesetid int) {
+func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, rulesetid int) {
 	// remove repository ruleset
 	// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#delete-a-repository-ruleset
 
@@ -1801,7 +1806,8 @@ func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, dryrun b
 			nil,
 		)
 		if err != nil {
-			logrus.Errorf("failed to remove ruleset from repository: %v", err)
+			errorCollector.AddError(fmt.Errorf("failed to remove ruleset from repository: %v", err))
+			return
 		}
 	}
 
@@ -1874,13 +1880,13 @@ type GraphqlBranchProtectionRuleCreationResponse struct {
 	} `json:"errors"`
 }
 
-func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	// add repository branch protection
 	// https://docs.github.com/en/graphql/reference/mutations#createbranchprotectionrule
 
 	repo := g.repositories[reponame]
 	if repo == nil {
-		logrus.Errorf("repository %s not found", reponame)
+		errorCollector.AddError(fmt.Errorf("repository %s not found", reponame))
 		return
 	}
 
@@ -1907,13 +1913,15 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, dr
 			},
 		)
 		if err != nil {
-			logrus.Errorf("failed to add branch protection to repository %s: %v. %s", reponame, err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v. %s", reponame, err, string(body)))
+			return
 		}
 
 		var res GraphqlBranchProtectionRuleCreationResponse
 		err = json.Unmarshal(body, &res)
 		if err != nil {
-			logrus.Errorf("failed to add branch protection to repository %s: %v", reponame, err)
+			errorCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v", reponame, err))
+			return
 		}
 
 		branchprotection.Id = res.Data.CreateBranchProtectionRule.BranchProtectionRule.Id
@@ -1962,7 +1970,7 @@ mutation updateBranchProtectionRule(
   }
 }`
 
-func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	// update repository branch protection
 	// https://docs.github.com/en/graphql/reference/mutations#updatebranchprotectionrule
 
@@ -1989,13 +1997,15 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 			},
 		)
 		if err != nil {
-			logrus.Errorf("failed to update branch protection for repository %s: %v. %s", reponame, err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v. %s", reponame, err, string(body)))
+			return
 		}
 
 		var res GraphqlBranchProtectionRuleCreationResponse
 		err = json.Unmarshal(body, &res)
 		if err != nil {
-			logrus.Errorf("failed to update branch protection for repository %s: %v", reponame, err)
+			errorCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v", reponame, err))
+			return
 		}
 	}
 
@@ -2015,7 +2025,7 @@ mutation deleteBranchProtectionRule(
 }
 `
 
-func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	// remove repository branch protection
 	// https://docs.github.com/en/graphql/reference/mutations#deletebranchprotectionrule
 
@@ -2028,13 +2038,15 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 			},
 		)
 		if err != nil {
-			logrus.Errorf("failed to delete branch protection for repository %s: %v. %s", reponame, err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v. %s", reponame, err, string(body)))
+			return
 		}
 
 		var res GraphqlBranchProtectionRuleCreationResponse
 		err = json.Unmarshal(body, &res)
 		if err != nil {
-			logrus.Errorf("failed to delete branch protection for repository %s: %v", reponame, err)
+			errorCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v", reponame, err))
+			return
 		}
 	}
 
@@ -2044,7 +2056,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 	}
 }
 
-func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, dryrun bool, ghuserid string) {
+func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ghuserid string) {
 	// add member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
 	if !dryrun {
@@ -2056,14 +2068,15 @@ func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, dryrun bool, ghuser
 			map[string]interface{}{"role": "member"},
 		)
 		if err != nil {
-			logrus.Errorf("failed to add user to org: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to add user to org: %v. %s", err, string(body)))
+			return
 		}
 	}
 
 	g.users[ghuserid] = ghuserid
 }
 
-func (g *GoliacRemoteImpl) RemoveUserFromOrg(ctx context.Context, dryrun bool, ghuserid string) {
+func (g *GoliacRemoteImpl) RemoveUserFromOrg(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ghuserid string) {
 	// remove member
 	// https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#remove-organization-membership-for-a-user
 	if !dryrun {
@@ -2075,7 +2088,8 @@ func (g *GoliacRemoteImpl) RemoveUserFromOrg(ctx context.Context, dryrun bool, g
 			nil,
 		)
 		if err != nil {
-			logrus.Errorf("failed to remove user from org: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to remove user from org: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2087,7 +2101,7 @@ type CreateTeamResponse struct {
 	Slug string
 }
 
-func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
+func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
 	slugname := slug.Make(teamname)
 	// create team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
@@ -2108,13 +2122,13 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname
 			params,
 		)
 		if err != nil {
-			logrus.Errorf("failed to create team: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to create team: %v. %s", err, string(body)))
 			return
 		}
 		var res CreateTeamResponse
 		err = json.Unmarshal(body, &res)
 		if err != nil {
-			logrus.Errorf("failed to create team: %v", err)
+			errorCollector.AddError(fmt.Errorf("failed to create team: %v", err))
 			return
 		}
 
@@ -2129,7 +2143,7 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname
 				map[string]interface{}{"role": "member"},
 			)
 			if err != nil {
-				logrus.Errorf("failed to create team: %v. %s", err, string(body))
+				errorCollector.AddError(fmt.Errorf("failed to add team member: %v. %s", err, string(body)))
 				return
 			}
 		}
@@ -2146,7 +2160,7 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, dryrun bool, teamname
 }
 
 // role = member or maintainer (usually we use member)
-func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
+func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string, role string) {
 	// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -2157,7 +2171,8 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, dryrun bool,
 			map[string]interface{}{"role": role},
 		)
 		if err != nil {
-			logrus.Errorf("failed to add team member: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to add team member: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2193,7 +2208,7 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, dryrun bool,
 }
 
 // role = member or maintainer (usually we use member)
-func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
+func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string, role string) {
 	// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -2204,7 +2219,8 @@ func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, dryrun bo
 			map[string]interface{}{"role": role},
 		)
 		if err != nil {
-			logrus.Errorf("failed to update team member: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to update team member: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2253,7 +2269,7 @@ func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, dryrun bo
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string) {
+func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string) {
 	// https://docs.github.com/en/rest/teams/members?apiVersion=2022-11-28#add-or-update-team-membership-for-a-user
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -2264,7 +2280,8 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, dryrun bo
 			nil,
 		)
 		if err != nil {
-			logrus.Errorf("failed to remove team member: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to remove team member: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2283,7 +2300,7 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, dryrun bo
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, dryrun bool, teamslug string, parentTeam *int) {
+func (g *GoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, parentTeam *int) {
 	// set parent's team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#update-a-team
 	if !dryrun {
@@ -2295,12 +2312,13 @@ func (g *GoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, dryrun bool,
 			map[string]interface{}{"parent_team_id": parentTeam},
 		)
 		if err != nil {
-			logrus.Errorf("failed to delete a team: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to set parent team: %v. %s", err, string(body)))
+			return
 		}
 	}
 }
 
-func (g *GoliacRemoteImpl) DeleteTeam(ctx context.Context, dryrun bool, teamslug string) {
+func (g *GoliacRemoteImpl) DeleteTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string) {
 	// delete team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#delete-a-team
 	if !dryrun {
@@ -2312,7 +2330,8 @@ func (g *GoliacRemoteImpl) DeleteTeam(ctx context.Context, dryrun bool, teamslug
 			nil,
 		)
 		if err != nil {
-			logrus.Errorf("failed to delete a team: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to delete a team: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2338,7 +2357,7 @@ boolProperties are:
 - allow_update_branch
 - ...
 */
-func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, dryrun bool, reponame string, description string, writers []string, readers []string, boolProperties map[string]bool) {
+func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, writers []string, readers []string, boolProperties map[string]bool) {
 	repoId := 0
 	repoRefId := reponame
 	// create repository
@@ -2360,7 +2379,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, dryrun bool, re
 			props,
 		)
 		if err != nil {
-			logrus.Errorf("failed to create repository: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to create repository: %v. %s", err, string(body)))
 			return
 		}
 
@@ -2368,7 +2387,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, dryrun bool, re
 		var resp CreateRepositoryResponse
 		err = json.Unmarshal(body, &resp)
 		if err != nil {
-			logrus.Errorf("failed to read the create repository action response: %v", err)
+			errorCollector.AddError(fmt.Errorf("failed to read the create repository action response: %v", err))
 			return
 		}
 		repoId = resp.Id
@@ -2397,7 +2416,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, dryrun bool, re
 				map[string]interface{}{"permission": "pull"},
 			)
 			if err != nil {
-				logrus.Errorf("failed to create repository (and add members): %v. %s", err, string(body))
+				errorCollector.AddError(fmt.Errorf("failed to create repository (and add members): %v. %s", err, string(body)))
 				return
 			}
 		}
@@ -2423,7 +2442,8 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, dryrun bool, re
 				map[string]interface{}{"permission": "push"},
 			)
 			if err != nil {
-				logrus.Errorf("failed to create repository (and add members): %v. %s", err, string(body))
+				errorCollector.AddError(fmt.Errorf("failed to create repository (and add members): %v. %s", err, string(body)))
+				return
 			}
 		}
 
@@ -2439,7 +2459,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, dryrun bool, re
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	// update member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#add-or-update-team-repository-permissions
 	if !dryrun {
@@ -2451,7 +2471,8 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, dr
 			map[string]interface{}{"permission": permission},
 		)
 		if err != nil {
-			logrus.Errorf("failed to add team access: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to add team access: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2470,7 +2491,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, dr
 	g.teamRepos[teamslug] = teamsRepos
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	// update member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#add-or-update-team-repository-permissions
 	if !dryrun {
@@ -2482,7 +2503,8 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context,
 			map[string]interface{}{"permission": permission},
 		)
 		if err != nil {
-			logrus.Errorf("failed to add team access: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to add team access: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2501,7 +2523,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context,
 	g.teamRepos[teamslug] = teamsRepos
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string) {
 	// delete member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#remove-a-repository-from-a-team
 	if !dryrun {
@@ -2513,7 +2535,8 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context,
 			nil,
 		)
 		if err != nil {
-			logrus.Errorf("failed to remove team access: %. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to remove team access: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2531,7 +2554,7 @@ Used for
 - allow_update_branch
 - archived
 */
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Context, dryrun bool, reponame string, propertyName string, propertyValue bool) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue bool) {
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -2542,7 +2565,8 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Contex
 			map[string]interface{}{propertyName: propertyValue},
 		)
 		if err != nil {
-			logrus.Errorf("failed to update repository %s setting: %v. %s", propertyName, err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to update repository %s setting: %v. %s", propertyName, err, string(body)))
+			return
 		}
 	}
 
@@ -2551,7 +2575,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Contex
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string, permission string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#add-a-repository-collaborator
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -2562,7 +2586,8 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, 
 			map[string]interface{}{"permission": permission},
 		)
 		if err != nil {
-			logrus.Errorf("failed to set repository collaborator: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to set repository collaborator: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2575,7 +2600,7 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, 
 	}
 }
 
-func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
+func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#remove-a-repository-collaborator
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -2586,7 +2611,8 @@ func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, dryru
 			nil,
 		)
 		if err != nil {
-			logrus.Errorf("failed to remove repository collaborator: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to remove repository collaborator: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2595,15 +2621,15 @@ func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, dryru
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
-	g.updateRepositoryRemoveUser(ctx, dryrun, reponame, githubid)
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string) {
+	g.updateRepositoryRemoveUser(ctx, errorCollector, dryrun, reponame, githubid)
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
-	g.updateRepositoryRemoveUser(ctx, dryrun, reponame, githubid)
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveInternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string) {
+	g.updateRepositoryRemoveUser(ctx, errorCollector, dryrun, reponame, githubid)
 }
 
-func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, dryrun bool, reponame string) {
+func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string) {
 	// delete repo
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#delete-a-repository
 	if !dryrun {
@@ -2615,7 +2641,8 @@ func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, dryrun bool, re
 			nil,
 		)
 		if err != nil {
-			logrus.Errorf("failed to delete repository: %v. %s", err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to delete repository: %v. %s", err, string(body)))
+			return
 		}
 	}
 
@@ -2626,7 +2653,7 @@ func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, dryrun bool, re
 	}
 
 }
-func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, dryrun bool, reponame string, newname string) {
+func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, newname string) {
 	// update repository
 	// https://docs.github.com/fr/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
 	if !dryrun {
@@ -2638,7 +2665,8 @@ func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, dryrun bool, re
 			map[string]interface{}{"name": newname},
 		)
 		if err != nil {
-			logrus.Errorf("failed to rename the repository %s (to %s): %v. %s", reponame, newname, err, string(body))
+			errorCollector.AddError(fmt.Errorf("failed to rename the repository %s (to %s): %v. %s", reponame, newname, err, string(body)))
+			return
 		}
 
 		// update the repositories list
@@ -2665,6 +2693,6 @@ func (g *GoliacRemoteImpl) Begin(dryrun bool) {
 }
 func (g *GoliacRemoteImpl) Rollback(dryrun bool, err error) {
 }
-func (g *GoliacRemoteImpl) Commit(ctx context.Context, dryrun bool) error {
+func (g *GoliacRemoteImpl) Commit(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool) error {
 	return nil
 }

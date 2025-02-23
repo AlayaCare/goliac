@@ -552,113 +552,113 @@ func (m *GoliacRemoteExecutorMock) CountAssets(ctx context.Context) (int, error)
 func (g *GoliacRemoteExecutorMock) SetRemoteObservability(feedback observability.RemoteObservability) {
 }
 
-func (e *GoliacRemoteExecutorMock) AddUserToOrg(ctx context.Context, dryrun bool, ghuserid string) {
+func (e *GoliacRemoteExecutorMock) AddUserToOrg(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ghuserid string) {
 	fmt.Println("*** AddUserToOrg", ghuserid)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) RemoveUserFromOrg(ctx context.Context, dryrun bool, ghuserid string) {
+func (e *GoliacRemoteExecutorMock) RemoveUserFromOrg(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ghuserid string) {
 	fmt.Println("*** RemoveUserFromOrg", ghuserid)
 	e.nbChanges++
 }
 
-func (e *GoliacRemoteExecutorMock) CreateTeam(ctx context.Context, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
+func (e *GoliacRemoteExecutorMock) CreateTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
 	fmt.Println("*** CreateTeam", teamname, description, parentTeam, members)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateTeamAddMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
+func (e *GoliacRemoteExecutorMock) UpdateTeamAddMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string, role string) {
 	fmt.Println("*** UpdateTeamAddMember", teamslug, username, role)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateTeamUpdateMember(ctx context.Context, dryrun bool, teamslug string, username string, role string) {
+func (e *GoliacRemoteExecutorMock) UpdateTeamUpdateMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string, role string) {
 	fmt.Println("*** UpdateTeamUpdateMember", teamslug, username, role)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, teamslug string, username string) {
+func (e *GoliacRemoteExecutorMock) UpdateTeamRemoveMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string) {
 	fmt.Println("*** UpdateTeamRemoveMember", teamslug, username)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateTeamSetParent(ctx context.Context, dryrun bool, teamslug string, parentTeam *int) {
+func (e *GoliacRemoteExecutorMock) UpdateTeamSetParent(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, parentTeam *int) {
 	fmt.Println("*** UpdateTeamSetParent", teamslug, parentTeam)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) DeleteTeam(ctx context.Context, dryrun bool, teamslug string) {
+func (e *GoliacRemoteExecutorMock) DeleteTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string) {
 	fmt.Println("*** DeleteTeam", teamslug)
 	e.nbChanges++
 }
 
-func (e *GoliacRemoteExecutorMock) CreateRepository(ctx context.Context, dryrun bool, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
+func (e *GoliacRemoteExecutorMock) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
 	fmt.Println("*** CreateRepository", reponame, descrition, writers, readers, boolProperties)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateBoolProperty(ctx context.Context, dryrun bool, reponame string, propertyName string, propertyValue bool) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateBoolProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue bool) {
 	fmt.Println("*** UpdateRepositoryUpdateBoolProperty", reponame, propertyName, propertyValue)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryAddTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryAddTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	fmt.Println("*** UpdateRepositoryAddTeamAccess", reponame, teamslug, permission)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string, permission string) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	fmt.Println("*** UpdateRepositoryUpdateTeamAccess", reponame, teamslug, permission)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveTeamAccess(ctx context.Context, dryrun bool, reponame string, teamslug string) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string) {
 	fmt.Println("*** UpdateRepositoryRemoveTeamAccess", reponame, teamslug)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) AddRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *engine.GithubRuleSet) {
+func (e *GoliacRemoteExecutorMock) AddRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *engine.GithubRuleSet) {
 	fmt.Println("*** AddRepositoryRuleset", reponame, ruleset.Name)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *engine.GithubRuleSet) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *engine.GithubRuleSet) {
 	fmt.Println("*** UpdateRepositoryRuleset", reponame, ruleset.Name)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) DeleteRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, rulesetid int) {
+func (e *GoliacRemoteExecutorMock) DeleteRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, rulesetid int) {
 	fmt.Println("*** DeleteRepositoryRuleset", reponame, rulesetid)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) AddRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
+func (e *GoliacRemoteExecutorMock) AddRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
 	fmt.Println("*** AddRepositoryBranchProtection", reponame, branchprotection.Pattern)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
 	fmt.Println("*** UpdateRepositoryBranchProtection", reponame, branchprotection.Pattern)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) DeleteRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
+func (e *GoliacRemoteExecutorMock) DeleteRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *engine.GithubBranchProtection) {
 	fmt.Println("*** DeleteRepositoryBranchProtection", reponame, branchprotection.Pattern)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) AddRuleset(ctx context.Context, dryrun bool, ruleset *engine.GithubRuleSet) {
+func (e *GoliacRemoteExecutorMock) AddRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *engine.GithubRuleSet) {
 	fmt.Println("*** AddRuleset", ruleset.Name)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRuleset(ctx context.Context, dryrun bool, ruleset *engine.GithubRuleSet) {
+func (e *GoliacRemoteExecutorMock) UpdateRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *engine.GithubRuleSet) {
 	fmt.Println("*** UpdateRuleset", ruleset.Name)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) DeleteRuleset(ctx context.Context, dryrun bool, rulesetid int) {
+func (e *GoliacRemoteExecutorMock) DeleteRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, rulesetid int) {
 	fmt.Println("*** DeleteRuleset", rulesetid)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string, permission string) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositorySetExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string, permission string) {
 	fmt.Println("*** UpdateRepositorySetExternalUser", reponame, githubid, permission)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string) {
 	fmt.Println("*** UpdateRepositoryRemoveExternalUser", reponame, githubid)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, reponame string, githubid string) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryRemoveInternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string) {
 	fmt.Println("*** UpdateRepositoryRemoveInternalUser", reponame, githubid)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) DeleteRepository(ctx context.Context, dryrun bool, reponame string) {
+func (e *GoliacRemoteExecutorMock) DeleteRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string) {
 	fmt.Println("*** DeleteRepository", reponame)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) RenameRepository(ctx context.Context, dryrun bool, reponame string, newname string) {
+func (e *GoliacRemoteExecutorMock) RenameRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, newname string) {
 	fmt.Println("*** RenameRepository", reponame, newname)
 	e.nbChanges++
 }
@@ -667,7 +667,7 @@ func (e *GoliacRemoteExecutorMock) Begin(dryrun bool) {
 }
 func (e *GoliacRemoteExecutorMock) Rollback(dryrun bool, err error) {
 }
-func (e *GoliacRemoteExecutorMock) Commit(ctx context.Context, dryrun bool) error {
+func (e *GoliacRemoteExecutorMock) Commit(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool) error {
 	return nil
 }
 
@@ -690,9 +690,10 @@ func TestGoliacApply(t *testing.T) {
 
 		local := engine.NewGoliacLocalImpl()
 
-		errs, warns := local.LoadAndValidateLocal(clonedFs)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		local.LoadAndValidateLocal(clonedFs, errorCollector)
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, false, errorCollector.HasWarns())
 
 		githubClient := NewGitHubClientMock()
 		remote := NewGoliacRemoteExecutorMock().(*GoliacRemoteExecutorMock)
@@ -707,10 +708,9 @@ func TestGoliacApply(t *testing.T) {
 			repoconfig:         &config.RepositoryConfig{},
 		}
 
-		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///src", "master")
-		assert.Nil(t, err)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		unmanaged := goliac.Apply(context.Background(), errorCollector, fs, false, "inmemory:///src", "master")
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, false, errorCollector.HasWarns())
 		assert.NotNil(t, unmanaged)
 		assert.Equal(t, 0, remote.nbChanges)
 	})
@@ -728,9 +728,10 @@ func TestGoliacApply(t *testing.T) {
 
 		local := engine.NewGoliacLocalImpl()
 
-		errs, warns := local.LoadAndValidateLocal(clonedFs)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		local.LoadAndValidateLocal(clonedFs, errorCollector)
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, false, errorCollector.HasWarns())
 
 		githubClient := NewGitHubClientMock()
 		remote := NewGoliacRemoteExecutorMock().(*GoliacRemoteExecutorMock)
@@ -745,10 +746,9 @@ func TestGoliacApply(t *testing.T) {
 			repoconfig:         &config.RepositoryConfig{},
 		}
 
-		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///src", "master")
-		assert.Nil(t, err)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		unmanaged := goliac.Apply(context.Background(), errorCollector, fs, false, "inmemory:///src", "master")
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, false, errorCollector.HasWarns())
 		assert.NotNil(t, unmanaged)
 		assert.Equal(t, 1, remote.nbChanges) // 1 team renamed
 	})
@@ -766,10 +766,11 @@ func TestGoliacApply(t *testing.T) {
 
 		local := engine.NewGoliacLocalImpl()
 
-		errs, warns := local.LoadAndValidateLocal(clonedFs)
-		assert.Equal(t, 0, len(errs))
-		assert.Equal(t, 1, len(warns))
-		assert.Equal(t, "not enough owners for team filename teams/team2/team.yaml", warns[0].Error())
+		errorCollector := observability.NewErrorCollection()
+		local.LoadAndValidateLocal(clonedFs, errorCollector)
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, true, errorCollector.HasWarns())
+		assert.Equal(t, "not enough owners for team filename teams/team2/team.yaml", errorCollector.Warns[0].Error())
 
 		githubClient := NewGitHubClientMock()
 		remote := NewGoliacRemoteExecutorMock().(*GoliacRemoteExecutorMock)
@@ -784,10 +785,9 @@ func TestGoliacApply(t *testing.T) {
 			repoconfig:         &config.RepositoryConfig{},
 		}
 
-		err, errs, warns, unmanaged := goliac.Apply(context.Background(), fs, false, "inmemory:///src", "master")
-		assert.Nil(t, err)
-		assert.Equal(t, 0, len(errs))
-		assert.Equal(t, 1, len(warns))
+		unmanaged := goliac.Apply(context.Background(), errorCollector, fs, false, "inmemory:///src", "master")
+		assert.Equal(t, false, errorCollector.HasErrors())
+		assert.Equal(t, 2, len(errorCollector.Warns))
 		assert.NotNil(t, unmanaged)
 		assert.Equal(t, 2, remote.nbChanges)
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -50,24 +51,22 @@ func NewTeam(fs billy.Filesystem, filename string, parent *string) (*Team, error
  * - a slice of errors that must stop the validation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadTeamDirectory(fs billy.Filesystem, dirname string, users map[string]*User) (map[string]*Team, []error, []Warning) {
-	errors := []error{}
-	warning := []Warning{}
+func ReadTeamDirectory(fs billy.Filesystem, dirname string, users map[string]*User, errorCollector *observability.ErrorCollection) map[string]*Team {
 	teams := make(map[string]*Team)
 
 	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
-		errors = append(errors, err)
-		return teams, errors, warning
+		errorCollector.AddError(err)
+		return teams
 	}
 	if !exist {
-		return teams, errors, warning
+		return teams
 	}
 	// Parse all the teams in the dirname directory
 	entries, err := fs.ReadDir(dirname)
 	if err != nil {
-		errors = append(errors, err)
-		return teams, errors, warning
+		errorCollector.AddError(err)
+		return teams
 	}
 
 	for _, e := range entries {
@@ -79,22 +78,20 @@ func ReadTeamDirectory(fs billy.Filesystem, dirname string, users map[string]*Us
 			continue
 		}
 
-		recursiveReadTeamDirectory(fs, filepath.Join(dirname, e.Name()), nil, users, teams, &errors, &warning)
+		recursiveReadTeamDirectory(fs, filepath.Join(dirname, e.Name()), nil, users, teams, errorCollector)
 	}
-	return teams, errors, warning
+	return teams
 }
 
-func recursiveReadTeamDirectory(fs billy.Filesystem, dirname string, parentTeam *string, users map[string]*User, teams map[string]*Team, errors *[]error, warning *[]Warning) {
+func recursiveReadTeamDirectory(fs billy.Filesystem, dirname string, parentTeam *string, users map[string]*User, teams map[string]*Team, errorCollector *observability.ErrorCollection) {
 
 	team, err := NewTeam(fs, filepath.Join(dirname, "team.yaml"), parentTeam)
 	if err != nil {
-		*errors = append(*errors, err)
+		errorCollector.AddError(err)
 		return
 	} else {
-		err, warns := team.Validate(dirname, users)
-		*warning = append(*warning, warns...)
-		if err != nil {
-			*errors = append(*errors, err)
+		team.Validate(dirname, users, errorCollector)
+		if errorCollector.HasErrors() {
 			return
 		} else {
 			teams[team.Name] = team
@@ -106,7 +103,7 @@ func recursiveReadTeamDirectory(fs billy.Filesystem, dirname string, parentTeam 
 	// Parse all the subteams in the dirname directory
 	entries, err := fs.ReadDir(dirname)
 	if err != nil {
-		*errors = append(*errors, err)
+		errorCollector.AddError(err)
 		return
 	}
 
@@ -119,70 +116,76 @@ func recursiveReadTeamDirectory(fs billy.Filesystem, dirname string, parentTeam 
 			continue
 		}
 		if _, ok := teams[e.Name()]; ok {
-			*errors = append(*errors, fmt.Errorf("team %s already exists in %s", e.Name(), dirname))
+			errorCollector.AddError(fmt.Errorf("team %s already exists in %s", e.Name(), dirname))
 			continue
 		}
 
-		recursiveReadTeamDirectory(fs, filepath.Join(dirname, e.Name()), &parent, users, teams, errors, warning)
+		recursiveReadTeamDirectory(fs, filepath.Join(dirname, e.Name()), &parent, users, teams, errorCollector)
 	}
 }
 
-func (t *Team) Validate(dirname string, users map[string]*User) (error, []Warning) {
-	warnings := []Warning{}
-
+func (t *Team) Validate(dirname string, users map[string]*User, errorCollector *observability.ErrorCollection) {
 	if t.ApiVersion != "v1" {
-		return fmt.Errorf("invalid apiVersion: %s for team filename %s/team.yaml", t.ApiVersion, dirname), warnings
+		errorCollector.AddError(fmt.Errorf("invalid apiVersion: %s for team filename %s/team.yaml", t.ApiVersion, dirname))
+		return
 	}
 
 	if t.Kind != "Team" {
-		return fmt.Errorf("invalid kind: %s for team filename %s/team.yaml", t.Kind, dirname), warnings
+		errorCollector.AddError(fmt.Errorf("invalid kind: %s for team filename %s/team.yaml", t.Kind, dirname))
+		return
 	}
 
 	if t.Name == "" {
-		return fmt.Errorf("metadata.name is empty for team filename %s", dirname), warnings
+		errorCollector.AddError(fmt.Errorf("metadata.name is empty for team filename %s/team.yaml", dirname))
+		return
 	}
 
 	if t.Name == "everyone" {
-		return fmt.Errorf("team name 'everyone' is reserved"), warnings
+		errorCollector.AddError(fmt.Errorf("team name 'everyone' is reserved for team filename %s/team.yaml", dirname))
+		return
 	}
 
 	if strings.HasSuffix(t.Name, config.Config.GoliacTeamOwnerSuffix) {
-		return fmt.Errorf("metadata.name cannot finish with '%s' for team filename %s. It is a reserved suffix", config.Config.GoliacTeamOwnerSuffix, dirname), warnings
+		errorCollector.AddError(fmt.Errorf("metadata.name cannot finish with '%s' for team filename %s/team.yaml. It is a reserved suffix", config.Config.GoliacTeamOwnerSuffix, dirname))
+		return
 	}
 
 	teamname := filepath.Base(dirname)
 	if t.Name != teamname {
-		return fmt.Errorf("invalid metadata.name: %s for team filename %s/team.yaml", t.Name, dirname), warnings
+		errorCollector.AddError(fmt.Errorf("invalid metadata.name: %s for team filename %s/team.yaml", t.Name, dirname))
+		return
 	}
 
 	if t.Spec.ExternallyManaged {
 		if len(t.Spec.Owners) > 0 {
-			return fmt.Errorf("externallyManaged team cannot have owners for team filename %s/team.yaml", dirname), warnings
+			errorCollector.AddError(fmt.Errorf("externallyManaged team cannot have owners for team filename %s/team.yaml", dirname))
+			return
 		}
 		if len(t.Spec.Members) > 0 {
-			return fmt.Errorf("externallyManaged team cannot have members for team filename %s/team.yaml", dirname), warnings
+			errorCollector.AddError(fmt.Errorf("externallyManaged team cannot have members for team filename %s/team.yaml", dirname))
+			return
 		}
 	}
 
 	for _, owner := range t.Spec.Owners {
 		if _, ok := users[owner]; !ok {
-			return fmt.Errorf("invalid owner: %s doesn't exist in team filename %s/team.yaml", owner, dirname), warnings
+			errorCollector.AddError(fmt.Errorf("invalid owner: %s doesn't exist in team filename %s/team.yaml", owner, dirname))
+			return
 		}
 	}
 
 	for _, member := range t.Spec.Members {
 		if _, ok := users[member]; !ok {
-			return fmt.Errorf("invalid member: %s doesn't exist in team filename %s/team.yaml", member, dirname), warnings
+			errorCollector.AddError(fmt.Errorf("invalid member: %s doesn't exist in team filename %s/team.yaml", member, dirname))
+			return
 		}
 	}
 
 	// warnings
 
 	if len(t.Spec.Owners) < 2 && !t.Spec.ExternallyManaged {
-		warnings = append(warnings, fmt.Errorf("not enough owners for team filename %s/team.yaml", dirname))
+		errorCollector.AddWarn(fmt.Errorf("not enough owners for team filename %s/team.yaml", dirname))
 	}
-
-	return nil, warnings
 }
 
 /**

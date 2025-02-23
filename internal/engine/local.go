@@ -47,7 +47,7 @@ type GoliacLocalGit interface {
 	LoadRepoConfig() (*config.RepositoryConfig, error)
 
 	// Load and Validate from a github repository
-	LoadAndValidate() ([]error, []entity.Warning)
+	LoadAndValidate(errorCollection *observability.ErrorCollection)
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
 	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error
 	// whenever repos are not deleted but archived, or need to be renamed
@@ -55,11 +55,11 @@ type GoliacLocalGit interface {
 	// whenever the users list is changing, reload users and teams, and commit them
 	// (force will bypass the max_changesets check)
 	// return true if some changes were done
-	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability) (bool, error)
+	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool
 	Close(fs billy.Filesystem)
 
 	// Load and Validate from a local directory
-	LoadAndValidateLocal(fs billy.Filesystem) ([]error, []entity.Warning)
+	LoadAndValidateLocal(fs billy.Filesystem, errorCollection *observability.ErrorCollection)
 }
 
 type GoliacLocalResources interface {
@@ -619,17 +619,17 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.Repositor
  * - collect the difference
  * - returns deleted users, and add/updated users
  */
-func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesystem, userplugin UserSyncPlugin, feedback observability.RemoteObservability) ([]string, []string, error) {
+func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesystem, userplugin UserSyncPlugin, feedback observability.RemoteObservability, errorCollection *observability.ErrorCollection) ([]string, []string) {
 	usersOrgPath := filepath.Join("users", "org")
-	orgUsers, errs, _ := entity.ReadUserDirectory(fs, usersOrgPath)
-	if len(errs) > 0 {
-		return nil, nil, fmt.Errorf("cannot load org users (for example: %v)", errs[0])
+	orgUsers := entity.ReadUserDirectory(fs, usersOrgPath, errorCollection)
+	if errorCollection.HasErrors() {
+		return nil, nil
 	}
 
 	// use usersync to update the users
-	newOrgUsers, err := userplugin.UpdateUsers(repoconfig, fs, usersOrgPath, feedback)
-	if err != nil {
-		return nil, nil, err
+	newOrgUsers := userplugin.UpdateUsers(repoconfig, fs, usersOrgPath, feedback, errorCollection)
+	if errorCollection.HasErrors() {
+		return nil, nil
 	}
 
 	// write back to disk
@@ -646,7 +646,8 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 				// changed user
 				file, err := fs.Create(filepath.Join(usersOrgPath, fmt.Sprintf("%s.yaml", username)))
 				if err != nil {
-					return nil, nil, err
+					errorCollection.AddError(err)
+					return nil, nil
 				}
 				defer file.Close()
 
@@ -654,7 +655,8 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 				encoder.SetIndent(2)
 				err = encoder.Encode(newuser)
 				if err != nil {
-					return nil, nil, err
+					errorCollection.AddError(err)
+					return nil, nil
 				}
 				updatedusers = append(updatedusers, filepath.Join(usersOrgPath, fmt.Sprintf("%s.yaml", username)))
 			}
@@ -666,7 +668,8 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 		// new user
 		file, err := fs.Create(filepath.Join(usersOrgPath, fmt.Sprintf("%s.yaml", username)))
 		if err != nil {
-			return nil, nil, err
+			errorCollection.AddError(err)
+			return nil, nil
 		}
 		defer file.Close()
 
@@ -674,20 +677,24 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 		encoder.SetIndent(2)
 		err = encoder.Encode(user)
 		if err != nil {
-			return nil, nil, err
+			errorCollection.AddError(err)
+			return nil, nil
 		}
 		updatedusers = append(updatedusers, filepath.Join(usersOrgPath, fmt.Sprintf("%s.yaml", username)))
 	}
-	return deletedusers, updatedusers, nil
+	return deletedusers, updatedusers
 }
 
-func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability) (bool, error) {
+// return true if some changes were done
+func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool {
 	if g.repo == nil {
-		return false, fmt.Errorf("git repository not cloned")
+		errorCollector.AddError(fmt.Errorf("git repository not cloned"))
+		return false
 	}
 	w, err := g.repo.Worktree()
 	if err != nil {
-		return false, err
+		errorCollector.AddError(err)
+		return false
 	}
 
 	//
@@ -695,28 +702,30 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 	//
 
 	// Parse all the users in the <orgDirectory>/org-users directory
-	deletedusers, addedusers, err := syncUsersViaUserPlugin(repoconfig, w.Filesystem, userplugin, feedback)
-	if err != nil {
-		return false, err
+	deletedusers, addedusers := syncUsersViaUserPlugin(repoconfig, w.Filesystem, userplugin, feedback, errorCollector)
+	if errorCollector.HasErrors() {
+		return false
 	}
 
 	//
 	// let's update teams
 	//
 
-	errors, _ := g.loadUsers(w.Filesystem)
-	if len(errors) > 0 {
-		return false, fmt.Errorf("cannot read users (for example: %v)", errors[0])
+	g.loadUsers(w.Filesystem, errorCollector)
+	if errorCollector.HasErrors() {
+		return false
 	}
 
 	teamschanged, err := entity.ReadAndAdjustTeamDirectory(w.Filesystem, "teams", g.users)
 	if err != nil {
-		return false, err
+		errorCollector.AddError(err)
+		return false
 	}
 
 	// check if we have too many changesets
 	if !force && len(teamschanged)+len(deletedusers)+len(addedusers) > repoconfig.MaxChangesets {
-		return false, fmt.Errorf("too many changesets (%d) to commit. Please increase max_changesets in goliac.yaml", len(teamschanged)+len(deletedusers)+len(addedusers))
+		errorCollector.AddError(fmt.Errorf("too many changesets (%d) to commit. Please increase max_changesets in goliac.yaml", len(teamschanged)+len(deletedusers)+len(addedusers)))
+		return false
 	}
 
 	//
@@ -730,7 +739,8 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "remove_user_from_repository"}).Infof("user: %s", u)
 			_, err = w.Remove(u)
 			if err != nil {
-				return false, err
+				errorCollector.AddError(err)
+				return false
 			}
 		}
 
@@ -738,7 +748,8 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_user_to_repository"}).Infof("user: %s", u)
 			_, err = w.Add(u)
 			if err != nil {
-				return false, err
+				errorCollector.AddError(err)
+				return false
 			}
 		}
 
@@ -746,7 +757,8 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_to_repository"}).Infof("team: %s", t)
 			_, err = w.Add(t)
 			if err != nil {
-				return false, err
+				errorCollector.AddError(err)
+				return false
 			}
 		}
 
@@ -759,11 +771,12 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 		})
 
 		if err != nil {
-			return false, err
+			errorCollector.AddError(err)
+			return false
 		}
 
 		if dryrun {
-			return false, nil
+			return false
 		}
 
 		// Now push the tag to the remote repository
@@ -777,9 +790,12 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
 			Auth:       auth,
 		})
 
-		return true, err
+		if err != nil {
+			errorCollector.AddError(err)
+		}
+		return true
 	}
-	return false, nil
+	return false
 }
 
 /*
@@ -787,40 +803,35 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig,
  * - read the organization files
  * - validate the organization
  */
-func (g *GoliacLocalImpl) LoadAndValidate() ([]error, []entity.Warning) {
+func (g *GoliacLocalImpl) LoadAndValidate(errorCollection *observability.ErrorCollection) {
 	if g.repo == nil {
-		return []error{fmt.Errorf("the repository has not been cloned. Did you called .Clone()?")}, []entity.Warning{}
+		errorCollection.AddError(fmt.Errorf("the repository has not been cloned. Did you called .Clone()?"))
+		return
 	}
 
 	// read the organization files
 
 	w, err := g.repo.Worktree()
 	if err != nil {
-		return []error{err}, []entity.Warning{}
+		errorCollection.AddError(err)
+		return
 	}
-	errs, warns := g.LoadAndValidateLocal(w.Filesystem)
-
-	return errs, warns
+	g.LoadAndValidateLocal(w.Filesystem, errorCollection)
 }
 
-func (g *GoliacLocalImpl) loadUsers(fs billy.Filesystem) ([]error, []entity.Warning) {
-	errors := []error{}
-	warnings := []entity.Warning{}
+func (g *GoliacLocalImpl) loadUsers(fs billy.Filesystem, errorCollection *observability.ErrorCollection) {
 
 	// Parse all the users in the <orgDirectory>/protected-users directory
-	protectedUsers, errs, warns := entity.ReadUserDirectory(fs, filepath.Join("users", "protected"))
-	errors = append(errors, errs...)
-	warnings = append(warnings, warns...)
+	protectedUsers := entity.ReadUserDirectory(fs, filepath.Join("users", "protected"), errorCollection)
+
 	g.users = protectedUsers
 
 	// Parse all the users in the <orgDirectory>/org-users directory
-	orgUsers, errs, warns := entity.ReadUserDirectory(fs, filepath.Join("users", "org"))
-	errors = append(errors, errs...)
-	warnings = append(warnings, warns...)
+	orgUsers := entity.ReadUserDirectory(fs, filepath.Join("users", "org"), errorCollection)
 
 	// not users? not good
 	if orgUsers == nil {
-		return errors, warnings
+		return
 	}
 
 	for k, v := range orgUsers {
@@ -828,17 +839,11 @@ func (g *GoliacLocalImpl) loadUsers(fs billy.Filesystem) ([]error, []entity.Warn
 	}
 
 	// Parse all the users in the <orgDirectory>/external-users directory
-	externalUsers, errs, warns := entity.ReadUserDirectory(fs, filepath.Join("users", "external"))
-	errors = append(errors, errs...)
-	warnings = append(warnings, warns...)
+	externalUsers := entity.ReadUserDirectory(fs, filepath.Join("users", "external"), errorCollection)
 	g.externalUsers = externalUsers
 
-	rulesets, errs, warns := entity.ReadRuleSetDirectory(fs, filepath.Join("rulesets"))
-	errors = append(errors, errs...)
-	warnings = append(warnings, warns...)
+	rulesets := entity.ReadRuleSetDirectory(fs, filepath.Join("rulesets"), errorCollection)
 	g.rulesets = rulesets
-
-	return errors, warnings
 }
 
 /**
@@ -846,34 +851,26 @@ func (g *GoliacLocalImpl) loadUsers(fs billy.Filesystem) ([]error, []entity.Warn
  * - a slice of errors that must stop the vlidation process
  * - a slice of warning that must not stop the validation process
  */
-func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem) ([]error, []entity.Warning) {
-	errors, warnings := g.loadUsers(fs)
+func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem, errorCollection *observability.ErrorCollection) {
+	g.loadUsers(fs, errorCollection)
 
-	if len(errors) > 0 {
-		return errors, warnings
+	if errorCollection.HasErrors() {
+		return
 	}
 
 	// Parse all the teams in the <orgDirectory>/teams directory
-	teams, errs, warns := entity.ReadTeamDirectory(fs, "teams", g.users)
-	errors = append(errors, errs...)
-	warnings = append(warnings, warns...)
+	teams := entity.ReadTeamDirectory(fs, "teams", g.users, errorCollection)
 	g.teams = teams
 
 	// Parse all repositories in the <orgDirectory>/teams/<teamname> directories
-	repos, errs, warns := entity.ReadRepositories(fs, "archived", "teams", g.teams, g.externalUsers)
-	errors = append(errors, errs...)
-	warnings = append(warnings, warns...)
+	repos := entity.ReadRepositories(fs, "archived", "teams", g.teams, g.externalUsers, errorCollection)
 	g.repositories = repos
 
-	rulesets, errs, warns := entity.ReadRuleSetDirectory(fs, "rulesets")
-	errors = append(errors, errs...)
-	warnings = append(warnings, warns...)
+	rulesets := entity.ReadRuleSetDirectory(fs, "rulesets", errorCollection)
 	g.rulesets = rulesets
 
 	logrus.Debugf("Nb local users: %d", len(g.users))
 	logrus.Debugf("Nb local external users: %d", len(g.externalUsers))
 	logrus.Debugf("Nb local teams: %d", len(g.teams))
 	logrus.Debugf("Nb local repositories: %d", len(g.repositories))
-
-	return errors, warnings
 }
