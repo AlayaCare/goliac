@@ -1667,6 +1667,14 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 					"strict_required_status_checks_policy": rule.StrictRequiredStatusChecksPolicy,
 				},
 			})
+		case "non_fast_forward":
+			rules = append(rules, map[string]interface{}{
+				"type": "non_fast_forward",
+			})
+		case "required_linear_history":
+			rules = append(rules, map[string]interface{}{
+				"type": "required_linear_history",
+			})
 		}
 	}
 

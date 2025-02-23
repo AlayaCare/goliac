@@ -35,6 +35,8 @@ func CompareRulesetParameters(ruletype string, left RuleSetParameters, right Rul
 		return true
 	case "non_fast_forward":
 		return true
+	case "required_linear_history":
+		return true
 	case "pull_request":
 		if left.DismissStaleReviewsOnPush != right.DismissStaleReviewsOnPush {
 			return false

@@ -3,6 +3,7 @@
 - refactor error handling
 - fix ruleset repository_ids API call
 - dont enforce ruleset/branch protections on archived repositories
+- adding support for ruleset parameters required_linear_history, non_fast_forward
 
 ## Goliac v0.15.1
 
