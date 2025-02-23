@@ -1,3 +1,8 @@
+## Goliac v0.15.2
+
+- refactor error handling
+- fix ruleset repository_ids API call
+
 ## Goliac v0.15.1
 
 - branch protections bugfixes

@@ -1622,9 +1622,11 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 			"include": include,
 			"exclude": exclude,
 		},
-		"repository_id": map[string]interface{}{
+	}
+	if len(repoIds) > 0 {
+		conditions["repository_id"] = map[string]interface{}{
 			"repository_ids": repoIds,
-		},
+		}
 	}
 
 	rules := make([]map[string]interface{}, 0)
