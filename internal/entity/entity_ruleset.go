@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-git/go-billy/v5"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"gopkg.in/yaml.v3"
 )
@@ -114,25 +115,23 @@ func NewRuleSet(fs billy.Filesystem, filename string) (*RuleSet, error) {
  * - a slice of errors that must stop the validation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadRuleSetDirectory(fs billy.Filesystem, dirname string) (map[string]*RuleSet, []error, []Warning) {
-	errors := []error{}
-	warning := []Warning{}
+func ReadRuleSetDirectory(fs billy.Filesystem, dirname string, errorCollection *observability.ErrorCollection) map[string]*RuleSet {
 	rulesets := make(map[string]*RuleSet)
 
 	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
-		errors = append(errors, err)
-		return rulesets, errors, warning
+		errorCollection.AddError(err)
+		return rulesets
 	}
 	if !exist {
-		return rulesets, errors, warning
+		return rulesets
 	}
 
 	// Parse all the rulesets in the dirname directory
 	entries, err := fs.ReadDir(dirname)
 	if err != nil {
-		errors = append(errors, err)
-		return rulesets, errors, warning
+		errorCollection.AddError(err)
+		return rulesets
 	}
 
 	for _, e := range entries {
@@ -145,18 +144,18 @@ func ReadRuleSetDirectory(fs billy.Filesystem, dirname string) (map[string]*Rule
 		}
 		ruleset, err := NewRuleSet(fs, filepath.Join(dirname, e.Name()))
 		if err != nil {
-			errors = append(errors, err)
+			errorCollection.AddError(err)
 		} else {
 			err := ruleset.Validate(filepath.Join(dirname, e.Name()))
 			if err != nil {
-				errors = append(errors, err)
+				errorCollection.AddError(err)
 			} else {
 				rulesets[ruleset.Name] = ruleset
 			}
 
 		}
 	}
-	return rulesets, errors, warning
+	return rulesets
 }
 
 func (r *RuleSet) Validate(filename string) error {

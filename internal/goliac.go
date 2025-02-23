@@ -35,10 +35,10 @@ type Goliac interface {
 
 	// will run and apply the reconciliation,
 	// it returns an error if something went wrong, and a detailed list of errors and warnings
-	Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string) (error, []error, []entity.Warning, *engine.UnmanagedResources)
+	Apply(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string) *engine.UnmanagedResources
 
 	// will clone run the user-plugin to sync users, and will commit to the team repository, return true if a change was done
-	UsersUpdate(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) (bool, error)
+	UsersUpdate(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) bool
 
 	// flush remote cache
 	FlushCache()
@@ -117,20 +117,23 @@ func (g *GoliacImpl) FlushCache() {
 	g.remote.FlushCache()
 }
 
-func (g *GoliacImpl) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string) (error, []error, []entity.Warning, *engine.UnmanagedResources) {
-	err, errs, warns := g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch)
+func (g *GoliacImpl) Apply(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string) *engine.UnmanagedResources {
+	g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, errorCollector)
 	defer g.local.Close(fs)
-	if err != nil {
-		return fmt.Errorf("failed to load and validate: %s", err), errs, warns, nil
+	if errorCollector.HasErrors() {
+		return nil
 	}
 	if !strings.HasPrefix(repositoryUrl, "https://") &&
 		!strings.HasPrefix(repositoryUrl, "inmemory:///") { // <- only for testing purposes
-		return fmt.Errorf("local mode is not supported for plan/apply, you must specify the https url of the remote team git repository. Check the documentation"), errs, warns, nil
+		errorCollector.AddError(fmt.Errorf("local mode is not supported for plan/apply, you must specify the https url of the remote team git repository. Check the documentation"))
+
+		return nil
 	}
 
 	u, err := url.Parse(repositoryUrl)
 	if err != nil {
-		return fmt.Errorf("failed to parse %s: %v", repositoryUrl, err), errs, warns, nil
+		errorCollector.AddError(fmt.Errorf("failed to parse %s: %v", repositoryUrl, err))
+		return nil
 	}
 
 	teamreponame := strings.TrimSuffix(path.Base(u.Path), filepath.Ext(path.Base(u.Path)))
@@ -139,65 +142,66 @@ func (g *GoliacImpl) Apply(ctx context.Context, fs billy.Filesystem, dryrun bool
 	if !dryrun {
 		err := g.forceSquashMergeOnTeamsRepo(ctx, teamreponame, branch)
 		if err != nil {
-			return fmt.Errorf("error when ensuring PR on %s, repo can only be done via squash and merge: %v", teamreponame, err), errs, warns, nil
+			errorCollector.AddError(fmt.Errorf("error when ensuring PR on %s, repo can only be done via squash and merge: %v", teamreponame, err))
+			return nil
 		}
 	}
 
-	unmanaged, err := g.applyToGithub(ctx, dryrun, config.Config.GithubAppOrganization, teamreponame, branch, config.Config.SyncUsersBeforeApply)
-	for _, warn := range warns {
+	unmanaged := g.applyToGithub(ctx, dryrun, config.Config.GithubAppOrganization, teamreponame, branch, config.Config.SyncUsersBeforeApply, errorCollector)
+	for _, warn := range errorCollector.Warns {
 		logrus.Warn(warn)
 	}
-	if err != nil {
-		return err, errs, warns, unmanaged
+	if errorCollector.HasErrors() {
+		return unmanaged
 	}
 
-	return nil, errs, warns, unmanaged
+	return unmanaged
 }
 
-func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string) (error, []error, []entity.Warning) {
-	var errs []error
-	var warns []entity.Warning
+func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, errorCollector *observability.ErrorCollection) {
 	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") || strings.HasPrefix(repositoryUrl, "inmemory:///") {
 		accessToken := ""
 		var err error
 		if strings.HasPrefix(repositoryUrl, "https://") {
 			accessToken, err = g.localGithubClient.GetAccessToken(ctx)
 			if err != nil {
-				return err, nil, nil
+				errorCollector.AddError(fmt.Errorf("error when getting access token: %v", err))
+				return
 			}
 		}
 
 		err = g.local.Clone(fs, accessToken, repositoryUrl, branch)
 		if err != nil {
-			return fmt.Errorf("unable to clone: %v", err), nil, nil
+			errorCollector.AddError(fmt.Errorf("unable to clone: %v", err))
+			return
 		}
 		repoconfig, err := g.local.LoadRepoConfig()
 		if err != nil {
-			return fmt.Errorf("unable to read goliac.yaml config file: %v", err), nil, nil
+			errorCollector.AddError(fmt.Errorf("unable to read goliac.yaml config file: %v", err))
+			return
 		}
 		g.repoconfig = repoconfig
 
-		errs, warns = g.local.LoadAndValidate()
+		g.local.LoadAndValidate(errorCollector)
 	} else {
 		// Local
 		subfs, err := fs.Chroot(repositoryUrl)
 		if err != nil {
-			return fmt.Errorf("unable to chroot to %s: %v", repositoryUrl, err), nil, nil
+			errorCollector.AddError(fmt.Errorf("unable to chroot to %s: %v", repositoryUrl, err))
+			return
 		}
-		errs, warns = g.local.LoadAndValidateLocal(subfs)
+		g.local.LoadAndValidateLocal(subfs, errorCollector)
 	}
 
-	for _, warn := range warns {
+	for _, warn := range errorCollector.Warns {
 		logrus.Debug(warn)
 	}
-	if len(errs) != 0 {
-		for _, err := range errs {
+	if errorCollector.HasErrors() {
+		for _, err := range errorCollector.Errors {
 			logrus.Error(err)
 		}
-		return fmt.Errorf("not able to load and validate the goliac organization: see logs"), errs, warns
+		return
 	}
-
-	return nil, errs, warns
 }
 
 /*
@@ -260,10 +264,11 @@ Apply the changes to the github team repository:
   - apply the changes
   - update the codeowners file
 */
-func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrganization string, teamreponame string, branch string, syncusersbeforeapply bool) (*engine.UnmanagedResources, error) {
+func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrganization string, teamreponame string, branch string, syncusersbeforeapply bool, errorCollector *observability.ErrorCollection) *engine.UnmanagedResources {
 	err := g.remote.Load(ctx, false)
 	if err != nil {
-		return nil, fmt.Errorf("error when fetching data from Github: %v", err)
+		errorCollector.AddError(fmt.Errorf("error when loading data from Github: %v", err))
+		return nil
 	}
 
 	//
@@ -278,11 +283,12 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 		} else {
 			accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 			if err != nil {
-				return nil, err
+				errorCollector.AddError(fmt.Errorf("error when getting access token: %v", err))
+				return nil
 			}
-			change, err := g.local.SyncUsersAndTeams(g.repoconfig, userplugin, accessToken, dryrun, false, g.feedback)
-			if err != nil {
-				return nil, err
+			change := g.local.SyncUsersAndTeams(g.repoconfig, userplugin, accessToken, dryrun, false, g.feedback, errorCollector)
+			if errorCollector.HasErrors() {
+				return nil
 			}
 			if change {
 				g.remote.FlushCacheUsersTeamsOnly()
@@ -295,9 +301,10 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 	//
 
 	// we apply the changes to the github team repository
-	unmanaged, err := g.applyCommitsToGithub(ctx, dryrun, teamreponame, branch)
+	unmanaged, err := g.applyCommitsToGithub(ctx, errorCollector, dryrun, teamreponame, branch)
 	if err != nil {
-		return unmanaged, fmt.Errorf("error when applying to github: %v", err)
+		errorCollector.AddError(fmt.Errorf("error when applying to github: %v", err))
+		return unmanaged
 	}
 
 	//
@@ -308,18 +315,20 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 	if !dryrun {
 		accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 		if err != nil {
-			return unmanaged, err
+			errorCollector.AddError(fmt.Errorf("error when getting access token: %v", err))
+			return unmanaged
 		}
 		err = g.local.UpdateAndCommitCodeOwners(g.repoconfig, dryrun, accessToken, branch, GOLIAC_GIT_TAG, githubOrganization)
 		if err != nil {
-			return unmanaged, fmt.Errorf("error when updating and commiting: %v", err)
+			errorCollector.AddError(fmt.Errorf("error when updating and commiting: %v", err))
+			return unmanaged
 		}
 	}
 
-	return unmanaged, nil
+	return unmanaged
 }
 
-func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, teamreponame string, branch string) (*engine.UnmanagedResources, error) {
+func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamreponame string, branch string) (*engine.UnmanagedResources, error) {
 
 	// if the repo was just archived in a previous commit and we "resume it"
 	// so we keep a track of all repos that we want to archive until the end of the process
@@ -338,7 +347,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 
 	// the repo has already been cloned (to HEAD) and validated (see loadAndValidateGoliacOrganization)
 	// we can now apply the changes to the github team repository
-	unmanaged, err = reconciliator.Reconciliate(ctx, g.local, g.remote, teamreponame, branch, dryrun, g.repoconfig.AdminTeam, reposToArchive, reposToRename)
+	unmanaged, err = reconciliator.Reconciliate(ctx, errorCollector, g.local, g.remote, teamreponame, branch, dryrun, g.repoconfig.AdminTeam, reposToArchive, reposToRename)
 	if err != nil {
 		return unmanaged, fmt.Errorf("error when reconciliating: %v", err)
 	}
@@ -370,27 +379,31 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, dryrun bool, team
 	return unmanaged, nil
 }
 
-func (g *GoliacImpl) UsersUpdate(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) (bool, error) {
+func (g *GoliacImpl) UsersUpdate(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) bool {
 	accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 	if err != nil {
-		return false, err
+		errorCollector.AddError(fmt.Errorf("error when getting access token: %v", err))
+		return false
 	}
 
 	err = g.local.Clone(fs, accessToken, repositoryUrl, branch)
 	if err != nil {
-		return false, err
+		errorCollector.AddError(fmt.Errorf("unable to clone: %v", err))
+		return false
 	}
 	defer g.local.Close(fs)
 
 	repoconfig, err := g.local.LoadRepoConfig()
 	if err != nil {
-		return false, fmt.Errorf("unable to read goliac.yaml config file: %v", err)
+		errorCollector.AddError(fmt.Errorf("unable to read goliac.yaml config file: %v", err))
+		return false
 	}
 
 	userplugin, found := engine.GetUserSyncPlugin(repoconfig.UserSync.Plugin)
 	if !found {
-		return false, fmt.Errorf("user sync Plugin %s not found", repoconfig.UserSync.Plugin)
+		errorCollector.AddError(fmt.Errorf("user sync Plugin %s not found", repoconfig.UserSync.Plugin))
+		return false
 	}
 
-	return g.local.SyncUsersAndTeams(repoconfig, userplugin, accessToken, dryrun, force, g.feedback)
+	return g.local.SyncUsersAndTeams(repoconfig, userplugin, accessToken, dryrun, force, g.feedback, errorCollector)
 }

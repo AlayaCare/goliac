@@ -8,6 +8,7 @@ import (
 
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/entity"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
@@ -25,7 +26,7 @@ type UnmanagedResources struct {
  * GoliacReconciliator is here to sync the local state to the remote state
  */
 type GoliacReconciliator interface {
-	Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamreponame string, branch string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error)
+	Reconciliate(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote GoliacRemote, teamreponame string, branch string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error)
 }
 
 type GoliacReconciliatorImpl struct {
@@ -42,7 +43,7 @@ func NewGoliacReconciliatorImpl(executor ReconciliatorExecutor, repoconfig *conf
 	}
 }
 
-func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local GoliacLocal, remote GoliacRemote, teamsreponame string, branch string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error) {
+func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote GoliacRemote, teamsreponame string, branch string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error) {
 	rremote := NewMutableGoliacRemoteImpl(ctx, remote)
 	r.Begin(ctx, dryrun)
 	unmanaged := &UnmanagedResources{
@@ -54,39 +55,39 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, local Goliac
 	}
 	r.unmanaged = unmanaged
 
-	err := r.reconciliateUsers(ctx, local, rremote, dryrun)
+	err := r.reconciliateUsers(ctx, errorCollector, local, rremote, dryrun)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
 		return nil, err
 	}
 
-	err = r.reconciliateTeams(ctx, local, rremote, dryrun)
+	err = r.reconciliateTeams(ctx, errorCollector, local, rremote, dryrun)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
 		return nil, err
 	}
 
-	err = r.reconciliateRepositories(ctx, local, rremote, teamsreponame, branch, dryrun, reposToArchive, reposToRename)
+	err = r.reconciliateRepositories(ctx, errorCollector, local, rremote, teamsreponame, branch, dryrun, reposToArchive, reposToRename)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
 		return nil, err
 	}
 
 	if remote.IsEnterprise() {
-		err = r.reconciliateRulesets(ctx, local, rremote, teamsreponame, r.repoconfig, dryrun)
+		err = r.reconciliateRulesets(ctx, errorCollector, local, rremote, teamsreponame, r.repoconfig, dryrun)
 		if err != nil {
 			r.Rollback(ctx, dryrun, err)
 			return nil, err
 		}
 	}
 
-	return r.unmanaged, r.Commit(ctx, dryrun)
+	return r.unmanaged, r.Commit(ctx, errorCollector, dryrun)
 }
 
 /*
  * This function sync teams and team's members
  */
-func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) error {
+func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) error {
 	ghUsers := remote.Users()
 
 	rUsers := make(map[string]string)
@@ -99,7 +100,7 @@ func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local G
 
 		if !ok {
 			// deal with non existing remote user
-			r.AddUserToOrg(ctx, dryrun, remote, lUser.Spec.GithubID)
+			r.AddUserToOrg(ctx, errorCollector, dryrun, remote, lUser.Spec.GithubID)
 		} else {
 			delete(rUsers, user)
 		}
@@ -108,7 +109,7 @@ func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, local G
 	// remaining (GH) users (aka not found locally)
 	for _, rUser := range rUsers {
 		// DELETE User
-		r.RemoveUserFromOrg(ctx, dryrun, remote, rUser)
+		r.RemoveUserFromOrg(ctx, errorCollector, dryrun, remote, rUser)
 	}
 	return nil
 }
@@ -124,7 +125,7 @@ type GithubTeamComparable struct {
 /*
 This function sync teams and team's members,
 */
-func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) error {
+func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote *MutableGoliacRemoteImpl, dryrun bool) error {
 	ghTeams := remote.Teams()
 	rUsers := remote.Users()
 
@@ -271,12 +272,12 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 		if lTeam.ParentTeam != nil && ghTeams[*lTeam.ParentTeam] != nil {
 			parentTeam = &ghTeams[*lTeam.ParentTeam].Id
 		}
-		r.CreateTeam(ctx, dryrun, remote, lTeam.Name, lTeam.Name, parentTeam, lTeam.Members)
+		r.CreateTeam(ctx, errorCollector, dryrun, remote, lTeam.Name, lTeam.Name, parentTeam, lTeam.Members)
 	}
 
 	onRemoved := func(key string, lTeam *GithubTeamComparable, rTeam *GithubTeamComparable) {
 		// DELETE team
-		r.DeleteTeam(ctx, dryrun, remote, rTeam.Slug)
+		r.DeleteTeam(ctx, errorCollector, dryrun, remote, rTeam.Slug)
 	}
 
 	onChanged := func(slugTeam string, lTeam *GithubTeamComparable, rTeam *GithubTeamComparable) {
@@ -295,7 +296,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 			}
 			if !found {
 				// let's downgrade the maintainer to member
-				r.UpdateTeamChangeMaintainerToMember(ctx, dryrun, remote, slugTeam, r_maintainer)
+				r.UpdateTeamChangeMaintainerToMember(ctx, errorCollector, dryrun, remote, slugTeam, r_maintainer)
 				for i, m := range rTeam.Maintainers {
 					if m == r_maintainer {
 						rTeam.Maintainers = append(rTeam.Maintainers[:i], rTeam.Maintainers[i+1:]...)
@@ -316,14 +317,14 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 			for _, m := range rTeam.Members {
 				if _, ok := localMembers[m]; !ok {
 					// REMOVE team member
-					r.UpdateTeamRemoveMember(ctx, dryrun, remote, slugTeam, m)
+					r.UpdateTeamRemoveMember(ctx, errorCollector, dryrun, remote, slugTeam, m)
 				} else {
 					delete(localMembers, m)
 				}
 			}
 			for m := range localMembers {
 				// ADD team member
-				r.UpdateTeamAddMember(ctx, dryrun, remote, slugTeam, m, "member")
+				r.UpdateTeamAddMember(ctx, errorCollector, dryrun, remote, slugTeam, m, "member")
 			}
 		}
 
@@ -339,7 +340,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, local G
 				parentTeamName = *lTeam.ParentTeam
 			}
 
-			r.UpdateTeamSetParent(ctx, dryrun, remote, slugTeam, parentTeam, parentTeamName)
+			r.UpdateTeamSetParent(ctx, errorCollector, dryrun, remote, slugTeam, parentTeam, parentTeamName)
 		}
 	}
 
@@ -363,7 +364,7 @@ type GithubRepoComparable struct {
  * This function sync repositories and team's repositories permissions
  * It returns the list of deleted repos that must not be deleted but archived
  */
-func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, branch string, dryrun bool, toArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) error {
+func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, branch string, dryrun bool, toArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) error {
 
 	// let's start with the local cloned github-teams repo
 	lRepos := make(map[string]*GithubRepoComparable)
@@ -378,7 +379,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			renamedRepo.RenameTo = ""
 			reponame = repo.RenameTo
 
-			r.RenameRepository(ctx, dryrun, remote, repo.Name, repo.RenameTo)
+			r.RenameRepository(ctx, errorCollector, dryrun, remote, repo.Name, repo.RenameTo)
 
 			// in the post action we have to also update the git repository
 			reposToRename[repo.DirectoryPath] = repo
@@ -569,16 +570,16 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		//
 		onRulesetAdded := func(rulename string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
 			// CREATE repo ruleset
-			r.AddRepositoryRuleset(ctx, dryrun, reponame, lRuleset)
+			r.AddRepositoryRuleset(ctx, errorCollector, dryrun, reponame, lRuleset)
 		}
 		onRulesetRemoved := func(rulename string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
 			// DELETE repo ruleset
-			r.DeleteRepositoryRuleset(ctx, dryrun, reponame, rRuleset)
+			r.DeleteRepositoryRuleset(ctx, errorCollector, dryrun, reponame, rRuleset)
 		}
 		onRulesetChange := func(rulename string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
 			// UPDATE ruleset
 			lRuleset.Id = rRuleset.Id
-			r.UpdateRepositoryRuleset(ctx, dryrun, reponame, lRuleset)
+			r.UpdateRepositoryRuleset(ctx, errorCollector, dryrun, reponame, lRuleset)
 		}
 		CompareEntities(lRepo.Rulesets, rRepo.Rulesets, compareRulesets, onRulesetAdded, onRulesetRemoved, onRulesetChange)
 
@@ -587,16 +588,16 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		//
 		onBranchProtectionAdded := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
 			// CREATE repo branchprotection
-			r.AddRepositoryBranchProtection(ctx, dryrun, reponame, lBp)
+			r.AddRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, lBp)
 		}
 		onBranchProtectionRemoved := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
 			// DELETE repo branchprotection
-			r.DeleteRepositoryBranchProtection(ctx, dryrun, reponame, rBp)
+			r.DeleteRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, rBp)
 		}
 		onBranchProtectionChange := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
 			// UPDATE branchprotection
 			lBp.Id = rBp.Id
-			r.UpdateRepositoryBranchProtection(ctx, dryrun, reponame, lBp)
+			r.UpdateRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, lBp)
 		}
 		CompareEntities(lRepo.BranchProtections, rRepo.BranchProtections, compareBranchProtections, onBranchProtectionAdded, onBranchProtectionRemoved, onBranchProtectionChange)
 
@@ -636,31 +637,31 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		// reconciliate repositories boolean properties
 		for lk, lv := range lRepo.BoolProperties {
 			if rv, ok := rRepo.BoolProperties[lk]; !ok || rv != lv {
-				r.UpdateRepositoryUpdateBoolProperty(ctx, dryrun, remote, reponame, lk, lv)
+				r.UpdateRepositoryUpdateBoolProperty(ctx, errorCollector, dryrun, remote, reponame, lk, lv)
 			}
 		}
 
 		if res, readToRemove, readToAdd := entity.StringArrayEquivalent(lRepo.Readers, rRepo.Readers); !res {
 			for _, teamSlug := range readToAdd {
-				r.UpdateRepositoryAddTeamAccess(ctx, dryrun, remote, reponame, teamSlug, "pull")
+				r.UpdateRepositoryAddTeamAccess(ctx, errorCollector, dryrun, remote, reponame, teamSlug, "pull")
 			}
 			for _, teamSlug := range readToRemove {
-				r.UpdateRepositoryRemoveTeamAccess(ctx, dryrun, remote, reponame, teamSlug)
+				r.UpdateRepositoryRemoveTeamAccess(ctx, errorCollector, dryrun, remote, reponame, teamSlug)
 			}
 		}
 
 		if res, writeToRemove, writeToAdd := entity.StringArrayEquivalent(lRepo.Writers, rRepo.Writers); !res {
 			for _, teamSlug := range writeToAdd {
-				r.UpdateRepositoryAddTeamAccess(ctx, dryrun, remote, reponame, teamSlug, "push")
+				r.UpdateRepositoryAddTeamAccess(ctx, errorCollector, dryrun, remote, reponame, teamSlug, "push")
 			}
 			for _, teamSlug := range writeToRemove {
-				r.UpdateRepositoryRemoveTeamAccess(ctx, dryrun, remote, reponame, teamSlug)
+				r.UpdateRepositoryRemoveTeamAccess(ctx, errorCollector, dryrun, remote, reponame, teamSlug)
 			}
 		}
 
 		// internal users
 		for _, internalUser := range rRepo.InternalUsers {
-			r.UpdateRepositoryRemoveInternalUser(ctx, dryrun, remote, reponame, internalUser)
+			r.UpdateRepositoryRemoveInternalUser(ctx, errorCollector, dryrun, remote, reponame, internalUser)
 		}
 
 		// external users
@@ -678,11 +679,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 					}
 				}
 				if !found {
-					r.UpdateRepositoryRemoveExternalUser(ctx, dryrun, remote, reponame, eReader)
+					r.UpdateRepositoryRemoveExternalUser(ctx, errorCollector, dryrun, remote, reponame, eReader)
 				}
 			}
 			for _, eReader := range ereaderToAdd {
-				r.UpdateRepositorySetExternalUser(ctx, dryrun, remote, reponame, eReader, "pull")
+				r.UpdateRepositorySetExternalUser(ctx, errorCollector, dryrun, remote, reponame, eReader, "pull")
 			}
 		}
 
@@ -697,11 +698,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 					}
 				}
 				if !found {
-					r.UpdateRepositoryRemoveExternalUser(ctx, dryrun, remote, reponame, eWriter)
+					r.UpdateRepositoryRemoveExternalUser(ctx, errorCollector, dryrun, remote, reponame, eWriter)
 				}
 			}
 			for _, eWriter := range ewriteToAdd {
-				r.UpdateRepositorySetExternalUser(ctx, dryrun, remote, reponame, eWriter, "push")
+				r.UpdateRepositorySetExternalUser(ctx, errorCollector, dryrun, remote, reponame, eWriter, "push")
 			}
 		}
 
@@ -713,11 +714,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		// if the repo was just archived in a previous commit and we "resume it"
 		if aRepo, ok := toArchive[reponame]; ok {
 			delete(toArchive, reponame)
-			r.UpdateRepositoryUpdateBoolProperty(ctx, dryrun, remote, reponame, "archived", false)
+			r.UpdateRepositoryUpdateBoolProperty(ctx, errorCollector, dryrun, remote, reponame, "archived", false)
 			// calling onChanged to update the repository permissions
 			onChanged(reponame, aRepo, rRepo)
 		} else {
-			r.CreateRepository(ctx, dryrun, remote, reponame, reponame, lRepo.Writers, lRepo.Readers, lRepo.BoolProperties)
+			r.CreateRepository(ctx, errorCollector, dryrun, remote, reponame, reponame, lRepo.Writers, lRepo.Readers, lRepo.BoolProperties)
 		}
 	}
 
@@ -727,13 +728,13 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		// but if we have ArchiveOnDelete...
 		if r.repoconfig.ArchiveOnDelete {
 			if r.repoconfig.DestructiveOperations.AllowDestructiveRepositories {
-				r.UpdateRepositoryUpdateBoolProperty(ctx, dryrun, remote, reponame, "archived", true)
+				r.UpdateRepositoryUpdateBoolProperty(ctx, errorCollector, dryrun, remote, reponame, "archived", true)
 				toArchive[reponame] = rRepo
 			} else {
 				r.unmanaged.Repositories[reponame] = true
 			}
 		} else {
-			r.DeleteRepository(ctx, dryrun, remote, reponame)
+			r.DeleteRepository(ctx, errorCollector, dryrun, remote, reponame)
 		}
 	}
 
@@ -829,7 +830,7 @@ func compareRulesets(rulesetname string, lrs *GithubRuleSet, rrs *GithubRuleSet)
 	return true
 }
 
-func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, conf *config.RepositoryConfig, dryrun bool) error {
+func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, conf *config.RepositoryConfig, dryrun bool) error {
 	repositories := local.Repositories()
 
 	lgrs := map[string]*GithubRuleSet{}
@@ -877,18 +878,18 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 	onAdded := func(rulesetname string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
 		// CREATE ruleset
 
-		r.AddRuleset(ctx, dryrun, lRuleset)
+		r.AddRuleset(ctx, errorCollector, dryrun, lRuleset)
 	}
 
 	onRemoved := func(rulesetname string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
 		// DELETE ruleset
-		r.DeleteRuleset(ctx, dryrun, rRuleset)
+		r.DeleteRuleset(ctx, errorCollector, dryrun, rRuleset)
 	}
 
 	onChanged := func(rulesetname string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
 		// UPDATE ruleset
 		lRuleset.Id = rRuleset.Id
-		r.UpdateRuleset(ctx, dryrun, lRuleset)
+		r.UpdateRuleset(ctx, errorCollector, dryrun, lRuleset)
 	}
 
 	CompareEntities(lgrs, rgrs, compareRulesets, onAdded, onRemoved, onChanged)
@@ -896,27 +897,27 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, loca
 	return nil
 }
 
-func (r *GoliacReconciliatorImpl) AddUserToOrg(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, ghuserid string) {
+func (r *GoliacReconciliatorImpl) AddUserToOrg(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, ghuserid string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_user_to_org"}).Infof("ghuserid: %s", ghuserid)
 	remote.AddUserToOrg(ghuserid)
 	if r.executor != nil {
-		r.executor.AddUserToOrg(ctx, dryrun, ghuserid)
+		r.executor.AddUserToOrg(ctx, errorCollector, dryrun, ghuserid)
 	}
 }
 
-func (r *GoliacReconciliatorImpl) RemoveUserFromOrg(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, ghuserid string) {
+func (r *GoliacReconciliatorImpl) RemoveUserFromOrg(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, ghuserid string) {
 	if r.repoconfig.DestructiveOperations.AllowDestructiveUsers {
 		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "remove_user_from_org"}).Infof("ghuserid: %s", ghuserid)
 		remote.RemoveUserFromOrg(ghuserid)
 		if r.executor != nil {
-			r.executor.RemoveUserFromOrg(ctx, dryrun, ghuserid)
+			r.executor.RemoveUserFromOrg(ctx, errorCollector, dryrun, ghuserid)
 		}
 	} else {
 		r.unmanaged.Users[ghuserid] = true
 	}
 }
 
-func (r *GoliacReconciliatorImpl) CreateTeam(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamname string, description string, parentTeam *int, members []string) {
+func (r *GoliacReconciliatorImpl) CreateTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, teamname string, description string, parentTeam *int, members []string) {
 	parenTeamId := "nil"
 	if parentTeam != nil {
 		parenTeamId = fmt.Sprintf("%d", *parentTeam)
@@ -925,31 +926,31 @@ func (r *GoliacReconciliatorImpl) CreateTeam(ctx context.Context, dryrun bool, r
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "create_team"}).Infof("teamname: %s, parentTeam: %s, members: %s", teamname, parenTeamId, strings.Join(members, ","))
 	remote.CreateTeam(teamname, description, members)
 	if r.executor != nil {
-		r.executor.CreateTeam(ctx, dryrun, teamname, description, parentTeam, members)
+		r.executor.CreateTeam(ctx, errorCollector, dryrun, teamname, description, parentTeam, members)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateTeamAddMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, ghuserid string, role string) {
+func (r *GoliacReconciliatorImpl) UpdateTeamAddMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, ghuserid string, role string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_add_member"}).Infof("teamslug: %s, ghuserid: %s, role: %s", teamslug, ghuserid, role)
 	remote.UpdateTeamAddMember(teamslug, ghuserid, "member")
 	if r.executor != nil {
-		r.executor.UpdateTeamAddMember(ctx, dryrun, teamslug, ghuserid, "member")
+		r.executor.UpdateTeamAddMember(ctx, errorCollector, dryrun, teamslug, ghuserid, "member")
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateTeamRemoveMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, ghuserid string) {
+func (r *GoliacReconciliatorImpl) UpdateTeamRemoveMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, ghuserid string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_remove_member"}).Infof("teamslug: %s, ghuserid: %s", teamslug, ghuserid)
 	remote.UpdateTeamRemoveMember(teamslug, ghuserid)
 	if r.executor != nil {
-		r.executor.UpdateTeamRemoveMember(ctx, dryrun, teamslug, ghuserid)
+		r.executor.UpdateTeamRemoveMember(ctx, errorCollector, dryrun, teamslug, ghuserid)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateTeamChangeMaintainerToMember(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, ghuserid string) {
+func (r *GoliacReconciliatorImpl) UpdateTeamChangeMaintainerToMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, ghuserid string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_change_maintainer_to_member"}).Infof("teamslug: %s, ghuserid: %s", teamslug, ghuserid)
 	remote.UpdateTeamUpdateMember(teamslug, ghuserid, "member")
 	if r.executor != nil {
-		r.executor.UpdateTeamUpdateMember(ctx, dryrun, teamslug, ghuserid, "member")
+		r.executor.UpdateTeamUpdateMember(ctx, errorCollector, dryrun, teamslug, ghuserid, "member")
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateTeamSetParent(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, parentTeam *int, parentTeamName string) {
+func (r *GoliacReconciliatorImpl) UpdateTeamSetParent(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string, parentTeam *int, parentTeamName string) {
 	parenTeamId := "nil"
 	if parentTeam != nil {
 		parenTeamId = fmt.Sprintf("%d", *parentTeam)
@@ -958,154 +959,154 @@ func (r *GoliacReconciliatorImpl) UpdateTeamSetParent(ctx context.Context, dryru
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_parentteam"}).Infof("teamslug: %s, parentteam: %s (%s)", teamslug, parenTeamId, parentTeamName)
 	remote.UpdateTeamSetParent(ctx, dryrun, teamslug, parentTeam)
 	if r.executor != nil {
-		r.executor.UpdateTeamSetParent(ctx, dryrun, teamslug, parentTeam)
+		r.executor.UpdateTeamSetParent(ctx, errorCollector, dryrun, teamslug, parentTeam)
 	}
 }
-func (r *GoliacReconciliatorImpl) DeleteTeam(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string) {
+func (r *GoliacReconciliatorImpl) DeleteTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, teamslug string) {
 	if r.repoconfig.DestructiveOperations.AllowDestructiveTeams {
 		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_team"}).Infof("teamslug: %s", teamslug)
 		remote.DeleteTeam(teamslug)
 		if r.executor != nil {
-			r.executor.DeleteTeam(ctx, dryrun, teamslug)
+			r.executor.DeleteTeam(ctx, errorCollector, dryrun, teamslug)
 		}
 	} else {
 		r.unmanaged.Teams[teamslug] = true
 	}
 }
-func (r *GoliacReconciliatorImpl) CreateRepository(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
+func (r *GoliacReconciliatorImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "create_repository"}).Infof("repositoryname: %s, readers: %s, writers: %s, boolProperties: %v", reponame, strings.Join(readers, ","), strings.Join(writers, ","), boolProperties)
 	remote.CreateRepository(reponame, reponame, writers, readers, boolProperties)
 	if r.executor != nil {
-		r.executor.CreateRepository(ctx, dryrun, reponame, reponame, writers, readers, boolProperties)
+		r.executor.CreateRepository(ctx, errorCollector, dryrun, reponame, reponame, writers, readers, boolProperties)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, teamslug string, permission string) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, teamslug string, permission string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_add_team"}).Infof("repositoryname: %s, teamslug: %s, permission: %s", reponame, teamslug, permission)
 	remote.UpdateRepositoryAddTeamAccess(reponame, teamslug, permission)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryAddTeamAccess(ctx, dryrun, reponame, teamslug, permission)
+		r.executor.UpdateRepositoryAddTeamAccess(ctx, errorCollector, dryrun, reponame, teamslug, permission)
 	}
 }
 
-func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, teamslug string, permission string) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, teamslug string, permission string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_update_team"}).Infof("repositoryname: %s, teamslug:%s, permission: %s", reponame, teamslug, permission)
 	remote.UpdateRepositoryUpdateTeamAccess(reponame, teamslug, permission)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryUpdateTeamAccess(ctx, dryrun, reponame, teamslug, permission)
+		r.executor.UpdateRepositoryUpdateTeamAccess(ctx, errorCollector, dryrun, reponame, teamslug, permission)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, teamslug string) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, teamslug string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_remove_team"}).Infof("repositoryname: %s, teamslug:%s", reponame, teamslug)
 	remote.UpdateRepositoryRemoveTeamAccess(reponame, teamslug)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryRemoveTeamAccess(ctx, dryrun, reponame, teamslug)
+		r.executor.UpdateRepositoryRemoveTeamAccess(ctx, errorCollector, dryrun, reponame, teamslug)
 	}
 }
 
-func (r *GoliacReconciliatorImpl) DeleteRepository(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string) {
+func (r *GoliacReconciliatorImpl) DeleteRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string) {
 	if r.repoconfig.DestructiveOperations.AllowDestructiveRepositories {
 		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_repository"}).Infof("repositoryname: %s", reponame)
 		remote.DeleteRepository(reponame)
 		if r.executor != nil {
-			r.executor.DeleteRepository(ctx, dryrun, reponame)
+			r.executor.DeleteRepository(ctx, errorCollector, dryrun, reponame)
 		}
 	} else {
 		r.unmanaged.Repositories[reponame] = true
 	}
 }
 
-func (r *GoliacReconciliatorImpl) RenameRepository(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, newname string) {
+func (r *GoliacReconciliatorImpl) RenameRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, newname string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "rename_repository"}).Infof("repositoryname: %s newname: %s", reponame, newname)
 	remote.RenameRepository(reponame, newname)
 	if r.executor != nil {
-		r.executor.RenameRepository(ctx, dryrun, reponame, newname)
+		r.executor.RenameRepository(ctx, errorCollector, dryrun, reponame, newname)
 	}
 }
 
-func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue bool) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue bool) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_update_bool_property"}).Infof("repositoryname: %s %s:%v", reponame, propertyName, propertyValue)
 	remote.UpdateRepositoryUpdateBoolProperty(reponame, propertyName, propertyValue)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryUpdateBoolProperty(ctx, dryrun, reponame, propertyName, propertyValue)
+		r.executor.UpdateRepositoryUpdateBoolProperty(ctx, errorCollector, dryrun, reponame, propertyName, propertyValue)
 	}
 }
-func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
+func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *GithubRuleSet) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_ruleset"}).Infof("ruleset: %s (id: %d) enforcement: %s", ruleset.Name, ruleset.Id, ruleset.Enforcement)
 	if r.executor != nil {
-		r.executor.AddRuleset(ctx, dryrun, ruleset)
+		r.executor.AddRuleset(ctx, errorCollector, dryrun, ruleset)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
+func (r *GoliacReconciliatorImpl) UpdateRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *GithubRuleSet) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_ruleset"}).Infof("ruleset: %s (id: %d) enforcement: %s", ruleset.Name, ruleset.Id, ruleset.Enforcement)
 	if r.executor != nil {
-		r.executor.UpdateRuleset(ctx, dryrun, ruleset)
+		r.executor.UpdateRuleset(ctx, errorCollector, dryrun, ruleset)
 	}
 }
-func (r *GoliacReconciliatorImpl) DeleteRuleset(ctx context.Context, dryrun bool, ruleset *GithubRuleSet) {
+func (r *GoliacReconciliatorImpl) DeleteRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *GithubRuleSet) {
 	if r.repoconfig.DestructiveOperations.AllowDestructiveRulesets {
 		logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_ruleset"}).Infof("ruleset id:%d", ruleset.Id)
 		if r.executor != nil {
-			r.executor.DeleteRuleset(ctx, dryrun, ruleset.Id)
+			r.executor.DeleteRuleset(ctx, errorCollector, dryrun, ruleset.Id)
 		}
 	} else {
 		r.unmanaged.RuleSets[ruleset.Name] = true
 	}
 }
-func (r *GoliacReconciliatorImpl) AddRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+func (r *GoliacReconciliatorImpl) AddRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_repository_ruleset"}).Infof("repository: %s, ruleset: %s (id: %d) enforcement: %s", reponame, ruleset.Name, ruleset.Id, ruleset.Enforcement)
 	if r.executor != nil {
-		r.executor.AddRepositoryRuleset(ctx, dryrun, reponame, ruleset)
+		r.executor.AddRepositoryRuleset(ctx, errorCollector, dryrun, reponame, ruleset)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_ruleset"}).Infof("repository: %s, ruleset: %s (id: %d) enforcement: %s", reponame, ruleset.Name, ruleset.Id, ruleset.Enforcement)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryRuleset(ctx, dryrun, reponame, ruleset)
+		r.executor.UpdateRepositoryRuleset(ctx, errorCollector, dryrun, reponame, ruleset)
 	}
 }
-func (r *GoliacReconciliatorImpl) DeleteRepositoryRuleset(ctx context.Context, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+func (r *GoliacReconciliatorImpl) DeleteRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_repository_ruleset"}).Infof("repository: %s, ruleset id:%d", reponame, ruleset.Id)
 	if r.executor != nil {
-		r.executor.DeleteRepositoryRuleset(ctx, dryrun, reponame, ruleset.Id)
+		r.executor.DeleteRepositoryRuleset(ctx, errorCollector, dryrun, reponame, ruleset.Id)
 	}
 }
-func (r *GoliacReconciliatorImpl) AddRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (r *GoliacReconciliatorImpl) AddRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_repository_branchprotection"}).Infof("repository: %s, branchprotection: %s", reponame, branchprotection.Pattern)
 	if r.executor != nil {
-		r.executor.AddRepositoryBranchProtection(ctx, dryrun, reponame, branchprotection)
+		r.executor.AddRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, branchprotection)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_branchprotection"}).Infof("repository: %s, branchprotection: %s", reponame, branchprotection.Pattern)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryBranchProtection(ctx, dryrun, reponame, branchprotection)
+		r.executor.UpdateRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, branchprotection)
 	}
 }
-func (r *GoliacReconciliatorImpl) DeleteRepositoryBranchProtection(ctx context.Context, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (r *GoliacReconciliatorImpl) DeleteRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_repository_branchprotection"}).Infof("repository: %s, branchprotection: %s", reponame, branchprotection.Pattern)
 	if r.executor != nil {
-		r.executor.DeleteRepositoryBranchProtection(ctx, dryrun, reponame, branchprotection)
+		r.executor.DeleteRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, branchprotection)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateRepositorySetExternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string, permission string) {
+func (r *GoliacReconciliatorImpl) UpdateRepositorySetExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string, permission string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_set_external_user"}).Infof("repositoryname: %s collaborator:%s permission:%s", reponame, collaboatorGithubId, permission)
 	remote.UpdateRepositorySetExternalUser(reponame, collaboatorGithubId, permission)
 	if r.executor != nil {
-		r.executor.UpdateRepositorySetExternalUser(ctx, dryrun, reponame, collaboatorGithubId, permission)
+		r.executor.UpdateRepositorySetExternalUser(ctx, errorCollector, dryrun, reponame, collaboatorGithubId, permission)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveInternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveInternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_remove_internal_user"}).Infof("repositoryname: %s collaborator:%s", reponame, collaboatorGithubId)
 	remote.UpdateRepositoryRemoveInternalUser(reponame, collaboatorGithubId)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryRemoveInternalUser(ctx, dryrun, reponame, collaboatorGithubId)
+		r.executor.UpdateRepositoryRemoveInternalUser(ctx, errorCollector, dryrun, reponame, collaboatorGithubId)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, collaboatorGithubId string) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_remove_external_user"}).Infof("repositoryname: %s collaborator:%s", reponame, collaboatorGithubId)
 	remote.UpdateRepositoryRemoveExternalUser(reponame, collaboatorGithubId)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryRemoveExternalUser(ctx, dryrun, reponame, collaboatorGithubId)
+		r.executor.UpdateRepositoryRemoveExternalUser(ctx, errorCollector, dryrun, reponame, collaboatorGithubId)
 	}
 }
 func (r *GoliacReconciliatorImpl) Begin(ctx context.Context, dryrun bool) {
@@ -1120,10 +1121,10 @@ func (r *GoliacReconciliatorImpl) Rollback(ctx context.Context, dryrun bool, err
 		r.executor.Rollback(dryrun, err)
 	}
 }
-func (r *GoliacReconciliatorImpl) Commit(ctx context.Context, dryrun bool) error {
+func (r *GoliacReconciliatorImpl) Commit(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool) error {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun}).Debugf("reconciliation commit")
 	if r.executor != nil {
-		return r.executor.Commit(ctx, dryrun)
+		return r.executor.Commit(ctx, errorCollector, dryrun)
 	}
 	return nil
 }

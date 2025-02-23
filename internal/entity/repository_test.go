@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/stretchr/testify/assert"
 )
@@ -57,19 +58,21 @@ kind: Repository
 name: repo1
 `), 0644)
 		assert.Nil(t, err)
-		users, errs, warns := ReadUserDirectory(fs, "users")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+
+		errorCollector := observability.NewErrorCollection()
+		users := ReadUserDirectory(fs, "users", errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams, errs, warns := ReadTeamDirectory(fs, "teams", users)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		repos, errs, warns := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
-		assert.Equal(t, 0, len(errs))
-		assert.Equal(t, 0, len(warns))
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, repos)
 		assert.Equal(t, 1, len(repos))
 	})
@@ -84,19 +87,20 @@ kind: Repository
 name: repo2
 `), 0644)
 		assert.Nil(t, err)
-		users, errs, warns := ReadUserDirectory(fs, "users")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		users := ReadUserDirectory(fs, "users", errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams, errs, warns := ReadTeamDirectory(fs, "teams", users)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		_, errs, warns = ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
-		assert.Equal(t, len(errs), 1)
-		assert.Equal(t, len(warns), 0)
+		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, errorCollector)
+		assert.True(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 	})
 
 	t.Run("not happy path: wrong writer team name", func(t *testing.T) {
@@ -113,19 +117,20 @@ spec:
   - wrongteam
 `), 0644)
 		assert.Nil(t, err)
-		users, errs, warns := ReadUserDirectory(fs, "users")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		users := ReadUserDirectory(fs, "users", errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams, errs, warns := ReadTeamDirectory(fs, "teams", users)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		_, errs, warns = ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
-		assert.Equal(t, len(errs), 1)
-		assert.Equal(t, len(warns), 0)
+		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, errorCollector)
+		assert.True(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 	})
 
 	t.Run("not happy path: wrong writer team name", func(t *testing.T) {
@@ -142,19 +147,20 @@ spec:
   - wrongteam
 `), 0644)
 		assert.Nil(t, err)
-		users, errs, warns := ReadUserDirectory(fs, "users")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		users := ReadUserDirectory(fs, "users", errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams, errs, warns := ReadTeamDirectory(fs, "teams", users)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		_, errs, warns = ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
-		assert.Equal(t, len(errs), 1)
-		assert.Equal(t, len(warns), 0)
+		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, errorCollector)
+		assert.True(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 	})
 
 	t.Run("happy path: archived repo in the wrong place: it doesn't matter", func(t *testing.T) {
@@ -170,19 +176,20 @@ spec:
   archived: true
 `), 0644)
 		assert.Nil(t, err)
-		users, errs, warns := ReadUserDirectory(fs, "users")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		users := ReadUserDirectory(fs, "users", errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams, errs, warns := ReadTeamDirectory(fs, "teams", users)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		repos, errs, warns := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, repos)
 		assert.Equal(t, len(repos), 1)
 	})
@@ -198,19 +205,20 @@ kind: Repository
 name: repo1
 `), 0644)
 		assert.Nil(t, err)
-		users, errs, warns := ReadUserDirectory(fs, "users")
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		errorCollector := observability.NewErrorCollection()
+		users := ReadUserDirectory(fs, "users", errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams, errs, warns := ReadTeamDirectory(fs, "teams", users)
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		repos, errs, warns := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{})
-		assert.Equal(t, len(errs), 0)
-		assert.Equal(t, len(warns), 0)
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, errorCollector)
+		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, errorCollector.HasWarns())
 		assert.NotNil(t, repos)
 		assert.Equal(t, len(repos), 1)
 	})

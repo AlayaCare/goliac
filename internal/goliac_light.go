@@ -1,11 +1,10 @@
 package internal
 
 import (
-	"fmt"
-
 	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/engine"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,7 +15,7 @@ import (
  */
 type GoliacLight interface {
 	// Validate a local teams directory
-	Validate(path string) error
+	Validate(path string, errorCollector *observability.ErrorCollection)
 }
 
 type GoliacLightImpl struct {
@@ -31,19 +30,16 @@ func NewGoliacLightImpl() (GoliacLight, error) {
 	}, nil
 }
 
-func (g *GoliacLightImpl) Validate(path string) error {
+func (g *GoliacLightImpl) Validate(path string, errorCollector *observability.ErrorCollection) {
 	fs := osfs.New(path)
-	errs, warns := g.local.LoadAndValidateLocal(fs)
+	g.local.LoadAndValidateLocal(fs, errorCollector)
 
-	for _, warn := range warns {
+	for _, warn := range errorCollector.Warns {
 		logrus.Warn(warn)
 	}
-	if len(errs) != 0 {
-		for _, err := range errs {
+	if errorCollector.HasErrors() {
+		for _, err := range errorCollector.Errors {
 			logrus.Error(err)
 		}
-		return fmt.Errorf("not able to validate the goliac organization: see logs")
 	}
-
-	return nil
 }

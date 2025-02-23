@@ -11,6 +11,7 @@ import (
 	"github.com/goliac-project/goliac/internal"
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/notification"
+	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -68,9 +69,13 @@ func main() {
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			err = goliac.Validate(path)
-			if err != nil {
-				logrus.Fatalf("failed to verify: %s", err)
+			errorCollector := observability.NewErrorCollection()
+			goliac.Validate(path, errorCollector)
+			if errorCollector.HasErrors() {
+				logrus.Fatalf("failed to verify:")
+				for _, err := range errorCollector.Errors {
+					logrus.Errorf("- %s", err)
+				}
 			}
 		},
 	}
@@ -113,9 +118,14 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 
 			ctx := context.Background()
 			fs := osfs.New("/")
-			err, _, _, _ = goliac.Apply(ctx, fs, true, repo, branch)
-			if err != nil {
-				logrus.Errorf("Failed to plan: %v", err)
+
+			errorCollector := observability.NewErrorCollection()
+			goliac.Apply(ctx, errorCollector, fs, true, repo, branch)
+			if errorCollector.HasErrors() {
+				logrus.Errorf("Failed to plan:")
+				for _, err := range errorCollector.Errors {
+					logrus.Errorf("- %s", err)
+				}
 			}
 		},
 	}
@@ -160,9 +170,13 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 
 			ctx := context.Background()
 			fs := osfs.New("/")
-			err, _, _, _ = goliac.Apply(ctx, fs, false, repo, branch)
-			if err != nil {
-				logrus.Errorf("Failed to apply: %v", err)
+			errorCollector := observability.NewErrorCollection()
+			goliac.Apply(ctx, errorCollector, fs, false, repo, branch)
+			if errorCollector.HasErrors() {
+				logrus.Errorf("Failed to apply:")
+				for _, err := range errorCollector.Errors {
+					logrus.Errorf("- %s", err)
+				}
 			}
 		},
 	}
@@ -200,9 +214,13 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			}
 			ctx := context.Background()
 			fs := osfs.New("/")
-			_, err = goliac.UsersUpdate(ctx, fs, repo, branch, dryrunParameter, forceParameter)
-			if err != nil {
-				logrus.Fatalf("failed to update and commit teams: %s", err)
+			errorCollector := observability.NewErrorCollection()
+			goliac.UsersUpdate(ctx, errorCollector, fs, repo, branch, dryrunParameter, forceParameter)
+			if errorCollector.HasErrors() {
+				logrus.Fatalf("failed to update and commit teams:")
+				for _, err := range errorCollector.Errors {
+					logrus.Errorf("- %s", err)
+				}
 			}
 		},
 	}
