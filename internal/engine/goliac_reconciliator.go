@@ -772,7 +772,6 @@ func compareBranchProtections(bpname string, lbp *GithubBranchProtection, rbp *G
 			return false
 		}
 		if res, _, _ := entity.StringArrayEquivalent(lbp.RequiredStatusCheckContexts, rbp.RequiredStatusCheckContexts); !res {
-			fmt.Println("false")
 			return false
 		}
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/github"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/parser"
@@ -368,7 +369,6 @@ func (m *MockGithubClient) QueryGraphQLAPI(ctx context.Context, query string, va
 
 	// Check for parsing error.
 	if err != nil {
-		fmt.Println("debug1", err)
 		return nil, err
 	}
 
@@ -614,5 +614,50 @@ func TestIsEnterprise(t *testing.T) {
 			assert.Equal(t, set.expected, res)
 
 		}
+	})
+}
+
+func TestPrepareRuleset(t *testing.T) {
+	t.Run("happy path", func(t *testing.T) {
+		ghClient := MockGithubClient{}
+		g := NewGoliacRemoteImpl(&ghClient)
+		g.appIds["goliac-project-app"] = 1
+		g.repositories["repo1"] = &GithubRepository{
+			Name: "repo1",
+			Id:   123,
+		}
+		g.repositories["repo2"] = &GithubRepository{
+			Name: "repo2",
+			Id:   456,
+		}
+
+		rulesetData := []byte(`
+name: ruleset1
+id: 1
+enforcement: evaluate
+bypassapps:
+  goliac-project-app: always
+oninclude:
+  - "~DEFAULT_BRANCH"
+rules:
+  required_status_checks:
+    requiredStatusChecks:
+      - circleCI check
+      - jenkins check
+repositories:
+  - repo1
+  - repo2
+`)
+		var ruleset GithubRuleSet
+		err := yaml.Unmarshal(rulesetData, &ruleset)
+		assert.Nil(t, err)
+
+		payload := g.prepareRuleset(&ruleset)
+
+		assert.Equal(t, "ruleset1", payload["name"].(string))
+		assert.Equal(t, "evaluate", payload["enforcement"].(string))
+		assert.Equal(t, 1, len(payload["bypass_actors"].([]map[string]interface{})))
+		assert.Equal(t, "~DEFAULT_BRANCH", payload["conditions"].(map[string]interface{})["ref_name"].(map[string]interface{})["include"].([]string)[0])
+		assert.Equal(t, 2, len(payload["conditions"].(map[string]interface{})["repository_id"].(map[string]interface{})["repository_ids"].([]int)))
 	})
 }
