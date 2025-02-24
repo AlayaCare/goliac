@@ -530,6 +530,10 @@ destructive_operations:
 
 usersync:
   plugin: %s
+
+#visibility_rules:
+#  forbid_public_repositories: false
+#  forbid_public_repositories_exclusions: [] # reponame or regexp
 `, adminteam, userplugin)
 	if err := writeFile(filepath.Join(rootpath, "goliac.yaml"), []byte(conf), fs); err != nil {
 		return err

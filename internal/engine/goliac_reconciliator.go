@@ -30,16 +30,18 @@ type GoliacReconciliator interface {
 }
 
 type GoliacReconciliatorImpl struct {
-	executor   ReconciliatorExecutor
-	repoconfig *config.RepositoryConfig
-	unmanaged  *UnmanagedResources
+	executor            ReconciliatorExecutor
+	reconciliatorFilter ReconciliatorFilter
+	repoconfig          *config.RepositoryConfig
+	unmanaged           *UnmanagedResources
 }
 
-func NewGoliacReconciliatorImpl(executor ReconciliatorExecutor, repoconfig *config.RepositoryConfig) GoliacReconciliator {
+func NewGoliacReconciliatorImpl(isEntreprise bool, executor ReconciliatorExecutor, repoconfig *config.RepositoryConfig) GoliacReconciliator {
 	return &GoliacReconciliatorImpl{
-		executor:   executor,
-		repoconfig: repoconfig,
-		unmanaged:  nil,
+		executor:            executor,
+		reconciliatorFilter: NewReconciliatorFilter(isEntreprise, repoconfig),
+		repoconfig:          repoconfig,
+		unmanaged:           nil,
 	}
 }
 
@@ -546,7 +548,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			branchprotections[bp.Pattern] = &branchprotection
 		}
 
-		lRepos[utils.GithubAnsiString(reponame)] = &GithubRepoComparable{
+		lRepos[utils.GithubAnsiString(reponame)] = r.reconciliatorFilter.RepositoryFilter(reponame, &GithubRepoComparable{
 			BoolProperties: map[string]bool{
 				"archived":               lRepo.Archived,
 				"allow_auto_merge":       lRepo.Spec.AllowAutoMerge,
@@ -561,7 +563,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			InternalUsers:       []string{},
 			Rulesets:            rulesets,
 			BranchProtections:   branchprotections,
-		}
+		})
 	}
 
 	// now we compare local (slugTeams) and remote (rTeams)
