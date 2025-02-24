@@ -1,3 +1,8 @@
+## Goliac v0.15.3
+
+- allow public,internal,private repository visibility
+- allow to restrict public repositories via global rules
+
 ## Goliac v0.15.2
 
 - refactor error handling
