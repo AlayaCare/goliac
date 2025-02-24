@@ -138,6 +138,15 @@ destructive_operations:
   teams: false        # can Goliac remove teams not listed in this repository
   users: false        # can Goliac remove users not listed in this repository
   rulesets: false     # can Goliac remove rulesets not listed in this repository
+
+usersync:
+  plugin: noop # noop, fromgithubsaml, shellscript
+
+#visibility_rules:
+#  forbid_public_repositories: true # if you want to forbid public repositories
+#  forbid_public_repositories_exclusions: # if you want to allow some public repositories
+#    - goliac-teams
+#    - repo_public.*
 ```
 
 and you can configure different ruleset in the `/rulesets` directory like

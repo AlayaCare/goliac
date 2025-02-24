@@ -18,7 +18,7 @@ type Repository struct {
 		Readers             []string                     `yaml:"readers,omitempty"`
 		ExternalUserReaders []string                     `yaml:"externalUserReaders,omitempty"`
 		ExternalUserWriters []string                     `yaml:"externalUserWriters,omitempty"`
-		IsPublic            bool                         `yaml:"public,omitempty"`
+		Visibility          string                       `yaml:"visibility,omitempty"`
 		AllowAutoMerge      bool                         `yaml:"allow_auto_merge,omitempty"`
 		DeleteBranchOnMerge bool                         `yaml:"delete_branch_on_merge,omitempty"`
 		AllowUpdateBranch   bool                         `yaml:"allow_update_branch,omitempty"`
@@ -64,6 +64,7 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
 	}
 
 	repository := &Repository{}
+	repository.Spec.Visibility = "private" // default visibility
 	err = yaml.Unmarshal(filecontent, repository)
 	if err != nil {
 		return nil, err
@@ -202,6 +203,11 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 	filename = filepath.Base(filename)
 	if r.Name != filename[:len(filename)-len(filepath.Ext(filename))] {
 		return fmt.Errorf("invalid name: %s for repository filename %s", r.Name, filename)
+	}
+
+	visibility := r.Spec.Visibility
+	if visibility != "public" && visibility != "private" && visibility != "internal" {
+		return fmt.Errorf("invalid visibility: %s for repository filename %s", visibility, filename)
 	}
 
 	for _, writer := range r.Spec.Writers {

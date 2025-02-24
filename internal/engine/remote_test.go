@@ -103,7 +103,7 @@ func (m *MockGithubClient) reposNodes(first, after string, args ast.ArgumentList
 
 	searchName, _ := hasChild("name", children)
 	searchArchived, _ := hasChild("isArchived", children)
-	searchPrivate, _ := hasChild("isPrivate", children)
+	searchPrivate, _ := hasChild("visibility", children)
 
 	index := iAfter
 	totalCount := 0
@@ -120,7 +120,11 @@ func (m *MockGithubClient) reposNodes(first, after string, args ast.ArgumentList
 			block["isArchived"] = index%3 == 0 // let's pretend each 3 repo is an archive repo
 		}
 		if searchPrivate {
-			block["isPrivate"] = index%10 == 0 // let's pretend each 10 repo is a private repo
+			if index%10 == 0 { // let's pretend each 10 repo is a private repo
+				block["visibility"] = "private"
+			} else {
+				block["visibility"] = "public"
+			}
 		}
 		index++
 		if index > maxToFake { // let's pretend we have maxToFake repos
@@ -447,8 +451,8 @@ func TestRemoteRepository(t *testing.T) {
 		assert.Equal(t, 133, len(repositories))
 		assert.Equal(t, false, repositories["repo_1"].BoolProperties["archived"])
 		assert.Equal(t, true, repositories["repo_3"].BoolProperties["archived"])
-		assert.Equal(t, false, repositories["repo_1"].BoolProperties["private"])
-		assert.Equal(t, true, repositories["repo_10"].BoolProperties["private"])
+		assert.Equal(t, "public", repositories["repo_1"].Visibility)
+		assert.Equal(t, "private", repositories["repo_10"].Visibility)
 	})
 	t.Run("happy path: load remote teams", func(t *testing.T) {
 		// MockGithubClient doesn't support concurrent access

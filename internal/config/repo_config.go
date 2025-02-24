@@ -25,6 +25,11 @@ type RepositoryConfig struct {
 		AllowDestructiveUsers        bool `yaml:"users"`
 		AllowDestructiveRulesets     bool `yaml:"rulesets"`
 	} `yaml:"destructive_operations"`
+
+	VisibilityRules struct {
+		ForbidPublicRepositories           bool     `yaml:"forbid_public_repositories"`
+		ForbidPublicRepositoriesExclusions []string `yaml:"forbid_public_repositories_exclusions"`
+	} `yaml:"visibility_rules"`
 }
 
 // set default values

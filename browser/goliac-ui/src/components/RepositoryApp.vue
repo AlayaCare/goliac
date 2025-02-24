@@ -15,8 +15,8 @@
                     </div>
                 </template>
                 <div class="flex-container">
-                    <el-text>Public : </el-text>
-                    <el-text>{{ repository.public}}</el-text>
+                    <el-text>Visibility : </el-text>
+                    <el-text>{{ repository.visibility}}</el-text>
                 </div>
                 <div class="flex-container">
                     <el-text>Archived : </el-text>

@@ -218,7 +218,7 @@ func (r *ReconciliatorListenerRecorder) UpdateTeamSetParent(ctx context.Context,
 func (r *ReconciliatorListenerRecorder) DeleteTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string) {
 	r.TeamDeleted[teamslug] = true
 }
-func (r *ReconciliatorListenerRecorder) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
+func (r *ReconciliatorListenerRecorder) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
 	r.RepositoryCreated[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {
@@ -236,7 +236,7 @@ func (r *ReconciliatorListenerRecorder) DeleteRepository(ctx context.Context, er
 func (r *ReconciliatorListenerRecorder) RenameRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, newname string) {
 	r.RepositoriesRenamed[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateBoolProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue bool) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
 	r.RepositoriesUpdatePrivate[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string, permission string) {
@@ -319,7 +319,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -365,7 +365,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -411,7 +411,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -475,7 +475,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -544,7 +544,7 @@ func TestReconciliationTeam(t *testing.T) {
 			EveryoneTeamEnabled: true,
 		}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -592,7 +592,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -629,7 +629,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -705,7 +705,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -784,7 +784,7 @@ func TestReconciliationTeam(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 		repoconfig := &config.RepositoryConfig{}
 		repoconfig.DestructiveOperations.AllowDestructiveTeams = true
-		r := NewGoliacReconciliatorImpl(recorder, repoconfig)
+		r := NewGoliacReconciliatorImpl(false, recorder, repoconfig)
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
 			teams: make(map[string]*entity.Team),
@@ -821,7 +821,7 @@ func TestReconciliationRepo(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -862,7 +862,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -917,7 +917,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -990,7 +990,7 @@ func TestReconciliationRepo(t *testing.T) {
 			EveryoneTeamEnabled: true,
 		}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -1062,7 +1062,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -1145,7 +1145,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -1233,7 +1233,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -1311,7 +1311,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -1391,7 +1391,7 @@ func TestReconciliationRepo(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -1466,7 +1466,7 @@ func TestReconciliationRepo(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -1543,7 +1543,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users:     make(map[string]*entity.User),
@@ -1623,7 +1623,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users:     make(map[string]*entity.User),
@@ -1700,7 +1700,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users:     make(map[string]*entity.User),
@@ -1784,7 +1784,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -1820,7 +1820,7 @@ func TestReconciliationRepo(t *testing.T) {
 			ArchiveOnDelete: true,
 		}
 		repoconfig.DestructiveOperations.AllowDestructiveRepositories = true
-		r := NewGoliacReconciliatorImpl(recorder, repoconfig)
+		r := NewGoliacReconciliatorImpl(false, recorder, repoconfig)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -1859,7 +1859,7 @@ func TestReconciliationRepo(t *testing.T) {
 			ArchiveOnDelete: false,
 		}
 		repoconfig.DestructiveOperations.AllowDestructiveRepositories = true
-		r := NewGoliacReconciliatorImpl(recorder, repoconfig)
+		r := NewGoliacReconciliatorImpl(false, recorder, repoconfig)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -1899,7 +1899,7 @@ func TestReconciliationRepo(t *testing.T) {
 			ArchiveOnDelete: false,
 		}
 		repoconfig.DestructiveOperations.AllowDestructiveRepositories = true
-		r := NewGoliacReconciliatorImpl(recorder, repoconfig)
+		r := NewGoliacReconciliatorImpl(false, recorder, repoconfig)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -2022,7 +2022,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users:    make(map[string]*entity.User),
@@ -2079,7 +2079,7 @@ func TestReconciliationRulesets(t *testing.T) {
 			Ruleset: "new",
 		})
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users:    make(map[string]*entity.User),
@@ -2136,7 +2136,7 @@ func TestReconciliationRulesets(t *testing.T) {
 			Ruleset: "update",
 		})
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users:    make(map[string]*entity.User),
@@ -2195,7 +2195,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		}
 		repoconf.DestructiveOperations.AllowDestructiveRulesets = true
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users:    make(map[string]*entity.User),
@@ -2240,7 +2240,7 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -2337,7 +2337,7 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -2428,7 +2428,7 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),
@@ -2515,7 +2515,7 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 
 		repoconf := config.RepositoryConfig{}
 
-		r := NewGoliacReconciliatorImpl(recorder, &repoconf)
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
 		local := GoliacLocalMock{
 			users: make(map[string]*entity.User),

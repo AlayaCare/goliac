@@ -49,7 +49,7 @@ apiVersion: v1
 kind: Repository
 name: awesome-repository
 spec:
-  public: true
+  visibility: public
   allow_auto_merge: true
   delete_branch_on_merge: true
   allow_update_branch: true
@@ -77,7 +77,7 @@ apiVersion: v1
 kind: Repository
 name: awesome-repository
 spec:
-  public: true
+  visibility: public
   ...
 renameTo: anotherName
 ```
@@ -99,7 +99,7 @@ apiVersion: v1
 kind: Repository
 name: awesome-repository
 spec:
-  public: true
+  visibility: public
   ...
   rulesets:
     - name: myruleset
@@ -118,7 +118,7 @@ apiVersion: v1
 kind: Repository
 name: awesome-repository
 spec:
-  public: true
+  visibility: public
   ...
   rulesets:
     - name: myruleset
@@ -141,7 +141,7 @@ apiVersion: v1
 kind: Repository
 name: awesome-repository
 spec:
-  public: true
+  visibility: public
   ...
   rulesets:
     - name: myruleset
@@ -168,7 +168,7 @@ apiVersion: v1
 kind: Repository
 name: awesome-repository
 spec:
-  public: true
+  visibility: public
   ...
   branch_protections:
     - pattern: master
@@ -195,7 +195,7 @@ apiVersion: v1
 kind: Repository
 name: awesome-repository
 spec:
-  public: true
+  visibility: public
   ...
   branch_protections:
     - pattern: master

@@ -38,11 +38,11 @@ type RepositoryDetails struct {
 	// name
 	Name string `json:"name,omitempty"`
 
-	// public
-	Public bool `json:"public"`
-
 	// teams
 	Teams []*RepositoryDetailsTeamsItems0 `json:"teams"`
+
+	// visibility
+	Visibility string `json:"visibility"`
 }
 
 // Validate validates this repository details

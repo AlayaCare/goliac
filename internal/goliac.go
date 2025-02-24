@@ -338,7 +338,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, errorCollector *o
 	var unmanaged *engine.UnmanagedResources
 
 	ga := NewGithubBatchExecutor(g.remote, g.repoconfig.MaxChangesets)
-	reconciliator := engine.NewGoliacReconciliatorImpl(ga, g.repoconfig)
+	reconciliator := engine.NewGoliacReconciliatorImpl(g.remote.IsEnterprise(), ga, g.repoconfig)
 
 	commit, err := g.local.GetHeadCommit()
 	if err != nil {

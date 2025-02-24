@@ -169,9 +169,10 @@ func (m *MutableGoliacRemoteImpl) DeleteTeam(teamslug string) {
 		delete(m.teamRepos, teamslug)
 	}
 }
-func (m *MutableGoliacRemoteImpl) CreateRepository(reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
+func (m *MutableGoliacRemoteImpl) CreateRepository(reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
 	r := GithubRepository{
 		Name:           reponame,
+		Visibility:     visibility,
 		BoolProperties: boolProperties,
 		ExternalUsers:  map[string]string{},
 	}
@@ -226,15 +227,19 @@ func (m *MutableGoliacRemoteImpl) RenameRepository(reponame string, newname stri
 
 /*
 UpdateRepositoryUpdateBoolProperty is used for
-- private
-- archived
-- allow_auto_merge
-- delete_branch_on_merge
-- allow_update_branch
+- visibility (string)
+- archived (bool)
+- allow_auto_merge (bool)
+- delete_branch_on_merge (bool)
+- allow_update_branch (bool)
 */
-func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(reponame string, propertyName string, propertyValue bool) {
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateProperty(reponame string, propertyName string, propertyValue interface{}) {
 	if r, ok := m.repositories[reponame]; ok {
-		r.BoolProperties[propertyName] = propertyValue
+		if propertyName == "visibility" {
+			r.Visibility = propertyValue.(string)
+		} else {
+			r.BoolProperties[propertyName] = propertyValue.(bool)
+		}
 	}
 }
 func (m *MutableGoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, collaboatorGithubId string, permission string) {
