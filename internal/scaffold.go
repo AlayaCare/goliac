@@ -273,7 +273,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 
 				if rRepo, ok := rRepos[r]; ok {
 					// basic repository properties
-					lRepo.Spec.IsPublic = rRepo.BoolProperties["public"]
+					lRepo.Spec.Visibility = rRepo.Visibility
 					lRepo.Spec.AllowAutoMerge = rRepo.BoolProperties["allow_auto_merge"]
 					lRepo.Spec.DeleteBranchOnMerge = rRepo.BoolProperties["delete_branch_on_merge"]
 					lRepo.Spec.AllowUpdateBranch = rRepo.BoolProperties["allow_update_branch"]

@@ -134,9 +134,9 @@ func (g *GoliacServerImpl) GetRepositories(app.GetRepositoriesParams) middleware
 
 	for _, r := range local.Repositories() {
 		repo := models.Repository{
-			Name:     r.Name,
-			Public:   r.Spec.IsPublic,
-			Archived: r.Archived,
+			Name:       r.Name,
+			Visibility: r.Spec.Visibility,
+			Archived:   r.Archived,
 		}
 		repositories = append(repositories, &repo)
 	}
@@ -198,7 +198,7 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 
 	repositoryDetails := models.RepositoryDetails{
 		Name:                repository.Name,
-		Public:              repository.Spec.IsPublic,
+		Visibility:          repository.Spec.Visibility,
 		AutoMergeAllowed:    repository.Spec.AllowAutoMerge,
 		DeleteBranchOnMerge: repository.Spec.DeleteBranchOnMerge,
 		AllowUpdateBranch:   repository.Spec.AllowUpdateBranch,
@@ -295,7 +295,7 @@ func (g *GoliacServerImpl) GetTeam(params app.GetTeamParams) middleware.Responde
 		r := models.Repository{
 			Name:                reponame,
 			Archived:            repo.Archived,
-			Public:              repo.Spec.IsPublic,
+			Visibility:          repo.Spec.Visibility,
 			AutoMergeAllowed:    repo.Spec.AllowAutoMerge,
 			DeleteBranchOnMerge: repo.Spec.DeleteBranchOnMerge,
 			AllowUpdateBranch:   repo.Spec.AllowUpdateBranch,
@@ -432,18 +432,18 @@ func (g *GoliacServerImpl) GetCollaborator(params app.GetCollaboratorParams) mid
 		for _, r := range repo.Spec.ExternalUserReaders {
 			if r == params.CollaboratorID {
 				collaboratordetails.Repositories = append(collaboratordetails.Repositories, &models.Repository{
-					Name:     repo.Name,
-					Public:   repo.Spec.IsPublic,
-					Archived: repo.Archived,
+					Name:       repo.Name,
+					Visibility: repo.Spec.Visibility,
+					Archived:   repo.Archived,
 				})
 			}
 		}
 		for _, r := range repo.Spec.ExternalUserWriters {
 			if r == params.CollaboratorID {
 				collaboratordetails.Repositories = append(collaboratordetails.Repositories, &models.Repository{
-					Name:     repo.Name,
-					Public:   repo.Spec.IsPublic,
-					Archived: repo.Archived,
+					Name:       repo.Name,
+					Visibility: repo.Spec.Visibility,
+					Archived:   repo.Archived,
 				})
 			}
 		}
@@ -547,9 +547,9 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 
 	for _, r := range userRepos {
 		repo := models.Repository{
-			Name:     r.Name,
-			Public:   r.Spec.IsPublic,
-			Archived: r.Archived,
+			Name:       r.Name,
+			Visibility: r.Spec.Visibility,
+			Archived:   r.Archived,
 		}
 		userdetails.Repositories = append(userdetails.Repositories, &repo)
 	}

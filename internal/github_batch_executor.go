@@ -118,12 +118,13 @@ func (g *GithubBatchExecutor) DeleteTeam(ctx context.Context, errorCollector *ob
 	})
 }
 
-func (g *GithubBatchExecutor) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, writers []string, readers []string, boolProperties map[string]bool) {
+func (g *GithubBatchExecutor) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
 	g.commands = append(g.commands, &GithubCommandCreateRepository{
 		client:         g.client,
 		dryrun:         dryrun,
 		reponame:       reponame,
 		description:    description,
+		visibility:     visibility,
 		readers:        readers,
 		writers:        writers,
 		boolProperties: boolProperties,
@@ -159,8 +160,8 @@ func (g *GithubBatchExecutor) UpdateRepositoryRemoveTeamAccess(ctx context.Conte
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryUpdateBoolProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue bool) {
-	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdateBoolProperty{
+func (g *GithubBatchExecutor) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdateProperty{
 		client:        g.client,
 		dryrun:        dryrun,
 		reponame:      reponame,
@@ -322,13 +323,14 @@ type GithubCommandCreateRepository struct {
 	dryrun         bool
 	reponame       string
 	description    string
+	visibility     string
 	writers        []string
 	readers        []string
 	boolProperties map[string]bool
 }
 
 func (g *GithubCommandCreateRepository) Apply(ctx context.Context, errorCollector *observability.ErrorCollection) {
-	g.client.CreateRepository(ctx, errorCollector, g.dryrun, g.reponame, g.description, g.writers, g.readers, g.boolProperties)
+	g.client.CreateRepository(ctx, errorCollector, g.dryrun, g.reponame, g.description, g.visibility, g.writers, g.readers, g.boolProperties)
 }
 
 type GithubCommandCreateTeam struct {
@@ -454,16 +456,16 @@ func (g *GithubCommandUpdateRepositoryRemoveInternalUser) Apply(ctx context.Cont
 	g.client.UpdateRepositoryRemoveInternalUser(ctx, errorCollector, g.dryrun, g.reponame, g.githubid)
 }
 
-type GithubCommandUpdateRepositoryUpdateBoolProperty struct {
+type GithubCommandUpdateRepositoryUpdateProperty struct {
 	client        engine.ReconciliatorExecutor
 	dryrun        bool
 	reponame      string
 	propertyName  string
-	propertyValue bool
+	propertyValue interface{}
 }
 
-func (g *GithubCommandUpdateRepositoryUpdateBoolProperty) Apply(ctx context.Context, errorCollector *observability.ErrorCollection) {
-	g.client.UpdateRepositoryUpdateBoolProperty(ctx, errorCollector, g.dryrun, g.reponame, g.propertyName, g.propertyValue)
+func (g *GithubCommandUpdateRepositoryUpdateProperty) Apply(ctx context.Context, errorCollector *observability.ErrorCollection) {
+	g.client.UpdateRepositoryUpdateProperty(ctx, errorCollector, g.dryrun, g.reponame, g.propertyName, g.propertyValue)
 }
 
 type GithubCommandUpdateTeamAddMember struct {

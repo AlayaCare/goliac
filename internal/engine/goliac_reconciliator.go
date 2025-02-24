@@ -350,6 +350,7 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, errorCo
 }
 
 type GithubRepoComparable struct {
+	Visibility          string
 	BoolProperties      map[string]bool
 	Writers             []string
 	Readers             []string
@@ -395,6 +396,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	ghRepos := remote.Repositories()
 	for k, v := range ghRepos {
 		repo := &GithubRepoComparable{
+			Visibility:          v.Visibility,
 			BoolProperties:      map[string]bool{},
 			Writers:             []string{},
 			Readers:             []string{},
@@ -444,7 +446,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 	teamsRepo.Name = teamsreponame
 	teamsRepo.Spec.Writers = []string{r.repoconfig.AdminTeam}
 	teamsRepo.Spec.Readers = []string{}
-	teamsRepo.Spec.IsPublic = false
+	teamsRepo.Spec.Visibility = "private"
 	teamsRepo.Spec.DeleteBranchOnMerge = true
 	// cf goliac.go:L231-252
 	bp := entity.RepositoryBranchProtection{
@@ -546,12 +548,12 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 
 		lRepos[utils.GithubAnsiString(reponame)] = &GithubRepoComparable{
 			BoolProperties: map[string]bool{
-				"private":                !lRepo.Spec.IsPublic,
 				"archived":               lRepo.Archived,
 				"allow_auto_merge":       lRepo.Spec.AllowAutoMerge,
 				"delete_branch_on_merge": lRepo.Spec.DeleteBranchOnMerge,
 				"allow_update_branch":    lRepo.Spec.AllowUpdateBranch,
 			},
+			Visibility:          lRepo.Spec.Visibility,
 			Readers:             readers,
 			Writers:             writers,
 			ExternalUserReaders: eReaders,
@@ -613,6 +615,10 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
+		if lRepo.Visibility != rRepo.Visibility {
+			return false
+		}
+
 		if res, _, _ := entity.StringArrayEquivalent(lRepo.Readers, rRepo.Readers); !res {
 			return false
 		}
@@ -640,8 +646,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		// reconciliate repositories boolean properties
 		for lk, lv := range lRepo.BoolProperties {
 			if rv, ok := rRepo.BoolProperties[lk]; !ok || rv != lv {
-				r.UpdateRepositoryUpdateBoolProperty(ctx, errorCollector, dryrun, remote, reponame, lk, lv)
+				r.UpdateRepositoryUpdateProperty(ctx, errorCollector, dryrun, remote, reponame, lk, lv)
 			}
+		}
+		if lRepo.Visibility != rRepo.Visibility {
+			r.UpdateRepositoryUpdateProperty(ctx, errorCollector, dryrun, remote, reponame, "visibility", lRepo.Visibility)
 		}
 
 		if res, readToRemove, readToAdd := entity.StringArrayEquivalent(lRepo.Readers, rRepo.Readers); !res {
@@ -717,11 +726,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		// if the repo was just archived in a previous commit and we "resume it"
 		if aRepo, ok := toArchive[reponame]; ok {
 			delete(toArchive, reponame)
-			r.UpdateRepositoryUpdateBoolProperty(ctx, errorCollector, dryrun, remote, reponame, "archived", false)
+			r.UpdateRepositoryUpdateProperty(ctx, errorCollector, dryrun, remote, reponame, "archived", false)
 			// calling onChanged to update the repository permissions
 			onChanged(reponame, aRepo, rRepo)
 		} else {
-			r.CreateRepository(ctx, errorCollector, dryrun, remote, reponame, reponame, lRepo.Writers, lRepo.Readers, lRepo.BoolProperties)
+			r.CreateRepository(ctx, errorCollector, dryrun, remote, reponame, reponame, lRepo.Visibility, lRepo.Writers, lRepo.Readers, lRepo.BoolProperties)
 		}
 	}
 
@@ -731,7 +740,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		// but if we have ArchiveOnDelete...
 		if r.repoconfig.ArchiveOnDelete {
 			if r.repoconfig.DestructiveOperations.AllowDestructiveRepositories {
-				r.UpdateRepositoryUpdateBoolProperty(ctx, errorCollector, dryrun, remote, reponame, "archived", true)
+				r.UpdateRepositoryUpdateProperty(ctx, errorCollector, dryrun, remote, reponame, "archived", true)
 				toArchive[reponame] = rRepo
 			} else {
 				r.unmanaged.Repositories[reponame] = true
@@ -975,11 +984,11 @@ func (r *GoliacReconciliatorImpl) DeleteTeam(ctx context.Context, errorCollector
 		r.unmanaged.Teams[teamslug] = true
 	}
 }
-func (r *GoliacReconciliatorImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
+func (r *GoliacReconciliatorImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "create_repository"}).Infof("repositoryname: %s, readers: %s, writers: %s, boolProperties: %v", reponame, strings.Join(readers, ","), strings.Join(writers, ","), boolProperties)
-	remote.CreateRepository(reponame, reponame, writers, readers, boolProperties)
+	remote.CreateRepository(reponame, reponame, visibility, writers, readers, boolProperties)
 	if r.executor != nil {
-		r.executor.CreateRepository(ctx, errorCollector, dryrun, reponame, reponame, writers, readers, boolProperties)
+		r.executor.CreateRepository(ctx, errorCollector, dryrun, reponame, reponame, visibility, writers, readers, boolProperties)
 	}
 }
 func (r *GoliacReconciliatorImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, teamslug string, permission string) {
@@ -1025,11 +1034,11 @@ func (r *GoliacReconciliatorImpl) RenameRepository(ctx context.Context, errorCol
 	}
 }
 
-func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue bool) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue interface{}) {
 	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_update_bool_property"}).Infof("repositoryname: %s %s:%v", reponame, propertyName, propertyValue)
-	remote.UpdateRepositoryUpdateBoolProperty(reponame, propertyName, propertyValue)
+	remote.UpdateRepositoryUpdateProperty(reponame, propertyName, propertyValue)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryUpdateBoolProperty(ctx, errorCollector, dryrun, reponame, propertyName, propertyValue)
+		r.executor.UpdateRepositoryUpdateProperty(ctx, errorCollector, dryrun, reponame, propertyName, propertyValue)
 	}
 }
 func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *GithubRuleSet) {

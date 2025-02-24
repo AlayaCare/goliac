@@ -158,7 +158,7 @@ apiVersion: v1
 kind: Repository
 name: myrepository
 spec:
-  public: false
+  visibility: private
 EOF
 
 git add myrepository.yaml

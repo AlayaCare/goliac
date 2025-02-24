@@ -61,7 +61,8 @@ type GithubRepository struct {
 	Name              string
 	Id                int
 	RefId             string
-	BoolProperties    map[string]bool                    // archived, private, allow_auto_merge, delete_branch_on_merge, allow_update_branch
+	Visibility        string                             // public, internal, private
+	BoolProperties    map[string]bool                    // archived, allow_auto_merge, delete_branch_on_merge, allow_update_branch
 	ExternalUsers     map[string]string                  // [githubid]permission
 	InternalUsers     map[string]string                  // [githubid]permission
 	RuleSets          map[string]*GithubRuleSet          // [name]ruleset
@@ -493,7 +494,7 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
 		  id
 		  databaseId
           isArchived
-          isPrivate
+          visibility
 		  autoMergeAllowed
           deleteBranchOnMerge
           allowUpdateBranch
@@ -608,7 +609,7 @@ type GraplQLRepositories struct {
 					Id                  string
 					DatabaseId          int
 					IsArchived          bool
-					IsPrivate           bool
+					Visibility          string
 					AutoMergeAllowed    bool
 					DeleteBranchOnMerge bool
 					AllowUpdateBranch   bool
@@ -683,12 +684,12 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 
 		for _, c := range gResult.Data.Organization.Repositories.Nodes {
 			repo := &GithubRepository{
-				Name:  c.Name,
-				Id:    c.DatabaseId,
-				RefId: c.Id,
+				Name:       c.Name,
+				Id:         c.DatabaseId,
+				RefId:      c.Id,
+				Visibility: strings.ToLower(c.Visibility),
 				BoolProperties: map[string]bool{
 					"archived":               c.IsArchived,
-					"private":                c.IsPrivate,
 					"allow_auto_merge":       c.AutoMergeAllowed,
 					"delete_branch_on_merge": c.DeleteBranchOnMerge,
 					"allow_update_branch":    c.AllowUpdateBranch,
@@ -2360,14 +2361,13 @@ type CreateRepositoryResponse struct {
 
 /*
 boolProperties are:
-- private
 - archived
 - allow_auto_merge
 - delete_branch_on_merge
 - allow_update_branch
 - ...
 */
-func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, writers []string, readers []string, boolProperties map[string]bool) {
+func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
 	repoId := 0
 	repoRefId := reponame
 	// create repository
@@ -2376,6 +2376,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 		props := map[string]interface{}{
 			"name":        reponame,
 			"description": description,
+			"visibility":  visibility,
 		}
 		for k, v := range boolProperties {
 			props[k] = v
@@ -2409,6 +2410,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 		Name:           reponame,
 		Id:             repoId,
 		RefId:          repoRefId,
+		Visibility:     visibility,
 		BoolProperties: boolProperties,
 	}
 	g.repositories[reponame] = newRepo
@@ -2558,13 +2560,13 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context,
 
 /*
 Used for
-- private
-- allow_auto_merge
-- delete_branch_on_merge
-- allow_update_branch
-- archived
+- visibility (string)
+- allow_auto_merge (bool)
+- delete_branch_on_merge (bool)
+- allow_update_branch (bool)
+- archived (bool)
 */
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue bool) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -2581,7 +2583,11 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateBoolProperty(ctx context.Contex
 	}
 
 	if repo, ok := g.repositories[reponame]; ok {
-		repo.BoolProperties[propertyName] = propertyValue
+		if propertyName == "visibility" {
+			repo.Visibility = propertyValue.(string)
+		} else {
+			repo.BoolProperties[propertyName] = propertyValue.(bool)
+		}
 	}
 }
 

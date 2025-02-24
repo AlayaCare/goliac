@@ -32,8 +32,8 @@ type Repository struct {
 	// name
 	Name string `json:"name,omitempty"`
 
-	// public
-	Public bool `json:"public"`
+	// visibility
+	Visibility string `json:"visibility"`
 }
 
 // Validate validates this repository

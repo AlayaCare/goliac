@@ -484,8 +484,8 @@ func init() {
           "type": "string",
           "x-isnullable": false
         },
-        "public": {
-          "type": "boolean",
+        "visibility": {
+          "type": "string",
           "x-isnullable": false,
           "x-omitempty": false
         }
@@ -534,11 +534,6 @@ func init() {
           "type": "string",
           "x-isnullable": false
         },
-        "public": {
-          "type": "boolean",
-          "x-isnullable": false,
-          "x-omitempty": false
-        },
         "teams": {
           "type": "array",
           "items": {
@@ -554,6 +549,11 @@ func init() {
               }
             }
           }
+        },
+        "visibility": {
+          "type": "string",
+          "x-isnullable": false,
+          "x-omitempty": false
         }
       }
     },
@@ -1352,8 +1352,8 @@ func init() {
           "type": "string",
           "x-isnullable": false
         },
-        "public": {
-          "type": "boolean",
+        "visibility": {
+          "type": "string",
           "x-isnullable": false,
           "x-omitempty": false
         }
@@ -1392,16 +1392,16 @@ func init() {
           "type": "string",
           "x-isnullable": false
         },
-        "public": {
-          "type": "boolean",
-          "x-isnullable": false,
-          "x-omitempty": false
-        },
         "teams": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/RepositoryDetailsTeamsItems0"
           }
+        },
+        "visibility": {
+          "type": "string",
+          "x-isnullable": false,
+          "x-omitempty": false
         }
       }
     },

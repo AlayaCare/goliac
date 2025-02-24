@@ -434,12 +434,12 @@ func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context, current bool) map[
 func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]*engine.GithubRepository {
 	return map[string]*engine.GithubRepository{
 		"src": {
-			Name:  "src", // this is the "teams" repository
-			Id:    0,
-			RefId: "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
+			Name:       "src", // this is the "teams" repository
+			Id:         0,
+			RefId:      "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
+			Visibility: "private",
 			BoolProperties: map[string]bool{
 				"archived":               false,
-				"private":                true,
 				"allow_auto_merge":       false,
 				"delete_branch_on_merge": true,
 				"allow_update_branch":    false,
@@ -458,12 +458,12 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 			},
 		},
 		"repo1": {
-			Name:  "repo1",
-			Id:    1,
-			RefId: "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
+			Name:       "repo1",
+			Id:         1,
+			RefId:      "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
+			Visibility: "private",
 			BoolProperties: map[string]bool{
 				"archived":               false,
-				"private":                true,
 				"allow_auto_merge":       false,
 				"delete_branch_on_merge": false,
 				"allow_update_branch":    false,
@@ -471,12 +471,12 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 			ExternalUsers: map[string]string{},
 		},
 		"repo2": {
-			Name:  "repo2",
-			Id:    2,
-			RefId: "MDEwOlJlcG9zaXRvcnkaNTcwNDA4Ng==",
+			Name:       "repo2",
+			Id:         2,
+			RefId:      "MDEwOlJlcG9zaXRvcnkaNTcwNDA4Ng==",
+			Visibility: "private",
 			BoolProperties: map[string]bool{
 				"archived":               false,
-				"private":                true,
 				"allow_auto_merge":       false,
 				"delete_branch_on_merge": false,
 				"allow_update_branch":    false,
@@ -586,12 +586,12 @@ func (e *GoliacRemoteExecutorMock) DeleteTeam(ctx context.Context, errorCollecto
 	e.nbChanges++
 }
 
-func (e *GoliacRemoteExecutorMock) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, writers []string, readers []string, boolProperties map[string]bool) {
-	fmt.Println("*** CreateRepository", reponame, descrition, writers, readers, boolProperties)
+func (e *GoliacRemoteExecutorMock) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
+	fmt.Println("*** CreateRepository", reponame, descrition, visibility, writers, readers, boolProperties)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateBoolProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue bool) {
-	fmt.Println("*** UpdateRepositoryUpdateBoolProperty", reponame, propertyName, propertyValue)
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+	fmt.Println("*** UpdateRepositoryUpdateProperty", reponame, propertyName, propertyValue)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryAddTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {

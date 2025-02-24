@@ -112,8 +112,8 @@ definitions:
       name:
         type: string
         x-isnullable: false
-      public:
-        type: boolean
+      visibility:
+        type: string
         x-isnullable: false
         x-omitempty: false
       autoMergeAllowed:
@@ -145,8 +145,8 @@ definitions:
       name:
         type: string
         x-isnullable: false
-      public:
-        type: boolean
+      visibility:
+        type: string
         x-isnullable: false
         x-omitempty: false
       archived:
