@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -773,7 +774,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 		assert.NotNil(t, goliacConfig)
 
 		// update and commit the CODEOWNERS file
-		err = g.UpdateAndCommitCodeOwners(goliacConfig, false, "none", "master", "foobar", "goliac-project")
+		err = g.UpdateAndCommitCodeOwners(context.TODO(), goliacConfig, false, "none", "master", "foobar", "goliac-project")
 		assert.Nil(t, err)
 
 		// check the content of the CODEOWNERS file
@@ -810,7 +811,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 
 		// sync users and teams
 		errorCollector := observability.NewErrorCollection()
-		change := g.SyncUsersAndTeams(goliacConfig, mockUserPlugin, "none", false, false, nil, errorCollector)
+		change := g.SyncUsersAndTeams(context.TODO(), goliacConfig, mockUserPlugin, "none", false, false, nil, errorCollector)
 		assert.False(t, errorCollector.HasErrors())
 		assert.True(t, change)
 

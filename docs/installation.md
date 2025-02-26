@@ -248,6 +248,8 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_GITHUB_WEBHOOK_PORT        | 18001         | (optional) Port to listen to GitHub webhook |
 | GOLIAC_GITHUB_WEBHOOK_SECRET      |               | (optional) Secret to validate GitHub webhook |
 | GOLIAC_GITHUB_WEBHOOK_PATH        | /webhook      | (optional) Path to listen to GitHub webhook |
+| GOLIAC_OPENTELEMETRY_ENABLED      | false         | (optional) Enable OpenTelemetry tracing |
+| GOLIAC_OPENTELEMETRY_GRPC_ENDPOINT| localhost:4317| (optional) OpenTelemetry grpc endpoint |
 then you just need to start it with
 
 ```shell

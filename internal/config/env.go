@@ -68,6 +68,9 @@ var Config = struct {
 	GithubWebhookDedicatedHost string `env:"GOLIAC_GITHUB_WEBHOOK_HOST" envDefault:"localhost"`
 	GithubWebhookDedicatedPort int    `env:"GOLIAC_GITHUB_WEBHOOK_PORT" envDefault:"18001"`
 	GithubWebhookPath          string `env:"GOLIAC_GITHUB_WEBHOOK_PATH" envDefault:"/webhook"`
+
+	OpenTelemetryEnabled      bool   `env:"GOLIAC_OPENTELEMETRY_ENABLED" envDefault:"false"`
+	OpenTelemetryGrpcEndpoint string `env:"GOLIAC_OPENTELEMETRY_GRPC_ENDPOINT" envDefault:"localhost:4317"`
 }{}
 
 // to be overrided at build time with

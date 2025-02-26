@@ -72,7 +72,7 @@ func (s *Scaffold) SetRemoteObservability(feedback observability.RemoteObservabi
 /*
  * Generate will generate a full teams directory structure compatible with Goliac
  */
-func (s *Scaffold) Generate(rootpath string, adminteam string, usersOnly bool) error {
+func (s *Scaffold) Generate(ctx context.Context, rootpath string, adminteam string, usersOnly bool) error {
 	if _, err := os.Stat(rootpath); os.IsNotExist(err) {
 		// Create the directory if it does not exist
 		err := os.MkdirAll(rootpath, 0755)
@@ -82,7 +82,6 @@ func (s *Scaffold) Generate(rootpath string, adminteam string, usersOnly bool) e
 	}
 	fs := osfs.New(rootpath)
 
-	ctx := context.Background()
 	if err := s.remote.Load(ctx, true); err != nil {
 		logrus.Warnf("Not able to load all information from Github: %v, but I will try to continue", err)
 	}

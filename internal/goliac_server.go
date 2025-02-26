@@ -24,6 +24,8 @@ import (
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/health"
 	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 /*
@@ -606,8 +608,18 @@ func (g *GoliacServerImpl) PostFlushCache(app.PostFlushCacheParams) middleware.R
 	return app.NewPostFlushCacheOK()
 }
 
-func (g *GoliacServerImpl) PostResync(app.PostResyncParams) middleware.Responder {
-	go g.triggerApply()
+func (g *GoliacServerImpl) PostResync(params app.PostResyncParams) middleware.Responder {
+	go func() {
+		ctx := context.Background()
+		if config.Config.OpenTelemetryEnabled {
+			var span trace.Span
+			tracer := otel.Tracer("background-post-resync")
+			ctx, span = tracer.Start(ctx, "backgroundResync")
+			defer span.End()
+		}
+		g.triggerApply(ctx)
+	}()
+
 	return app.NewPostResyncOK()
 }
 
@@ -647,7 +659,18 @@ func (g *GoliacServerImpl) Serve() {
 			config.Config.ServerGitBranch, func() {
 				// when receiving a Github webhook event
 				// let's start the apply process asynchronously
-				go g.triggerApply()
+				go func() {
+					ctx := context.Background()
+					var span trace.Span
+					if config.Config.OpenTelemetryEnabled {
+						tracer := otel.Tracer("github-webhook-tracer")
+						ctx, span = tracer.Start(ctx, "github-webhook")
+					}
+					g.triggerApply(ctx)
+					if span != nil {
+						span.End()
+					}
+				}()
 			},
 		)
 		go func() {
@@ -680,7 +703,17 @@ func (g *GoliacServerImpl) Serve() {
 					// because we want to reconciliate even if there
 					// is no new commit
 					// (and also it will populate the lastUnmanaged structure)
-					g.triggerApply()
+
+					ctx := context.Background()
+					var span trace.Span
+					if config.Config.OpenTelemetryEnabled {
+						tracer := otel.Tracer("cronjob-tracer")
+						ctx, span = tracer.Start(ctx, "cronjob")
+					}
+					g.triggerApply(ctx)
+					if span != nil {
+						span.End()
+					}
 				}
 			}
 		}
@@ -702,9 +735,9 @@ inside serverApply, it will check if the lobby is free
 - if the lobby is free, it will start the apply process
 - if the lobby is busy, it will do nothing
 */
-func (g *GoliacServerImpl) triggerApply() {
+func (g *GoliacServerImpl) triggerApply(ctx context.Context) {
 	errorCollector := observability.NewErrorCollection()
-	applied := g.serveApply(errorCollector)
+	applied := g.serveApply(ctx, errorCollector)
 	if !applied && !errorCollector.HasErrors() {
 		// the run was skipped
 		g.syncInterval = config.Config.ServerApplyInterval
@@ -768,7 +801,7 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	return server, nil
 }
 
-func (g *GoliacServerImpl) serveApply(errorCollector *observability.ErrorCollection) bool {
+func (g *GoliacServerImpl) serveApply(ctx context.Context, errorCollector *observability.ErrorCollection) bool {
 	// we want to run ApplyToGithub
 	// and queue one new run (the lobby) if a new run is asked
 	g.applyLobbyMutex.Lock()
@@ -817,10 +850,10 @@ func (g *GoliacServerImpl) serveApply(errorCollector *observability.ErrorCollect
 
 	startTime := time.Now()
 	stats := config.GoliacStatistics{}
-	ctx := context.WithValue(context.Background(), config.ContextKeyStatistics, &stats)
+	newctx := context.WithValue(ctx, config.ContextKeyStatistics, &stats)
 
 	fs := osfs.New("/")
-	unmanaged := g.goliac.Apply(ctx, errorCollector, fs, false, repo, branch)
+	unmanaged := g.goliac.Apply(newctx, errorCollector, fs, false, repo, branch)
 	if errorCollector.HasErrors() {
 		return false
 	}

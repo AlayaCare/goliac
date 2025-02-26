@@ -48,6 +48,10 @@ func SetupGlobalMiddleware(handler http.Handler) http.Handler {
 		IndexFile: "index.html",
 	})
 
+	if Config.OpenTelemetryEnabled {
+		n.Use(NewOtelMiddleware())
+	}
+
 	n.Use(setupRecoveryMiddleware())
 
 	n.UseHandler(handler)
