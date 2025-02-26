@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"os"
 
 	"github.com/caarlos0/env"
@@ -11,6 +12,12 @@ func init() {
 	env.Parse(&Config)
 
 	setupLogrus()
+	if Config.OpenTelemetryEnabled {
+		err := setupTraceProvider(context.Background())
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func setupLogrus() {

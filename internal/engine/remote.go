@@ -15,6 +15,8 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/hashicorp/go-version"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const FORLOOP_STOP = 100
@@ -852,6 +854,11 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 
 // Load from a github repository. continueOnError is used for scaffolding
 func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "Load")
+		defer childSpan.End()
+	}
 	var retErr error
 
 	if time.Now().After(g.ttlExpireAppIds) {
@@ -958,6 +965,11 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 }
 
 func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently(ctx context.Context) (map[string]map[string]*GithubTeamRepo, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadTeamReposNonConcurrently")
+		defer childSpan.End()
+	}
 	logrus.Debug("loading teamReposNonConcurrently")
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
 
@@ -988,6 +1000,11 @@ func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently(ctx context.Context) (ma
 }
 
 func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGoroutines int64) (map[string]map[string]*GithubTeamRepo, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadTeamReposConcurrently")
+		defer childSpan.End()
+	}
 	logrus.Debug("loading teamReposConcurrently")
 	teamRepos := make(map[string]map[string]*GithubTeamRepo)
 
@@ -1173,6 +1190,11 @@ type GraplQLTeamMembers struct {
 }
 
 func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTeam, map[string]string, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadTeams")
+		defer childSpan.End()
+	}
 	logrus.Debug("loading teams")
 	teams := make(map[string]*GithubTeam)
 	teamSlugByName := make(map[string]string)
@@ -1547,6 +1569,11 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 }
 
 func (g *GoliacRemoteImpl) loadRulesets(ctx context.Context) (map[string]*GithubRuleSet, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadRulesets")
+		defer childSpan.End()
+	}
 	logrus.Debug("loading rulesets")
 	variables := make(map[string]interface{})
 	variables["orgLogin"] = config.Config.GithubAppOrganization

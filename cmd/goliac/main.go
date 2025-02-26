@@ -15,6 +15,8 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var dryrunParameter bool
@@ -117,6 +119,13 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			}
 
 			ctx := context.Background()
+			var span trace.Span
+			if config.Config.OpenTelemetryEnabled {
+				tracer := otel.Tracer("scaffold")
+				ctx, span = tracer.Start(ctx, "scaffold")
+				defer span.End()
+			}
+
 			fs := osfs.New("/")
 
 			errorCollector := observability.NewErrorCollection()
@@ -169,6 +178,13 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			}
 
 			ctx := context.Background()
+			var span trace.Span
+			if config.Config.OpenTelemetryEnabled {
+				tracer := otel.Tracer("scaffold")
+				ctx, span = tracer.Start(ctx, "scaffold")
+				defer span.End()
+			}
+
 			fs := osfs.New("/")
 			errorCollector := observability.NewErrorCollection()
 			goliac.Apply(ctx, errorCollector, fs, false, repo, branch)
@@ -213,6 +229,13 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
 			ctx := context.Background()
+			var span trace.Span
+			if config.Config.OpenTelemetryEnabled {
+				tracer := otel.Tracer("scaffold")
+				ctx, span = tracer.Start(ctx, "scaffold")
+				defer span.End()
+			}
+
 			fs := osfs.New("/")
 			errorCollector := observability.NewErrorCollection()
 			goliac.UsersUpdate(ctx, errorCollector, fs, repo, branch, dryrunParameter, forceParameter)
@@ -256,7 +279,15 @@ The adminteam is your current team that contains Github administrator`,
 				}
 			}
 
-			err = scaffold.Generate(directory, adminteam, usersOnly)
+			ctx := context.Background()
+			var span trace.Span
+			if config.Config.OpenTelemetryEnabled {
+				tracer := otel.Tracer("scaffold")
+				ctx, span = tracer.Start(ctx, "scaffold")
+				defer span.End()
+			}
+
+			err = scaffold.Generate(ctx, directory, adminteam, usersOnly)
 			if err != nil {
 				logrus.Fatalf("failed to create scaffold direcrory: %s", err)
 			} else {

@@ -16,7 +16,12 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/goliac-project/goliac/internal/config"
+	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type GitHubClient interface {
@@ -174,7 +179,7 @@ type GraphQLRequest struct {
  *
  * Example:
  * query := `
- *	query($name: String!) {
+ *	query myquery($name: String!) {
  *		user(login: $name) {
  *			name
  *			company
@@ -187,16 +192,39 @@ type GraphQLRequest struct {
  * responseBody, err := client.QueryGraphQLAPI(query, variables)
  */
 func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		queryName := utils.FirstTwoWordsBeforeParenthesis(query, 100)
+		// get back the tracer from the context
+		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, fmt.Sprintf("QueryGraphQLAPI %s", queryName))
+		defer childSpan.End()
+
+		childSpan.SetAttributes(
+			attribute.String("query", query),
+		)
+		jsonVariables, err := json.Marshal(variables)
+		if err == nil {
+			childSpan.SetAttributes(
+				attribute.String("variables", string(jsonVariables)),
+			)
+		}
+	}
 	body, err := json.Marshal(GraphQLRequest{
 		Query:     query,
 		Variables: variables,
 	})
 	if err != nil {
+		if childSpan != nil {
+			childSpan.SetStatus(codes.Error, fmt.Sprintf("error marshalling the request: %s", err.Error()))
+		}
 		return nil, err
 	}
 
 	req, err := http.NewRequestWithContext(ctx, "POST", client.gitHubServer+"/graphql", bytes.NewBuffer(body))
 	if err != nil {
+		if childSpan != nil {
+			childSpan.SetStatus(codes.Error, fmt.Sprintf("error preparing the http request: %s", err.Error()))
+		}
 		return nil, err
 	}
 
@@ -210,6 +238,9 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
+		if childSpan != nil {
+			childSpan.SetStatus(codes.Error, fmt.Sprintf("error sending the http request: %s", err.Error()))
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -223,11 +254,17 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 		if resp.Header.Get("X-RateLimit-Reset") != "" {
 			// We're being rate limited. Get the reset time from the headers.
 			if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
+				if childSpan != nil {
+					childSpan.SetStatus(codes.Error, fmt.Sprintf("waitRateLimit: %s", err.Error()))
+				}
 				return nil, err
 			}
 		} else if resp.Header.Get("Retry-After") != "" {
 			retryAfter, err := strconv.Atoi(resp.Header.Get("Retry-After"))
 			if err != nil {
+				if childSpan != nil {
+					childSpan.SetStatus(codes.Error, fmt.Sprintf("error parsing Retry-After header: %s", err.Error()))
+				}
 				return nil, err
 			}
 			if retryAfter > 30 {
@@ -236,6 +273,9 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 			logrus.Debugf("2nd rate limit reached, waiting for %d seconds", retryAfter)
 			time.Sleep(time.Duration(retryAfter) * time.Second)
 		} else {
+			if childSpan != nil {
+				childSpan.SetStatus(codes.Error, "rate limit headers not found")
+			}
 			return nil, fmt.Errorf("unexpected status: %s", resp.Status)
 		}
 
@@ -244,7 +284,14 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 	} else {
 		responseBody, err := io.ReadAll(resp.Body)
 		if err != nil {
+			if childSpan != nil {
+				childSpan.SetStatus(codes.Error, fmt.Sprintf("error reading the response body: %s", err.Error()))
+			}
 			return nil, err
+		}
+
+		if childSpan != nil {
+			childSpan.SetAttributes(attribute.String("response", string(responseBody)))
 		}
 
 		return responseBody, nil
@@ -265,16 +312,37 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
  * responseBody, err := client.CallRestAPIWithBody("orgs/my-org/repos", "POST", body)
  */
 func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}) ([]byte, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		// get back the tracer from the context
+		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, fmt.Sprintf("CallRestAPI %s", endpoint))
+		defer childSpan.End()
+
+		childSpan.SetAttributes(
+			attribute.String("method", method),
+			attribute.String("endpoint", endpoint),
+			attribute.String("parameters", parameters),
+		)
+	}
 	var bodyReader io.Reader
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
 		if err != nil {
+			if childSpan != nil {
+				childSpan.SetStatus(codes.Error, err.Error())
+			}
 			return nil, err
+		}
+		if childSpan != nil {
+			childSpan.SetAttributes(attribute.String("body", string(jsonBody)))
 		}
 		bodyReader = bytes.NewBuffer(jsonBody)
 	}
 	urlpath, err := url.JoinPath(client.gitHubServer, endpoint)
 	if err != nil {
+		if childSpan != nil {
+			childSpan.SetStatus(codes.Error, err.Error())
+		}
 		return nil, err
 	}
 
@@ -290,6 +358,9 @@ func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, param
 
 	req, err := http.NewRequestWithContext(ctx, method, urlpath, bodyReader)
 	if err != nil {
+		if childSpan != nil {
+			childSpan.SetStatus(codes.Error, fmt.Sprintf("error preparing the http request: %s", err.Error()))
+		}
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
@@ -297,6 +368,14 @@ func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, param
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	resp, err := client.httpClient.Do(req)
 	if err != nil {
+		if childSpan != nil {
+			// read the full response body to get the error message
+			respBody := make([]byte, 0)
+			if resp != nil && resp.Body != nil {
+				respBody, _ = io.ReadAll(resp.Body)
+			}
+			childSpan.SetStatus(codes.Error, fmt.Sprintf("error: %s, response: %s", err.Error(), string(respBody)))
+		}
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -309,6 +388,9 @@ func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, param
 
 		// We're being rate limited. Get the reset time from the headers.
 		if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
+			if childSpan != nil {
+				childSpan.SetStatus(codes.Error, fmt.Sprintf("waitRateLimit: %s", err.Error()))
+			}
 			return nil, err
 		}
 
@@ -317,9 +399,15 @@ func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, param
 	} else {
 		responseBody, err := io.ReadAll(resp.Body)
 		if err != nil {
+			if childSpan != nil {
+				childSpan.SetStatus(codes.Error, err.Error())
+			}
 			return nil, err
 		}
 		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			if childSpan != nil {
+				childSpan.SetStatus(codes.Error, fmt.Sprintf("unexpected status: %s", resp.Status))
+			}
 			return responseBody, fmt.Errorf("unexpected status: %s", resp.Status)
 		}
 

@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +23,8 @@ import (
 	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,13 +52,13 @@ type GoliacLocalGit interface {
 	// Load and Validate from a github repository
 	LoadAndValidate(errorCollection *observability.ErrorCollection)
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
-	UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error
+	UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error
 	// whenever repos are not deleted but archived, or need to be renamed
 	UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, accesstoken string, branch string, tagname string) error
 	// whenever the users list is changing, reload users and teams, and commit them
 	// (force will bypass the max_changesets check)
 	// return true if some changes were done
-	SyncUsersAndTeams(repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool
+	SyncUsersAndTeams(ctx context.Context, repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool
 	Close(fs billy.Filesystem)
 
 	// Load and Validate from a local directory
@@ -499,7 +502,12 @@ func (g *GoliacLocalImpl) UpdateRepos(reposToArchiveList []string, reposToRename
  * UpdateAndCommitCodeOwners will collects all teams definition to update the .github/CODEOWNERS file
  * cf https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
  */
-func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
+func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		_, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "UpdateAndCommitCodeOwners")
+		defer childSpan.End()
+	}
 	if g.repo == nil {
 		return fmt.Errorf("git repository not cloned")
 	}
@@ -686,7 +694,12 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 }
 
 // return true if some changes were done
-func (g *GoliacLocalImpl) SyncUsersAndTeams(repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool {
+func (g *GoliacLocalImpl) SyncUsersAndTeams(ctx context.Context, repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		_, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "SyncUsersAndTeams")
+		defer childSpan.End()
+	}
 	if g.repo == nil {
 		errorCollector.AddError(fmt.Errorf("git repository not cloned"))
 		return false

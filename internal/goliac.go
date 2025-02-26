@@ -16,6 +16,9 @@ import (
 	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/usersync"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -159,6 +162,17 @@ func (g *GoliacImpl) Apply(ctx context.Context, errorCollector *observability.Er
 }
 
 func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, errorCollector *observability.ErrorCollection) {
+	if config.Config.OpenTelemetryEnabled {
+		// get back the tracer from the context
+		var childSpan trace.Span
+		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadAndValidateGoliacOrganization")
+		defer childSpan.End()
+
+		childSpan.SetAttributes(
+			attribute.String("repository_url", repositoryUrl),
+			attribute.String("branch", branch),
+		)
+	}
 	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") || strings.HasPrefix(repositoryUrl, "inmemory:///") {
 		accessToken := ""
 		var err error
@@ -286,7 +300,7 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 				errorCollector.AddError(fmt.Errorf("error when getting access token: %v", err))
 				return nil
 			}
-			change := g.local.SyncUsersAndTeams(g.repoconfig, userplugin, accessToken, dryrun, false, g.feedback, errorCollector)
+			change := g.local.SyncUsersAndTeams(ctx, g.repoconfig, userplugin, accessToken, dryrun, false, g.feedback, errorCollector)
 			if errorCollector.HasErrors() {
 				return nil
 			}
@@ -318,7 +332,7 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 			errorCollector.AddError(fmt.Errorf("error when getting access token: %v", err))
 			return unmanaged
 		}
-		err = g.local.UpdateAndCommitCodeOwners(g.repoconfig, dryrun, accessToken, branch, GOLIAC_GIT_TAG, githubOrganization)
+		err = g.local.UpdateAndCommitCodeOwners(ctx, g.repoconfig, dryrun, accessToken, branch, GOLIAC_GIT_TAG, githubOrganization)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("error when updating and commiting: %v", err))
 			return unmanaged
@@ -329,6 +343,11 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 }
 
 func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamreponame string, branch string) (*engine.UnmanagedResources, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "applyCommitsToGithub")
+		defer childSpan.End()
+	}
 
 	// if the repo was just archived in a previous commit and we "resume it"
 	// so we keep a track of all repos that we want to archive until the end of the process
@@ -405,5 +424,5 @@ func (g *GoliacImpl) UsersUpdate(ctx context.Context, errorCollector *observabil
 		return false
 	}
 
-	return g.local.SyncUsersAndTeams(repoconfig, userplugin, accessToken, dryrun, force, g.feedback, errorCollector)
+	return g.local.SyncUsersAndTeams(ctx, repoconfig, userplugin, accessToken, dryrun, force, g.feedback, errorCollector)
 }
