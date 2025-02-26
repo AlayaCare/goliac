@@ -1,3 +1,7 @@
+## Goliac v0.15.4
+
+- introducing opentelemetry tracing
+
 ## Goliac v0.15.3
 
 - allow public,internal,private repository visibility
