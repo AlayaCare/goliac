@@ -1637,13 +1637,25 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 			repoIds = append(repoIds, rid.Id)
 		}
 	}
-	include := ruleset.OnInclude
-	if include == nil {
-		include = []string{}
+	include := []string{}
+	if ruleset.OnInclude != nil {
+		for _, i := range ruleset.OnInclude {
+			if strings.HasPrefix(i, "~") {
+				include = append(include, i)
+			} else {
+				include = append(include, "refs/heads/"+i)
+			}
+		}
 	}
-	exclude := ruleset.OnExclude
-	if exclude == nil {
-		exclude = []string{}
+	exclude := []string{}
+	if ruleset.OnExclude != nil {
+		for _, e := range ruleset.OnExclude {
+			if strings.HasPrefix(e, "~") {
+				exclude = append(exclude, e)
+			} else {
+				exclude = append(exclude, "refs/heads/"+e)
+			}
+		}
 	}
 	conditions := map[string]interface{}{
 		"ref_name": map[string]interface{}{
@@ -1688,10 +1700,16 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 				},
 			})
 		case "required_status_checks":
+			statusChecks := make([]map[string]interface{}, 0)
+			for _, s := range rule.RequiredStatusChecks {
+				statusChecks = append(statusChecks, map[string]interface{}{
+					"context": s,
+				})
+			}
 			rules = append(rules, map[string]interface{}{
 				"type": "required_status_checks",
 				"parameters": map[string]interface{}{
-					"required_status_checks":               rule.RequiredStatusChecks,
+					"required_status_checks":               statusChecks,
 					"strict_required_status_checks_policy": rule.StrictRequiredStatusChecksPolicy,
 				},
 			})
