@@ -663,5 +663,49 @@ repositories:
 		assert.Equal(t, 1, len(payload["bypass_actors"].([]map[string]interface{})))
 		assert.Equal(t, "~DEFAULT_BRANCH", payload["conditions"].(map[string]interface{})["ref_name"].(map[string]interface{})["include"].([]string)[0])
 		assert.Equal(t, 2, len(payload["conditions"].(map[string]interface{})["repository_id"].(map[string]interface{})["repository_ids"].([]int)))
+		assert.Equal(t, "circleCI check", payload["rules"].([]map[string]interface{})[0]["parameters"].(map[string]interface{})["required_status_checks"].([]map[string]interface{})[0]["context"].(string))
+	})
+
+	t.Run("happy path: non default branch name", func(t *testing.T) {
+		ghClient := MockGithubClient{}
+		g := NewGoliacRemoteImpl(&ghClient)
+		g.appIds["goliac-project-app"] = 1
+		g.repositories["repo1"] = &GithubRepository{
+			Name: "repo1",
+			Id:   123,
+		}
+		g.repositories["repo2"] = &GithubRepository{
+			Name: "repo2",
+			Id:   456,
+		}
+
+		rulesetData := []byte(`
+name: ruleset1
+id: 1
+enforcement: evaluate
+bypassapps:
+  goliac-project-app: always
+oninclude:
+  - main
+rules:
+  required_status_checks:
+    requiredStatusChecks:
+      - circleCI check
+      - jenkins check
+repositories:
+  - repo1
+  - repo2
+`)
+		var ruleset GithubRuleSet
+		err := yaml.Unmarshal(rulesetData, &ruleset)
+		assert.Nil(t, err)
+
+		payload := g.prepareRuleset(&ruleset)
+
+		assert.Equal(t, "ruleset1", payload["name"].(string))
+		assert.Equal(t, "evaluate", payload["enforcement"].(string))
+		assert.Equal(t, 1, len(payload["bypass_actors"].([]map[string]interface{})))
+		// Github API uses refs/heads/ as prefix
+		assert.Equal(t, "refs/heads/main", payload["conditions"].(map[string]interface{})["ref_name"].(map[string]interface{})["include"].([]string)[0])
 	})
 }
