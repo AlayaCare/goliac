@@ -276,6 +276,9 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 					lRepo.Spec.AllowAutoMerge = rRepo.BoolProperties["allow_auto_merge"]
 					lRepo.Spec.DeleteBranchOnMerge = rRepo.BoolProperties["delete_branch_on_merge"]
 					lRepo.Spec.AllowUpdateBranch = rRepo.BoolProperties["allow_update_branch"]
+					if rRepo.DefaultBranchName != "main" {
+						lRepo.Spec.DefaultBranchName = rRepo.DefaultBranchName
+					}
 
 					// scaffoldling repository rulesets
 					rRulesets := rRepo.RuleSets

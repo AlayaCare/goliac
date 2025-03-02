@@ -144,7 +144,7 @@ type ReconciliatorListenerRecorder struct {
 	RepositoryTeamRemoved             map[string][]string
 	RepositoriesDeleted               map[string]bool
 	RepositoriesRenamed               map[string]bool
-	RepositoriesUpdatePrivate         map[string]bool
+	RepositoriesUpdateProperty        map[string]bool
 	RepositoriesUpdateArchived        map[string]bool
 	RepositoriesSetExternalUser       map[string]string
 	RepositoriesRemoveExternalUser    map[string]bool
@@ -177,7 +177,7 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 		RepositoryTeamRemoved:             make(map[string][]string),
 		RepositoriesDeleted:               make(map[string]bool),
 		RepositoriesRenamed:               make(map[string]bool),
-		RepositoriesUpdatePrivate:         make(map[string]bool),
+		RepositoriesUpdateProperty:        make(map[string]bool),
 		RepositoriesUpdateArchived:        make(map[string]bool),
 		RepositoriesSetExternalUser:       make(map[string]string),
 		RepositoriesRemoveExternalUser:    make(map[string]bool),
@@ -218,7 +218,7 @@ func (r *ReconciliatorListenerRecorder) UpdateTeamSetParent(ctx context.Context,
 func (r *ReconciliatorListenerRecorder) DeleteTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string) {
 	r.TeamDeleted[teamslug] = true
 }
-func (r *ReconciliatorListenerRecorder) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
+func (r *ReconciliatorListenerRecorder) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string) {
 	r.RepositoryCreated[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {
@@ -237,7 +237,8 @@ func (r *ReconciliatorListenerRecorder) RenameRepository(ctx context.Context, er
 	r.RepositoriesRenamed[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
-	r.RepositoriesUpdatePrivate[reponame] = true
+	fmt.Println("UpdateProperty", reponame, propertyName, propertyValue)
+	r.RepositoriesUpdateProperty[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string, permission string) {
 	r.RepositoriesSetExternalUser[githubid] = permission
@@ -1958,9 +1959,14 @@ func TestReconciliationRepo(t *testing.T) {
 		remote.teams["existing"] = rExisting
 
 		remote.repos["goliac-teams"] = &GithubRepository{
-			Name:           "goliac-teams",
-			ExternalUsers:  map[string]string{},
-			BoolProperties: map[string]bool{},
+			Name:          "goliac-teams",
+			ExternalUsers: map[string]string{},
+			BoolProperties: map[string]bool{
+				"allow_auto_merge":       false,
+				"archived":               false,
+				"delete_branch_on_merge": true,
+				"allow_update_branch":    false,
+			},
 		}
 
 		existingOwner := &GithubTeam{
@@ -1976,9 +1982,14 @@ func TestReconciliationRepo(t *testing.T) {
 
 		remote.teams["existing-goliac-owners"] = existingOwner
 		rRepo := GithubRepository{
-			Name:           "myrepo",
-			ExternalUsers:  make(map[string]string),
-			BoolProperties: make(map[string]bool),
+			Name:          "myrepo",
+			ExternalUsers: make(map[string]string),
+			BoolProperties: map[string]bool{
+				"allow_auto_merge":       false,
+				"delete_branch_on_merge": false,
+				"allow_update_branch":    false,
+				"archived":               false,
+			},
 		}
 		remote.repos["myrepo"] = &rRepo
 
@@ -2013,6 +2024,143 @@ func TestReconciliationRepo(t *testing.T) {
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
 		assert.Equal(t, 0, len(recorder.RepositoriesSetExternalUser))
 		assert.Equal(t, 0, len(recorder.RepositoriesRemoveExternalUser))
+		assert.Equal(t, 0, len(recorder.RepositoriesUpdateProperty))
+	})
+
+	t.Run("happy path: change default branch of the repo", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconfig := &config.RepositoryConfig{
+			AdminTeam:       "admin-team",
+			ArchiveOnDelete: false,
+		}
+		repoconfig.DestructiveOperations.AllowDestructiveRepositories = true
+		r := NewGoliacReconciliatorImpl(false, recorder, repoconfig)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		lRepo := &entity.Repository{}
+		lRepo.Name = "myrepo"
+		lRepo.Spec.Readers = []string{}
+		lRepo.Spec.Writers = []string{}
+		lRepo.Spec.ExternalUserWriters = []string{}
+		lowner := "existing"
+		lRepo.Owner = &lowner
+		lRepo.Spec.DefaultBranchName = "master"
+		local.repos["myrepo"] = lRepo
+
+		adminTeam := &entity.Team{}
+		adminTeam.Name = "admin-team"
+		adminTeam.Spec.Owners = []string{"existing_owner"}
+		local.teams["admin-team"] = adminTeam
+
+		existingTeam := &entity.Team{}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{}
+		local.teams["existing"] = existingTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+		rAdminTeam := &GithubTeam{
+			Name:    "admin-team",
+			Slug:    "admin-team",
+			Members: []string{"admin-team"},
+		}
+		remote.teams["admin-team"] = rAdminTeam
+
+		rAdminTeamOwners := &GithubTeam{
+			Name:    "admin-team-goliac-owners",
+			Slug:    "admin-team-goliac-owners",
+			Members: []string{"admin-team"},
+		}
+		remote.teams["admin-team-goliac-owners"] = rAdminTeamOwners
+
+		rExisting := &GithubTeam{
+			Name:    "existing",
+			Slug:    "existing",
+			Members: []string{"existing_owner"},
+		}
+		remote.teams["existing"] = rExisting
+
+		ghTeams := &GithubRepository{
+			Name:          "goliac-teams",
+			ExternalUsers: map[string]string{},
+			BoolProperties: map[string]bool{
+				"allow_auto_merge":       false,
+				"archived":               false,
+				"delete_branch_on_merge": true,
+				"allow_update_branch":    false,
+			},
+		}
+		remote.repos["goliac-teams"] = ghTeams
+
+		existingOwner := &GithubTeam{
+			Name:    "existing-goliac-owners",
+			Slug:    "existing-goliac-owners",
+			Members: []string{"existing_owner"},
+		}
+		remote.teamsrepos["existing-goliac-owners"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["existing-goliac-owners"]["goliac-teams"] = &GithubTeamRepo{
+			Name:       "goliac-teams",
+			Permission: "WRITE",
+		}
+
+		remote.teams["existing-goliac-owners"] = existingOwner
+		rRepo := GithubRepository{
+			Name:          "myrepo",
+			ExternalUsers: make(map[string]string),
+			BoolProperties: map[string]bool{
+				"allow_auto_merge":       false,
+				"delete_branch_on_merge": false,
+				"allow_update_branch":    false,
+				"archived":               false,
+			},
+			DefaultBranchName: "main",
+		}
+		remote.repos["myrepo"] = &rRepo
+
+		remote.teamsrepos["admin-team"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["admin-team"]["goliac-teams"] = &GithubTeamRepo{
+			Name:       "goliac-teams",
+			Permission: "WRITE",
+		}
+		remote.teamsrepos["admin-team-goliac-owners"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["admin-team-goliac-owners"]["goliac-teams"] = &GithubTeamRepo{
+			Name:       "goliac-teams",
+			Permission: "WRITE",
+		}
+
+		remote.teamsrepos["existing"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["existing"]["myrepo"] = &GithubTeamRepo{
+			Name:       "myrepo",
+			Permission: "WRITE",
+		}
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "goliac-teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		// 1 repo renamed
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, 0, len(recorder.RepositoryCreated))
+		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
+		assert.Equal(t, 0, len(recorder.RepositoriesRenamed))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamAdded))
+		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
+		assert.Equal(t, 0, len(recorder.RepositoriesSetExternalUser))
+		assert.Equal(t, 0, len(recorder.RepositoriesRemoveExternalUser))
+		assert.Equal(t, 1, len(recorder.RepositoriesUpdateProperty))
 	})
 }
 

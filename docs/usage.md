@@ -68,6 +68,19 @@ In this last example:
 - the repository allows to update the branch
 - other teams have write (`anotherteamA`, `anotherteamB`) or read (`anotherteamC`, `anotherteamD`) access
 
+## Set default branch repository
+
+By default the default branch is `main`.
+You can specify a different default branch
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  default_branch: master
+```
+
 ## Rename a repository
 
 You need to add a `renameTo` to the repository, and Goliac will rename it (and update the `goliac-teams` repository):

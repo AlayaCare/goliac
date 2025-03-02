@@ -1,3 +1,7 @@
+## Goliac v0.15.6
+
+- new property to specify default branch for each repository
+
 ## Goliac v0.15.5
 
 - ruleset bugfixes: include/exclude refs/heads prefix + required_status_checks payload
