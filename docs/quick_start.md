@@ -28,7 +28,7 @@ As a Github org admin, in GitHub:
 - Go to the left tab "Install App"
   - Click on "Install"
 
-### Alternative: use a personal access token
+#### Alternative: use a personal access token
 
 If you don't have the possibility to create a Github App, you can use a personal access token.
 If you only need to scaffold, you will need a personal access token with
@@ -45,11 +45,21 @@ You will need to export the `GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN` env variable (
 curl -o goliac -L https://github.com/goliac-project/goliac/releases/latest/download/goliac-`uname -s`-`uname -m` && chmod +x goliac
 ```
 
+## Starting with Goliac
+
+You can onboard your repositories and teams incrementally. You can start with a single team and a single repository and then add more as you go.
+
+The best way to do it is to:
+- create a `goliac-admin` dedicated Github team to administer Goliac
+- use the `goliac scaffold` command to create the initial structure and then cherry-pick the repositories and teams you want to onboard.
+- optionally use the `goliac verify` command to check that the structure is correct (the scaffold command is supposed to do it for you)
+- use the `goliac plan` command to see what Goliac will do
+- use the `goliac apply` command to apply the changes or merge the PRs
+
+
 ### Create a goliac admin team
 
-If you dont have yet one, you will need to create a team in Github, where you will add your IT/Github admins (in our example, the team is called `goliac-admin` ).
-
-## Scaffold and test
+If you dont have yet one, you will need to create a team in Github, where you will add your IT/Github admins (in our example, the team is called `goliac-admin` ), that will administer Goliac.
 
 ### Scaffold
 
@@ -79,17 +89,64 @@ The application will connect to your GitHub organization and will try to guess
 
 And it will create the corresponding structure into the "goliac-teams" directory.
 
-### Clean up to start
+In particular it will creates a `/goliac.yaml` file:
 
-If you want, you can remove (for now) part or all repositories:
+```yaml
+admin_team: goliac-admin
 
-```shell
-find goliac-teams/teams -name "*.yaml" ! -name "team.yaml" -print0 | xargs -0 rm
+rulesets:
+  - pattern: .*
+    ruleset: default
+
+max_changesets: 50
+archive_on_delete: true
+
+destructive_operations:
+  repositories: false
+  teams: false
+  users: false
+  rulesets: false
+
+usersync:
+  plugin: fromgithubsaml
+```
+
+This default behaviour
+- forbids any destructive operations
+- uses the `fromgithubsaml` plugin to sync users (for Enterprise GitHub plan)
+- dont force you to onboard all repositories and teams at once (i.e. you can do it incrementally)
+- uses a global ruleset called `default` for all repositories (check the `rulesets/default.yaml` file)
+
+
+## Starting the onboarding
+
+If you want to start simple, in the `teams` repository you can remove all the teams (except one) and repositories (except one), to have something like
+
+- teams/myteam/team.yaml
+
+```yaml
+apiVersion: v1
+kind: Team
+name: myteam
+spec:
+  owners:
+    - user1
+  members:
+    - user2
+```
+
+- teams/myteam/myrepository.yaml
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: myrepository
+...
 ```
 
 ### Verify
 
-You can run the 
+Eventually you can check the structure of your configuration, by running 
 
 ```shell
 goliac verify <goliac-team directory>
@@ -146,6 +203,16 @@ export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-tea
 ```
 
 And you can access the dashboard UI at http://localhost:18000
+
+## Incremental onboarding
+
+You can now add more teams and repositories, by running the `scaffold` command, and cherry-pick more files and put them in the `goliac-teams` repository:
+- create a new branch
+- add the new team/repository
+- verify
+- push the branch
+- plan (with the name of the branch)
+- merge the branch
 
 ## Use daily
 
