@@ -709,6 +709,10 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 				BranchProtections: make(map[string]*GithubBranchProtection),
 				DefaultBranchName: c.DefaultBranchRef.Name,
 			}
+			// if the repository has not been populated yet
+			if repo.DefaultBranchName == "" {
+				repo.DefaultBranchName = "main"
+			}
 			for _, outsideCollaborator := range c.OutsideCollaborators.Edges {
 				repo.ExternalUsers[outsideCollaborator.Node.Login] = outsideCollaborator.Permission
 			}

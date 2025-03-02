@@ -28,7 +28,7 @@ In GitHub:
   - Give Read/Write access to `Members`
 - Under Repository permissions
   - Give Read/Write access to `Administration`
-  - Give Read/Write access to `Content`
+  - Give Read/Write access to `Content` (it is needed to access the default branch of repositories)
 - Where can this GitHub App be installed: `Only on this account`
 - And Create
 - then you must
