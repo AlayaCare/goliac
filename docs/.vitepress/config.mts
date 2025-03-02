@@ -19,7 +19,7 @@ export default defineConfig({
             { text: 'What is Goliac', link: '/what_is_goliac' },
             { text: 'Quick start', link: '/quick_start' },
             { text: 'Installation', link: '/installation' },
-            { text: 'Usage', link: '/usage' },
+            { text: 'Regular Usage', link: '/regular_usage' },
             { text: 'Security', link: '/security' },
             { text: 'Troubleshooting', link: '/troubleshooting' }
           ]
@@ -33,7 +33,7 @@ export default defineConfig({
           { text: 'What is Goliac', link: '/what_is_goliac' },
           { text: 'Quick start', link: '/quick_start' },
           { text: 'Installation', link: '/installation' },
-          { text: 'Usage', link: '/usage' },
+          { text: 'Regular Usage', link: '/regular_usage' },
           { text: 'Security', link: '/security' },
           { text: 'Troubleshooting', link: '/troubleshooting' }
         ]
