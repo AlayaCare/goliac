@@ -69,6 +69,7 @@ type GithubRepository struct {
 	InternalUsers     map[string]string                  // [githubid]permission
 	RuleSets          map[string]*GithubRuleSet          // [name]ruleset
 	BranchProtections map[string]*GithubBranchProtection // [pattern]branch protection
+	DefaultBranchName string
 }
 
 type GithubTeam struct {
@@ -500,6 +501,9 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
 		  autoMergeAllowed
           deleteBranchOnMerge
           allowUpdateBranch
+		  defaultBranchRef {
+		    name
+		  }
           directCollaborators: collaborators(affiliation: DIRECT, first: 100) {
             edges {
               node {
@@ -615,6 +619,9 @@ type GraplQLRepositories struct {
 					AutoMergeAllowed    bool
 					DeleteBranchOnMerge bool
 					AllowUpdateBranch   bool
+					DefaultBranchRef    struct {
+						Name string
+					}
 					DirectCollaborators struct {
 						Edges []struct {
 							Node struct {
@@ -700,6 +707,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 				InternalUsers:     make(map[string]string),
 				RuleSets:          make(map[string]*GithubRuleSet),
 				BranchProtections: make(map[string]*GithubBranchProtection),
+				DefaultBranchName: c.DefaultBranchRef.Name,
 			}
 			for _, outsideCollaborator := range c.OutsideCollaborators.Edges {
 				repo.ExternalUsers[outsideCollaborator.Node.Login] = outsideCollaborator.Permission
@@ -2412,16 +2420,17 @@ boolProperties are:
 - allow_update_branch
 - ...
 */
-func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
+func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string) {
 	repoId := 0
 	repoRefId := reponame
 	// create repository
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#create-an-organization-repository
 	if !dryrun {
 		props := map[string]interface{}{
-			"name":        reponame,
-			"description": description,
-			"visibility":  visibility,
+			"name":           reponame,
+			"description":    description,
+			"visibility":     visibility,
+			"default_branch": defaultBranch,
 		}
 		for k, v := range boolProperties {
 			props[k] = v
@@ -2630,6 +2639,8 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, e
 	if repo, ok := g.repositories[reponame]; ok {
 		if propertyName == "visibility" {
 			repo.Visibility = propertyValue.(string)
+		} else if propertyName == "default_branch" {
+			repo.DefaultBranchName = propertyValue.(string)
 		} else {
 			repo.BoolProperties[propertyName] = propertyValue.(bool)
 		}

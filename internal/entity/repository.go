@@ -24,6 +24,7 @@ type Repository struct {
 		AllowUpdateBranch   bool                         `yaml:"allow_update_branch,omitempty"`
 		Rulesets            []RepositoryRuleSet          `yaml:"rulesets,omitempty"`
 		BranchProtections   []RepositoryBranchProtection `yaml:"branch_protections,omitempty"`
+		DefaultBranchName   string                       `yaml:"default_branch,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
@@ -64,7 +65,8 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
 	}
 
 	repository := &Repository{}
-	repository.Spec.Visibility = "private" // default visibility
+	repository.Spec.Visibility = "private"     // default visibility
+	repository.Spec.DefaultBranchName = "main" // default branch name
 	err = yaml.Unmarshal(filecontent, repository)
 	if err != nil {
 		return nil, err

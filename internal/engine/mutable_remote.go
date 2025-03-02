@@ -169,12 +169,13 @@ func (m *MutableGoliacRemoteImpl) DeleteTeam(teamslug string) {
 		delete(m.teamRepos, teamslug)
 	}
 }
-func (m *MutableGoliacRemoteImpl) CreateRepository(reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
+func (m *MutableGoliacRemoteImpl) CreateRepository(reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string) {
 	r := GithubRepository{
-		Name:           reponame,
-		Visibility:     visibility,
-		BoolProperties: boolProperties,
-		ExternalUsers:  map[string]string{},
+		Name:              reponame,
+		Visibility:        visibility,
+		BoolProperties:    boolProperties,
+		ExternalUsers:     map[string]string{},
+		DefaultBranchName: defaultBranch,
 	}
 	m.repositories[reponame] = &r
 }
@@ -237,6 +238,8 @@ func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateProperty(reponame string
 	if r, ok := m.repositories[reponame]; ok {
 		if propertyName == "visibility" {
 			r.Visibility = propertyValue.(string)
+		} else if propertyName == "default_branch" {
+			r.DefaultBranchName = propertyValue.(string)
 		} else {
 			r.BoolProperties[propertyName] = propertyValue.(bool)
 		}

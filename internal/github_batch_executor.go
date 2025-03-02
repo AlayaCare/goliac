@@ -118,7 +118,7 @@ func (g *GithubBatchExecutor) DeleteTeam(ctx context.Context, errorCollector *ob
 	})
 }
 
-func (g *GithubBatchExecutor) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
+func (g *GithubBatchExecutor) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string) {
 	g.commands = append(g.commands, &GithubCommandCreateRepository{
 		client:         g.client,
 		dryrun:         dryrun,
@@ -128,6 +128,7 @@ func (g *GithubBatchExecutor) CreateRepository(ctx context.Context, errorCollect
 		readers:        readers,
 		writers:        writers,
 		boolProperties: boolProperties,
+		defaultBranch:  defaultBranch,
 	})
 }
 
@@ -327,10 +328,11 @@ type GithubCommandCreateRepository struct {
 	writers        []string
 	readers        []string
 	boolProperties map[string]bool
+	defaultBranch  string
 }
 
 func (g *GithubCommandCreateRepository) Apply(ctx context.Context, errorCollector *observability.ErrorCollection) {
-	g.client.CreateRepository(ctx, errorCollector, g.dryrun, g.reponame, g.description, g.visibility, g.writers, g.readers, g.boolProperties)
+	g.client.CreateRepository(ctx, errorCollector, g.dryrun, g.reponame, g.description, g.visibility, g.writers, g.readers, g.boolProperties, g.defaultBranch)
 }
 
 type GithubCommandCreateTeam struct {

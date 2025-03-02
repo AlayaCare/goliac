@@ -468,7 +468,8 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 				"delete_branch_on_merge": false,
 				"allow_update_branch":    false,
 			},
-			ExternalUsers: map[string]string{},
+			ExternalUsers:     map[string]string{},
+			DefaultBranchName: "main",
 		},
 		"repo2": {
 			Name:       "repo2",
@@ -481,7 +482,8 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 				"delete_branch_on_merge": false,
 				"allow_update_branch":    false,
 			},
-			ExternalUsers: map[string]string{},
+			ExternalUsers:     map[string]string{},
+			DefaultBranchName: "main",
 		},
 	}
 }
@@ -586,8 +588,8 @@ func (e *GoliacRemoteExecutorMock) DeleteTeam(ctx context.Context, errorCollecto
 	e.nbChanges++
 }
 
-func (e *GoliacRemoteExecutorMock) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool) {
-	fmt.Println("*** CreateRepository", reponame, descrition, visibility, writers, readers, boolProperties)
+func (e *GoliacRemoteExecutorMock) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string) {
+	fmt.Println("*** CreateRepository", reponame, descrition, visibility, writers, readers, boolProperties, defaultBranch)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
