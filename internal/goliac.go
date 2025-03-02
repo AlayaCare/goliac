@@ -65,6 +65,7 @@ func NewGoliacImpl() (Goliac, error) {
 		config.Config.GithubAppOrganization,
 		config.Config.GithubAppID,
 		config.Config.GithubAppPrivateKeyFile,
+		config.Config.GithubPersonalAccessToken,
 	)
 	if err != nil {
 		return nil, err
@@ -75,6 +76,7 @@ func NewGoliacImpl() (Goliac, error) {
 		config.Config.GithubAppOrganization,
 		config.Config.GithubTeamAppID,
 		config.Config.GithubTeamAppPrivateKeyFile,
+		config.Config.GithubPersonalAccessToken,
 	)
 	if err != nil {
 		return nil, err

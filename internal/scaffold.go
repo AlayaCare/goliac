@@ -35,6 +35,7 @@ func NewScaffold() (*Scaffold, error) {
 		config.Config.GithubAppOrganization,
 		config.Config.GithubAppID,
 		config.Config.GithubAppPrivateKeyFile,
+		config.Config.GithubPersonalAccessToken,
 	)
 
 	if err != nil {

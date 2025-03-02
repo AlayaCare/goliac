@@ -1,3 +1,7 @@
+## Goliac v0.15.7
+
+- allow to use a PAT (Personal Access Token) to run Goliac (in particular useful to scaffold)
+
 ## Goliac v0.15.6
 
 - new property to specify default branch for each repository

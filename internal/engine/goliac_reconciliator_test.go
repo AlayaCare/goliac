@@ -237,7 +237,6 @@ func (r *ReconciliatorListenerRecorder) RenameRepository(ctx context.Context, er
 	r.RepositoriesRenamed[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
-	fmt.Println("UpdateProperty", reponame, propertyName, propertyValue)
 	r.RepositoriesUpdateProperty[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string, permission string) {
@@ -1383,7 +1382,6 @@ func TestReconciliationRepo(t *testing.T) {
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
 		assert.Equal(t, 1, len(recorder.RepositoryTeamAdded)) // on teams repo
 		assert.Equal(t, 0, len(recorder.RepositoryTeamUpdated))
-		fmt.Println("**debug", recorder.TeamMemberRemoved)
 		assert.Equal(t, 0, len(recorder.TeamMemberRemoved))
 		assert.Equal(t, 1, len(recorder.TeamMemberUpdated))
 	})
