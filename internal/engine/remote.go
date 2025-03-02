@@ -707,6 +707,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 				InternalUsers:     make(map[string]string),
 				RuleSets:          make(map[string]*GithubRuleSet),
 				BranchProtections: make(map[string]*GithubBranchProtection),
+				DefaultBranchName: c.DefaultBranchRef.Name,
 			}
 			for _, outsideCollaborator := range c.OutsideCollaborators.Edges {
 				repo.ExternalUsers[outsideCollaborator.Node.Login] = outsideCollaborator.Permission
@@ -2638,6 +2639,8 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, e
 	if repo, ok := g.repositories[reponame]; ok {
 		if propertyName == "visibility" {
 			repo.Visibility = propertyValue.(string)
+		} else if propertyName == "default_branch" {
+			repo.DefaultBranchName = propertyValue.(string)
 		} else {
 			repo.BoolProperties[propertyName] = propertyValue.(bool)
 		}

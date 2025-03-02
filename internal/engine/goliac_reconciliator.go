@@ -1052,7 +1052,7 @@ func (r *GoliacReconciliatorImpl) RenameRepository(ctx context.Context, errorCol
 }
 
 func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue interface{}) {
-	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_update_bool_property"}).Infof("repositoryname: %s %s:%v", reponame, propertyName, propertyValue)
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_update_property"}).Infof("repositoryname: %s %s:%v", reponame, propertyName, propertyValue)
 	remote.UpdateRepositoryUpdateProperty(reponame, propertyName, propertyValue)
 	if r.executor != nil {
 		r.executor.UpdateRepositoryUpdateProperty(ctx, errorCollector, dryrun, reponame, propertyName, propertyValue)
