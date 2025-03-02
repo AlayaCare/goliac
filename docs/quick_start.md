@@ -28,6 +28,17 @@ As a Github org admin, in GitHub:
 - Go to the left tab "Install App"
   - Click on "Install"
 
+### Alternative: use a personal access token
+
+If you don't have the possibility to create a Github App, you can use a personal access token.
+If you only need to scaffold, you will need a personal access token with
+- `read:org` scope (under `admin:org` category)
+
+If you want to use the full Goliac capabilities, you will need a personal access token with
+- `read:org` and `write:org` scope (under `admin:org` category)
+
+You will need to export the `GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN` env variable (instead of `GOLIAC_GITHUB_APP_ID`, `GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE`) in the following examples.
+
 ### Get the Goliac binary
 
 ```shell

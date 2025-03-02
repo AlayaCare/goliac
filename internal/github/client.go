@@ -37,6 +37,7 @@ type GitHubClientImpl struct {
 	installationID  int64
 	appSlug         string
 	privateKey      []byte
+	patToken        string // if not "" we use the personal access token
 	accessToken     string
 	httpClient      *http.Client
 	tokenExpiration time.Time
@@ -49,6 +50,13 @@ type AuthorizedTransport struct {
 
 func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	t.client.mu.Lock()
+
+	// Use the personal access token if available
+	if t.client.patToken != "" {
+		req.Header.Add("Authorization", "token "+t.client.patToken)
+		t.client.mu.Unlock()
+		return http.DefaultTransport.RoundTrip(req)
+	}
 
 	// Refresh the access token if necessary
 	if t.client.accessToken == "" || time.Until(t.client.tokenExpiration) < 5*time.Minute {
@@ -90,7 +98,7 @@ func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, erro
  * 	"private-key.pem",
  * )
  */
-func NewGitHubClientImpl(githubServer, organizationName string, appID int64, privateKeyFile string) (GitHubClient, error) {
+func NewGitHubClientImpl(githubServer, organizationName string, appID int64, privateKeyFile string, patToken string) (GitHubClient, error) {
 	privateKey, err := os.ReadFile(privateKeyFile)
 	if err != nil {
 		return nil, err
@@ -100,32 +108,37 @@ func NewGitHubClientImpl(githubServer, organizationName string, appID int64, pri
 		gitHubServer: githubServer,
 		appID:        appID,
 		privateKey:   privateKey,
+		patToken:     patToken,
 	}
 
-	// create JWT
-	token, err := client.createJWT()
-	if err != nil {
-		return nil, err
-	}
+	// If a personal access token is not provided, we need to find the installation ID
+	if client.patToken == "" {
 
-	// retrieve all installations for the authenticated app
-	installations, err := client.getInstallations(token)
-	if err != nil {
-		return nil, err
-	}
-
-	// find the installation ID for the given organization
-	for _, installation := range installations {
-		logrus.Debugf("Found installation %s with id %d for organization: %s", installation.AppSlug, installation.ID, organizationName)
-		if strings.EqualFold(installation.Account.Login, organizationName) && installation.AppId == appID {
-			client.installationID = installation.ID
-			client.appSlug = installation.AppSlug
-			break
+		// create JWT
+		token, err := client.createJWT()
+		if err != nil {
+			return nil, err
 		}
-	}
 
-	if client.installationID == 0 {
-		return nil, fmt.Errorf("installation not found for organization: %s", organizationName)
+		// retrieve all installations for the authenticated app
+		installations, err := client.getInstallations(token)
+		if err != nil {
+			return nil, err
+		}
+
+		// find the installation ID for the given organization
+		for _, installation := range installations {
+			logrus.Debugf("Found installation %s with id %d for organization: %s", installation.AppSlug, installation.ID, organizationName)
+			if strings.EqualFold(installation.Account.Login, organizationName) && installation.AppId == appID {
+				client.installationID = installation.ID
+				client.appSlug = installation.AppSlug
+				break
+			}
+		}
+
+		if client.installationID == 0 {
+			return nil, fmt.Errorf("installation not found for organization: %s", organizationName)
+		}
 	}
 
 	transport := &AuthorizedTransport{
