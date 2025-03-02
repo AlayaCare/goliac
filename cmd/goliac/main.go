@@ -368,14 +368,6 @@ Either local directory, or remote git repository`,
 	rootCmd.AddCommand(servecmd)
 	rootCmd.AddCommand(versioncmd)
 
-	// if the team app is not set, use the app github app settings
-	if config.Config.GithubTeamAppID == 0 {
-		config.Config.GithubTeamAppID = config.Config.GithubAppID
-	}
-	if config.Config.GithubTeamAppPrivateKeyFile == "" {
-		config.Config.GithubTeamAppPrivateKeyFile = config.Config.GithubAppPrivateKeyFile
-	}
-
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

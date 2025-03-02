@@ -1,68 +1,5 @@
 # Security
 
-## Security hardening
-
-If you want to narrow down what Goliac is doing, you can create 2 github apps
-- one to access only the `goliac-team`'s repository
-- another one that dont have repository access, but only to the organization administrative APIs
-
-### Goliac-Teams GitHub App
-
-You need to 
-- Register new goliac-teams GitHub App
-  - in your profile settings, go to `Developer settings`/`GitHub Apps`
-  - Click on `New GitHub App`
-- Give basic information:
-  - GitHub App  name can be `<yourorg>-goliac-teams-app`
-  - Homepage URL can be `https://github.com/goliac-project/goliac`
-  - Disable the active Webhook
-- Under Repository permissions
-  - Give Read/Write access to `Administration` (needed to bypass the 'vaidate' check)
-  - Give Read/Write access to `Content` (needed to be able to udpate the repository)
-- Where can this GitHub App be installed: `Only on this account`
-- And Create
-- then you must
-  - collect the AppID
-  - Generate (and collect) a private key (file)
-- Go to the left tab "Install App"
-  - Click on "Install"
-  - On Repository access, select "Only select repositories", and select the goliac-team's repository
-
-We will set ip up in Goliac with
-- `GOLIAC_GITHUB_TEAM_APP_ID` environment variable
-- `GOLIAC_GITHUB_TEAM_APP_PRIVATE_KEY_FILE` environment variable
-
-### Admin GitHub App
-
-If you already created a Github app (when following the installation instructions), you can use it, but remove the repository access
-
-Else you need to
-- Register new GitHub App
-  - in your profile settings, go to `Developer settings`/`GitHub Apps`
-  - Click on `New GitHub App`
-- Give basic information:
-  - GitHub App  name can be `<yourorg>-goliac-app` (it will be used in the rulesets later)
-  - Homepage URL can be `https://github.com/goliac-project/goliac`
-  - Disable the active Webhook
-- Under Repository permissions
-  - Give Read/Write access to `Administration`
-- Under Organization permissions
-  - Give Read/Write access to `Administration`
-  - Give Read/Write access to `Members`
-- Where can this GitHub App be installed: `Only on this account`
-- And Create
-- then you must
-  - collect the AppID
-  - Generate (and collect) a private key (file)
-- Go to the left tab "Install App"
-  - Click on "Install"
-  - On Repository access, select "All repositories" (except if you are doing a test and want to select the repositories to manage)
-
-We will set ip up in Goliac with
-- `GOLIAC_GITHUB_APP_ID` environment variable
-- `GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE` environment variable
-
-
 ## Networking
 
 ### Outbond connections
@@ -128,11 +65,11 @@ By default Goliac will logs
 - in text format (you can change it via `GOLIAC_LOGRUS_FORMAT` to `json`)
 - as info (you can change it via `GOLIAC_LOGRUS_LEVEL` to `warn` or `error`)
 
-Intentionally, with the (default) info level, Goliac will output command it is running, with some PII informations (name of the author of the change, some information on the changes. you can check the `internal/engine/goliac_reconciliator.go` for more details, especially all `logrus.WithFields` code). It is the intented behaviour to be able to collect what Goliac is doing.
+Intentionally, with the (default) info level, Goliac will output command it is running, with some PII informations (some information on the changes. you can check the `internal/engine/goliac_reconciliator.go` for more details, especially all `logrus.WithFields` code). It is the intented behaviour to be able to collect what Goliac is doing.
 
 It will output something like
 ```
-time="2024-11-10T04:03:14-05:00" level=info msg="teamslug: a_github_team, username: a_username_githubid, role: member" author=author_of_the_commit command=update_team_add_member dryrun=false
+time="2024-11-10T04:03:14-05:00" level=info msg="teamslug: a_github_team, username: a_username_githubid, role: member" command=update_team_add_member dryrun=false
 ```
 
 If you want to restrict this behaviour, you can change the log level (to `warn` or `error`), and you can still keep the audit feature of Goliac, by reviewing the Git history of your teams repository (in Github)

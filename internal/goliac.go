@@ -74,8 +74,8 @@ func NewGoliacImpl() (Goliac, error) {
 	localGithubClient, err := github.NewGitHubClientImpl(
 		config.Config.GithubServer,
 		config.Config.GithubAppOrganization,
-		config.Config.GithubTeamAppID,
-		config.Config.GithubTeamAppPrivateKeyFile,
+		config.Config.GithubAppID,
+		config.Config.GithubAppPrivateKeyFile,
 		config.Config.GithubPersonalAccessToken,
 	)
 	if err != nil {

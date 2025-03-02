@@ -1,3 +1,7 @@
+## Goliac v0.15.8
+
+- default branch bugfixes: when the repo is empty, and when the Github App doesn't have content access
+
 ## Goliac v0.15.7
 
 - allow to use a PAT (Personal Access Token) to run Goliac (in particular useful to scaffold)
