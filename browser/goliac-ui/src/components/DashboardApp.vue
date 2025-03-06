@@ -256,11 +256,11 @@
                         value: status.nbUsersExternal,
                     },
                     {
-                        key: "Nb Teams",
+                        key: "Nb Managed Teams",
                         value: status.nbTeams,
                     },
                     {
-                        key: "Nb Repositories",
+                        key: "Nb Managed Repositories",
                         value: status.nbRepos
                     },
                 ]

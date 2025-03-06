@@ -32,6 +32,103 @@ Goliac use a [GitOps](https://www.redhat.com/en/topics/devops/what-is-gitops) ap
 - each change you want to bring is done via a Github Pull Request, that needs to be reviewed and validated, and can be auditing via the Git commit history
 - each team can change part of the `goliac-teams` structure they own (a sub directory)
 
+### Opinionated but flexible
+
+Goliac is opinionated in the way it works, but it is also flexible:
+- you import your users (manually or via an external source, like Github SAML integration)
+- you group them into teams (see below)
+- you define repository and give them a team owner (and only one)
+- other team can be "invited" to have read or read-write access to repos (owned by a specific team)
+
+![goliac teams and ownership](images/owners.png)
+
+On the disk it translate to a hierarchy of yaml files like:
+
+```
+goliac-teams
+├── teams
+│   ├── teamA
+│   │   ├── team.yaml <- the definition of team1
+│   │   ├── repo1.yaml
+│   │   └── repo2.yaml
+│   └── teamB
+│       ├── team.yaml <- the definition of team2
+│       └── repo3.yaml
+```
+
+where a `team.yaml` looks like
+
+```yaml
+apiVersion: v1
+kind: Team
+name: teamA
+spec:
+  owners:
+    - user1@alayacare.com
+    - user2@alayacare.com
+ ```
+
+ and a `repo.yaml` looks like
+ 
+```yaml
+apiVersion: v1
+kind: Repository
+name: repo1
+```
+
+### Giving access to a repository
+
+You can give access to a repository to a team by editing a repository yaml file.
+
+![goliac teams and ownership](images/ownersAndReaders.png)
+
+
+For example to give read access to `teamA` to `repo3`, you can edit `repo3.yaml` like:
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: repo3
+spec:
+  readers:
+    - teamA
+```
+
+The nice thing is that:
+1. you can do it editing and submitting this change via a Pull Request (GitOps)
+2. IT do not need to be in the loop, *team B* can approve itself the PR (with the magic of CODEOWNERS file)
+
+
+### Creating new repositories
+
+You can create a new repository by creating a new yaml file into your team directory, via a Pull Request, and ask a colleague for a review.
+
+![new repository PR](images/newRepository.png)
+
+Note: the colleague must be in the team that owns the repository, and in the `owners` section of the team. Usually owners are PM, or tech leads.
+
+
+
+### Enforcing security rules
+
+Goliac allows you to enforce security rules across your Github organization, via [Github Rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets). You can define global rules that will be applied to all repositories, or to a subset of repositories.
+
+To do so, you can add rulesets into the main `goliac.yaml` file, and add some files into the `rulesets` directory:
+
+```
+goliac-teams
+├── goliac.yaml
+├── rulesets
+│   └── default.yaml
+├── teams
+│   ├── teamA
+│   │   ├── team.yaml <- the definition of team1
+│   │   ├── repo1.yaml
+│   │   └── repo2.yaml
+│   └── teamB
+│       ├── team.yaml <- the definition of team2
+│       └── repo3.yaml
+```
 
 ## Security friendly
 
