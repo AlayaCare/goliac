@@ -1,3 +1,7 @@
+## Goliac v0.15.9
+
+- bugfix: removing twice the same user
+
 ## Goliac v0.15.8
 
 - default branch bugfixes: when the repo is empty, and when the Github App doesn't have content access
