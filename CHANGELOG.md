@@ -1,3 +1,7 @@
+## Goliac v0.15.11
+
+- bugfix when comparing team parent name (slug vs real name)
+
 ## Goliac v0.15.10
 
 - bugfix: removing twice the same user

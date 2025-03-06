@@ -160,7 +160,8 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, errorCo
 		}
 		if v.ParentTeam != nil {
 			if parent, ok := ghTeamsPerId[*v.ParentTeam]; ok {
-				team.ParentTeam = &parent.Name
+				parentTeam := slug.Make(parent.Name)
+				team.ParentTeam = &parentTeam
 			}
 		}
 
