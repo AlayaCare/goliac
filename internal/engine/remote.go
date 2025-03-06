@@ -2356,13 +2356,22 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, errorColl
 	if team, ok := g.teams[teamslug]; ok {
 		members := team.Members
 		found := false
-		for i, m := range members {
-			if m == username {
-				found = true
-				members = append(members[:i], members[i+1:]...)
-			}
+		// to be sure to remove all the members with the same username
+		// we create a map with the members and then we remove the username
+		membersMap := make(map[string]bool)
+		for _, m := range members {
+			membersMap[m] = true
+		}
+		if _, ok := membersMap[username]; ok {
+			found = true
+			delete(membersMap, username)
 		}
 		if found {
+			// we recreate the members slice
+			members = make([]string, 0, len(membersMap))
+			for m := range membersMap {
+				members = append(members, m)
+			}
 			g.teams[teamslug].Members = members
 		}
 	}
