@@ -1,3 +1,7 @@
+## Goliac v0.15.10
+
+- bugfix: removing twice the same user
+
 ## Goliac v0.15.9
 
 - update documentation
