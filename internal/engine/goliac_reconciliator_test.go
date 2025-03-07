@@ -63,7 +63,7 @@ func (m *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
 	return nil
 }
-func (m *GoliacLocalMock) UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, accesstoken string, branch string, tagname string) error {
+func (m *GoliacLocalMock) UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, reposToCreate map[string]*entity.Repository, accesstoken string, branch string, tagname string) error {
 	return nil
 }
 func (m *GoliacLocalMock) SyncUsersAndTeams(ctx context.Context, repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool {
@@ -218,7 +218,7 @@ func (r *ReconciliatorListenerRecorder) UpdateTeamSetParent(ctx context.Context,
 func (r *ReconciliatorListenerRecorder) DeleteTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string) {
 	r.TeamDeleted[teamslug] = true
 }
-func (r *ReconciliatorListenerRecorder) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string) {
+func (r *ReconciliatorListenerRecorder) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string, githubToken *string) {
 	r.RepositoryCreated[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {

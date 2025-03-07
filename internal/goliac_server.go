@@ -51,6 +51,8 @@ type GoliacServer interface {
 	GetRepository(app.GetRepositoryParams) middleware.Responder
 	GetStatistics(app.GetStatiticsParams) middleware.Responder
 	GetUnmanaged(app.GetUnmanagedParams) middleware.Responder
+
+	PostExternalCreateRepository(app.PostExternalCreateRepositoryParams) middleware.Responder
 }
 
 type GoliacServerImpl struct {
@@ -623,6 +625,34 @@ func (g *GoliacServerImpl) PostResync(params app.PostResyncParams) middleware.Re
 	return app.NewPostResyncOK()
 }
 
+func (g *GoliacServerImpl) PostExternalCreateRepository(params app.PostExternalCreateRepositoryParams) middleware.Responder {
+	if params.Body.Visibility != "private" && params.Body.Visibility != "public" && params.Body.Visibility != "internal" {
+		message := fmt.Sprintf("Invalid visibility: %s", params.Body.Visibility)
+		return app.NewPostExternalCreateRepositoryDefault(400).WithPayload(&models.Error{Message: &message})
+	}
+	errorCollector := observability.NewErrorCollection()
+
+	g.goliac.CreateRepository(
+		params.HTTPRequest.Context(),
+		errorCollector,
+		osfs.New("/"),
+		params.Body.GithubToken,
+		params.Body.RepositoryName,
+		params.Body.TeamName,
+		params.Body.Visibility,
+		params.Body.DefaultBranch,
+		config.Config.ServerGitRepository,
+		config.Config.ServerGitBranch,
+	)
+
+	if errorCollector.HasErrors() {
+		message := fmt.Sprintf("Error when creating repository: %s", errorCollector.Errors[0])
+		return app.NewPostExternalCreateRepositoryDefault(500).WithPayload(&models.Error{Message: &message})
+	}
+
+	return app.NewPostExternalCreateRepositoryOK()
+}
+
 func (g *GoliacServerImpl) Serve() {
 	var wg sync.WaitGroup
 	stopCh := make(chan struct{})
@@ -790,6 +820,8 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.AppGetTeamHandler = app.GetTeamHandlerFunc(g.GetTeam)
 	api.AppGetRepositoriesHandler = app.GetRepositoriesHandlerFunc(g.GetRepositories)
 	api.AppGetRepositoryHandler = app.GetRepositoryHandlerFunc(g.GetRepository)
+
+	api.AppPostExternalCreateRepositoryHandler = app.PostExternalCreateRepositoryHandlerFunc(g.PostExternalCreateRepository)
 
 	server := restapi.NewServer(api)
 

@@ -54,7 +54,7 @@ type GoliacLocalGit interface {
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
 	UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error
 	// whenever repos are not deleted but archived, or need to be renamed
-	UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, accesstoken string, branch string, tagname string) error
+	UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, reposToCreate map[string]*entity.Repository, accesstoken string, branch string, tagname string) error
 	// whenever the users list is changing, reload users and teams, and commit them
 	// (force will bypass the max_changesets check)
 	// return true if some changes were done
@@ -352,7 +352,7 @@ func (g *GoliacLocalImpl) buildTeamPath(teamname string) string {
 	return g.buildTeamPath(*team.ParentTeam) + "/" + teamname
 }
 
-func (g *GoliacLocalImpl) UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, accesstoken string, branch string, tagname string) error {
+func (g *GoliacLocalImpl) UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, reposToCreate map[string]*entity.Repository, accesstoken string, branch string, tagname string) error {
 	if g.repo == nil {
 		return fmt.Errorf("git repository not cloned")
 	}
@@ -470,6 +470,44 @@ func (g *GoliacLocalImpl) UpdateRepos(reposToArchiveList []string, reposToRename
 		}
 
 		_, err = w.Commit("renaming repositories", &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "Goliac",
+				Email: config.Config.GoliacEmail,
+				When:  time.Now(),
+			},
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(reposToCreate) != 0 {
+
+		for directoryPath, repository := range reposToCreate {
+			newRepository := *repository
+
+			filename := filepath.Join(directoryPath, newRepository.Name+".yaml")
+			file, err := w.Filesystem.Create(filename)
+			if err != nil {
+				return fmt.Errorf("not able to create file %s: %v", filename, err)
+			}
+			defer file.Close()
+
+			encoder := yaml.NewEncoder(file)
+			encoder.SetIndent(2)
+			err = encoder.Encode(&newRepository)
+			if err != nil {
+				return fmt.Errorf("not able to write to file %s: %v", filename, err)
+			}
+
+			_, err = w.Add(filename)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = w.Commit("creating repositories", &git.CommitOptions{
 			Author: &object.Signature{
 				Name:  "Goliac",
 				Email: config.Config.GoliacEmail,

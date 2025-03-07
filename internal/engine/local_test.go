@@ -732,7 +732,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 		}
 
 		// archive the repository 'repo1'
-		err = g.UpdateRepos([]string{"repo1"}, map[string]*entity.Repository{}, "none", "master", "foobar")
+		err = g.UpdateRepos([]string{"repo1"}, map[string]*entity.Repository{}, map[string]*entity.Repository{}, "none", "master", "foobar")
 		assert.Nil(t, err)
 
 		// check the content of the 'archived/repo1.yaml' file

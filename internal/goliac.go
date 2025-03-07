@@ -46,6 +46,8 @@ type Goliac interface {
 	// flush remote cache
 	FlushCache()
 
+	CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, githubToken, newRepositoryName, team, visibility, newRepositorydefaultBranch string, repositoryUrl, branch string)
+
 	GetLocal() engine.GoliacLocalResources
 	GetRemote() engine.GoliacRemoteResources
 }
@@ -120,6 +122,71 @@ func (g *GoliacImpl) SetRemoteObservability(feedback observability.RemoteObserva
 
 func (g *GoliacImpl) FlushCache() {
 	g.remote.FlushCache()
+}
+
+func (g *GoliacImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, githubToken, newRepositoryName, team, visibility, newRepositoryDefaultBranch string, repositoryUrl, branch string) {
+	g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, errorCollector)
+	defer g.local.Close(fs)
+	if errorCollector.HasErrors() {
+		return
+	}
+	// sanity check
+	// checking the team exists and the reposirory doesn't (yet)
+	lTeam := g.local.Teams()[team]
+	if lTeam == nil {
+		errorCollector.AddError(fmt.Errorf("team %s not found", team))
+		return
+	}
+	if g.local.Repositories()[newRepositoryName] != nil {
+		errorCollector.AddError(fmt.Errorf("repository %s already exists", newRepositoryName))
+		return
+	}
+
+	accessToken, err := g.localGithubClient.GetAccessToken(ctx)
+	if err != nil {
+		errorCollector.AddError(fmt.Errorf("error when getting access token: %v", err))
+		return
+	}
+
+	// first create the repository on github
+
+	g.remote.CreateRepository(
+		ctx,
+		errorCollector,
+		false,
+		newRepositoryName,
+		newRepositoryName,
+		visibility,
+		[]string{team},
+		[]string{},
+		map[string]bool{},
+		newRepositoryDefaultBranch,
+		&githubToken,
+	)
+
+	if errorCollector.HasErrors() {
+		return
+	}
+
+	// now we have to add the repository to the local cache and to the remote goliac-teams repository
+	// add the repository to the local cache
+	repo := &entity.Repository{}
+	repo.Name = newRepositoryName
+	repo.Spec.Visibility = visibility
+	repo.Spec.Writers = []string{}
+	repo.Spec.Readers = []string{}
+
+	err = g.local.UpdateRepos(
+		[]string{},                      // to archive
+		map[string]*entity.Repository{}, // to rename
+		map[string]*entity.Repository{newRepositoryName: repo}, // to create
+		accessToken,
+		branch,
+		GOLIAC_GIT_TAG)
+
+	if err != nil {
+		errorCollector.AddError(fmt.Errorf("error when updating repos: %v", err))
+	}
 }
 
 func (g *GoliacImpl) Apply(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string) *engine.UnmanagedResources {
@@ -236,7 +303,9 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 			"allow_rebase_merge":     false, // allow rebase-merging pull requests
 			"allow_squash_merge":     true,  // allow squash-merging pull requests
 			"delete_branch_on_merge": true,  // automatically deleting head branches when pull requests are merged
-		})
+		},
+		nil,
+	)
 	if err != nil {
 		return err
 	}
@@ -269,7 +338,8 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 			//"required_approving_review_count": 1   // Number of approvals required. Set this to 1 for one review.
 			//},
 			"restrictions": nil,
-		})
+		},
+		nil)
 	return err
 }
 
@@ -392,7 +462,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, errorCollector *o
 		for reponame := range reposToArchive {
 			reposToArchiveList = append(reposToArchiveList, reponame)
 		}
-		err = g.local.UpdateRepos(reposToArchiveList, reposToRename, accessToken, branch, GOLIAC_GIT_TAG)
+		err = g.local.UpdateRepos(reposToArchiveList, reposToRename, map[string]*entity.Repository{}, accessToken, branch, GOLIAC_GIT_TAG)
 		if err != nil {
 			return unmanaged, fmt.Errorf("error when archiving repos: %v", err)
 		}

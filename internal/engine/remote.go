@@ -112,7 +112,7 @@ type GHESInfo struct {
 }
 
 func getGHESVersion(ctx context.Context, client github.GitHubClient) (*GHESInfo, error) {
-	body, err := client.CallRestAPI(ctx, "/api/v3", "", "GET", nil)
+	body, err := client.CallRestAPI(ctx, "/api/v3", "", "GET", nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ type OrgInfo struct {
 }
 
 func getOrgInfo(ctx context.Context, orgname string, client github.GitHubClient) (*OrgInfo, error) {
-	body, err := client.CallRestAPI(ctx, "/orgs/"+orgname, "", "GET", nil)
+	body, err := client.CallRestAPI(ctx, "/orgs/"+orgname, "", "GET", nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -820,6 +820,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 		fmt.Sprintf("/orgs/%s/installations", config.Config.GithubAppOrganization),
 		"page=1&per_page=30",
 		"GET",
+		nil,
 		nil)
 
 	if err != nil {
@@ -843,6 +844,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 				fmt.Sprintf("/orgs/%s/installations", config.Config.GithubAppOrganization),
 				fmt.Sprintf("page=%d&per_page=30", i),
 				"GET",
+				nil,
 				nil)
 
 			if err != nil {
@@ -1119,6 +1121,7 @@ func (g *GoliacRemoteImpl) loadTeamRepos(ctx context.Context, repository string)
 		"/repos/"+config.Config.GithubAppOrganization+"/"+repository+"/teams",
 		"",
 		"GET",
+		nil,
 		nil)
 	if err != nil {
 		return nil, fmt.Errorf("not able to list teams for repo %s: %v", repository, err)
@@ -1758,6 +1761,7 @@ func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, errorCollector *obser
 			"",
 			"POST",
 			g.prepareRuleset(ruleset),
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to add ruleset to org: %v. %s", err, string(body)))
@@ -1779,6 +1783,7 @@ func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, errorCollector *ob
 			"",
 			"PUT",
 			g.prepareRuleset(ruleset),
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to update ruleset %d to org: %v. %s", ruleset.Id, err, string(body)))
@@ -1799,6 +1804,7 @@ func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, errorCollector *ob
 			fmt.Sprintf("/orgs/%s/rulesets/%d", config.Config.GithubAppOrganization, rulesetid),
 			"",
 			"DELETE",
+			nil,
 			nil,
 		)
 		if err != nil {
@@ -1826,6 +1832,7 @@ func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, errorCollec
 			"",
 			"POST",
 			g.prepareRuleset(ruleset),
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to add ruleset to repository: %v. %s", err, string(body)))
@@ -1849,6 +1856,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, errorCol
 			"",
 			"PUT",
 			g.prepareRuleset(ruleset),
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to update ruleset %d to repository: %v. %s", ruleset.Id, err, string(body)))
@@ -1871,6 +1879,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, errorCol
 			fmt.Sprintf("/repos/%s/%s/rulesets/%d", config.Config.GithubAppOrganization, reponame, rulesetid),
 			"",
 			"DELETE",
+			nil,
 			nil,
 		)
 		if err != nil {
@@ -2134,6 +2143,7 @@ func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, errorCollector *obs
 			"",
 			"PUT",
 			map[string]interface{}{"role": "member"},
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to add user to org: %v. %s", err, string(body)))
@@ -2153,6 +2163,7 @@ func (g *GoliacRemoteImpl) RemoveUserFromOrg(ctx context.Context, errorCollector
 			fmt.Sprintf("/orgs/%s/memberships/%s", config.Config.GithubAppOrganization, ghuserid),
 			"",
 			"DELETE",
+			nil,
 			nil,
 		)
 		if err != nil {
@@ -2188,6 +2199,7 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, errorCollector *obser
 			"",
 			"POST",
 			params,
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to create team: %v. %s", err, string(body)))
@@ -2209,6 +2221,7 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, errorCollector *obser
 				"",
 				"PUT",
 				map[string]interface{}{"role": "member"},
+				nil,
 			)
 			if err != nil {
 				errorCollector.AddError(fmt.Errorf("failed to add team member: %v. %s", err, string(body)))
@@ -2237,6 +2250,7 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, errorCollect
 			"",
 			"PUT",
 			map[string]interface{}{"role": role},
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to add team member: %v. %s", err, string(body)))
@@ -2285,6 +2299,7 @@ func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, errorColl
 			"",
 			"PUT",
 			map[string]interface{}{"role": role},
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to update team member: %v. %s", err, string(body)))
@@ -2346,6 +2361,7 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, errorColl
 			"",
 			"DELETE",
 			nil,
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to remove team member: %v. %s", err, string(body)))
@@ -2387,6 +2403,7 @@ func (g *GoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, errorCollect
 			"",
 			"PATCH",
 			map[string]interface{}{"parent_team_id": parentTeam},
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to set parent team: %v. %s", err, string(body)))
@@ -2404,6 +2421,7 @@ func (g *GoliacRemoteImpl) DeleteTeam(ctx context.Context, errorCollector *obser
 			fmt.Sprintf("/orgs/%s/teams/%s", config.Config.GithubAppOrganization, teamslug),
 			"",
 			"DELETE",
+			nil,
 			nil,
 		)
 		if err != nil {
@@ -2433,7 +2451,7 @@ boolProperties are:
 - allow_update_branch
 - ...
 */
-func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string) {
+func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string, githubToken *string) {
 	repoId := 0
 	repoRefId := reponame
 	// create repository
@@ -2455,6 +2473,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 			"",
 			"POST",
 			props,
+			githubToken, // if nil, we use the default Goliac token
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to create repository: %v. %s", err, string(body)))
@@ -2493,6 +2512,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 				"",
 				"PUT",
 				map[string]interface{}{"permission": "pull"},
+				nil, // we keep the default Goliac token
 			)
 			if err != nil {
 				errorCollector.AddError(fmt.Errorf("failed to create repository (and add members): %v. %s", err, string(body)))
@@ -2519,6 +2539,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 				"",
 				"PUT",
 				map[string]interface{}{"permission": "push"},
+				nil, // we keep the default Goliac token
 			)
 			if err != nil {
 				errorCollector.AddError(fmt.Errorf("failed to create repository (and add members): %v. %s", err, string(body)))
@@ -2548,6 +2569,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, er
 			"",
 			"PUT",
 			map[string]interface{}{"permission": permission},
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to add team access: %v. %s", err, string(body)))
@@ -2580,6 +2602,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context,
 			"",
 			"PUT",
 			map[string]interface{}{"permission": permission},
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to add team access: %v. %s", err, string(body)))
@@ -2612,6 +2635,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context,
 			"",
 			"DELETE",
 			nil,
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to remove team access: %v. %s", err, string(body)))
@@ -2642,6 +2666,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, e
 			"",
 			"PATCH",
 			map[string]interface{}{propertyName: propertyValue},
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to update repository %s setting: %v. %s", propertyName, err, string(body)))
@@ -2669,6 +2694,7 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, 
 			"",
 			"PUT",
 			map[string]interface{}{"permission": permission},
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to set repository collaborator: %v. %s", err, string(body)))
@@ -2693,6 +2719,7 @@ func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, error
 			fmt.Sprintf("repos/%s/%s/collaborators/%s", config.Config.GithubAppOrganization, reponame, githubid),
 			"",
 			"DELETE",
+			nil,
 			nil,
 		)
 		if err != nil {
@@ -2724,6 +2751,7 @@ func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, errorCollector 
 			"",
 			"DELETE",
 			nil,
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to delete repository: %v. %s", err, string(body)))
@@ -2748,6 +2776,7 @@ func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, errorCollector 
 			"",
 			"PATCH",
 			map[string]interface{}{"name": newname},
+			nil,
 		)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to rename the repository %s (to %s): %v. %s", reponame, newname, err, string(body)))
