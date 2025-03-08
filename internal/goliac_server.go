@@ -632,7 +632,7 @@ func (g *GoliacServerImpl) PostExternalCreateRepository(params app.PostExternalC
 	}
 	errorCollector := observability.NewErrorCollection()
 
-	g.goliac.CreateRepository(
+	g.goliac.ExternalCreateRepository(
 		params.HTTPRequest.Context(),
 		errorCollector,
 		osfs.New("/"),

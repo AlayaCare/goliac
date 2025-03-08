@@ -105,6 +105,7 @@ type GoliacRemoteImpl struct {
 	isEnterprise          bool
 	feedback              observability.RemoteObservability
 	loadTeamsMutex        sync.Mutex
+	actionMutex           sync.Mutex
 }
 
 type GHESInfo struct {
@@ -310,7 +311,16 @@ func (g *GoliacRemoteImpl) AppIds(ctx context.Context) map[string]int {
 			g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
-	return g.appIds
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// copy the map to a safe one
+	var rAppIds = make(map[string]int)
+	for k, v := range g.appIds {
+		rAppIds[k] = v
+	}
+	return rAppIds
 }
 
 func (g *GoliacRemoteImpl) Users(ctx context.Context) map[string]string {
@@ -321,7 +331,16 @@ func (g *GoliacRemoteImpl) Users(ctx context.Context) map[string]string {
 			g.ttlExpireUsers = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
-	return g.users
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// copy the map to a safe one
+	var rUsers = make(map[string]string)
+	for k, v := range g.users {
+		rUsers[k] = v
+	}
+	return rUsers
 }
 
 func (g *GoliacRemoteImpl) TeamSlugByName(ctx context.Context) map[string]string {
@@ -333,7 +352,15 @@ func (g *GoliacRemoteImpl) TeamSlugByName(ctx context.Context) map[string]string
 			g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
-	return g.teamSlugByName
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// copy the map to a safe one
+	var rTeamSlugByName = make(map[string]string)
+	for k, v := range g.teamSlugByName {
+		rTeamSlugByName[k] = v
+	}
+	return rTeamSlugByName
 }
 
 /*
@@ -354,7 +381,16 @@ func (g *GoliacRemoteImpl) Teams(ctx context.Context, current bool) map[string]*
 			g.ttlExpireTeams = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
-	return g.teams
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// copy the map to a safe one
+	var rTeams = make(map[string]*GithubTeam)
+	for k, v := range g.teams {
+		rTeams[k] = v
+	}
+	return rTeams
 }
 
 func (g *GoliacRemoteImpl) Repositories(ctx context.Context) map[string]*GithubRepository {
@@ -366,7 +402,16 @@ func (g *GoliacRemoteImpl) Repositories(ctx context.Context) map[string]*GithubR
 			g.ttlExpireRepositories = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
-	return g.repositories
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// copy the map to a safe one
+	var rRepositories = make(map[string]*GithubRepository)
+	for k, v := range g.repositories {
+		rRepositories[k] = v
+	}
+	return rRepositories
 }
 
 func (g *GoliacRemoteImpl) TeamRepositories(ctx context.Context) map[string]map[string]*GithubTeamRepo {
@@ -385,7 +430,18 @@ func (g *GoliacRemoteImpl) TeamRepositories(ctx context.Context) map[string]map[
 			}
 		}
 	}
-	return g.teamRepos
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// copy the map to a safe one
+	var rTeamRepos = make(map[string]map[string]*GithubTeamRepo)
+	for k, v := range g.teamRepos {
+		rTeamRepos[k] = make(map[string]*GithubTeamRepo)
+		for k2, v2 := range v {
+			rTeamRepos[k][k2] = v2
+		}
+	}
+	return rTeamRepos
 }
 
 const listAllOrgMembers = `
@@ -888,6 +944,8 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 		g.ttlExpireAppIds = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
+	// the lock is here to avoid multiple calls to loadTeams (and it can be long)
+	// especially coming from the UI
 	g.loadTeamsMutex.Lock()
 	if time.Now().After(g.ttlExpireTeams) {
 		teams, teamSlugByName, err := g.loadTeams(ctx)
@@ -1116,36 +1174,47 @@ func (g *GoliacRemoteImpl) loadTeamRepos(ctx context.Context, repository string)
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#list-repository-teams
 	teamsrepo := make(map[string]*GithubTeamRepo)
 
-	data, err := g.client.CallRestAPI(
-		ctx,
-		"/repos/"+config.Config.GithubAppOrganization+"/"+repository+"/teams",
-		"",
-		"GET",
-		nil,
-		nil)
-	if err != nil {
-		return nil, fmt.Errorf("not able to list teams for repo %s: %v", repository, err)
-	}
-
 	var teams []TeamsRepoResponse
-	err = json.Unmarshal(data, &teams)
-	if err != nil {
-		return nil, fmt.Errorf("not able to unmarshall teams for repo %s: %v", repository, err)
-	}
 
-	for _, t := range teams {
-		permission := ""
-		switch t.Permission {
-		case "admin":
-			permission = "ADMIN"
-		case "push":
-			permission = "WRITE"
-		case "pull":
-			permission = "READ"
+	page := 1
+	for page == 1 || len(teams) == 30 {
+		data, err := g.client.CallRestAPI(
+			ctx,
+			"/repos/"+config.Config.GithubAppOrganization+"/"+repository+"/teams",
+			fmt.Sprintf("page=%d&per_page=30", page),
+			"GET",
+			nil,
+			nil)
+		if err != nil {
+			return nil, fmt.Errorf("not able to list teams for repo %s: %v", repository, err)
 		}
-		teamsrepo[t.Slug] = &GithubTeamRepo{
-			Name:       repository,
-			Permission: permission,
+
+		err = json.Unmarshal(data, &teams)
+		if err != nil {
+			return nil, fmt.Errorf("not able to unmarshall teams for repo %s: %v", repository, err)
+		}
+
+		for _, t := range teams {
+			permission := ""
+			switch t.Permission {
+			case "admin":
+				permission = "ADMIN"
+			case "push":
+				permission = "WRITE"
+			case "pull":
+				permission = "READ"
+			}
+			teamsrepo[t.Slug] = &GithubTeamRepo{
+				Name:       repository,
+				Permission: permission,
+			}
+		}
+
+		page++
+
+		// sanity check to avoid loops
+		if page > FORLOOP_STOP {
+			break
 		}
 	}
 
@@ -1769,6 +1838,9 @@ func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, errorCollector *obser
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	g.rulesets[ruleset.Name] = ruleset
 }
 
@@ -1791,6 +1863,9 @@ func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, errorCollector *ob
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	g.rulesets[ruleset.Name] = ruleset
 }
 
@@ -1812,6 +1887,9 @@ func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, errorCollector *ob
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
 
 	for _, r := range g.rulesets {
 		if r.Id == rulesetid {
@@ -1839,6 +1917,10 @@ func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, errorCollec
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	repo := g.repositories[reponame]
 	if repo != nil {
 		repo.RuleSets[ruleset.Name] = ruleset
@@ -1863,6 +1945,10 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, errorCol
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	repo := g.repositories[reponame]
 	if repo != nil {
 		repo.RuleSets[ruleset.Name] = ruleset
@@ -1887,6 +1973,9 @@ func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, errorCol
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
 
 	repo := g.repositories[reponame]
 	if repo != nil {
@@ -2004,6 +2093,9 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, er
 		branchprotection.Id = res.Data.CreateBranchProtectionRule.BranchProtectionRule.Id
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	repo.BranchProtections[branchprotection.Pattern] = branchprotection
 }
 
@@ -2086,6 +2178,9 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	repo := g.repositories[reponame]
 	if repo != nil {
 		repo.BranchProtections[branchprotection.Pattern] = branchprotection
@@ -2127,6 +2222,9 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	repo := g.repositories[reponame]
 	if repo != nil {
 		delete(repo.BranchProtections, branchprotection.Pattern)
@@ -2151,6 +2249,9 @@ func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, errorCollector *obs
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	g.users[ghuserid] = ghuserid
 }
 
@@ -2171,6 +2272,9 @@ func (g *GoliacRemoteImpl) RemoveUserFromOrg(ctx context.Context, errorCollector
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
 
 	delete(g.users, ghuserid)
 }
@@ -2231,6 +2335,9 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, errorCollector *obser
 		slugname = res.Slug
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	g.teams[slugname] = &GithubTeam{
 		Name:        teamname,
 		Slug:        slugname,
@@ -2257,6 +2364,9 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, errorCollect
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
 
 	if role == "maintainer" {
 		if team, ok := g.teams[teamslug]; ok {
@@ -2306,6 +2416,9 @@ func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, errorColl
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
 
 	if role == "maintainer" {
 		if team, ok := g.teams[teamslug]; ok {
@@ -2369,6 +2482,9 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, errorColl
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	if team, ok := g.teams[teamslug]; ok {
 		members := team.Members
 		found := false
@@ -2430,6 +2546,9 @@ func (g *GoliacRemoteImpl) DeleteTeam(ctx context.Context, errorCollector *obser
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	delete(g.teams, teamslug)
 	for name, slug := range g.teamSlugByName {
 		if slug == teamslug {
@@ -2490,6 +2609,9 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 		repoId = resp.Id
 		repoRefId = resp.NodeId
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
 
 	// update the repositories list
 	newRepo := &GithubRepository{
@@ -2577,6 +2699,9 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, er
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	teamsRepos := g.teamRepos[teamslug]
 	if teamsRepos == nil {
 		teamsRepos = make(map[string]*GithubTeamRepo)
@@ -2609,6 +2734,9 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context,
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
 
 	teamsRepos := g.teamRepos[teamslug]
 	if teamsRepos == nil {
@@ -2643,6 +2771,9 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context,
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	teamsRepos := g.teamRepos[teamslug]
 	if teamsRepos != nil {
 		delete(g.teamRepos[teamslug], reponame)
@@ -2674,6 +2805,9 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, e
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	if repo, ok := g.repositories[reponame]; ok {
 		if propertyName == "visibility" {
 			repo.Visibility = propertyValue.(string)
@@ -2702,6 +2836,9 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, 
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	if repo, ok := g.repositories[reponame]; ok {
 		if permission == "push" {
 			repo.ExternalUsers[githubid] = "WRITE"
@@ -2727,6 +2864,9 @@ func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, error
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
 
 	if repo, ok := g.repositories[reponame]; ok {
 		delete(repo.ExternalUsers, githubid)
@@ -2759,6 +2899,9 @@ func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, errorCollector 
 		}
 	}
 
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	// update the repositories list
 	if r, ok := g.repositories[reponame]; ok {
 		delete(g.repositoriesByRefId, r.RefId)
@@ -2782,6 +2925,9 @@ func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, errorCollector 
 			errorCollector.AddError(fmt.Errorf("failed to rename the repository %s (to %s): %v. %s", reponame, newname, err, string(body)))
 			return
 		}
+
+		g.actionMutex.Lock()
+		defer g.actionMutex.Unlock()
 
 		// update the repositories list
 		if r, ok := g.repositories[reponame]; ok {

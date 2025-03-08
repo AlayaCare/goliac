@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/goliac-project/goliac/internal/config"
@@ -46,19 +47,21 @@ type Goliac interface {
 	// flush remote cache
 	FlushCache()
 
-	CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, githubToken, newRepositoryName, team, visibility, newRepositorydefaultBranch string, repositoryUrl, branch string)
+	ExternalCreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, githubToken, newRepositoryName, team, visibility, newRepositorydefaultBranch string, repositoryUrl, branch string)
 
 	GetLocal() engine.GoliacLocalResources
 	GetRemote() engine.GoliacRemoteResources
 }
 
 type GoliacImpl struct {
-	local              engine.GoliacLocal
-	remote             engine.GoliacRemoteExecutor
-	localGithubClient  github.GitHubClient // github client for team repository operations
-	remoteGithubClient github.GitHubClient // github client for admin operations
-	repoconfig         *config.RepositoryConfig
-	feedback           observability.RemoteObservability // mostly used for UI progressbar
+	local                 engine.GoliacLocal
+	remote                engine.GoliacRemoteExecutor
+	localGithubClient     github.GitHubClient // github client for team repository operations
+	remoteGithubClient    github.GitHubClient // github client for admin operations
+	repoconfig            *config.RepositoryConfig
+	feedback              observability.RemoteObservability // mostly used for UI progressbar
+	actionMutex           sync.Mutex
+	cacheDirtyAfterAction bool
 }
 
 func NewGoliacImpl() (Goliac, error) {
@@ -89,12 +92,13 @@ func NewGoliacImpl() (Goliac, error) {
 	usersync.InitPlugins(remoteGithubClient)
 
 	return &GoliacImpl{
-		local:              engine.NewGoliacLocalImpl(),
-		remoteGithubClient: remoteGithubClient,
-		localGithubClient:  localGithubClient,
-		remote:             remote,
-		repoconfig:         &config.RepositoryConfig{},
-		feedback:           nil,
+		local:                 engine.NewGoliacLocalImpl(),
+		remoteGithubClient:    remoteGithubClient,
+		localGithubClient:     localGithubClient,
+		remote:                remote,
+		repoconfig:            &config.RepositoryConfig{},
+		feedback:              nil,
+		cacheDirtyAfterAction: false,
 	}, nil
 }
 
@@ -124,7 +128,12 @@ func (g *GoliacImpl) FlushCache() {
 	g.remote.FlushCache()
 }
 
-func (g *GoliacImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, githubToken, newRepositoryName, team, visibility, newRepositoryDefaultBranch string, repositoryUrl, branch string) {
+func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, githubToken, newRepositoryName, team, visibility, newRepositoryDefaultBranch string, repositoryUrl, branch string) {
+
+	// we need to lock the actionMutex to avoid concurrent actions
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
 	g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, errorCollector)
 	defer g.local.Close(fs)
 	if errorCollector.HasErrors() {
@@ -187,14 +196,28 @@ func (g *GoliacImpl) CreateRepository(ctx context.Context, errorCollector *obser
 	if err != nil {
 		errorCollector.AddError(fmt.Errorf("error when updating repos: %v", err))
 	}
+
+	// make the internal remote cache consistent
+	g.cacheDirtyAfterAction = true
 }
 
 func (g *GoliacImpl) Apply(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string) *engine.UnmanagedResources {
-	g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, errorCollector)
-	defer g.local.Close(fs)
-	if errorCollector.HasErrors() {
-		return nil
+	// warm up the cache
+
+	if len(g.local.Repositories()) == 0 || len(g.local.Teams()) == 0 || len(g.local.Users()) == 0 {
+
+		// we need to lock the actionMutex to avoid concurrent actions
+		g.actionMutex.Lock()
+		g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, errorCollector)
+		g.local.Close(fs)
+
+		// we can unlock the actionMutex for now
+		g.actionMutex.Unlock()
+		if errorCollector.HasErrors() {
+			return nil
+		}
 	}
+
 	if !strings.HasPrefix(repositoryUrl, "https://") &&
 		!strings.HasPrefix(repositoryUrl, "inmemory:///") { // <- only for testing purposes
 		errorCollector.AddError(fmt.Errorf("local mode is not supported for plan/apply, you must specify the https url of the remote team git repository. Check the documentation"))
@@ -219,6 +242,50 @@ func (g *GoliacImpl) Apply(ctx context.Context, errorCollector *observability.Er
 		}
 	}
 
+	// if an action was done, we need to reload the goliac organization
+	// to ensure that the cache is up to date
+	if g.cacheDirtyAfterAction {
+		g.remote.FlushCache()
+		g.cacheDirtyAfterAction = false
+	}
+
+	// loading github assets can be long
+	err = g.remote.Load(ctx, false)
+	if err != nil {
+		errorCollector.AddError(fmt.Errorf("error when loading data from Github: %v", err))
+		return nil
+	}
+
+	g.actionMutex.Lock()
+
+	// the next step is a bit tricky.
+	// we need to ensure that the cache is up to date before applying the changes
+	// so we need to reload the goliac organization if the cache is dirty
+	// and we need to check again if the cache is dirty after the load
+	// that's why there is a while loop here
+	for g.cacheDirtyAfterAction {
+		g.remote.FlushCache()
+		g.cacheDirtyAfterAction = false
+
+		g.actionMutex.Unlock()
+		err = g.remote.Load(ctx, false)
+		if err != nil {
+			errorCollector.AddError(fmt.Errorf("error when loading data from Github: %v", err))
+			return nil
+		}
+		g.actionMutex.Lock()
+	}
+
+	defer g.actionMutex.Unlock()
+	// load and validate the goliac organization (after github assets have been loaded)
+	g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, errorCollector)
+	defer g.local.Close(fs)
+
+	if errorCollector.HasErrors() {
+		return nil
+	}
+
+	// apply the changes to the github team repository
 	unmanaged := g.applyToGithub(ctx, dryrun, config.Config.GithubAppOrganization, teamreponame, branch, config.Config.SyncUsersBeforeApply, errorCollector)
 	for _, warn := range errorCollector.Warns {
 		logrus.Warn(warn)
@@ -345,17 +412,11 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 
 /*
 Apply the changes to the github team repository:
-  - load the data from github
   - sync users if needed (from external sources)
   - apply the changes
   - update the codeowners file
 */
 func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrganization string, teamreponame string, branch string, syncusersbeforeapply bool, errorCollector *observability.ErrorCollection) *engine.UnmanagedResources {
-	err := g.remote.Load(ctx, false)
-	if err != nil {
-		errorCollector.AddError(fmt.Errorf("error when loading data from Github: %v", err))
-		return nil
-	}
 
 	//
 	// prelude
