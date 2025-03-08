@@ -1,3 +1,8 @@
+## Goliac v0.16.0
+
+- introduce a CreateRepository endpoint
+- bugfix: support loading more than 30 teams per repository 
+
 ## Goliac v0.15.11
 
 - bugfix when comparing team parent name (slug vs real name)

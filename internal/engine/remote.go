@@ -416,18 +416,10 @@ func (g *GoliacRemoteImpl) Repositories(ctx context.Context) map[string]*GithubR
 
 func (g *GoliacRemoteImpl) TeamRepositories(ctx context.Context) map[string]map[string]*GithubTeamRepo {
 	if time.Now().After(g.ttlExpireTeamsRepos) {
-		if config.Config.GithubConcurrentThreads <= 1 {
-			teamsrepos, err := g.loadTeamReposNonConcurrently(ctx)
-			if err == nil {
-				g.teamRepos = teamsrepos
-				g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
-			}
-		} else {
-			teamsrepos, err := g.loadTeamReposConcurrently(ctx, config.Config.GithubConcurrentThreads)
-			if err == nil {
-				g.teamRepos = teamsrepos
-				g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
-			}
+		teamsrepos, err := g.loadTeamReposConcurrently(ctx, config.Config.GithubConcurrentThreads)
+		if err == nil {
+			g.teamRepos = teamsrepos
+			g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 		}
 	}
 	g.actionMutex.Lock()
@@ -1005,27 +997,15 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 	}
 
 	if time.Now().After(g.ttlExpireTeamsRepos) {
-		if config.Config.GithubConcurrentThreads <= 1 {
-			teamsrepos, err := g.loadTeamReposNonConcurrently(ctx)
-			if err != nil {
-				if !continueOnError {
-					return err
-				}
-				logrus.Debugf("Error loading teams-repos: %v", err)
-				retErr = fmt.Errorf("error loading teams-repos: %v", err)
+		teamsrepos, err := g.loadTeamReposConcurrently(ctx, config.Config.GithubConcurrentThreads)
+		if err != nil {
+			if !continueOnError {
+				return err
 			}
-			g.teamRepos = teamsrepos
-		} else {
-			teamsrepos, err := g.loadTeamReposConcurrently(ctx, config.Config.GithubConcurrentThreads)
-			if err != nil {
-				if !continueOnError {
-					return err
-				}
-				logrus.Debugf("Error loading teams-repos: %v", err)
-				retErr = fmt.Errorf("error loading teams-repos: %v", err)
-			}
-			g.teamRepos = teamsrepos
+			logrus.Debugf("Error loading teams-repos: %v", err)
+			retErr = fmt.Errorf("error loading teams-repos: %v", err)
 		}
+		g.teamRepos = teamsrepos
 		g.ttlExpireTeamsRepos = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
 	}
 
@@ -1034,41 +1014,6 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 	logrus.Debugf("Nb remote repositories: %d", len(g.repositories))
 
 	return retErr
-}
-
-func (g *GoliacRemoteImpl) loadTeamReposNonConcurrently(ctx context.Context) (map[string]map[string]*GithubTeamRepo, error) {
-	var childSpan trace.Span
-	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadTeamReposNonConcurrently")
-		defer childSpan.End()
-	}
-	logrus.Debug("loading teamReposNonConcurrently")
-	teamRepos := make(map[string]map[string]*GithubTeamRepo)
-
-	teamsPerRepo := make(map[string]map[string]*GithubTeamRepo)
-	for repository := range g.repositories {
-		repos, err := g.loadTeamRepos(ctx, repository)
-		if err != nil {
-			return teamRepos, err
-		}
-		if g.feedback != nil {
-			g.feedback.LoadingAsset("teams_repos", 1)
-		}
-		teamsPerRepo[repository] = repos
-	}
-
-	// we have all the teams per repo, now we need to invert the map
-	for repository, repos := range teamsPerRepo {
-		for team, repo := range repos {
-			if _, ok := teamRepos[team]; ok {
-				teamRepos[team][repository] = repo
-			} else {
-				teamRepos[team] = map[string]*GithubTeamRepo{repository: repo}
-			}
-		}
-	}
-
-	return teamRepos, nil
 }
 
 func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGoroutines int64) (map[string]map[string]*GithubTeamRepo, error) {
@@ -1093,6 +1038,9 @@ func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGor
 		repos    map[string]*GithubTeamRepo
 	}, len(g.repositories))
 
+	if maxGoroutines < 1 {
+		maxGoroutines = 1
+	}
 	// Create worker goroutines
 	for i := int64(0); i < maxGoroutines; i++ {
 		wg.Add(1)
