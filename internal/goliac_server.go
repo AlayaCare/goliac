@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sort"
 	"sync"
 	"syscall"
 	"time"
@@ -64,6 +65,7 @@ type GoliacServerImpl struct {
 	ready               bool // when the server has finished to load the local configuration
 	lastSyncTime        *time.Time
 	lastSyncError       error
+	lastSyncWarnings    string // all the warnings that happened during the last sync (sorted)
 	detailedErrors      []error
 	detailedWarnings    []observability.Warning
 	syncInterval        int64 // in seconds time remaining between 2 sync
@@ -779,6 +781,25 @@ func (g *GoliacServerImpl) triggerApply(ctx context.Context) {
 		if errorCollector.HasErrors() {
 			g.lastSyncError = errorCollector.Errors[len(errorCollector.Errors)-1]
 		}
+
+		// we want to log the warnings only if they are new
+		previousSyncWarnings := g.lastSyncWarnings
+		g.lastSyncWarnings = ""
+		warns := []string{}
+		for _, w := range errorCollector.Warns {
+			warns = append(warns, w.Error())
+		}
+		sort.Strings(warns)
+		for _, w := range warns {
+			g.lastSyncWarnings += w + "\n"
+		}
+
+		if previousSyncWarnings != g.lastSyncWarnings {
+			for _, w := range errorCollector.Warns {
+				logrus.Warn(w)
+			}
+		}
+
 		g.detailedErrors = errorCollector.Errors
 		g.detailedWarnings = errorCollector.Warns
 		// log the error only if it's a new one

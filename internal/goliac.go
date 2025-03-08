@@ -287,12 +287,6 @@ func (g *GoliacImpl) Apply(ctx context.Context, errorCollector *observability.Er
 
 	// apply the changes to the github team repository
 	unmanaged := g.applyToGithub(ctx, dryrun, config.Config.GithubAppOrganization, teamreponame, branch, config.Config.SyncUsersBeforeApply, errorCollector)
-	for _, warn := range errorCollector.Warns {
-		logrus.Warn(warn)
-	}
-	if errorCollector.HasErrors() {
-		return unmanaged
-	}
 
 	return unmanaged
 }

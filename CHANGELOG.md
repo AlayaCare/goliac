@@ -2,6 +2,8 @@
 
 - introduce a CreateRepository endpoint
 - bugfix: support loading more than 30 teams per repository 
+- logs warnings message only once (if they dont change)
+- bugfix: scaffold correctly archived repositories
 
 ## Goliac v0.15.11
 
