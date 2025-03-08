@@ -4,6 +4,7 @@
 - bugfix: support loading more than 30 teams per repository 
 - logs warnings message only once (if they dont change)
 - bugfix: scaffold correctly archived repositories
+- enhancement: discard from readers a team that is the repository owner
 
 ## Goliac v0.15.11
 

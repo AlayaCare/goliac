@@ -485,6 +485,10 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		}
 		readers := make([]string, 0)
 		for _, r := range lRepo.Spec.Readers {
+			// dont add the owner to the readers (if listed)
+			if lRepo.Owner != nil && *lRepo.Owner == r {
+				continue
+			}
 			readers = append(readers, slug.Make(r))
 		}
 
