@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/goliac-project/goliac/internal/config"
@@ -16,6 +17,7 @@ import (
 	"github.com/goliac-project/goliac/internal/github"
 	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/usersync"
+	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -135,10 +137,11 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 	defer g.actionMutex.Unlock()
 
 	g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, errorCollector)
-	defer g.local.Close(fs)
 	if errorCollector.HasErrors() {
 		return
 	}
+	g.local.Close(fs)
+
 	// sanity check
 	// checking the team exists and the reposirory doesn't (yet)
 	lTeams := g.local.Teams()
@@ -169,7 +172,51 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 		return
 	}
 
-	// first create the repository on github
+	// first create the Pull Request
+
+	repo := &entity.Repository{}
+	repo.ApiVersion = "v1"
+	repo.Kind = "Repository"
+	repo.Name = newRepositoryName
+	repo.Spec.Visibility = visibility
+	repo.Spec.DefaultBranchName = newRepositoryDefaultBranch
+	repo.Spec.Writers = []string{}
+	repo.Spec.Readers = []string{}
+
+	newBranchName := fmt.Sprintf("create_repository_%d", time.Now().Unix())
+
+	orgname, reponame, err := utils.ExtractOrgRepo(repositoryUrl)
+
+	if err != nil {
+		errorCollector.AddError(fmt.Errorf("error when extracting org and repo: %v", err))
+		return
+	}
+
+	// clone the goliac-teams repository
+	// and create a PR on behalf of the githubToken
+	tmpLocal := engine.NewGoliacLocalImpl()
+	err = tmpLocal.Clone(fs, githubToken, repositoryUrl, branch)
+	if err != nil {
+		errorCollector.AddError(fmt.Errorf("error when cloning the repository: %v", err))
+		return
+	}
+
+	defer tmpLocal.Close(fs)
+
+	pr, err := tmpLocal.UpdateReposViaPullRequest(
+		map[string]*entity.Repository{directoryPath: repo},
+		orgname,
+		reponame,
+		githubToken,
+		branch,
+		newBranchName,
+	)
+
+	if err != nil {
+		errorCollector.AddError(fmt.Errorf("error when creating the repository creation PR: %v", err))
+	}
+
+	// second let's create the repository
 
 	g.remote.CreateRepository(
 		ctx,
@@ -195,28 +242,20 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 		return
 	}
 
-	// now we have to add the repository to the local cache and to the remote goliac-teams repository
-	// add the repository to the local cache
-	repo := &entity.Repository{}
-	repo.ApiVersion = "v1"
-	repo.Kind = "Repository"
-	repo.Name = newRepositoryName
-	repo.Spec.Visibility = visibility
-	repo.Spec.DefaultBranchName = newRepositoryDefaultBranch
-	repo.Spec.Writers = []string{}
-	repo.Spec.Readers = []string{}
-
-	err = g.local.UpdateRepos(
-		[]string{},                      // to archive
-		map[string]*entity.Repository{}, // to rename
-		map[string]*entity.Repository{directoryPath: repo}, // to create
-		accessToken,
-		branch,
-		GOLIAC_GIT_TAG)
-
+	// let's merge the PR with the Goliac accesstoken
+	err = tmpLocal.MergePullRequest(pr, accessToken, branch)
 	if err != nil {
-		errorCollector.AddError(fmt.Errorf("error when updating repos: %v", err))
+		errorCollector.AddError(fmt.Errorf("error when merging the PR: %v", err))
+		return
 	}
+
+	// refresh the cache
+
+	g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, errorCollector)
+	if errorCollector.HasErrors() {
+		return
+	}
+	g.local.Close(fs)
 
 	// make the internal remote cache consistent
 	g.cacheDirtyAfterAction = true
@@ -534,7 +573,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, errorCollector *o
 		for reponame := range reposToArchive {
 			reposToArchiveList = append(reposToArchiveList, reponame)
 		}
-		err = g.local.UpdateRepos(reposToArchiveList, reposToRename, map[string]*entity.Repository{}, accessToken, branch, GOLIAC_GIT_TAG)
+		err = g.local.UpdateRepos(reposToArchiveList, reposToRename, accessToken, branch, GOLIAC_GIT_TAG)
 		if err != nil {
 			return unmanaged, fmt.Errorf("error when archiving repos: %v", err)
 		}

@@ -732,7 +732,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 		}
 
 		// archive the repository 'repo4' (that is not part of the cloned repository)
-		err = g.UpdateRepos([]string{"repo4"}, map[string]*entity.Repository{}, map[string]*entity.Repository{}, "none", "master", "foobar")
+		err = g.UpdateRepos([]string{"repo4"}, map[string]*entity.Repository{}, "none", "master", "foobar")
 		assert.Nil(t, err)
 
 		// check the content of the 'archived/repo1.yaml' file
@@ -741,39 +741,39 @@ func TestGoliacLocalImpl(t *testing.T) {
 		assert.Equal(t, "apiVersion: v1\nkind: Repository\nname: repo4\n", string(content))
 	})
 
-	t.Run("CreateRepos", func(t *testing.T) {
-		rootfs := memfs.New()
-		src, _ := rootfs.Chroot("/src")
-		target, _ := src.Chroot("/target")
+	// t.Run("CreateRepos", func(t *testing.T) {
+	// 	rootfs := memfs.New()
+	// 	src, _ := rootfs.Chroot("/src")
+	// 	target, _ := src.Chroot("/target")
 
-		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
-		assert.Nil(t, err)
-		assert.NotNil(t, repo)
-		assert.NotNil(t, clonedRepo)
+	// 	repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+	// 	assert.Nil(t, err)
+	// 	assert.NotNil(t, repo)
+	// 	assert.NotNil(t, clonedRepo)
 
-		// get commits
-		g := GoliacLocalImpl{
-			teams:         map[string]*entity.Team{},
-			repositories:  map[string]*entity.Repository{},
-			users:         map[string]*entity.User{},
-			externalUsers: map[string]*entity.User{},
-			rulesets:      map[string]*entity.RuleSet{},
-			repo:          clonedRepo,
-		}
+	// 	// get commits
+	// 	g := GoliacLocalImpl{
+	// 		teams:         map[string]*entity.Team{},
+	// 		repositories:  map[string]*entity.Repository{},
+	// 		users:         map[string]*entity.User{},
+	// 		externalUsers: map[string]*entity.User{},
+	// 		rulesets:      map[string]*entity.RuleSet{},
+	// 		repo:          clonedRepo,
+	// 	}
 
-		// create a new repository
-		newrepo := entity.Repository{}
-		newrepo.ApiVersion = "v1"
-		newrepo.Kind = "Repository"
-		newrepo.Name = "newrepo"
-		err = g.UpdateRepos([]string{}, map[string]*entity.Repository{}, map[string]*entity.Repository{"teams/github-admins": &newrepo}, "none", "master", "foobar")
-		assert.Nil(t, err)
+	// 	// create a new repository
+	// 	newrepo := entity.Repository{}
+	// 	newrepo.ApiVersion = "v1"
+	// 	newrepo.Kind = "Repository"
+	// 	newrepo.Name = "newrepo"
+	// 	err = g.UpdateRepos([]string{}, map[string]*entity.Repository{}, map[string]*entity.Repository{"teams/github-admins": &newrepo}, "none", "master", "foobar")
+	// 	assert.Nil(t, err)
 
-		// check the content of the 'archived/repo1.yaml' file
-		content, err := utils.ReadFile(target, "teams/github-admins/newrepo.yaml")
-		assert.Nil(t, err)
-		assert.Equal(t, "apiVersion: v1\nkind: Repository\nname: newrepo\n", string(content))
-	})
+	// 	// check the content of the 'archived/repo1.yaml' file
+	// 	content, err := utils.ReadFile(target, "teams/github-admins/newrepo.yaml")
+	// 	assert.Nil(t, err)
+	// 	assert.Equal(t, "apiVersion: v1\nkind: Repository\nname: newrepo\n", string(content))
+	// })
 
 	t.Run("UpdateAndCommitCodeOwners", func(t *testing.T) {
 		rootfs := memfs.New()

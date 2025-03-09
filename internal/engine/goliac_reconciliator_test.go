@@ -11,6 +11,7 @@ import (
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/entity"
 	"github.com/goliac-project/goliac/internal/observability"
+	"github.com/google/go-github/v55/github"
 	"github.com/gosimple/slug"
 	"github.com/stretchr/testify/assert"
 )
@@ -63,9 +64,16 @@ func (m *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
 	return nil
 }
-func (m *GoliacLocalMock) UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, reposToCreate map[string]*entity.Repository, accesstoken string, branch string, tagname string) error {
+func (m *GoliacLocalMock) UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, accesstoken string, branch string, tagname string) error {
 	return nil
 }
+func (m *GoliacLocalMock) UpdateReposViaPullRequest(reposToCreate map[string]*entity.Repository, orgname, reponame, accesstoken, baseBranch, newBranchName string) (*github.PullRequest, error) {
+	return nil, nil
+}
+func (m *GoliacLocalMock) MergePullRequest(pr *github.PullRequest, accesstoken, mainBranch string) error {
+	return nil
+}
+
 func (m *GoliacLocalMock) SyncUsersAndTeams(ctx context.Context, repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool {
 	return false
 }
