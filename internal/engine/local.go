@@ -53,7 +53,7 @@ type GoliacLocalGit interface {
 	LoadAndValidate(errorCollection *observability.ErrorCollection)
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
 	UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error
-	// whenever repos are not deleted but archived, or need to be renamed
+	// whenever repos are not deleted but archived [reponame], need to be renamed [directorypath:repo definition], or created [directorypath: repo definition]
 	UpdateRepos(reposToArchiveList []string, reposToRename map[string]*entity.Repository, reposToCreate map[string]*entity.Repository, accesstoken string, branch string, tagname string) error
 	// whenever the users list is changing, reload users and teams, and commit them
 	// (force will bypass the max_changesets check)

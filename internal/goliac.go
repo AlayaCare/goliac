@@ -141,11 +141,23 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 	}
 	// sanity check
 	// checking the team exists and the reposirory doesn't (yet)
-	lTeam := g.local.Teams()[team]
+	lTeams := g.local.Teams()
+	if lTeams == nil {
+		errorCollector.AddError(fmt.Errorf("teams not found"))
+		return
+	}
+	lTeam := lTeams[team]
 	if lTeam == nil {
 		errorCollector.AddError(fmt.Errorf("team %s not found", team))
 		return
 	}
+	directoryPath := lTeam.Name
+	for lTeam.ParentTeam != nil {
+		directoryPath = path.Join(*lTeam.ParentTeam, directoryPath)
+		lTeam = lTeams[*lTeam.ParentTeam]
+	}
+	directoryPath = path.Join("teams", directoryPath)
+
 	if g.local.Repositories()[newRepositoryName] != nil {
 		errorCollector.AddError(fmt.Errorf("repository %s already exists", newRepositoryName))
 		return
@@ -189,7 +201,7 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 	err = g.local.UpdateRepos(
 		[]string{},                      // to archive
 		map[string]*entity.Repository{}, // to rename
-		map[string]*entity.Repository{newRepositoryName: repo}, // to create
+		map[string]*entity.Repository{directoryPath: repo}, // to create
 		accessToken,
 		branch,
 		GOLIAC_GIT_TAG)
