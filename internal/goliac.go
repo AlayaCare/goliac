@@ -174,6 +174,7 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 	)
 
 	if errorCollector.HasErrors() {
+		g.cacheDirtyAfterAction = true
 		return
 	}
 
@@ -242,12 +243,7 @@ func (g *GoliacImpl) Apply(ctx context.Context, errorCollector *observability.Er
 		}
 	}
 
-	// if an action was done, we need to reload the goliac organization
-	// to ensure that the cache is up to date
-	if g.cacheDirtyAfterAction {
-		g.remote.FlushCache()
-		g.cacheDirtyAfterAction = false
-	}
+	g.cacheDirtyAfterAction = false
 
 	// loading github assets can be long
 	err = g.remote.Load(ctx, false)
@@ -261,7 +257,8 @@ func (g *GoliacImpl) Apply(ctx context.Context, errorCollector *observability.Er
 	// the next step is a bit tricky.
 	// we need to ensure that the cache is up to date before applying the changes
 	// so we need to reload the goliac organization if the cache is dirty
-	// and we need to check again if the cache is dirty after the load
+	// i.e. if an external action was done in between.
+	// And we need to check again if the cache is dirty after the load
 	// that's why there is a while loop here
 	for g.cacheDirtyAfterAction {
 		g.remote.FlushCache()
