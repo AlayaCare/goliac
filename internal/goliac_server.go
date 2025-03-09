@@ -628,6 +628,12 @@ func (g *GoliacServerImpl) PostResync(params app.PostResyncParams) middleware.Re
 }
 
 func (g *GoliacServerImpl) PostExternalCreateRepository(params app.PostExternalCreateRepositoryParams) middleware.Responder {
+	if params.Body.Visibility == "" {
+		params.Body.Visibility = "private"
+	}
+	if params.Body.DefaultBranch == "" {
+		params.Body.DefaultBranch = "main"
+	}
 	if params.Body.Visibility != "private" && params.Body.Visibility != "public" && params.Body.Visibility != "internal" {
 		message := fmt.Sprintf("Invalid visibility: %s", params.Body.Visibility)
 		return app.NewPostExternalCreateRepositoryDefault(400).WithPayload(&models.Error{Message: &message})

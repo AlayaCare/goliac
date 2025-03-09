@@ -29,11 +29,11 @@ post:
             x-nullable: false
           visibility:
             type: string
-            default: "private"
+            default: private
             x-nullable: false
           default_branch:
             type: string
-            default: "main"
+            default: main
             minLength: 1
             x-nullable: false
 
