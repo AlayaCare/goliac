@@ -731,14 +731,14 @@ func TestGoliacLocalImpl(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		// archive the repository 'repo1'
-		err = g.UpdateRepos([]string{"repo1"}, map[string]*entity.Repository{}, map[string]*entity.Repository{}, "none", "master", "foobar")
+		// archive the repository 'repo4' (that is not part of the cloned repository)
+		err = g.UpdateRepos([]string{"repo4"}, map[string]*entity.Repository{}, map[string]*entity.Repository{}, "none", "master", "foobar")
 		assert.Nil(t, err)
 
 		// check the content of the 'archived/repo1.yaml' file
-		content, err := utils.ReadFile(target, "archived/repo1.yaml")
+		content, err := utils.ReadFile(target, "archived/repo4.yaml")
 		assert.Nil(t, err)
-		assert.Equal(t, "apiVersion: v1\nkind: Repository\nname: repo1\n", string(content))
+		assert.Equal(t, "apiVersion: v1\nkind: Repository\nname: repo4\n", string(content))
 	})
 
 	t.Run("CreateRepos", func(t *testing.T) {
@@ -766,11 +766,11 @@ func TestGoliacLocalImpl(t *testing.T) {
 		newrepo.ApiVersion = "v1"
 		newrepo.Kind = "Repository"
 		newrepo.Name = "newrepo"
-		err = g.UpdateRepos([]string{}, map[string]*entity.Repository{}, map[string]*entity.Repository{"teams/team1": &newrepo}, "none", "master", "foobar")
+		err = g.UpdateRepos([]string{}, map[string]*entity.Repository{}, map[string]*entity.Repository{"teams/github-admins": &newrepo}, "none", "master", "foobar")
 		assert.Nil(t, err)
 
 		// check the content of the 'archived/repo1.yaml' file
-		content, err := utils.ReadFile(target, "teams/team1/newrepo.yaml")
+		content, err := utils.ReadFile(target, "teams/github-admins/newrepo.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, "apiVersion: v1\nkind: Repository\nname: newrepo\n", string(content))
 	})

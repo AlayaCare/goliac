@@ -520,6 +520,13 @@ func (g *GoliacLocalImpl) UpdateRepos(reposToArchiveList []string, reposToRename
 		}
 	}
 
+	// reloading the new local organization
+	errorCollection := observability.NewErrorCollection()
+	g.LoadAndValidateLocal(w.Filesystem, errorCollection)
+	if errorCollection.HasErrors() {
+		return fmt.Errorf("error reloading and validating the local organization: %v", errorCollection)
+	}
+
 	err = g.repo.Push(&git.PushOptions{
 		RemoteName: "origin",
 		Auth: &http.BasicAuth{

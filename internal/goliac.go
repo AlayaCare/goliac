@@ -180,7 +180,12 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 		visibility,
 		[]string{team},
 		[]string{},
-		map[string]bool{},
+		map[string]bool{
+			"delete_branch_on_merge": false,
+			"allow_update_branch":    false,
+			"archived":               false,
+			"allow_auto_merge":       true,
+		},
 		newRepositoryDefaultBranch,
 		&githubToken,
 	)
@@ -193,8 +198,11 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 	// now we have to add the repository to the local cache and to the remote goliac-teams repository
 	// add the repository to the local cache
 	repo := &entity.Repository{}
+	repo.ApiVersion = "v1"
+	repo.Kind = "Repository"
 	repo.Name = newRepositoryName
 	repo.Spec.Visibility = visibility
+	repo.Spec.DefaultBranchName = newRepositoryDefaultBranch
 	repo.Spec.Writers = []string{}
 	repo.Spec.Readers = []string{}
 
