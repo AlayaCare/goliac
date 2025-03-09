@@ -184,7 +184,7 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 			"delete_branch_on_merge": false,
 			"allow_update_branch":    false,
 			"archived":               false,
-			"allow_auto_merge":       true,
+			"allow_auto_merge":       false,
 		},
 		newRepositoryDefaultBranch,
 		&githubToken,
