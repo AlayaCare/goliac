@@ -26,7 +26,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
-	"golang.org/x/oauth2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -66,8 +65,7 @@ type GoliacLocalGit interface {
 	// Load and Validate from a local directory
 	LoadAndValidateLocal(fs billy.Filesystem, errorCollection *observability.ErrorCollection)
 
-	UpdateReposViaPullRequest(reposToCreate map[string]*entity.Repository, orgname, reponame, accesstoken, baseBranch, newBranchName string) (*github.PullRequest, error)
-	MergePullRequest(pr *github.PullRequest, accesstoken, mainBranch string) error
+	UpdateReposViaPullRequest(ctx context.Context, client LocalGithubClient, reposToCreate map[string]*entity.Repository, orgname, reponame, accesstoken, baseBranch, newBranchName string) (*github.PullRequest, error)
 }
 
 type GoliacLocalResources interface {
@@ -444,7 +442,8 @@ func (g *GoliacLocalImpl) UpdateRepos(reposToArchiveList []string, reposToRename
 
 	if len(reposToRename) != 0 {
 
-		for directoryPath, repository := range reposToRename {
+		for _, repository := range reposToRename {
+			directoryPath := repository.DirectoryPath
 			newRepository := *repository
 			newRepository.Name = repository.RenameTo
 			newRepository.RenameTo = ""
@@ -510,7 +509,7 @@ func (g *GoliacLocalImpl) UpdateRepos(reposToArchiveList []string, reposToRename
 	return g.PushTag(tagname, headRef.Hash(), accesstoken)
 }
 
-func (g *GoliacLocalImpl) UpdateReposViaPullRequest(reposToCreate map[string]*entity.Repository, orgname, reponame, accesstoken, baseBranch, newBranchName string) (*github.PullRequest, error) {
+func (g *GoliacLocalImpl) UpdateReposViaPullRequest(ctx context.Context, client LocalGithubClient, reposToCreate map[string]*entity.Repository, orgname, reponame, accesstoken, baseBranch, newBranchName string) (*github.PullRequest, error) {
 	if g.repo == nil {
 		return nil, fmt.Errorf("git repository not cloned")
 	}
@@ -580,61 +579,7 @@ func (g *GoliacLocalImpl) UpdateReposViaPullRequest(reposToCreate map[string]*en
 		return nil, fmt.Errorf("error pushing to remote: %v", err)
 	}
 
-	return createPullRequest(orgname, reponame, accesstoken, baseBranch, newBranchName, "Creating new repositories")
-}
-
-// Function to create a PR using GitHub API
-func createPullRequest(orgname, reponame, accesstoken, baseBranch, branch, title string) (*github.PullRequest, error) {
-
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accesstoken})
-	tc := oauth2.NewClient(ctx, ts)
-	client := github.NewClient(tc)
-
-	newPR := &github.NewPullRequest{
-		Title: github.String(title),
-		Head:  github.String(branch),
-		Base:  github.String(baseBranch),
-		//		Body:                github.String(prBody),
-		MaintainerCanModify: github.Bool(true),
-	}
-
-	pr, _, err := client.PullRequests.Create(ctx, orgname, reponame, newPR)
-	if err != nil {
-		return nil, err
-	}
-	return pr, nil
-}
-
-func (g *GoliacLocalImpl) MergePullRequest(pr *github.PullRequest, accesstoken, mainBranch string) error {
-	ctx := context.Background()
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accesstoken})
-	tc := oauth2.NewClient(ctx, ts)
-	client := github.NewClient(tc)
-
-	// Create review request
-	review := &github.PullRequestReviewRequest{
-		Body:  github.String("Approving this PR via GitHub App."),
-		Event: github.String("APPROVE"),
-	}
-
-	// Approve the PR
-	_, _, err := client.PullRequests.CreateReview(ctx, pr.GetBase().GetRepo().GetOwner().GetLogin(), pr.GetBase().GetRepo().GetName(), pr.GetNumber(), review)
-	if err != nil {
-		return fmt.Errorf("failed to approve PR: %v", err)
-	}
-
-	// Merge request options
-	mergeOpts := &github.PullRequestOptions{
-		MergeMethod: "squash", // Options: "merge", "squash", "rebase"
-	}
-
-	_, _, err = client.PullRequests.Merge(ctx, pr.GetBase().GetRepo().GetOwner().GetLogin(), pr.GetBase().GetRepo().GetName(), pr.GetNumber(), "Merging PR", mergeOpts)
-
-	if err != nil {
-		return err
-	}
-	return nil
+	return client.CreatePullRequest(ctx, orgname, reponame, baseBranch, newBranchName, "Creating new repositories")
 }
 
 /*

@@ -136,6 +136,12 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 					logrus.Errorf("- %s", err)
 				}
 			}
+			if errorCollector.HasWarns() {
+				logrus.Warnf("Warnings:")
+				for _, err := range errorCollector.Warns {
+					logrus.Warnf("- %s", err)
+				}
+			}
 		},
 	}
 
@@ -192,6 +198,12 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 				logrus.Errorf("Failed to apply:")
 				for _, err := range errorCollector.Errors {
 					logrus.Errorf("- %s", err)
+				}
+			}
+			if errorCollector.HasWarns() {
+				logrus.Warnf("Warnings:")
+				for _, err := range errorCollector.Warns {
+					logrus.Warnf("- %s", err)
 				}
 			}
 		},

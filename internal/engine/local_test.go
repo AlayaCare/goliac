@@ -21,6 +21,7 @@ import (
 	"github.com/goliac-project/goliac/internal/entity"
 	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
+	"github.com/google/go-github/v55/github"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -344,6 +345,16 @@ name: repo2
 		return nil, err
 	}
 
+	err = util.WriteFile(src, "teams/github-admins/repo5.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo5
+renameTo: repo6
+`), 0644)
+	if err != nil {
+		return nil, err
+	}
+
 	// commit
 	worktree, err = repo.Worktree()
 	if err != nil {
@@ -496,7 +507,7 @@ func TestBasicGitops(t *testing.T) {
 		// check the number of files in the 'teams/github-admins' directory
 		files, err := target.ReadDir("teams/github-admins")
 		assert.Nil(t, err)
-		assert.Equal(t, 3, len(files))
+		assert.Equal(t, 4, len(files))
 
 		//
 		// checkout v0.1.0
@@ -532,7 +543,7 @@ func TestBasicGitops(t *testing.T) {
 		// check the number of files in the 'teams/github-admins' directory
 		files, err = target.ReadDir("teams/github-admins")
 		assert.Nil(t, err)
-		assert.Equal(t, 3, len(files))
+		assert.Equal(t, 4, len(files))
 	})
 
 	t.Run("CheckoutCommit", func(t *testing.T) {
@@ -562,7 +573,7 @@ func TestBasicGitops(t *testing.T) {
 		assert.Nil(t, err)
 		files, err := target.ReadDir("teams/github-admins")
 		assert.Nil(t, err)
-		assert.Equal(t, 3, len(files)) // it should be 3 because we have 3 files in the 'teams/github-admins' directory
+		assert.Equal(t, 4, len(files)) // it should be 3 because we have 3 files in the 'teams/github-admins' directory
 	})
 
 	t.Run("LoadRepoConfig", func(t *testing.T) {
@@ -741,39 +752,74 @@ func TestGoliacLocalImpl(t *testing.T) {
 		assert.Equal(t, "apiVersion: v1\nkind: Repository\nname: repo4\n", string(content))
 	})
 
-	// t.Run("CreateRepos", func(t *testing.T) {
-	// 	rootfs := memfs.New()
-	// 	src, _ := rootfs.Chroot("/src")
-	// 	target, _ := src.Chroot("/target")
+	t.Run("RenameRepos", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
 
-	// 	repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
-	// 	assert.Nil(t, err)
-	// 	assert.NotNil(t, repo)
-	// 	assert.NotNil(t, clonedRepo)
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
 
-	// 	// get commits
-	// 	g := GoliacLocalImpl{
-	// 		teams:         map[string]*entity.Team{},
-	// 		repositories:  map[string]*entity.Repository{},
-	// 		users:         map[string]*entity.User{},
-	// 		externalUsers: map[string]*entity.User{},
-	// 		rulesets:      map[string]*entity.RuleSet{},
-	// 		repo:          clonedRepo,
-	// 	}
+		// get commits
+		g := GoliacLocalImpl{
+			teams:         map[string]*entity.Team{},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
 
-	// 	// create a new repository
-	// 	newrepo := entity.Repository{}
-	// 	newrepo.ApiVersion = "v1"
-	// 	newrepo.Kind = "Repository"
-	// 	newrepo.Name = "newrepo"
-	// 	err = g.UpdateRepos([]string{}, map[string]*entity.Repository{}, map[string]*entity.Repository{"teams/github-admins": &newrepo}, "none", "master", "foobar")
-	// 	assert.Nil(t, err)
+		// rename the repository 'repo5' to 'repo6'
+		newrepo := entity.Repository{}
+		newrepo.ApiVersion = "v1"
+		newrepo.Kind = "Repository"
+		newrepo.Name = "repo5"
+		newrepo.RenameTo = "repo6"
+		newrepo.DirectoryPath = "teams/github-admins"
+		err = g.UpdateRepos([]string{}, map[string]*entity.Repository{"repo5": &newrepo}, "none", "master", "foobar")
+		assert.Nil(t, err)
 
-	// 	// check the content of the 'archived/repo1.yaml' file
-	// 	content, err := utils.ReadFile(target, "teams/github-admins/newrepo.yaml")
-	// 	assert.Nil(t, err)
-	// 	assert.Equal(t, "apiVersion: v1\nkind: Repository\nname: newrepo\n", string(content))
-	// })
+		// check the content of the 'archived/repo1.yaml' file
+		content, err := utils.ReadFile(target, "teams/github-admins/repo6.yaml")
+		assert.Nil(t, err)
+		assert.Equal(t, "apiVersion: v1\nkind: Repository\nname: repo6\n", string(content))
+	})
+
+	t.Run("UpdateReposViaPullRequest", func(t *testing.T) {
+		rootfs := memfs.New()
+		src, _ := rootfs.Chroot("/src")
+		target, _ := src.Chroot("/target")
+
+		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
+		assert.Nil(t, err)
+		assert.NotNil(t, repo)
+		assert.NotNil(t, clonedRepo)
+
+		g := GoliacLocalImpl{
+			teams:         map[string]*entity.Team{},
+			repositories:  map[string]*entity.Repository{},
+			users:         map[string]*entity.User{},
+			externalUsers: map[string]*entity.User{},
+			rulesets:      map[string]*entity.RuleSet{},
+			repo:          clonedRepo,
+		}
+
+		// create a new repository
+		localClient := &MockLocalGithubClient{}
+		newrepo := entity.Repository{}
+		newrepo.ApiVersion = "v1"
+		newrepo.Kind = "Repository"
+		newrepo.Name = "newrepo"
+
+		localClient.On("CreatePullRequest", context.TODO(), "a_org", "a_repo", "a_branch", "a_commitmessage", "Creating new repositories").Return(&github.PullRequest{}, nil)
+		pr, err := g.UpdateReposViaPullRequest(context.TODO(), localClient, map[string]*entity.Repository{"newRepo": &newrepo}, "a_org", "a_repo", "a_accesstoken", "a_branch", "a_commitmessage")
+
+		assert.Nil(t, err)
+		assert.NotNil(t, pr)
+	})
 
 	t.Run("UpdateAndCommitCodeOwners", func(t *testing.T) {
 		rootfs := memfs.New()

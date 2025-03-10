@@ -789,7 +789,7 @@ func TestGoliacApply(t *testing.T) {
 
 		unmanaged := goliac.Apply(context.Background(), errorCollector, fs, false, "inmemory:///src", "master")
 		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, 2, len(errorCollector.Warns))
+		assert.Equal(t, 1, len(errorCollector.Warns))
 		assert.NotNil(t, unmanaged)
 		assert.Equal(t, 2, remote.nbChanges)
 

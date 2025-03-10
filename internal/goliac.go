@@ -166,12 +166,6 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 		return
 	}
 
-	accessToken, err := g.localGithubClient.GetAccessToken(ctx)
-	if err != nil {
-		errorCollector.AddError(fmt.Errorf("error when getting access token: %v", err))
-		return
-	}
-
 	// first create the Pull Request
 
 	repo := &entity.Repository{}
@@ -203,7 +197,11 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 
 	defer tmpLocal.Close(fs)
 
+	clientOnBehalf := engine.NewLocalGithubClientImpl(ctx, githubToken)
+
 	pr, err := tmpLocal.UpdateReposViaPullRequest(
+		ctx,
+		clientOnBehalf,
 		map[string]*entity.Repository{directoryPath: repo},
 		orgname,
 		reponame,
@@ -214,6 +212,7 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 
 	if err != nil {
 		errorCollector.AddError(fmt.Errorf("error when creating the repository creation PR: %v", err))
+		return
 	}
 
 	// second let's create the repository
@@ -243,7 +242,14 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 	}
 
 	// let's merge the PR with the Goliac accesstoken
-	err = tmpLocal.MergePullRequest(pr, accessToken, branch)
+	accessToken, err := g.localGithubClient.GetAccessToken(ctx)
+	if err != nil {
+		errorCollector.AddError(fmt.Errorf("error when getting access token: %v", err))
+		return
+	}
+	clientGoliac := engine.NewLocalGithubClientImpl(ctx, accessToken)
+
+	err = clientGoliac.MergePullRequest(ctx, pr, branch)
 	if err != nil {
 		errorCollector.AddError(fmt.Errorf("error when merging the PR: %v", err))
 		return
@@ -251,6 +257,7 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 
 	// refresh the cache
 
+	errorCollector.ResetWarnings()
 	g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, errorCollector)
 	if errorCollector.HasErrors() {
 		return
@@ -334,6 +341,7 @@ func (g *GoliacImpl) Apply(ctx context.Context, errorCollector *observability.Er
 
 	defer g.actionMutex.Unlock()
 	// load and validate the goliac organization (after github assets have been loaded)
+	errorCollector.ResetWarnings()
 	g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, errorCollector)
 	defer g.local.Close(fs)
 
@@ -393,9 +401,6 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs b
 		g.local.LoadAndValidateLocal(subfs, errorCollector)
 	}
 
-	for _, warn := range errorCollector.Warns {
-		logrus.Debug(warn)
-	}
 	if errorCollector.HasErrors() {
 		for _, err := range errorCollector.Errors {
 			logrus.Error(err)
@@ -535,7 +540,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, errorCollector *o
 	// if the repo was just archived in a previous commit and we "resume it"
 	// so we keep a track of all repos that we want to archive until the end of the process
 	reposToArchive := make(map[string]*engine.GithubRepoComparable)
-	// map[directory]*entity.Repository
+	// map[oldreponame]*entity.Repository
 	reposToRename := make(map[string]*entity.Repository)
 	var unmanaged *engine.UnmanagedResources
 

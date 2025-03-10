@@ -379,6 +379,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 
 		// we rename the repository before we start to reconciliate
 		if repo.RenameTo != "" {
+			oldName := repo.Name
 			renamedRepo := *repo
 			renamedRepo.Name = repo.RenameTo
 			renamedRepo.RenameTo = ""
@@ -387,7 +388,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			r.RenameRepository(ctx, errorCollector, dryrun, remote, repo.Name, repo.RenameTo)
 
 			// in the post action we have to also update the git repository
-			reposToRename[repo.DirectoryPath] = repo
+			reposToRename[oldName] = repo
 			repo = &renamedRepo
 		}
 
