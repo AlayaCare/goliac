@@ -1,6 +1,6 @@
 post:
   tags:
-    - app
+    - external
   operationId: postExternalCreateRepository
   description: Create a Repository via Goliac
   parameters:

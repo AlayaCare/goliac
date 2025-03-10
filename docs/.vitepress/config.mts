@@ -22,7 +22,7 @@ export default defineConfig({
             { text: 'Regular Usage', link: '/regular_usage' },
             { text: 'Security', link: '/security' },
             { text: 'Troubleshooting', link: '/troubleshooting' },
-            { text: 'Apis', link: '/apis' }
+            { text: 'APIs', link: '/apis' },
           ]
         }
       ],
@@ -37,7 +37,8 @@ export default defineConfig({
           { text: 'Regular Usage', link: '/regular_usage' },
           { text: 'Security', link: '/security' },
           { text: 'Troubleshooting', link: '/troubleshooting' },
-          { text: 'Apis', link: '/apis' }
+          { text: 'APIs', link: '/apis' },
+          { text: 'API docs', link: '/api_docs', target: '_self'}
         ]
       }
     ],

@@ -22,6 +22,7 @@ import (
 	"github.com/goliac-project/goliac/swagger_gen/restapi"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/app"
+	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/external"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/health"
 	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
@@ -53,7 +54,7 @@ type GoliacServer interface {
 	GetStatistics(app.GetStatiticsParams) middleware.Responder
 	GetUnmanaged(app.GetUnmanagedParams) middleware.Responder
 
-	PostExternalCreateRepository(app.PostExternalCreateRepositoryParams) middleware.Responder
+	PostExternalCreateRepository(external.PostExternalCreateRepositoryParams) middleware.Responder
 }
 
 type GoliacServerImpl struct {
@@ -627,7 +628,7 @@ func (g *GoliacServerImpl) PostResync(params app.PostResyncParams) middleware.Re
 	return app.NewPostResyncOK()
 }
 
-func (g *GoliacServerImpl) PostExternalCreateRepository(params app.PostExternalCreateRepositoryParams) middleware.Responder {
+func (g *GoliacServerImpl) PostExternalCreateRepository(params external.PostExternalCreateRepositoryParams) middleware.Responder {
 	if params.Body.Visibility == "" {
 		params.Body.Visibility = "private"
 	}
@@ -636,7 +637,7 @@ func (g *GoliacServerImpl) PostExternalCreateRepository(params app.PostExternalC
 	}
 	if params.Body.Visibility != "private" && params.Body.Visibility != "public" && params.Body.Visibility != "internal" {
 		message := fmt.Sprintf("Invalid visibility: %s", params.Body.Visibility)
-		return app.NewPostExternalCreateRepositoryDefault(400).WithPayload(&models.Error{Message: &message})
+		return external.NewPostExternalCreateRepositoryDefault(400).WithPayload(&models.Error{Message: &message})
 	}
 	errorCollector := observability.NewErrorCollection()
 
@@ -655,10 +656,10 @@ func (g *GoliacServerImpl) PostExternalCreateRepository(params app.PostExternalC
 
 	if errorCollector.HasErrors() {
 		message := fmt.Sprintf("Error when creating repository: %s", errorCollector.Errors[0])
-		return app.NewPostExternalCreateRepositoryDefault(500).WithPayload(&models.Error{Message: &message})
+		return external.NewPostExternalCreateRepositoryDefault(500).WithPayload(&models.Error{Message: &message})
 	}
 
-	return app.NewPostExternalCreateRepositoryOK()
+	return external.NewPostExternalCreateRepositoryOK()
 }
 
 func (g *GoliacServerImpl) Serve() {
@@ -848,7 +849,7 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.AppGetRepositoriesHandler = app.GetRepositoriesHandlerFunc(g.GetRepositories)
 	api.AppGetRepositoryHandler = app.GetRepositoryHandlerFunc(g.GetRepository)
 
-	api.AppPostExternalCreateRepositoryHandler = app.PostExternalCreateRepositoryHandlerFunc(g.PostExternalCreateRepository)
+	api.ExternalPostExternalCreateRepositoryHandler = external.PostExternalCreateRepositoryHandlerFunc(g.PostExternalCreateRepository)
 
 	server := restapi.NewServer(api)
 

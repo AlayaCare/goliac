@@ -1,3 +1,7 @@
+## Goliac v0.16.1o
+
+- update the documentation (especially the APIs)
+
 ## Goliac v0.16.0
 
 - introduce a CreateRepository endpoint

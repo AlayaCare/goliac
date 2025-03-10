@@ -15,6 +15,10 @@ x-tagGroups:
   - name: Health Check
     tags:
       - health
+  - name: External API
+    description: APIs used to update Github synchronously with Goliac
+    tags:
+      - external
 consumes:
   - application/json
 produces:
@@ -275,7 +279,7 @@ paths:
   /external/createrepository:
     post:
       tags:
-        - app
+        - external
       operationId: postExternalCreateRepository
       description: Create a Repository via Goliac
       parameters:
