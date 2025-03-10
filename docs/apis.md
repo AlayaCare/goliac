@@ -38,5 +38,5 @@ curl -X POST -H 'Content-Type: application/json' http://localhost:18000/api/v1/e
 
 ## Further reading
 
-For the exhaustive list of available APIs, please refer to the [API documentation](api_docs/index.html).
+For the exhaustive list of available APIs, please refer to the [API documentation](api_docs.html){target="_self"}.
 

@@ -95,7 +95,7 @@ func init() {
       "post": {
         "description": "Create a Repository via Goliac",
         "tags": [
-          "app"
+          "external"
         ],
         "operationId": "postExternalCreateRepository",
         "parameters": [
@@ -884,6 +884,13 @@ func init() {
       "tags": [
         "health"
       ]
+    },
+    {
+      "description": "APIs used to update Github synchronously with Goliac",
+      "name": "External API",
+      "tags": [
+        "external"
+      ]
     }
   ]
 }`))
@@ -965,7 +972,7 @@ func init() {
       "post": {
         "description": "Create a Repository via Goliac",
         "tags": [
-          "app"
+          "external"
         ],
         "operationId": "postExternalCreateRepository",
         "parameters": [
@@ -1765,6 +1772,13 @@ func init() {
       "name": "Health Check",
       "tags": [
         "health"
+      ]
+    },
+    {
+      "description": "APIs used to update Github synchronously with Goliac",
+      "name": "External API",
+      "tags": [
+        "external"
       ]
     }
   ]
