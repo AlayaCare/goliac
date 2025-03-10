@@ -29,3 +29,7 @@ func NewErrorCollection() *ErrorCollection {
 		Warns:  []Warning{},
 	}
 }
+
+func (ec *ErrorCollection) ResetWarnings() {
+	ec.Warns = []Warning{}
+}
