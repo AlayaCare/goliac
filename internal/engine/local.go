@@ -309,8 +309,12 @@ func (g *GoliacLocalImpl) LoadRepoConfig() (*config.RepositoryConfig, error) {
 	return &repoconfig, nil
 }
 
-func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganization string) string {
+func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, goldenreviewers []string, githubOrganization string) string {
 	adminteamname := fmt.Sprintf("@%s/%s", githubOrganization, slug.Make(adminteam))
+	globalReviewers := adminteamname
+	for _, gr := range goldenreviewers {
+		globalReviewers += fmt.Sprintf(" @%s/%s", githubOrganization, slug.Make(gr))
+	}
 
 	codeowners := "# DO NOT MODIFY THIS FILE MANUALLY\n"
 
@@ -325,7 +329,11 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganiza
 		if strings.Contains(teampath, " ") {
 			teampath = strings.ReplaceAll(teampath, " ", "\\ ")
 		}
-		codeownersrules = append(codeownersrules, fmt.Sprintf("%s @%s/%s%s %s\n", teampath, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix, adminteamname))
+		if t == adminteam {
+			codeownersrules = append(codeownersrules, fmt.Sprintf("%s @%s/%s%s\n", teampath, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix))
+		} else {
+			codeownersrules = append(codeownersrules, fmt.Sprintf("%s @%s/%s%s %s\n", teampath, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix, globalReviewers))
+		}
 	}
 
 	// sort by path length
@@ -624,7 +632,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(ctx context.Context, repocon
 		content = []byte("")
 	}
 
-	newContent := g.codeowners_regenerate(repoconfig.AdminTeam, githubOrganization)
+	newContent := g.codeowners_regenerate(repoconfig.AdminTeam, repoconfig.GoldenReviewers, githubOrganization)
 
 	if string(content) != newContent {
 		logrus.Info(".github/CODEOWNERS needs to be regenerated")

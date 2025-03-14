@@ -5,8 +5,9 @@ import (
 )
 
 type RepositoryConfig struct {
-	AdminTeam           string `yaml:"admin_team"`
-	EveryoneTeamEnabled bool   `yaml:"everyone_team_enabled"`
+	AdminTeam           string   `yaml:"admin_team"`
+	EveryoneTeamEnabled bool     `yaml:"everyone_team_enabled"`
+	GoldenReviewers     []string `yaml:"golden_reviewers"`
 
 	Rulesets []struct {
 		Pattern string
