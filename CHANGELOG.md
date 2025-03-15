@@ -1,9 +1,4 @@
-## Goliac v0.16.2
-
-- better logging when externally creating a repository
-- introduing `golden_reviewers` in the `goliac.yaml` file
-
-## Goliac v0.16.1
+## Goliac v0.16.1o
 
 - update the documentation (especially the APIs)
 

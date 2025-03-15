@@ -528,9 +528,6 @@ func (s *Scaffold) generateGoliacConf(fs billy.Filesystem, rootpath string, admi
 	conf := fmt.Sprintf(`
 admin_team: %s
 
-# golden_reviewers:
-# - team-principals
-
 rulesets:
   - pattern: .*
     ruleset: default

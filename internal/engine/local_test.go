@@ -637,10 +637,10 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		content := g.codeowners_regenerate("github-admins", []string{}, "goliac-project")
+		content := g.codeowners_regenerate("github-admins", "goliac-project")
 
 		// check the content of the CODEOWNERS file
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github-admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+"\n", content)
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github-admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @goliac-project/github-admins\n", content)
 	})
 
 	t.Run("codeowners_regenerate with a team path with a space", func(t *testing.T) {
@@ -671,10 +671,10 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		content := g.codeowners_regenerate("github admins", []string{}, "goliac-project")
+		content := g.codeowners_regenerate("github admins", "goliac-project")
 
 		// check the content of the CODEOWNERS file
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github\\ admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+"\n", content)
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github\\ admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @goliac-project/github-admins\n", content)
 	})
 
 	t.Run("codeowners_regenerate with a parent", func(t *testing.T) {
@@ -714,51 +714,10 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		content := g.codeowners_regenerate("github-admins", []string{}, "goliac-project")
+		content := g.codeowners_regenerate("github-admins", "goliac-project")
 
 		// check the content of the CODEOWNERS file
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github-admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+"\n/teams/github-admins/subteam/* @goliac-project/subteam"+config.Config.GoliacTeamOwnerSuffix+" @goliac-project/github-admins\n", content)
-	})
-
-	t.Run("codeowners_regenerate with golden reviewers", func(t *testing.T) {
-		rootfs := memfs.New()
-		src, _ := rootfs.Chroot("/src")
-		target, _ := src.Chroot("/target")
-
-		repo, clonedRepo, err := helperCreateAndClone(rootfs, src, target)
-		assert.Nil(t, err)
-		assert.NotNil(t, repo)
-		assert.NotNil(t, clonedRepo)
-
-		// get commits
-		adminTeam := entity.Team{}
-		adminTeam.ApiVersion = "v1"
-		adminTeam.Kind = "Team"
-		adminTeam.Name = "github-admins"
-		adminTeam.Spec.Owners = []string{"admin"}
-
-		anotherTeam := entity.Team{}
-		anotherTeam.ApiVersion = "v1"
-		anotherTeam.Kind = "Team"
-		anotherTeam.Name = "another-team"
-		anotherTeam.Spec.Owners = []string{"admin"}
-
-		g := GoliacLocalImpl{
-			teams: map[string]*entity.Team{
-				"github-admins": &adminTeam,
-				"another-team":  &anotherTeam,
-			},
-			repositories:  map[string]*entity.Repository{},
-			users:         map[string]*entity.User{},
-			externalUsers: map[string]*entity.User{},
-			rulesets:      map[string]*entity.RuleSet{},
-			repo:          clonedRepo,
-		}
-
-		content := g.codeowners_regenerate("github-admins", []string{"principal-team"}, "goliac-project")
-
-		// check the content of the CODEOWNERS file
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/another-team/* @goliac-project/another-team"+config.Config.GoliacTeamOwnerSuffix+" @goliac-project/github-admins @goliac-project/principal-team\n/teams/github-admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+"\n", content)
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github-admins/* @goliac-project/github-admins-goliac-owners @goliac-project/github-admins\n/teams/github-admins/subteam/* @goliac-project/subteam-goliac-owners @goliac-project/github-admins\n", content)
 	})
 }
 
@@ -901,7 +860,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 		// check the content of the CODEOWNERS file
 		content, err := utils.ReadFile(target, ".github/CODEOWNERS")
 		assert.Nil(t, err)
-		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github-admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+"\n", string(content))
+		assert.Equal(t, "# DO NOT MODIFY THIS FILE MANUALLY\n* @goliac-project/github-admins\n/teams/github-admins/* @goliac-project/github-admins"+config.Config.GoliacTeamOwnerSuffix+" @goliac-project/github-admins\n", string(content))
 	})
 
 	t.Run("SyncUsersAndTeams", func(t *testing.T) {

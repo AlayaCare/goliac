@@ -217,7 +217,6 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 
 	// second let's create the repository
 
-	logrus.WithFields(map[string]interface{}{"dryrun": false, "command": "create_repository"}).Infof("repositoryname: %s", reponame)
 	g.remote.CreateRepository(
 		ctx,
 		errorCollector,
