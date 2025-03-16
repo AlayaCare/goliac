@@ -12,6 +12,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+var tp *sdktrace.TracerProvider
+
 func setupTraceProvider(ctx context.Context) error {
 	exporter, err := otlptracegrpc.New(ctx,
 		otlptracegrpc.WithEndpoint(Config.OpenTelemetryGrpcEndpoint),
@@ -23,7 +25,7 @@ func setupTraceProvider(ctx context.Context) error {
 	}
 
 	// Create trace provider
-	tp := sdktrace.NewTracerProvider(
+	tp = sdktrace.NewTracerProvider(
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
@@ -34,6 +36,13 @@ func setupTraceProvider(ctx context.Context) error {
 	// Set global tracer provider
 	otel.SetTracerProvider(tp)
 
+	return nil
+}
+
+func ShutdownTraceProvider() error {
+	if tp != nil {
+		return tp.Shutdown(context.Background())
+	}
 	return nil
 }
 

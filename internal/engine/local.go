@@ -589,7 +589,7 @@ func (g *GoliacLocalImpl) UpdateReposViaPullRequest(ctx context.Context, client 
 func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		_, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "UpdateAndCommitCodeOwners")
+		_, childSpan = otel.Tracer("goliac").Start(ctx, "UpdateAndCommitCodeOwners")
 		defer childSpan.End()
 	}
 	if g.repo == nil {
@@ -781,7 +781,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 func (g *GoliacLocalImpl) SyncUsersAndTeams(ctx context.Context, repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		_, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "SyncUsersAndTeams")
+		_, childSpan = otel.Tracer("goliac").Start(ctx, "SyncUsersAndTeams")
 		defer childSpan.End()
 	}
 	if g.repo == nil {

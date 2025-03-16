@@ -1,6 +1,8 @@
 ## Goliac v0.16.3
 
 - move golden_reviewers feature to global rulesets
+- bugfix: fix delete_repository_branchprotection mutation
+- bugfix: shutdown opentelemetry properly (for plan/apply/scaffold)
 
 ## Goliac v0.16.2
 

@@ -70,6 +70,7 @@ var Config = struct {
 
 	OpenTelemetryEnabled      bool   `env:"GOLIAC_OPENTELEMETRY_ENABLED" envDefault:"false"`
 	OpenTelemetryGrpcEndpoint string `env:"GOLIAC_OPENTELEMETRY_GRPC_ENDPOINT" envDefault:"localhost:4317"`
+	OpenTelemetryTraceAll     bool   `env:"GOLIAC_OPENTELEMETRY_TRACE_ALL" envDefault:"true"`
 }{}
 
 // to be overrided at build time with

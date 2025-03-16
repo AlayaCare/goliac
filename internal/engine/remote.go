@@ -918,7 +918,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "Load")
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "Load")
 		defer childSpan.End()
 	}
 	var retErr error
@@ -1019,7 +1019,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGoroutines int64) (map[string]map[string]*GithubTeamRepo, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadTeamReposConcurrently")
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadTeamReposConcurrently")
 		defer childSpan.End()
 	}
 	logrus.Debug("loading teamReposConcurrently")
@@ -1224,7 +1224,7 @@ type GraplQLTeamMembers struct {
 func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTeam, map[string]string, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadTeams")
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadTeams")
 		defer childSpan.End()
 	}
 	logrus.Debug("loading teams")
@@ -1613,7 +1613,7 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 func (g *GoliacRemoteImpl) loadRulesets(ctx context.Context) (map[string]*GithubRuleSet, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadRulesets")
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadRulesets")
 		defer childSpan.End()
 	}
 	logrus.Debug("loading rulesets")
@@ -2057,6 +2057,10 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, er
 			errorCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v", reponame, err))
 			return
 		}
+		if len(res.Errors) > 0 {
+			errorCollector.AddError(fmt.Errorf("graphql error on AddRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
+			return
+		}
 
 		branchprotection.Id = res.Data.CreateBranchProtectionRule.BranchProtectionRule.Id
 	}
@@ -2144,6 +2148,10 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 			errorCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v", reponame, err))
 			return
 		}
+		if len(res.Errors) > 0 {
+			errorCollector.AddError(fmt.Errorf("graphql error on UpdateRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
+			return
+		}
 	}
 
 	g.actionMutex.Lock()
@@ -2161,6 +2169,7 @@ mutation deleteBranchProtectionRule(
   deleteBranchProtectionRule(input: {
 		branchProtectionRuleId: $branchProtectionRuleId
 	}) {
+		clientMutationId
   }
 }
 `
@@ -2186,6 +2195,10 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 		err = json.Unmarshal(body, &res)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v", reponame, err))
+			return
+		}
+		if len(res.Errors) > 0 {
+			errorCollector.AddError(fmt.Errorf("graphql error on DeleteRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
 			return
 		}
 	}

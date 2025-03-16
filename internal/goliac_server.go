@@ -618,7 +618,7 @@ func (g *GoliacServerImpl) PostResync(params app.PostResyncParams) middleware.Re
 		ctx := context.Background()
 		if config.Config.OpenTelemetryEnabled {
 			var span trace.Span
-			tracer := otel.Tracer("background-post-resync")
+			tracer := otel.Tracer("goliac")
 			ctx, span = tracer.Start(ctx, "backgroundResync")
 			defer span.End()
 		}
@@ -702,7 +702,7 @@ func (g *GoliacServerImpl) Serve() {
 					ctx := context.Background()
 					var span trace.Span
 					if config.Config.OpenTelemetryEnabled {
-						tracer := otel.Tracer("github-webhook-tracer")
+						tracer := otel.Tracer("goliac")
 						ctx, span = tracer.Start(ctx, "github-webhook")
 					}
 					g.triggerApply(ctx)
@@ -766,6 +766,7 @@ func (g *GoliacServerImpl) Serve() {
 
 	close(stopCh)
 	wg.Wait()
+	config.ShutdownTraceProvider()
 }
 
 /*
