@@ -1396,11 +1396,14 @@ query listRulesets ($orgLogin: String!) {
 		  target
 		  enforcement
 		  bypassActors(first:100) {
-			app:nodes {
+			actors:nodes {
 			  actor {
 				... on App {
 					databaseId
 					name
+				}
+				... on Team {
+					teamslug:slug
 				}
 			  }
 			  bypassMode
@@ -1449,10 +1452,11 @@ query listRulesets ($orgLogin: String!) {
   }
 `
 
-type GithubRuleSetApp struct {
+type GithubRuleSetActor struct {
 	Actor struct {
 		DatabaseId int
 		Name       string
+		TeamSlug   string
 	}
 	BypassMode string // ALWAYS, PULL_REQUEST
 }
@@ -1488,7 +1492,7 @@ type GraphQLGithubRuleSet struct {
 	Target       string // BRANCH, TAG
 	Enforcement  string // DISABLED, ACTIVE, EVALUATE
 	BypassActors struct {
-		App []GithubRuleSetApp
+		Actors []GithubRuleSetActor
 	}
 	Conditions struct {
 		RefName struct { // target branches
@@ -1537,6 +1541,7 @@ type GithubRuleSet struct {
 	Id          int               // for tracking purpose
 	Enforcement string            // disabled, active, evaluate
 	BypassApps  map[string]string // appname, mode (always, pull_request)
+	BypassTeams map[string]string // teamslug, mode (always, pull_request)
 
 	OnInclude []string // ~DEFAULT_BRANCH, ~ALL, branch_name, ...
 	OnExclude []string //  branch_name, ...
@@ -1552,6 +1557,7 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 		Id:           src.DatabaseId,
 		Enforcement:  strings.ToLower(src.Enforcement),
 		BypassApps:   map[string]string{},
+		BypassTeams:  map[string]string{},
 		OnInclude:    []string{},
 		OnExclude:    []string{},
 		Rules:        map[string]entity.RuleSetParameters{},
@@ -1572,8 +1578,12 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 		}
 	}
 
-	for _, b := range src.BypassActors.App {
-		ruleset.BypassApps[b.Actor.Name] = strings.ToLower(b.BypassMode)
+	for _, b := range src.BypassActors.Actors {
+		if b.Actor.TeamSlug != "" {
+			ruleset.BypassTeams[b.Actor.TeamSlug] = strings.ToLower(b.BypassMode)
+		} else {
+			ruleset.BypassApps[b.Actor.Name] = strings.ToLower(b.BypassMode)
+		}
 	}
 
 	for _, r := range src.Rules.Nodes {
@@ -1657,6 +1667,16 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 			bypassActor := map[string]interface{}{
 				"actor_id":    appId,
 				"actor_type":  "Integration",
+				"bypass_mode": mode,
+			}
+			bypassActors = append(bypassActors, bypassActor)
+		}
+	}
+	for teamslug, mode := range ruleset.BypassTeams {
+		if team, ok := g.teams[teamslug]; ok {
+			bypassActor := map[string]interface{}{
+				"actor_id":    team.Id,
+				"actor_type":  "Team",
 				"bypass_mode": mode,
 			}
 			bypassActors = append(bypassActors, bypassActor)
