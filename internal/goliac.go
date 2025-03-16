@@ -357,10 +357,10 @@ func (g *GoliacImpl) Apply(ctx context.Context, errorCollector *observability.Er
 }
 
 func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs billy.Filesystem, repositoryUrl, branch string, errorCollector *observability.ErrorCollection) {
+	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
 		// get back the tracer from the context
-		var childSpan trace.Span
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadAndValidateGoliacOrganization")
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadAndValidateGoliacOrganization")
 		defer childSpan.End()
 
 		childSpan.SetAttributes(
@@ -368,6 +368,7 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs b
 			attribute.String("branch", branch),
 		)
 	}
+
 	if strings.HasPrefix(repositoryUrl, "https://") || strings.HasPrefix(repositoryUrl, "git@") || strings.HasPrefix(repositoryUrl, "inmemory:///") {
 		accessToken := ""
 		var err error
@@ -473,6 +474,16 @@ Apply the changes to the github team repository:
   - update the codeowners file
 */
 func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrganization string, teamreponame string, branch string, syncusersbeforeapply bool, errorCollector *observability.ErrorCollection) *engine.UnmanagedResources {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		// get back the tracer from the context
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "applyToGithub")
+		defer childSpan.End()
+
+		childSpan.SetAttributes(
+			attribute.String("github_organization", githubOrganization),
+		)
+	}
 
 	//
 	// prelude
@@ -534,7 +545,7 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamreponame string, branch string) (*engine.UnmanagedResources, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "applyCommitsToGithub")
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "applyCommitsToGithub")
 		defer childSpan.End()
 	}
 

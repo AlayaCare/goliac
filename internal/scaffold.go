@@ -304,6 +304,16 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 									Mode:    mode,
 								})
 							}
+							for teamslug, mode := range rRuleset.BypassTeams {
+								teamname := teamsNameBySlug[teamslug]
+								lRuleset.BypassTeams = append(lRuleset.BypassTeams, struct {
+									TeamName string
+									Mode     string
+								}{
+									TeamName: teamname,
+									Mode:     mode,
+								})
+							}
 							lRuleset.Conditions.Include = rRuleset.OnInclude
 							lRuleset.Conditions.Exclude = rRuleset.OnExclude
 							for rulename, rulespec := range rRuleset.Rules {
@@ -527,9 +537,6 @@ func (s *Scaffold) generateGoliacConf(fs billy.Filesystem, rootpath string, admi
 
 	conf := fmt.Sprintf(`
 admin_team: %s
-
-# golden_reviewers:
-# - team-principals
 
 rulesets:
   - pattern: .*

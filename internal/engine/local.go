@@ -309,12 +309,8 @@ func (g *GoliacLocalImpl) LoadRepoConfig() (*config.RepositoryConfig, error) {
 	return &repoconfig, nil
 }
 
-func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, goldenreviewers []string, githubOrganization string) string {
+func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, githubOrganization string) string {
 	adminteamname := fmt.Sprintf("@%s/%s", githubOrganization, slug.Make(adminteam))
-	globalReviewers := adminteamname
-	for _, gr := range goldenreviewers {
-		globalReviewers += fmt.Sprintf(" @%s/%s", githubOrganization, slug.Make(gr))
-	}
 
 	codeowners := "# DO NOT MODIFY THIS FILE MANUALLY\n"
 
@@ -329,11 +325,7 @@ func (g *GoliacLocalImpl) codeowners_regenerate(adminteam string, goldenreviewer
 		if strings.Contains(teampath, " ") {
 			teampath = strings.ReplaceAll(teampath, " ", "\\ ")
 		}
-		if t == adminteam {
-			codeownersrules = append(codeownersrules, fmt.Sprintf("%s @%s/%s%s\n", teampath, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix))
-		} else {
-			codeownersrules = append(codeownersrules, fmt.Sprintf("%s @%s/%s%s %s\n", teampath, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix, globalReviewers))
-		}
+		codeownersrules = append(codeownersrules, fmt.Sprintf("%s @%s/%s%s %s\n", teampath, githubOrganization, slug.Make(t), config.Config.GoliacTeamOwnerSuffix, adminteamname))
 	}
 
 	// sort by path length
@@ -597,7 +589,7 @@ func (g *GoliacLocalImpl) UpdateReposViaPullRequest(ctx context.Context, client 
 func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		_, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "UpdateAndCommitCodeOwners")
+		_, childSpan = otel.Tracer("goliac").Start(ctx, "UpdateAndCommitCodeOwners")
 		defer childSpan.End()
 	}
 	if g.repo == nil {
@@ -632,7 +624,7 @@ func (g *GoliacLocalImpl) UpdateAndCommitCodeOwners(ctx context.Context, repocon
 		content = []byte("")
 	}
 
-	newContent := g.codeowners_regenerate(repoconfig.AdminTeam, repoconfig.GoldenReviewers, githubOrganization)
+	newContent := g.codeowners_regenerate(repoconfig.AdminTeam, githubOrganization)
 
 	if string(content) != newContent {
 		logrus.Info(".github/CODEOWNERS needs to be regenerated")
@@ -789,7 +781,7 @@ func syncUsersViaUserPlugin(repoconfig *config.RepositoryConfig, fs billy.Filesy
 func (g *GoliacLocalImpl) SyncUsersAndTeams(ctx context.Context, repoconfig *config.RepositoryConfig, userplugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		_, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "SyncUsersAndTeams")
+		_, childSpan = otel.Tracer("goliac").Start(ctx, "SyncUsersAndTeams")
 		defer childSpan.End()
 	}
 	if g.repo == nil {

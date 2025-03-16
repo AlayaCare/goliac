@@ -121,15 +121,18 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			ctx := context.Background()
 			var span trace.Span
 			if config.Config.OpenTelemetryEnabled {
-				tracer := otel.Tracer("scaffold")
-				ctx, span = tracer.Start(ctx, "scaffold")
-				defer span.End()
+				tracer := otel.Tracer("goliac")
+				ctx, span = tracer.Start(ctx, "plan")
 			}
 
 			fs := osfs.New("/")
 
 			errorCollector := observability.NewErrorCollection()
 			goliac.Apply(ctx, errorCollector, fs, true, repo, branch)
+			if span != nil {
+				span.End()
+				config.ShutdownTraceProvider()
+			}
 			if errorCollector.HasErrors() {
 				logrus.Errorf("Failed to plan:")
 				for _, err := range errorCollector.Errors {
@@ -186,14 +189,17 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			ctx := context.Background()
 			var span trace.Span
 			if config.Config.OpenTelemetryEnabled {
-				tracer := otel.Tracer("scaffold")
-				ctx, span = tracer.Start(ctx, "scaffold")
-				defer span.End()
+				tracer := otel.Tracer("goliac")
+				ctx, span = tracer.Start(ctx, "apply")
 			}
 
 			fs := osfs.New("/")
 			errorCollector := observability.NewErrorCollection()
 			goliac.Apply(ctx, errorCollector, fs, false, repo, branch)
+			if span != nil {
+				span.End()
+				config.ShutdownTraceProvider()
+			}
 			if errorCollector.HasErrors() {
 				logrus.Errorf("Failed to apply:")
 				for _, err := range errorCollector.Errors {
@@ -243,14 +249,17 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			ctx := context.Background()
 			var span trace.Span
 			if config.Config.OpenTelemetryEnabled {
-				tracer := otel.Tracer("scaffold")
-				ctx, span = tracer.Start(ctx, "scaffold")
-				defer span.End()
+				tracer := otel.Tracer("goliac")
+				ctx, span = tracer.Start(ctx, "syncusers")
 			}
 
 			fs := osfs.New("/")
 			errorCollector := observability.NewErrorCollection()
 			goliac.UsersUpdate(ctx, errorCollector, fs, repo, branch, dryrunParameter, forceParameter)
+			if span != nil {
+				span.End()
+				config.ShutdownTraceProvider()
+			}
 			if errorCollector.HasErrors() {
 				logrus.Fatalf("failed to update and commit teams:")
 				for _, err := range errorCollector.Errors {
@@ -294,12 +303,15 @@ The adminteam is your current team that contains Github administrator`,
 			ctx := context.Background()
 			var span trace.Span
 			if config.Config.OpenTelemetryEnabled {
-				tracer := otel.Tracer("scaffold")
+				tracer := otel.Tracer("goliac")
 				ctx, span = tracer.Start(ctx, "scaffold")
-				defer span.End()
 			}
 
 			err = scaffold.Generate(ctx, directory, adminteam, usersOnly)
+			if span != nil {
+				span.End()
+				config.ShutdownTraceProvider()
+			}
 			if err != nil {
 				logrus.Fatalf("failed to create scaffold direcrory: %s", err)
 			} else {

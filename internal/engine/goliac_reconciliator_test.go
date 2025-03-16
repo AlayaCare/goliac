@@ -2382,6 +2382,81 @@ func TestReconciliationRulesets(t *testing.T) {
 		assert.Equal(t, 0, len(recorder.RuleSetUpdated))
 		assert.Equal(t, 1, len(recorder.RuleSetDeleted))
 	})
+
+	t.Run("happy path: same bypass team inn ruleset in goliac conf", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users:    make(map[string]*entity.User),
+			teams:    make(map[string]*entity.Team),
+			repos:    make(map[string]*entity.Repository),
+			rulesets: make(map[string]*entity.RuleSet),
+		}
+
+		ateam := &entity.Team{}
+		ateam.Name = "ateam"
+		ateam.Spec.Owners = []string{"existing_owner"}
+		local.teams["ateam"] = ateam
+
+		newRuleset := &entity.RuleSet{}
+		newRuleset.Name = "new"
+		newRuleset.Spec.Enforcement = "active"
+		newRuleset.Spec.Rules = append(newRuleset.Spec.Rules, struct {
+			Ruletype   string
+			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
+		}{
+			"required_signatures", entity.RuleSetParameters{},
+		})
+		newRuleset.Spec.BypassTeams = []struct {
+			TeamName string
+			Mode     string
+		}{
+			{TeamName: "ateam", Mode: "pull_request"},
+		}
+		local.rulesets["new"] = newRuleset
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		rRuleset := &GithubRuleSet{
+			Name:        "new",
+			Enforcement: "active",
+			Rules:       make(map[string]entity.RuleSetParameters),
+			BypassTeams: make(map[string]string),
+			BypassApps:  make(map[string]string),
+		}
+		rRuleset.Rules["required_signatures"] = entity.RuleSetParameters{}
+		rRuleset.BypassTeams["ateam"] = "pull_request"
+		remote.rulesets["new"] = rRuleset
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+
+		repoconf.Rulesets = append(repoconf.Rulesets, struct {
+			Pattern string
+			Ruleset string
+		}{
+			Pattern: "foobar",
+			Ruleset: "new",
+		})
+
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		// 0 ruleset changed
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, 0, len(recorder.RuleSetCreated))
+		assert.Equal(t, 0, len(recorder.RuleSetUpdated))
+		assert.Equal(t, 0, len(recorder.RuleSetDeleted))
+	})
 }
 
 func TestReconciliationRepoRulesets(t *testing.T) {

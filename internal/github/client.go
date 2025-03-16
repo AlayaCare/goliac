@@ -208,18 +208,20 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
 		queryName := utils.FirstTwoWordsBeforeParenthesis(query, 100)
-		// get back the tracer from the context
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, fmt.Sprintf("QueryGraphQLAPI %s", queryName))
-		defer childSpan.End()
+		if strings.Contains(query, "mutation") || config.Config.OpenTelemetryTraceAll {
+			// get back the tracer from the context
+			ctx, childSpan = otel.Tracer("goliac").Start(ctx, fmt.Sprintf("QueryGraphQLAPI %s", queryName))
+			defer childSpan.End()
 
-		childSpan.SetAttributes(
-			attribute.String("query", query),
-		)
-		jsonVariables, err := json.Marshal(variables)
-		if err == nil {
 			childSpan.SetAttributes(
-				attribute.String("variables", string(jsonVariables)),
+				attribute.String("query", query),
 			)
+			jsonVariables, err := json.Marshal(variables)
+			if err == nil {
+				childSpan.SetAttributes(
+					attribute.String("variables", string(jsonVariables)),
+				)
+			}
 		}
 	}
 	body, err := json.Marshal(GraphQLRequest{
@@ -327,15 +329,17 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		// get back the tracer from the context
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, fmt.Sprintf("CallRestAPI %s", endpoint))
-		defer childSpan.End()
+		if method != "GET" || config.Config.OpenTelemetryTraceAll {
+			// get back the tracer from the context
+			ctx, childSpan = otel.Tracer("goliac").Start(ctx, fmt.Sprintf("CallRestAPI %s", endpoint))
+			defer childSpan.End()
 
-		childSpan.SetAttributes(
-			attribute.String("method", method),
-			attribute.String("endpoint", endpoint),
-			attribute.String("parameters", parameters),
-		)
+			childSpan.SetAttributes(
+				attribute.String("method", method),
+				attribute.String("endpoint", endpoint),
+				attribute.String("parameters", parameters),
+			)
+		}
 	}
 	var bodyReader io.Reader
 	if body != nil {

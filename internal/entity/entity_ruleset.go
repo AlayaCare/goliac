@@ -73,6 +73,10 @@ type RuleSetDefinition struct {
 		AppName string
 		Mode    string // always, pull_request
 	} `yaml:"bypassapps,omitempty"`
+	BypassTeams []struct {
+		TeamName string
+		Mode     string // always, pull_request
+	} `yaml:"bypassteams,omitempty"`
 	Conditions struct {
 		Include []string `yaml:"include,omitempty"` // ~DEFAULT_BRANCH, ~ALL, branch_name, ...
 		Exclude []string `yaml:"exclude,omitempty"` //  branch_name, ...
@@ -196,8 +200,19 @@ func (r *RuleSet) Validate(filename string) error {
 	}
 
 	for _, ba := range r.Spec.BypassApps {
+		if ba.AppName == "" {
+			return fmt.Errorf("invalid appname: %s for bypassapp in ruleset filename %s", ba.AppName, filename)
+		}
 		if ba.Mode != "always" && ba.Mode != "pull_request" {
 			return fmt.Errorf("invalid mode: %s for bypassapp %s in ruleset filename %s", ba.Mode, ba.AppName, filename)
+		}
+	}
+	for _, bt := range r.Spec.BypassTeams {
+		if bt.TeamName == "" {
+			return fmt.Errorf("invalid teamname: %s for bypassteam in ruleset filename %s", bt.TeamName, filename)
+		}
+		if bt.Mode != "always" && bt.Mode != "pull_request" {
+			return fmt.Errorf("invalid mode: %s for bypassteam %s in ruleset filename %s", bt.Mode, bt.TeamName, filename)
 		}
 	}
 	for _, include := range r.Spec.Conditions.Include {

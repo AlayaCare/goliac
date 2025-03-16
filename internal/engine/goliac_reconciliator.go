@@ -843,6 +843,14 @@ func compareRulesets(rulesetname string, lrs *GithubRuleSet, rrs *GithubRuleSet)
 			return false
 		}
 	}
+	if len(lrs.BypassTeams) != len(rrs.BypassTeams) {
+		return false
+	}
+	for k, v := range lrs.BypassTeams {
+		if rrs.BypassTeams[k] != v {
+			return false
+		}
+	}
 	if res, _, _ := entity.StringArrayEquivalent(lrs.OnInclude, rrs.OnInclude); !res {
 		return false
 	}
@@ -883,12 +891,17 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, erro
 			Name:        rs.Name,
 			Enforcement: rs.Spec.Enforcement,
 			BypassApps:  map[string]string{},
+			BypassTeams: map[string]string{},
 			OnInclude:   rs.Spec.Conditions.Include,
 			OnExclude:   rs.Spec.Conditions.Exclude,
 			Rules:       map[string]entity.RuleSetParameters{},
 		}
 		for _, b := range rs.Spec.BypassApps {
 			grs.BypassApps[b.AppName] = b.Mode
+		}
+		for _, b := range rs.Spec.BypassTeams {
+			teamslug := slug.Make(b.TeamName)
+			grs.BypassTeams[teamslug] = b.Mode
 		}
 		for _, r := range rs.Spec.Rules {
 			grs.Rules[r.Ruletype] = r.Parameters

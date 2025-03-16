@@ -918,7 +918,7 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "Load")
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "Load")
 		defer childSpan.End()
 	}
 	var retErr error
@@ -1019,7 +1019,7 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 func (g *GoliacRemoteImpl) loadTeamReposConcurrently(ctx context.Context, maxGoroutines int64) (map[string]map[string]*GithubTeamRepo, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadTeamReposConcurrently")
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadTeamReposConcurrently")
 		defer childSpan.End()
 	}
 	logrus.Debug("loading teamReposConcurrently")
@@ -1224,7 +1224,7 @@ type GraplQLTeamMembers struct {
 func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTeam, map[string]string, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadTeams")
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadTeams")
 		defer childSpan.End()
 	}
 	logrus.Debug("loading teams")
@@ -1396,11 +1396,14 @@ query listRulesets ($orgLogin: String!) {
 		  target
 		  enforcement
 		  bypassActors(first:100) {
-			app:nodes {
+			actors:nodes {
 			  actor {
 				... on App {
 					databaseId
 					name
+				}
+				... on Team {
+					teamslug:slug
 				}
 			  }
 			  bypassMode
@@ -1449,10 +1452,11 @@ query listRulesets ($orgLogin: String!) {
   }
 `
 
-type GithubRuleSetApp struct {
+type GithubRuleSetActor struct {
 	Actor struct {
 		DatabaseId int
 		Name       string
+		TeamSlug   string
 	}
 	BypassMode string // ALWAYS, PULL_REQUEST
 }
@@ -1488,7 +1492,7 @@ type GraphQLGithubRuleSet struct {
 	Target       string // BRANCH, TAG
 	Enforcement  string // DISABLED, ACTIVE, EVALUATE
 	BypassActors struct {
-		App []GithubRuleSetApp
+		Actors []GithubRuleSetActor
 	}
 	Conditions struct {
 		RefName struct { // target branches
@@ -1537,6 +1541,7 @@ type GithubRuleSet struct {
 	Id          int               // for tracking purpose
 	Enforcement string            // disabled, active, evaluate
 	BypassApps  map[string]string // appname, mode (always, pull_request)
+	BypassTeams map[string]string // teamslug, mode (always, pull_request)
 
 	OnInclude []string // ~DEFAULT_BRANCH, ~ALL, branch_name, ...
 	OnExclude []string //  branch_name, ...
@@ -1552,6 +1557,7 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 		Id:           src.DatabaseId,
 		Enforcement:  strings.ToLower(src.Enforcement),
 		BypassApps:   map[string]string{},
+		BypassTeams:  map[string]string{},
 		OnInclude:    []string{},
 		OnExclude:    []string{},
 		Rules:        map[string]entity.RuleSetParameters{},
@@ -1572,8 +1578,12 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 		}
 	}
 
-	for _, b := range src.BypassActors.App {
-		ruleset.BypassApps[b.Actor.Name] = strings.ToLower(b.BypassMode)
+	for _, b := range src.BypassActors.Actors {
+		if b.Actor.TeamSlug != "" {
+			ruleset.BypassTeams[b.Actor.TeamSlug] = strings.ToLower(b.BypassMode)
+		} else {
+			ruleset.BypassApps[b.Actor.Name] = strings.ToLower(b.BypassMode)
+		}
 	}
 
 	for _, r := range src.Rules.Nodes {
@@ -1603,7 +1613,7 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 func (g *GoliacRemoteImpl) loadRulesets(ctx context.Context) (map[string]*GithubRuleSet, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.GetTracerProvider().Tracer("goliac").Start(ctx, "loadRulesets")
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadRulesets")
 		defer childSpan.End()
 	}
 	logrus.Debug("loading rulesets")
@@ -1657,6 +1667,16 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 			bypassActor := map[string]interface{}{
 				"actor_id":    appId,
 				"actor_type":  "Integration",
+				"bypass_mode": mode,
+			}
+			bypassActors = append(bypassActors, bypassActor)
+		}
+	}
+	for teamslug, mode := range ruleset.BypassTeams {
+		if team, ok := g.teams[teamslug]; ok {
+			bypassActor := map[string]interface{}{
+				"actor_id":    team.Id,
+				"actor_type":  "Team",
 				"bypass_mode": mode,
 			}
 			bypassActors = append(bypassActors, bypassActor)
@@ -2037,6 +2057,10 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, er
 			errorCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v", reponame, err))
 			return
 		}
+		if len(res.Errors) > 0 {
+			errorCollector.AddError(fmt.Errorf("graphql error on AddRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
+			return
+		}
 
 		branchprotection.Id = res.Data.CreateBranchProtectionRule.BranchProtectionRule.Id
 	}
@@ -2124,6 +2148,10 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 			errorCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v", reponame, err))
 			return
 		}
+		if len(res.Errors) > 0 {
+			errorCollector.AddError(fmt.Errorf("graphql error on UpdateRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
+			return
+		}
 	}
 
 	g.actionMutex.Lock()
@@ -2141,6 +2169,7 @@ mutation deleteBranchProtectionRule(
   deleteBranchProtectionRule(input: {
 		branchProtectionRuleId: $branchProtectionRuleId
 	}) {
+		clientMutationId
   }
 }
 `
@@ -2166,6 +2195,10 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 		err = json.Unmarshal(body, &res)
 		if err != nil {
 			errorCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v", reponame, err))
+			return
+		}
+		if len(res.Errors) > 0 {
+			errorCollector.AddError(fmt.Errorf("graphql error on DeleteRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
 			return
 		}
 	}
