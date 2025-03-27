@@ -1,5 +1,5 @@
 <script setup>
-import { User, MessageBox, Folder } from '@element-plus/icons-vue'
+import { User, MessageBox, Folder, Tools } from '@element-plus/icons-vue'
 </script>
 
 <template>
@@ -32,6 +32,11 @@ import { User, MessageBox, Folder } from '@element-plus/icons-vue'
               <el-icon :size="16"><Folder /></el-icon>Repositories
             </template>
           </el-menu-item>
+          <el-menu-item v-if="nbForcemergeWorkflows>0" index="/forcemergeworkflows">
+            <template #title>
+              <el-icon :size="16"><Tools /></el-icon>PR Workflows
+            </template>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
@@ -45,8 +50,31 @@ import { User, MessageBox, Folder } from '@element-plus/icons-vue'
 </template>
 
 <script>
+import Axios from "axios";
+import constants from "@/constants";
+import helpers from "@/helpers/helpers";
+
+const { handleErr } = helpers;
+const { API_URL } = constants;
+
 export default {
   name: 'App',
+  data() {
+      return {
+        nbForcemergeWorkflows: 0,
+      }
+  },
+  mounted() {
+    this.getStatus()
+  },
+  methods: {
+    getStatus() {
+      Axios.get(`${API_URL}/status`).then(response => {
+        let status = response.data;
+        this.nbForcemergeWorkflows = status.nbForcemergeWorkflows;
+      }, handleErr.bind(this));
+    }
+  }
 }
 
 </script>

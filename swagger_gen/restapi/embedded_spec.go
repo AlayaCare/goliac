@@ -35,6 +35,214 @@ func init() {
   },
   "basePath": "/api/v1",
   "paths": {
+    "/auth/callback": {
+      "get": {
+        "description": "Receive the callback from github after authentication",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "getAuthenticationCallback",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "code received from github",
+            "name": "code",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "state received from github",
+            "name": "state",
+            "in": "query",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "github user information",
+            "schema": {
+              "$ref": "#/definitions/githubuser"
+            }
+          },
+          "302": {
+            "description": "redirect to github login",
+            "headers": {
+              "Location": {
+                "type": "string",
+                "format": "uri",
+                "description": "The URL to redirect to"
+              }
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/auth/githubuser": {
+      "get": {
+        "description": "Get the authenticated user information",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "getGithubUser",
+        "responses": {
+          "200": {
+            "description": "github user information",
+            "schema": {
+              "$ref": "#/definitions/githubuser"
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "get": {
+        "description": "Authenticate the user",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "getAuthenticationLogin",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "redirect url",
+            "name": "redirect",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "redirect to github login",
+            "headers": {
+              "Location": {
+                "type": "string",
+                "format": "uri",
+                "description": "The URL to redirect to"
+              }
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/auth/workflows_forcemerge": {
+      "get": {
+        "description": "Get all PR force merge workflows",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "getWorkflowsForcemerge",
+        "responses": {
+          "200": {
+            "description": "get list of all PR force merge workflows",
+            "schema": {
+              "$ref": "#/definitions/workflows_prmerged"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/auth/workflows_forcemerge/{workflowName}": {
+      "post": {
+        "description": "Bypass PR approval and force mere the PR",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "postWorkflowForcemerge",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "workflow name",
+            "name": "workflowName",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "PR to merge (and bypass approval)",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "pr_url",
+                "explanation"
+              ],
+              "properties": {
+                "explanation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "x-nullable": false
+                },
+                "pr_url": {
+                  "type": "string",
+                  "minLength": 10,
+                  "x-nullable": false
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PR merged",
+            "schema": {
+              "$ref": "#/definitions/prmerged"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/collaborators": {
       "get": {
         "description": "Get all external collaborators",
@@ -507,11 +715,40 @@ func init() {
         }
       }
     },
+    "githubuser": {
+      "type": "object",
+      "properties": {
+        "github_id": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        }
+      }
+    },
     "health": {
       "type": "object",
       "properties": {
         "status": {
           "type": "string"
+        }
+      }
+    },
+    "prmerged": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "tracking_urls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -670,6 +907,10 @@ func init() {
         "lastSyncTime": {
           "type": "string",
           "minLength": 1
+        },
+        "nbForcemergeWorkflows": {
+          "type": "integer",
+          "x-omitempty": false
         },
         "nbRepos": {
           "type": "integer",
@@ -864,6 +1105,22 @@ func init() {
       "items": {
         "$ref": "#/definitions/user"
       }
+    },
+    "workflows_prmerged": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "workflow_description": {
+            "type": "string",
+            "x-isnullable": false
+          },
+          "workflow_name": {
+            "type": "string",
+            "x-isnullable": false
+          }
+        }
+      }
     }
   },
   "tags": [
@@ -891,6 +1148,13 @@ func init() {
       "tags": [
         "external"
       ]
+    },
+    {
+      "description": "APIs used for authenticated users workflow",
+      "name": "auth",
+      "tags": [
+        "auth"
+      ]
     }
   ]
 }`))
@@ -912,6 +1176,214 @@ func init() {
   },
   "basePath": "/api/v1",
   "paths": {
+    "/auth/callback": {
+      "get": {
+        "description": "Receive the callback from github after authentication",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "getAuthenticationCallback",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "code received from github",
+            "name": "code",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "state received from github",
+            "name": "state",
+            "in": "query",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "github user information",
+            "schema": {
+              "$ref": "#/definitions/githubuser"
+            }
+          },
+          "302": {
+            "description": "redirect to github login",
+            "headers": {
+              "Location": {
+                "type": "string",
+                "format": "uri",
+                "description": "The URL to redirect to"
+              }
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/auth/githubuser": {
+      "get": {
+        "description": "Get the authenticated user information",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "getGithubUser",
+        "responses": {
+          "200": {
+            "description": "github user information",
+            "schema": {
+              "$ref": "#/definitions/githubuser"
+            }
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "get": {
+        "description": "Authenticate the user",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "getAuthenticationLogin",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "redirect url",
+            "name": "redirect",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "redirect to github login",
+            "headers": {
+              "Location": {
+                "type": "string",
+                "format": "uri",
+                "description": "The URL to redirect to"
+              }
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/auth/workflows_forcemerge": {
+      "get": {
+        "description": "Get all PR force merge workflows",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "getWorkflowsForcemerge",
+        "responses": {
+          "200": {
+            "description": "get list of all PR force merge workflows",
+            "schema": {
+              "$ref": "#/definitions/workflows_prmerged"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
+    "/auth/workflows_forcemerge/{workflowName}": {
+      "post": {
+        "description": "Bypass PR approval and force mere the PR",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "postWorkflowForcemerge",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "workflow name",
+            "name": "workflowName",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "PR to merge (and bypass approval)",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "pr_url",
+                "explanation"
+              ],
+              "properties": {
+                "explanation": {
+                  "type": "string",
+                  "minLength": 1,
+                  "x-nullable": false
+                },
+                "pr_url": {
+                  "type": "string",
+                  "minLength": 10,
+                  "x-nullable": false
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PR merged",
+            "schema": {
+              "$ref": "#/definitions/prmerged"
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      }
+    },
     "/collaborators": {
       "get": {
         "description": "Get all external collaborators",
@@ -1419,6 +1891,19 @@ func init() {
         }
       }
     },
+    "WorkflowsPrmergedItems0": {
+      "type": "object",
+      "properties": {
+        "workflow_description": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "workflow_name": {
+          "type": "string",
+          "x-isnullable": false
+        }
+      }
+    },
     "collaboratorDetails": {
       "type": "object",
       "properties": {
@@ -1446,11 +1931,40 @@ func init() {
         }
       }
     },
+    "githubuser": {
+      "type": "object",
+      "properties": {
+        "github_id": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "name": {
+          "type": "string",
+          "x-isnullable": false
+        }
+      }
+    },
     "health": {
       "type": "object",
       "properties": {
         "status": {
           "type": "string"
+        }
+      }
+    },
+    "prmerged": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "tracking_urls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
@@ -1589,6 +2103,10 @@ func init() {
         "lastSyncTime": {
           "type": "string",
           "minLength": 1
+        },
+        "nbForcemergeWorkflows": {
+          "type": "integer",
+          "x-omitempty": false
         },
         "nbRepos": {
           "type": "integer",
@@ -1753,6 +2271,12 @@ func init() {
       "items": {
         "$ref": "#/definitions/user"
       }
+    },
+    "workflows_prmerged": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/WorkflowsPrmergedItems0"
+      }
     }
   },
   "tags": [
@@ -1779,6 +2303,13 @@ func init() {
       "name": "External API",
       "tags": [
         "external"
+      ]
+    },
+    {
+      "description": "APIs used for authenticated users workflow",
+      "name": "auth",
+      "tags": [
+        "auth"
       ]
     }
   ]

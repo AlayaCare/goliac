@@ -1,0 +1,16 @@
+get:
+  tags:
+    - auth
+  operationId: getGithubUser
+  description: Get the authenticated user information
+  responses:
+    200:
+      description: github user information
+      schema:
+        $ref: "#/definitions/githubuser"
+    401:
+      description: unauthorized
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

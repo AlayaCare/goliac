@@ -9,18 +9,22 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/engine"
 	"github.com/goliac-project/goliac/internal/entity"
+	"github.com/goliac-project/goliac/internal/github"
 	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/app"
 )
 
 type GoliacLocalMock struct {
-	teams         map[string]*entity.Team
-	repositories  map[string]*entity.Repository
-	users         map[string]*entity.User
-	externalUsers map[string]*entity.User
-	rulesets      map[string]*entity.RuleSet
+	teams               map[string]*entity.Team
+	repositories        map[string]*entity.Repository
+	users               map[string]*entity.User
+	externalUsers       map[string]*entity.User
+	rulesets            map[string]*entity.RuleSet
+	forcemergeworkflows map[string]*entity.ForcemergeWorkflow
+	repoconfig          *config.RepositoryConfig
 }
 
 func (g *GoliacLocalMock) Teams() map[string]*entity.Team {
@@ -38,15 +42,22 @@ func (g *GoliacLocalMock) ExternalUsers() map[string]*entity.User {
 func (g *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 	return g.rulesets
 }
+func (g *GoliacLocalMock) ForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow {
+	return g.forcemergeworkflows
+}
+func (g *GoliacLocalMock) RepoConfig() *config.RepositoryConfig {
+	return g.repoconfig
+}
 
 func fixtureGoliacLocal() (*GoliacLocalMock, *GoliacRemoteMock) {
 	// local mock
 	l := GoliacLocalMock{
-		teams:         make(map[string]*entity.Team),
-		repositories:  make(map[string]*entity.Repository),
-		users:         make(map[string]*entity.User),
-		externalUsers: make(map[string]*entity.User),
-		rulesets:      make(map[string]*entity.RuleSet),
+		teams:               make(map[string]*entity.Team),
+		repositories:        make(map[string]*entity.Repository),
+		users:               make(map[string]*entity.User),
+		externalUsers:       make(map[string]*entity.User),
+		rulesets:            make(map[string]*entity.RuleSet),
+		forcemergeworkflows: make(map[string]*entity.ForcemergeWorkflow),
 	}
 
 	// users
@@ -161,9 +172,18 @@ func (g *GoliacMock) GetLocal() engine.GoliacLocalResources {
 func (g *GoliacMock) GetRemote() engine.GoliacRemoteResources {
 	return g.remote
 }
+func (g *GoliacMock) GetRemoteClient() github.GitHubClient {
+	return &GitHubClientMock{}
+}
 func (g *GoliacMock) ExternalCreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, githubToken, newRepositoryName, team, visibility, newRepositoryDefaultBranch string, repositoryUrl, branch string) {
 }
 func (g *GoliacMock) SetRemoteObservability(feedback observability.RemoteObservability) error {
+	return nil
+}
+func (g *GoliacMock) ExecuteForcemergeWorkflow(ctx context.Context, username string, workflowName string, prPathToMerge string, dryrun bool) ([]string, error) {
+	return nil, nil
+}
+func (g *GoliacMock) GetForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow {
 	return nil
 }
 func NewGoliacMock(local engine.GoliacLocalResources, remote engine.GoliacRemoteResources) Goliac {

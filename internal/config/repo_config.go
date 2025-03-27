@@ -30,6 +30,8 @@ type RepositoryConfig struct {
 		ForbidPublicRepositories           bool     `yaml:"forbid_public_repositories"`
 		ForbidPublicRepositoriesExclusions []string `yaml:"forbid_public_repositories_exclusions"`
 	} `yaml:"visibility_rules"`
+
+	ForceMergeworkflows []string `yaml:"forcemerge_workflows"`
 }
 
 // set default values

@@ -19,6 +19,10 @@ x-tagGroups:
     description: APIs used to update Github synchronously with Goliac
     tags:
       - external
+  - name: auth
+    description: APIs used for authenticated users workflow
+    tags:
+      - auth
 consumes:
   - application/json
 produces:
@@ -322,6 +326,146 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
+  /auth/login:
+    get:
+      tags:
+        - auth
+      operationId: getAuthenticationLogin
+      description: Authenticate the user
+      parameters:
+        - name: redirect
+          in: query
+          description: redirect url
+          required: false
+          type: string
+      responses:
+        '302':
+          description: redirect to github login
+          headers:
+            Location:
+              description: The URL to redirect to
+              type: string
+              format: uri
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
+  /auth/callback:
+    get:
+      tags:
+        - auth
+      operationId: getAuthenticationCallback
+      description: Receive the callback from github after authentication
+      parameters:
+        - name: code
+          in: query
+          description: code received from github
+          required: true
+          type: string
+        - name: state
+          in: query
+          description: state received from github
+          required: true
+          type: string
+      responses:
+        '200':
+          description: github user information
+          schema:
+            $ref: '#/definitions/githubuser'
+        '302':
+          description: redirect to github login
+          headers:
+            Location:
+              description: The URL to redirect to
+              type: string
+              format: uri
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
+  /auth/githubuser:
+    get:
+      tags:
+        - auth
+      operationId: getGithubUser
+      description: Get the authenticated user information
+      responses:
+        '200':
+          description: github user information
+          schema:
+            $ref: '#/definitions/githubuser'
+        '401':
+          description: unauthorized
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
+  /auth/workflows_forcemerge:
+    get:
+      tags:
+        - auth
+      operationId: getWorkflowsForcemerge
+      description: Get all PR force merge workflows
+      responses:
+        '200':
+          description: get list of all PR force merge workflows
+          schema:
+            $ref: '#/definitions/workflows_prmerged'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/error'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
+  /auth/workflows_forcemerge/{workflowName}:
+    post:
+      tags:
+        - auth
+      operationId: postWorkflowForcemerge
+      description: Bypass PR approval and force mere the PR
+      parameters:
+        - name: workflowName
+          in: path
+          description: workflow name
+          required: true
+          type: string
+        - name: body
+          in: body
+          description: PR to merge (and bypass approval)
+          required: true
+          schema:
+            type: object
+            required:
+              - pr_url
+              - explanation
+            properties:
+              pr_url:
+                type: string
+                minLength: 10
+                x-nullable: false
+              explanation:
+                type: string
+                minLength: 1
+                x-nullable: false
+      responses:
+        '200':
+          description: PR merged
+          schema:
+            $ref: '#/definitions/prmerged'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/error'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/error'
+        default:
+          description: generic error response
+          schema:
+            $ref: '#/definitions/error'
 definitions:
   health:
     type: object
@@ -539,6 +683,9 @@ definitions:
         type: array
         items:
           type: string
+      nbForcemergeWorkflows:
+        type: integer
+        x-omitempty: false
   statistics:
     properties:
       lastTimeToApply:
@@ -594,3 +741,34 @@ definitions:
       message:
         type: string
         minLength: 1
+  githubuser:
+    type: object
+    properties:
+      github_id:
+        type: string
+        x-isnullable: false
+      name:
+        type: string
+        x-isnullable: false
+  workflows_prmerged:
+    type: array
+    items:
+      type: object
+      properties:
+        workflow_name:
+          type: string
+          x-isnullable: false
+        workflow_description:
+          type: string
+          x-isnullable: false
+  prmerged:
+    type: object
+    properties:
+      message:
+        type: string
+        x-isnullable: false
+      tracking_urls:
+        type: array
+        items:
+          type: string
+          minLength: 1

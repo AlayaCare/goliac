@@ -34,7 +34,7 @@ function indexBy (arr, prop) {
     let msg = get(err, 'response.data.message', 'request error')
     this.$message.error(msg)
     if (get(err, 'response.status') === 401) {
-      let redirectURL = err.response.headers['www-authenticate'].split(`"`)[1]
+      let redirectURL = '/api/v1/auth/login?redirect=' + window.location.pathname + window.location.hash
       window.location = redirectURL
       return
     }

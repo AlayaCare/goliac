@@ -37,6 +37,7 @@ export default defineConfig({
           { text: 'Installation', link: '/installation' },
           { text: 'Regular Usage', link: '/regular_usage' },
           { text: 'Admin Usage', link: '/admin_usage' },
+          { text: 'PR Breaking glass', link: '/breakingglass' },
           { text: 'Security', link: '/security' },
           { text: 'Troubleshooting', link: '/troubleshooting' },
           { text: 'APIs', link: '/apis' },

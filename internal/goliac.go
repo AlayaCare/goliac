@@ -53,6 +53,9 @@ type Goliac interface {
 
 	GetLocal() engine.GoliacLocalResources
 	GetRemote() engine.GoliacRemoteResources
+
+	// used by the Github http auth endpoints to validate the token
+	GetRemoteClient() github.GitHubClient
 }
 
 type GoliacImpl struct {
@@ -89,18 +92,20 @@ func NewGoliacImpl() (Goliac, error) {
 		return nil, err
 	}
 
+	local := engine.NewGoliacLocalImpl()
 	remote := engine.NewGoliacRemoteImpl(remoteGithubClient)
 
 	usersync.InitPlugins(remoteGithubClient)
 
 	return &GoliacImpl{
-		local:                 engine.NewGoliacLocalImpl(),
+		local:                 local,
 		remoteGithubClient:    remoteGithubClient,
 		localGithubClient:     localGithubClient,
 		remote:                remote,
 		repoconfig:            &config.RepositoryConfig{},
 		feedback:              nil,
 		cacheDirtyAfterAction: false,
+		actionMutex:           sync.Mutex{},
 	}, nil
 }
 
@@ -110,6 +115,10 @@ func (g *GoliacImpl) GetLocal() engine.GoliacLocalResources {
 
 func (g *GoliacImpl) GetRemote() engine.GoliacRemoteResources {
 	return g.remote
+}
+
+func (g *GoliacImpl) GetRemoteClient() github.GitHubClient {
+	return g.remoteGithubClient
 }
 
 func (g *GoliacImpl) SetRemoteObservability(feedback observability.RemoteObservability) error {
@@ -385,14 +394,18 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs b
 			errorCollector.AddError(fmt.Errorf("unable to clone: %v", err))
 			return
 		}
-		repoconfig, err := g.local.LoadRepoConfig()
-		if err != nil {
-			errorCollector.AddError(fmt.Errorf("unable to read goliac.yaml config file: %v", err))
+		g.local.LoadAndValidate(errorCollector)
+		if errorCollector.HasErrors() {
+			return
+		}
+
+		repoconfig := g.local.RepoConfig()
+		if repoconfig == nil {
+			errorCollector.AddError(fmt.Errorf("unable to read goliac.yaml config file"))
 			return
 		}
 		g.repoconfig = repoconfig
 
-		g.local.LoadAndValidate(errorCollector)
 	} else {
 		// Local
 		subfs, err := fs.Chroot(repositoryUrl)
@@ -612,9 +625,14 @@ func (g *GoliacImpl) UsersUpdate(ctx context.Context, errorCollector *observabil
 	}
 	defer g.local.Close(fs)
 
-	repoconfig, err := g.local.LoadRepoConfig()
-	if err != nil {
-		errorCollector.AddError(fmt.Errorf("unable to read goliac.yaml config file: %v", err))
+	g.local.LoadAndValidate(errorCollector)
+	if errorCollector.HasErrors() {
+		return false
+	}
+
+	repoconfig := g.local.RepoConfig()
+	if repoconfig == nil {
+		errorCollector.AddError(fmt.Errorf("unable to read goliac.yaml config file"))
 		return false
 	}
 

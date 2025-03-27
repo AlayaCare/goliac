@@ -1,0 +1,23 @@
+get:
+  tags:
+    - auth
+  operationId: getAuthenticationLogin
+  description: Authenticate the user
+  parameters:
+    - name: redirect
+      in: query
+      description: redirect url
+      required: false
+      type: string
+  responses:
+    302:
+      description: redirect to github login
+      headers:
+        Location:
+          description: The URL to redirect to
+          type: string
+          format: uri
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

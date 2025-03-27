@@ -1,0 +1,32 @@
+get:
+  tags:
+    - auth
+  operationId: getAuthenticationCallback
+  description: Receive the callback from github after authentication
+  parameters:
+    - name: code
+      in: query
+      description: code received from github
+      required: true
+      type: string
+    - name: state
+      in: query
+      description: state received from github
+      required: true
+      type: string
+  responses:
+    200:
+      description: github user information
+      schema:
+        $ref: "#/definitions/githubuser"
+    302:
+      description: redirect to github login
+      headers:
+        Location:
+          description: The URL to redirect to
+          type: string
+          format: uri
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

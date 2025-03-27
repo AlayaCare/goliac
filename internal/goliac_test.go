@@ -356,6 +356,9 @@ func (c *GitHubClientMock) CallRestAPI(ctx context.Context, endpoint, parameters
 func (c *GitHubClientMock) GetAccessToken(context.Context) (string, error) {
 	return "accesstoken", nil
 }
+func (c *GitHubClientMock) CreateJWT() (string, error) {
+	return "", nil
+}
 func (c *GitHubClientMock) GetAppSlug() string {
 	return "goliac-project-app"
 }

@@ -13,6 +13,7 @@ var Config = struct {
 	GithubAppOrganization     string `env:"GOLIAC_GITHUB_APP_ORGANIZATION" envDefault:""`
 	GithubAppID               int64  `env:"GOLIAC_GITHUB_APP_ID"`
 	GithubAppPrivateKeyFile   string `env:"GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE" envDefault:"github-app-private-key.pem"`
+	GithubAppClientSecret     string `env:"GOLIAC_GITHUB_APP_CLIENT_SECRET"`
 	GithubPersonalAccessToken string `env:"GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN"`
 	GoliacEmail               string `env:"GOLIAC_EMAIL" envDefault:"goliac@goliac-project.com"`
 	GoliacTeamOwnerSuffix     string `env:"GOLIAC_TEAM_OWNER_SUFFIX" envDefault:"-goliac-owners"`
@@ -71,6 +72,13 @@ var Config = struct {
 	OpenTelemetryEnabled      bool   `env:"GOLIAC_OPENTELEMETRY_ENABLED" envDefault:"false"`
 	OpenTelemetryGrpcEndpoint string `env:"GOLIAC_OPENTELEMETRY_GRPC_ENDPOINT" envDefault:"localhost:4317"`
 	OpenTelemetryTraceAll     bool   `env:"GOLIAC_OPENTELEMETRY_TRACE_ALL" envDefault:"true"`
+
+	// ForcemergeWorkflow specific configuration
+	PrForcemergeJiraAtlassianDomain string `env:"GOLIAC_PR_FORCEMERGE_JIRA_ATLASSIAN_DOMAIN" envDefault:""`
+	PrForcemergeJiraProjectKey      string `env:"GOLIAC_PR_FORCEMERGE_JIRA_PROJECT_KEY" envDefault:""`
+	PrForcemergeJiraEmail           string `env:"GOLIAC_PR_FORCEMERGE_JIRA_EMAIL" envDefault:""`
+	PrForcemergeJiraApiToken        string `env:"GOLIAC_PR_FORCEMERGE_JIRA_API_TOKEN" envDefault:""`
+	PrForcemergeJiraIssueType       string `env:"GOLIAC_PR_FORCEMERGE_JIRA_ISSUE_TYPE" envDefault:"Task"`
 }{}
 
 // to be overrided at build time with

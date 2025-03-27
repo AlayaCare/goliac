@@ -20,6 +20,7 @@ import (
 	"github.com/go-openapi/swag"
 
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/app"
+	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/auth"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/external"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/health"
 )
@@ -46,11 +47,20 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 
 		JSONProducer: runtime.JSONProducer(),
 
+		AuthGetAuthenticationCallbackHandler: auth.GetAuthenticationCallbackHandlerFunc(func(params auth.GetAuthenticationCallbackParams) middleware.Responder {
+			return middleware.NotImplemented("operation auth.GetAuthenticationCallback has not yet been implemented")
+		}),
+		AuthGetAuthenticationLoginHandler: auth.GetAuthenticationLoginHandlerFunc(func(params auth.GetAuthenticationLoginParams) middleware.Responder {
+			return middleware.NotImplemented("operation auth.GetAuthenticationLogin has not yet been implemented")
+		}),
 		AppGetCollaboratorHandler: app.GetCollaboratorHandlerFunc(func(params app.GetCollaboratorParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetCollaborator has not yet been implemented")
 		}),
 		AppGetCollaboratorsHandler: app.GetCollaboratorsHandlerFunc(func(params app.GetCollaboratorsParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetCollaborators has not yet been implemented")
+		}),
+		AuthGetGithubUserHandler: auth.GetGithubUserHandlerFunc(func(params auth.GetGithubUserParams) middleware.Responder {
+			return middleware.NotImplemented("operation auth.GetGithubUser has not yet been implemented")
 		}),
 		HealthGetLivenessHandler: health.GetLivenessHandlerFunc(func(params health.GetLivenessParams) middleware.Responder {
 			return middleware.NotImplemented("operation health.GetLiveness has not yet been implemented")
@@ -85,6 +95,9 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		AppGetUsersHandler: app.GetUsersHandlerFunc(func(params app.GetUsersParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetUsers has not yet been implemented")
 		}),
+		AuthGetWorkflowsForcemergeHandler: auth.GetWorkflowsForcemergeHandlerFunc(func(params auth.GetWorkflowsForcemergeParams) middleware.Responder {
+			return middleware.NotImplemented("operation auth.GetWorkflowsForcemerge has not yet been implemented")
+		}),
 		ExternalPostExternalCreateRepositoryHandler: external.PostExternalCreateRepositoryHandlerFunc(func(params external.PostExternalCreateRepositoryParams) middleware.Responder {
 			return middleware.NotImplemented("operation external.PostExternalCreateRepository has not yet been implemented")
 		}),
@@ -93,6 +106,9 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		}),
 		AppPostResyncHandler: app.PostResyncHandlerFunc(func(params app.PostResyncParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.PostResync has not yet been implemented")
+		}),
+		AuthPostWorkflowForcemergeHandler: auth.PostWorkflowForcemergeHandlerFunc(func(params auth.PostWorkflowForcemergeParams) middleware.Responder {
+			return middleware.NotImplemented("operation auth.PostWorkflowForcemerge has not yet been implemented")
 		}),
 	}
 }
@@ -131,10 +147,16 @@ type GoliacAPI struct {
 	//   - application/json
 	JSONProducer runtime.Producer
 
+	// AuthGetAuthenticationCallbackHandler sets the operation handler for the get authentication callback operation
+	AuthGetAuthenticationCallbackHandler auth.GetAuthenticationCallbackHandler
+	// AuthGetAuthenticationLoginHandler sets the operation handler for the get authentication login operation
+	AuthGetAuthenticationLoginHandler auth.GetAuthenticationLoginHandler
 	// AppGetCollaboratorHandler sets the operation handler for the get collaborator operation
 	AppGetCollaboratorHandler app.GetCollaboratorHandler
 	// AppGetCollaboratorsHandler sets the operation handler for the get collaborators operation
 	AppGetCollaboratorsHandler app.GetCollaboratorsHandler
+	// AuthGetGithubUserHandler sets the operation handler for the get github user operation
+	AuthGetGithubUserHandler auth.GetGithubUserHandler
 	// HealthGetLivenessHandler sets the operation handler for the get liveness operation
 	HealthGetLivenessHandler health.GetLivenessHandler
 	// HealthGetReadinessHandler sets the operation handler for the get readiness operation
@@ -157,12 +179,16 @@ type GoliacAPI struct {
 	AppGetUserHandler app.GetUserHandler
 	// AppGetUsersHandler sets the operation handler for the get users operation
 	AppGetUsersHandler app.GetUsersHandler
+	// AuthGetWorkflowsForcemergeHandler sets the operation handler for the get workflows forcemerge operation
+	AuthGetWorkflowsForcemergeHandler auth.GetWorkflowsForcemergeHandler
 	// ExternalPostExternalCreateRepositoryHandler sets the operation handler for the post external create repository operation
 	ExternalPostExternalCreateRepositoryHandler external.PostExternalCreateRepositoryHandler
 	// AppPostFlushCacheHandler sets the operation handler for the post flush cache operation
 	AppPostFlushCacheHandler app.PostFlushCacheHandler
 	// AppPostResyncHandler sets the operation handler for the post resync operation
 	AppPostResyncHandler app.PostResyncHandler
+	// AuthPostWorkflowForcemergeHandler sets the operation handler for the post workflow forcemerge operation
+	AuthPostWorkflowForcemergeHandler auth.PostWorkflowForcemergeHandler
 
 	// ServeError is called when an error is received, there is a default handler
 	// but you can set your own with this
@@ -240,11 +266,20 @@ func (o *GoliacAPI) Validate() error {
 		unregistered = append(unregistered, "JSONProducer")
 	}
 
+	if o.AuthGetAuthenticationCallbackHandler == nil {
+		unregistered = append(unregistered, "auth.GetAuthenticationCallbackHandler")
+	}
+	if o.AuthGetAuthenticationLoginHandler == nil {
+		unregistered = append(unregistered, "auth.GetAuthenticationLoginHandler")
+	}
 	if o.AppGetCollaboratorHandler == nil {
 		unregistered = append(unregistered, "app.GetCollaboratorHandler")
 	}
 	if o.AppGetCollaboratorsHandler == nil {
 		unregistered = append(unregistered, "app.GetCollaboratorsHandler")
+	}
+	if o.AuthGetGithubUserHandler == nil {
+		unregistered = append(unregistered, "auth.GetGithubUserHandler")
 	}
 	if o.HealthGetLivenessHandler == nil {
 		unregistered = append(unregistered, "health.GetLivenessHandler")
@@ -279,6 +314,9 @@ func (o *GoliacAPI) Validate() error {
 	if o.AppGetUsersHandler == nil {
 		unregistered = append(unregistered, "app.GetUsersHandler")
 	}
+	if o.AuthGetWorkflowsForcemergeHandler == nil {
+		unregistered = append(unregistered, "auth.GetWorkflowsForcemergeHandler")
+	}
 	if o.ExternalPostExternalCreateRepositoryHandler == nil {
 		unregistered = append(unregistered, "external.PostExternalCreateRepositoryHandler")
 	}
@@ -287,6 +325,9 @@ func (o *GoliacAPI) Validate() error {
 	}
 	if o.AppPostResyncHandler == nil {
 		unregistered = append(unregistered, "app.PostResyncHandler")
+	}
+	if o.AuthPostWorkflowForcemergeHandler == nil {
+		unregistered = append(unregistered, "auth.PostWorkflowForcemergeHandler")
 	}
 
 	if len(unregistered) > 0 {
@@ -379,11 +420,23 @@ func (o *GoliacAPI) initHandlerCache() {
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
+	o.handlers["GET"]["/auth/callback"] = auth.NewGetAuthenticationCallback(o.context, o.AuthGetAuthenticationCallbackHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/auth/login"] = auth.NewGetAuthenticationLogin(o.context, o.AuthGetAuthenticationLoginHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
 	o.handlers["GET"]["/collaborators/{collaboratorID}"] = app.NewGetCollaborator(o.context, o.AppGetCollaboratorHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/collaborators"] = app.NewGetCollaborators(o.context, o.AppGetCollaboratorsHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/auth/githubuser"] = auth.NewGetGithubUser(o.context, o.AuthGetGithubUserHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
@@ -428,6 +481,10 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/users"] = app.NewGetUsers(o.context, o.AppGetUsersHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/auth/workflows_forcemerge"] = auth.NewGetWorkflowsForcemerge(o.context, o.AuthGetWorkflowsForcemergeHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
@@ -440,6 +497,10 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
 	o.handlers["POST"]["/resync"] = app.NewPostResync(o.context, o.AppPostResyncHandler)
+	if o.handlers["POST"] == nil {
+		o.handlers["POST"] = make(map[string]http.Handler)
+	}
+	o.handlers["POST"]["/auth/workflows_forcemerge/{workflowName}"] = auth.NewPostWorkflowForcemerge(o.context, o.AuthPostWorkflowForcemergeHandler)
 }
 
 // Serve creates a http handler to serve the API over HTTP

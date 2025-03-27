@@ -48,8 +48,6 @@ type GoliacLocalGit interface {
 	CheckoutCommit(commit *object.Commit) error
 	PushTag(tagname string, hash plumbing.Hash, accesstoken string) error
 
-	LoadRepoConfig() (*config.RepositoryConfig, error)
-
 	// Load and Validate from a github repository
 	LoadAndValidate(errorCollection *observability.ErrorCollection)
 	// whenever someone create/delete a team, we must update the github CODEOWNERS
@@ -73,38 +71,44 @@ type GoliacLocalResources interface {
 	Repositories() map[string]*entity.Repository // reponame, repo definition
 	Users() map[string]*entity.User              // github username, user definition
 	ExternalUsers() map[string]*entity.User
-	RuleSets() map[string]*entity.RuleSet
+	RuleSets() map[string]*entity.RuleSet                       //global rulesets
+	ForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow // global workflows
+	RepoConfig() *config.RepositoryConfig
 }
 
 type GoliacLocalImpl struct {
-	teams         map[string]*entity.Team
-	repositories  map[string]*entity.Repository
-	users         map[string]*entity.User
-	externalUsers map[string]*entity.User
-	rulesets      map[string]*entity.RuleSet
-	repo          *git.Repository
+	teams               map[string]*entity.Team
+	repositories        map[string]*entity.Repository
+	users               map[string]*entity.User
+	externalUsers       map[string]*entity.User
+	rulesets            map[string]*entity.RuleSet
+	forcemergeworkflows map[string]*entity.ForcemergeWorkflow
+	repoconfig          *config.RepositoryConfig
+	repo                *git.Repository
 }
 
 func NewGoliacLocalImpl() GoliacLocal {
 	return &GoliacLocalImpl{
-		teams:         map[string]*entity.Team{},
-		repositories:  map[string]*entity.Repository{},
-		users:         map[string]*entity.User{},
-		externalUsers: map[string]*entity.User{},
-		rulesets:      map[string]*entity.RuleSet{},
-		repo:          nil,
+		teams:               map[string]*entity.Team{},
+		repositories:        map[string]*entity.Repository{},
+		users:               map[string]*entity.User{},
+		externalUsers:       map[string]*entity.User{},
+		rulesets:            map[string]*entity.RuleSet{},
+		forcemergeworkflows: map[string]*entity.ForcemergeWorkflow{},
+		repo:                nil,
 	}
 }
 
 // NewMockGoliacLocalImpl is used for testing purposes
 func NewGoliacLocalImplWithRepo(repo *git.Repository) GoliacLocal {
 	return &GoliacLocalImpl{
-		teams:         map[string]*entity.Team{},
-		repositories:  map[string]*entity.Repository{},
-		users:         map[string]*entity.User{},
-		externalUsers: map[string]*entity.User{},
-		rulesets:      map[string]*entity.RuleSet{},
-		repo:          repo,
+		teams:               map[string]*entity.Team{},
+		repositories:        map[string]*entity.Repository{},
+		users:               map[string]*entity.User{},
+		externalUsers:       map[string]*entity.User{},
+		rulesets:            map[string]*entity.RuleSet{},
+		forcemergeworkflows: map[string]*entity.ForcemergeWorkflow{},
+		repo:                repo,
 	}
 }
 
@@ -126,6 +130,13 @@ func (g *GoliacLocalImpl) ExternalUsers() map[string]*entity.User {
 
 func (g *GoliacLocalImpl) RuleSets() map[string]*entity.RuleSet {
 	return g.rulesets
+}
+
+func (g *GoliacLocalImpl) ForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow {
+	return g.forcemergeworkflows
+}
+func (g *GoliacLocalImpl) RepoConfig() *config.RepositoryConfig {
+	return g.repoconfig
 }
 
 func (g *GoliacLocalImpl) Clone(fs billy.Filesystem, accesstoken, repositoryUrl, branch string) error {
@@ -286,18 +297,11 @@ func (g *GoliacLocalImpl) Close(fs billy.Filesystem) {
 	g.repo = nil
 }
 
-func (g *GoliacLocalImpl) LoadRepoConfig() (*config.RepositoryConfig, error) {
-	if g.repo == nil {
-		return nil, fmt.Errorf("git repository not cloned")
-	}
-	w, err := g.repo.Worktree()
-	if err != nil {
-		return nil, err
-	}
+func (g *GoliacLocalImpl) loadRepoConfig(fs billy.Filesystem) (*config.RepositoryConfig, error) {
 
 	var repoconfig config.RepositoryConfig
 
-	content, err := utils.ReadFile(w.Filesystem, "goliac.yaml")
+	content, err := utils.ReadFile(fs, "goliac.yaml")
 	if err != nil {
 		return nil, fmt.Errorf("not able to find the /goliac.yaml configuration file: %v", err)
 	}
@@ -949,6 +953,13 @@ func (g *GoliacLocalImpl) loadUsers(fs billy.Filesystem, errorCollection *observ
  * - a slice of warning that must not stop the validation process
  */
 func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem, errorCollection *observability.ErrorCollection) {
+	repoconfig, err := g.loadRepoConfig(fs)
+	if err != nil {
+		errorCollection.AddError(err)
+		return
+	}
+	g.repoconfig = repoconfig
+
 	g.loadUsers(fs, errorCollection)
 
 	if errorCollection.HasErrors() {
@@ -966,8 +977,18 @@ func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem, errorCollect
 	rulesets := entity.ReadRuleSetDirectory(fs, "rulesets", errorCollection)
 	g.rulesets = rulesets
 
+	forcemergeworkflows := entity.ReadForcemergeWorkflowDirectory(fs, "forcemerge_workflows", errorCollection)
+	g.forcemergeworkflows = make(map[string]*entity.ForcemergeWorkflow)
+	for _, v := range repoconfig.ForceMergeworkflows {
+		if w, ok := forcemergeworkflows[v]; ok {
+			g.forcemergeworkflows[v] = w
+		}
+	}
+
 	logrus.Debugf("Nb local users: %d", len(g.users))
 	logrus.Debugf("Nb local external users: %d", len(g.externalUsers))
 	logrus.Debugf("Nb local teams: %d", len(g.teams))
 	logrus.Debugf("Nb local repositories: %d", len(g.repositories))
+	logrus.Debugf("Nb local rulesets: %d", len(g.rulesets))
+	logrus.Debugf("Nb local forcemergeworkflows: %d", len(g.forcemergeworkflows))
 }

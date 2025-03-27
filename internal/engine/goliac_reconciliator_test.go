@@ -17,11 +17,12 @@ import (
 )
 
 type GoliacLocalMock struct {
-	users     map[string]*entity.User
-	externals map[string]*entity.User
-	teams     map[string]*entity.Team
-	repos     map[string]*entity.Repository
-	rulesets  map[string]*entity.RuleSet
+	users               map[string]*entity.User
+	externals           map[string]*entity.User
+	teams               map[string]*entity.Team
+	repos               map[string]*entity.Repository
+	rulesets            map[string]*entity.RuleSet
+	forcemergeworkflows map[string]*entity.ForcemergeWorkflow
 }
 
 func (m *GoliacLocalMock) Clone(fs billy.Filesystem, accesstoken, repositoryUrl, branch string) error {
@@ -39,8 +40,8 @@ func (m *GoliacLocalMock) CheckoutCommit(commit *object.Commit) error {
 func (m *GoliacLocalMock) PushTag(tagname string, hash plumbing.Hash, accesstoken string) error {
 	return nil
 }
-func (m *GoliacLocalMock) LoadRepoConfig() (*config.RepositoryConfig, error) {
-	return &config.RepositoryConfig{}, nil
+func (m *GoliacLocalMock) RepoConfig() *config.RepositoryConfig {
+	return &config.RepositoryConfig{}
 }
 func (m *GoliacLocalMock) LoadAndValidate(errorCollector *observability.ErrorCollection) {
 }
@@ -60,6 +61,9 @@ func (m *GoliacLocalMock) ExternalUsers() map[string]*entity.User {
 }
 func (m *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 	return m.rulesets
+}
+func (m *GoliacLocalMock) ForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow {
+	return m.forcemergeworkflows
 }
 func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
 	return nil

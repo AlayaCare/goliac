@@ -32,6 +32,9 @@ type Status struct {
 	// Min Length: 1
 	LastSyncTime string `json:"lastSyncTime,omitempty"`
 
+	// nb forcemerge workflows
+	NbForcemergeWorkflows int64 `json:"nbForcemergeWorkflows"`
+
 	// nb repos
 	NbRepos int64 `json:"nbRepos"`
 

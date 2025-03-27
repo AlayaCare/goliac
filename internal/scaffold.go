@@ -95,10 +95,12 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 	utils.RemoveAll(fs, "teams")
 	utils.RemoveAll(fs, "rulesets")
 	utils.RemoveAll(fs, "archived")
+	utils.RemoveAll(fs, "forcemerge_workflows")
 
 	fs.MkdirAll("archived", 0755)
 	fs.MkdirAll("rulesets", 0755)
 	fs.MkdirAll("teams", 0755)
+	fs.MkdirAll("forcemerge_workflows", 0755)
 
 	usermap, err := s.generateUsers(ctx, fs, "users")
 	if err != nil {
@@ -554,9 +556,11 @@ destructive_operations:
 usersync:
   plugin: %s
 
-#visibility_rules:
-#  forbid_public_repositories: false
-#  forbid_public_repositories_exclusions: [] # reponame or regexp
+# visibility_rules:
+#   forbid_public_repositories: false
+#   forbid_public_repositories_exclusions: [] # reponame or regexp
+
+# forcemerge_workflows: []
 `, adminteam, userplugin)
 	if err := writeFile(filepath.Join(rootpath, "goliac.yaml"), []byte(conf), fs); err != nil {
 		return err
