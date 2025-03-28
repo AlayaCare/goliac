@@ -13,10 +13,6 @@ import (
 	"github.com/goliac-project/goliac/internal/config"
 )
 
-type ForcemergeStepPlugin interface {
-	Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error)
-}
-
 type ForcemergeStepPlugJira struct {
 	AtlassianDomain string // something like "mycompany.atlassian.net"
 	ProjectKey      string

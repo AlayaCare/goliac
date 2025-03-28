@@ -16,6 +16,10 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+type ForcemergeStepPlugin interface {
+	Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error)
+}
+
 type Forcemerge interface {
 	ExecuteForcemergeWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, prPathToMerge, explanation string, dryrun bool) ([]string, error)
 }
@@ -38,7 +42,8 @@ type ForcemergeImpl struct {
 
 func NewForcemergeImpl(local ForcemergeLocalResource, remote ForcemergeRemoteResource, githubclient github.GitHubClient) Forcemerge {
 	stepPlugins := map[string]ForcemergeStepPlugin{
-		"jira": NewForcemergeStepPlugJira(),
+		"jira_ticket_creation": NewForcemergeStepPlugJira(),
+		"slack_notification":   NewForcemergeStepPluginSlack(),
 	}
 	return &ForcemergeImpl{
 		local:        local,

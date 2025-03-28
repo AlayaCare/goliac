@@ -74,11 +74,11 @@ func (w *ForcemergeWorkflow) Validate(filename string) error {
 		}
 
 		// only one step is allowed for now
-		if step.Name != "jira" {
+		if step.Name != "jira_ticket_creation" && step.Name != "slack_notification" {
 			return fmt.Errorf("invalid step.name: %s for ForcemergeWorkflow filename %s", step.Name, filename)
 		}
 		switch step.Name {
-		case "jira":
+		case "jira_ticket_creation":
 			// check if the jiraSpace is set
 			jiraProjectSet := false
 			for k, v := range step.Properties {
