@@ -12,12 +12,14 @@ import (
 )
 
 type ForcemergeStepPluginSlack struct {
+	SlackUrl   string
 	SlackToken string
 	Channel    string
 }
 
 func NewForcemergeStepPluginSlack() ForcemergeStepPlugin {
 	return &ForcemergeStepPluginSlack{
+		SlackUrl:   "https://slack.com/api/chat.postMessage",
 		SlackToken: config.Config.SlackToken,
 		Channel:    config.Config.SlackChannel,
 	}
@@ -34,8 +36,6 @@ func (f *ForcemergeStepPluginSlack) Execute(ctx context.Context, username, expla
 		channel = properties["channel"].(string)
 	}
 
-	slackUrl := "https://slack.com/api/chat.postMessage"
-
 	message := fmt.Sprintf("PR %s has been merged by %s with explanation: %s", url.Path, username, explanation)
 	// Prepare the message payload
 	msg := SlackMessage{
@@ -50,7 +50,7 @@ func (f *ForcemergeStepPluginSlack) Execute(ctx context.Context, username, expla
 	}
 
 	// Create a new HTTP POST request
-	req, err := http.NewRequest("POST", slackUrl, bytes.NewBuffer(jsonPayload))
+	req, err := http.NewRequest("POST", f.SlackUrl, bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return "", fmt.Errorf("failed to create new request: %v", err)
 	}

@@ -13,25 +13,27 @@ import (
 	"github.com/goliac-project/goliac/internal/config"
 )
 
-type ForcemergeStepPlugJira struct {
-	AtlassianDomain string // something like "mycompany.atlassian.net"
-	ProjectKey      string
-	Email           string
-	ApiToken        string //generate a Jira API token here: https://id.atlassian.com/manage/api-tokens
-	IssueType       string
+type ForcemergeStepPluginJira struct {
+	AtlassianUrlDomain string // something like "https://mycompany.atlassian.net"
+	ProjectKey         string
+	Email              string
+	ApiToken           string //generate a Jira API token here: https://id.atlassian.com/manage/api-tokens
+	IssueType          string
 }
 
-func NewForcemergeStepPlugJira() ForcemergeStepPlugin {
+func NewForcemergeStepPluginJira() ForcemergeStepPlugin {
 	domain := config.Config.PrForcemergeJiraAtlassianDomain
-	domain = strings.TrimPrefix(domain, "https://")
+	if !strings.HasPrefix(domain, "https://") || !strings.HasPrefix(domain, "http://") {
+		domain = "https://" + domain
+	}
 	domain = strings.TrimSuffix(domain, "/")
 
-	return &ForcemergeStepPlugJira{
-		AtlassianDomain: domain,
-		ProjectKey:      config.Config.PrForcemergeJiraProjectKey,
-		Email:           config.Config.PrForcemergeJiraEmail,
-		ApiToken:        config.Config.PrForcemergeJiraApiToken,
-		IssueType:       config.Config.PrForcemergeJiraIssueType,
+	return &ForcemergeStepPluginJira{
+		AtlassianUrlDomain: domain,
+		ProjectKey:         config.Config.PrForcemergeJiraProjectKey,
+		Email:              config.Config.PrForcemergeJiraEmail,
+		ApiToken:           config.Config.PrForcemergeJiraApiToken,
+		IssueType:          config.Config.PrForcemergeJiraIssueType,
 	}
 }
 
@@ -76,8 +78,8 @@ type CreateIssueResponse struct {
 	Self string `json:"self"`
 }
 
-func (f *ForcemergeStepPlugJira) Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error) {
-	jiraURL := fmt.Sprintf("https://%s/rest/api/3/issue", f.AtlassianDomain)
+func (f *ForcemergeStepPluginJira) Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error) {
+	jiraURL := fmt.Sprintf("%s/rest/api/3/issue", f.AtlassianUrlDomain)
 	projectKey := f.ProjectKey
 	issueType := f.IssueType
 	if properties["project_key"] != nil {
@@ -140,6 +142,6 @@ func (f *ForcemergeStepPlugJira) Execute(ctx context.Context, username, explanat
 	if err != nil {
 		return "", fmt.Errorf("error decoding response: %s", err)
 	}
-	issueURL := fmt.Sprintf("https://%s/browse/%s", f.AtlassianDomain, issueResponse.Key)
+	issueURL := fmt.Sprintf("%s/browse/%s", f.AtlassianUrlDomain, issueResponse.Key)
 	return issueURL, nil
 }

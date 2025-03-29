@@ -10,7 +10,6 @@ import (
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/engine"
 	"github.com/goliac-project/goliac/internal/entity"
-	"github.com/goliac-project/goliac/internal/github"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -24,25 +23,32 @@ type Forcemerge interface {
 	ExecuteForcemergeWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, prPathToMerge, explanation string, dryrun bool) ([]string, error)
 }
 
+// strip down version of Goliac Local
 type ForcemergeLocalResource interface {
 	ForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow
 	Teams() map[string]*entity.Team
 }
 
+// strip down version of Goliac Remote (if we have an externally managed team)
 type ForcemergeRemoteResource interface {
 	Teams(ctx context.Context, current bool) map[string]*engine.GithubTeam
+}
+
+// strip down version of GithubClient
+type ForcemergeGithubClient interface {
+	CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error)
 }
 
 type ForcemergeImpl struct {
 	local        ForcemergeLocalResource
 	remote       ForcemergeRemoteResource
-	githubclient github.GitHubClient
+	githubclient ForcemergeGithubClient
 	stepPlugins  map[string]ForcemergeStepPlugin
 }
 
-func NewForcemergeImpl(local ForcemergeLocalResource, remote ForcemergeRemoteResource, githubclient github.GitHubClient) Forcemerge {
+func NewForcemergeImpl(local ForcemergeLocalResource, remote ForcemergeRemoteResource, githubclient ForcemergeGithubClient) Forcemerge {
 	stepPlugins := map[string]ForcemergeStepPlugin{
-		"jira_ticket_creation": NewForcemergeStepPlugJira(),
+		"jira_ticket_creation": NewForcemergeStepPluginJira(),
 		"slack_notification":   NewForcemergeStepPluginSlack(),
 	}
 	return &ForcemergeImpl{
@@ -82,7 +88,7 @@ func (g *ForcemergeImpl) ExecuteForcemergeWorkflow(ctx context.Context, repoconf
 	prNumber := prMatch[2]
 
 	// check workflow and acl
-	w, err := g.getWorkflow(ctx, repoconfigForceMergeworkflows, workflowName, prPathToMerge, username)
+	w, err := g.getWorkflow(ctx, repoconfigForceMergeworkflows, workflowName, repo, username)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load the workflow: %v", err)
 	}

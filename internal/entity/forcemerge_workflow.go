@@ -19,10 +19,10 @@ type ForcemergeWorkflow struct {
 			Allowed []string `yaml:"allowed"`
 			Except  []string `yaml:"except"`
 		} `yaml:"repositories"`
-		Acl struct {
+		Acls struct {
 			Allowed []string `yaml:"allowed"`
 			Except  []string `yaml:"except"`
-		} `yaml:"acl"`
+		} `yaml:"acls"`
 		Steps []struct {
 			Name       string                 `yaml:"name"` // for now only 'jira' is supported
 			Properties map[string]interface{} `yaml:"properties"`
@@ -82,15 +82,29 @@ func (w *ForcemergeWorkflow) Validate(filename string) error {
 			// check if the jiraSpace is set
 			jiraProjectSet := false
 			for k, v := range step.Properties {
-				if k == "jira_project" {
+				if k == "project_key" {
 					jiraProjectSet = true
 					if v == "" {
-						return fmt.Errorf("step.properties.jira_project is empty for ForcemergeWorkflow filename %s", filename)
+						return fmt.Errorf("step.jira_ticket_creation.properties.project_key is empty for ForcemergeWorkflow filename %s", filename)
 					}
 				}
 			}
 			if !jiraProjectSet {
-				return fmt.Errorf("step.properties.jira_project is not set for ForcemergeWorkflow filename %s", filename)
+				return fmt.Errorf("step.jira_ticket_creation.properties.project_key is not set for ForcemergeWorkflow filename %s", filename)
+			}
+		case "slack_notification":
+			// check if the slackChannel is set
+			slackChannelSet := false
+			for k, v := range step.Properties {
+				if k == "channel" {
+					slackChannelSet = true
+					if v == "" {
+						return fmt.Errorf("step.slack_notification.properties.channel is empty for ForcemergeWorkflow filename %s", filename)
+					}
+				}
+			}
+			if !slackChannelSet {
+				return fmt.Errorf("step.slack_notification.properties.channel is not set for ForcemergeWorkflow filename %s", filename)
 			}
 		}
 	}
@@ -130,35 +144,55 @@ func (w *ForcemergeWorkflow) PassAcl(usernameTeams []string, repository string) 
 		return false
 	}
 
-	// checking if the repository is allowed
+	// checking if (one of) the team is allowed
 
 	teamsOwned := make(map[string]bool)
 	for _, team := range usernameTeams {
-		teamsOwned[team] = true
+		teamsOwned[team] = false
 	}
 
-	if len(w.Spec.Acl.Allowed) > 0 {
-		for _, allowed := range w.Spec.Acl.Allowed {
+	if len(w.Spec.Acls.Allowed) > 0 {
+		for _, allowed := range w.Spec.Acls.Allowed {
 			if allowed == "~ALL" {
 				break
 			}
-			if teamsOwned[allowed] {
-				break
+			for _, team := range usernameTeams {
+				teamRegex, err := regexp.Match(fmt.Sprintf("^%s$", allowed), []byte(team))
+				if err != nil {
+					return false
+				}
+				if teamRegex {
+					teamsOwned[team] = true
+				}
 			}
 		}
-		return false
+	} else {
+		for _, team := range usernameTeams {
+			teamsOwned[team] = true
+		}
 	}
 
-	if len(w.Spec.Acl.Except) > 0 {
-		for _, except := range w.Spec.Acl.Except {
-			if teamsOwned[except] {
-				return false
+	if len(w.Spec.Acls.Except) > 0 {
+		for _, except := range w.Spec.Acls.Except {
+			for _, team := range usernameTeams {
+				teamRegex, err := regexp.Match(fmt.Sprintf("^%s$", except), []byte(team))
+				if err != nil {
+					return false
+				}
+				if teamRegex {
+					teamsOwned[team] = false
+				}
 			}
 		}
-		return true
 	}
 
-	return true
+	for _, v := range teamsOwned {
+		if v {
+			return true
+		}
+	}
+
+	return false
 }
 
 func ReadForcemergeWorkflowDirectory(fs billy.Filesystem, dirname string, errorCollection *observability.ErrorCollection) map[string]*ForcemergeWorkflow {

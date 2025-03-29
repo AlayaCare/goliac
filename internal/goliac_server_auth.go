@@ -128,7 +128,7 @@ func (g *GoliacServerImpl) GetOrgMembership(ctx context.Context, ghuToken string
 helperCheckOrgMembership checks if the user is in the required GitHub organization.
 If the user is not in the organization, it returns an error.
 */
-func (g *GoliacServerImpl) helperCheckOrgMembership(req *http.Request, ghuToken string, org string, username string) (*GithubUserInfo, int, *models.Error) {
+func (g *GoliacServerImpl) helperCheckOrgMembership(req *http.Request) (*GithubUserInfo, int, *models.Error) {
 	// Retrieve the access token from the session
 	session, _ := g.sessionStore.Get(req, "auth-session")
 	accessToken, ok := session.Values["access_token"].(string)
@@ -156,7 +156,7 @@ func (g *GoliacServerImpl) helperCheckOrgMembership(req *http.Request, ghuToken 
 }
 
 func (g *GoliacServerImpl) AuthGetUser(params auth.GetGithubUserParams) middleware.Responder {
-	userinfo, codestatus, err := g.helperCheckOrgMembership(params.HTTPRequest, "", "", "")
+	userinfo, codestatus, err := g.helperCheckOrgMembership(params.HTTPRequest)
 
 	if err != nil {
 		return auth.NewGetGithubUserDefault(codestatus).WithPayload(err)
@@ -171,7 +171,7 @@ func (g *GoliacServerImpl) AuthGetUser(params auth.GetGithubUserParams) middlewa
 }
 
 func (g *GoliacServerImpl) AuthWorkflowForcemerge(params auth.PostWorkflowForcemergeParams) middleware.Responder {
-	userinfo, codestatus, merr := g.helperCheckOrgMembership(params.HTTPRequest, "", "", "")
+	userinfo, codestatus, merr := g.helperCheckOrgMembership(params.HTTPRequest)
 
 	if merr != nil {
 		return auth.NewPostWorkflowForcemergeDefault(codestatus).WithPayload(merr)
@@ -198,7 +198,7 @@ func (g *GoliacServerImpl) AuthWorkflowForcemerge(params auth.PostWorkflowForcem
 }
 
 func (g *GoliacServerImpl) AuthWorkflowsForcemerge(params auth.GetWorkflowsForcemergeParams) middleware.Responder {
-	_, codestatus, merr := g.helperCheckOrgMembership(params.HTTPRequest, "", "", "")
+	_, codestatus, merr := g.helperCheckOrgMembership(params.HTTPRequest)
 
 	if merr != nil {
 		return auth.NewGetWorkflowsForcemergeDefault(codestatus).WithPayload(merr)

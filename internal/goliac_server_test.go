@@ -123,6 +123,38 @@ func fixtureGoliacLocal() (*GoliacLocalMock, *GoliacRemoteMock) {
 	l.repositories["repoA"] = &repoA
 	l.repositories["repoB"] = &repoB
 
+	// forcemerge workflows
+	fmtest := entity.ForcemergeWorkflow{}
+	fmtest.ApiVersion = "v1"
+	fmtest.Kind = "ForcemergeWorkflow"
+	fmtest.Name = "fmtest"
+	fmtest.Spec.Description = "fmtest"
+	fmtest.Spec.Steps = []struct {
+		Name       string                 `yaml:"name"`
+		Properties map[string]interface{} `yaml:"properties"`
+	}{
+		{
+			Name: "jira_ticket_creation",
+			Properties: map[string]interface{}{
+				"project_key": "SRE",
+				"issue_type":  "Bug",
+			},
+		},
+	}
+	fmtest.Spec.Repositories = struct {
+		Allowed []string `yaml:"allowed"`
+		Except  []string `yaml:"except"`
+	}{
+		Allowed: []string{"goliac"},
+	}
+	fmtest.Spec.Acls = struct {
+		Allowed []string `yaml:"allowed"`
+		Except  []string `yaml:"except"`
+	}{
+		Allowed: []string{"test-team"},
+	}
+	l.forcemergeworkflows["fmtest"] = &fmtest
+
 	// remote mock
 	r := GoliacRemoteMock{
 		teams: make(map[string]*engine.GithubTeam),
