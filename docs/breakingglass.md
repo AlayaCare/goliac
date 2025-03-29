@@ -16,8 +16,11 @@ To be able to enable the Breaking Glass workflow, you need to register the Githu
 - go to the Github App settings (like https://github.com/organizations/AlayaCare/settings/apps/alayacare-goliac)
 - you need to create a client secret (if you don't have one already)
 - in General, under Identifying and authorizing users
-    - set the Callback URL to `http://<Goliac http endpoint>/api/v1/auth/callback`
-- and you need to set the following (new) environment variables: `GOLIAC_GITHUB_APP_CLIENT_SECRET` 
+    - set the Callback URL to `https://<Goliac DNS endpoint>/api/v1/auth/callback`
+- and you need to set the following (new) environment variables:
+  - `GOLIAC_GITHUB_APP_CLIENT_SECRET` (the secret associated with the webhook)
+  - `GOLIAC_GITHUB_APP_CALLBACK_URL` (the `Callback URL` of your Github App)
+
 
 
 ## Enable the Breaking Glass workflow

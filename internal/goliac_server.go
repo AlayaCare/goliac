@@ -146,7 +146,7 @@ func NewGoliacServer(goliac Goliac, notificationService notification.Notificatio
 	oauthConfig := &oauth2.Config{
 		ClientID:     appInfo.ClientID,
 		ClientSecret: appInfo.ClientSecret,
-		RedirectURL:  "http://localhost:18000/api/v1/auth/callback",
+		RedirectURL:  config.Config.GithubAppCallbackURL,
 		Endpoint:     endpoints,
 		Scopes:       []string{"openid", "read:org", "user"},
 	}
