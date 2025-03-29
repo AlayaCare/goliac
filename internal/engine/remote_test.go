@@ -435,6 +435,9 @@ func (m *MockGithubClient) CallRestAPI(ctx context.Context, endpoint, parameters
 func (m *MockGithubClient) GetAccessToken(ctx context.Context) (string, error) {
 	return "", nil
 }
+func (m *MockGithubClient) CreateJWT() (string, error) {
+	return "", nil
+}
 
 func TestRemoteRepository(t *testing.T) {
 
@@ -506,6 +509,9 @@ func (g *GitHubClientIsEnterpriseMock) CallRestAPI(ctx context.Context, endpoint
 	return g.results[endpoint], g.err
 }
 func (g *GitHubClientIsEnterpriseMock) GetAccessToken(ctx context.Context) (string, error) {
+	return "", nil
+}
+func (g *GitHubClientIsEnterpriseMock) CreateJWT() (string, error) {
 	return "", nil
 }
 func (g *GitHubClientIsEnterpriseMock) GetAppSlug() string {

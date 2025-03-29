@@ -1,0 +1,46 @@
+post:
+  tags:
+    - auth
+  operationId: postWorkflowForcemerge
+  description: Bypass PR approval and force mere the PR
+  parameters:
+    - name: workflowName
+      in: path
+      description: workflow name
+      required: true
+      type: string
+    - name: body
+      in: body
+      description: PR to merge (and bypass approval)
+      required: true
+      schema:
+        type: object
+        required:
+          - pr_url
+          - explanation
+        properties:
+          pr_url:
+            type: string
+            minLength: 10
+            x-nullable: false
+          explanation:
+            type: string
+            minLength: 1
+            x-nullable: false
+  responses:
+    200:
+      description: PR merged
+      schema:
+        $ref: "#/definitions/prmerged"
+    401:
+      description: Unauthorized
+      schema:
+        $ref: "#/definitions/error"
+    403:
+      description: Forbidden
+      schema:
+        $ref: "#/definitions/error"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

@@ -28,6 +28,7 @@ type GitHubClient interface {
 	QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error)
 	CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error)
 	GetAccessToken(ctx context.Context) (string, error)
+	CreateJWT() (string, error)
 	GetAppSlug() string
 }
 
@@ -60,7 +61,7 @@ func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, erro
 
 	// Refresh the access token if necessary
 	if t.client.accessToken == "" || time.Until(t.client.tokenExpiration) < 5*time.Minute {
-		token, err := t.client.createJWT()
+		token, err := t.client.CreateJWT()
 		if err != nil {
 			t.client.mu.Unlock()
 			return nil, err
@@ -115,7 +116,7 @@ func NewGitHubClientImpl(githubServer, organizationName string, appID int64, pri
 	if client.patToken == "" {
 
 		// create JWT
-		token, err := client.createJWT()
+		token, err := client.CreateJWT()
 		if err != nil {
 			return nil, err
 		}
@@ -440,7 +441,7 @@ func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, param
 	}
 }
 
-func (client *GitHubClientImpl) createJWT() (string, error) {
+func (client *GitHubClientImpl) CreateJWT() (string, error) {
 	key, err := jwt.ParseRSAPrivateKeyFromPEM(client.privateKey)
 	if err != nil {
 		return "", err
@@ -525,7 +526,7 @@ func (client *GitHubClientImpl) GetAccessToken(ctx context.Context) (string, err
 		return client.accessToken, nil
 	}
 
-	jwt, err := client.createJWT()
+	jwt, err := client.CreateJWT()
 	if err != nil {
 		return "", err
 	}

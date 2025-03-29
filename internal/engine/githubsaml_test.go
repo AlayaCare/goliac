@@ -100,6 +100,9 @@ func (c *GithubSamlGitHubClient) CallRestAPI(context.Context, string, string, st
 func (c *GithubSamlGitHubClient) GetAccessToken(context.Context) (string, error) {
 	return "accesstoken", nil
 }
+func (c *GithubSamlGitHubClient) CreateJWT() (string, error) {
+	return "", nil
+}
 func (c *GithubSamlGitHubClient) GetAppSlug() string {
 	return "foobar"
 }

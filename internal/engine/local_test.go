@@ -596,7 +596,9 @@ func TestBasicGitops(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		goliacConfig, err := g.LoadRepoConfig()
+		wt, err := clonedRepo.Worktree()
+		assert.Nil(t, err)
+		goliacConfig, err := g.loadRepoConfig(wt.Filesystem)
 		assert.Nil(t, err)
 		assert.NotNil(t, goliacConfig)
 		assert.Equal(t, "github-admins", goliacConfig.AdminTeam)
@@ -849,7 +851,9 @@ func TestGoliacLocalImpl(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		goliacConfig, err := g.LoadRepoConfig()
+		wt, err := clonedRepo.Worktree()
+		assert.Nil(t, err)
+		goliacConfig, err := g.loadRepoConfig(wt.Filesystem)
 		assert.Nil(t, err)
 		assert.NotNil(t, goliacConfig)
 
@@ -883,7 +887,9 @@ func TestGoliacLocalImpl(t *testing.T) {
 			repo:          clonedRepo,
 		}
 
-		goliacConfig, err := g.LoadRepoConfig()
+		wt, err := clonedRepo.Worktree()
+		assert.Nil(t, err)
+		goliacConfig, err := g.loadRepoConfig(wt.Filesystem)
 		assert.Nil(t, err)
 		assert.NotNil(t, goliacConfig)
 

@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -16,18 +17,23 @@ import (
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/engine"
 	"github.com/goliac-project/goliac/internal/entity"
+	"github.com/goliac-project/goliac/internal/github"
 	"github.com/goliac-project/goliac/internal/notification"
 	"github.com/goliac-project/goliac/internal/observability"
+	"github.com/goliac-project/goliac/internal/workflow"
 	"github.com/goliac-project/goliac/swagger_gen/models"
 	"github.com/goliac-project/goliac/swagger_gen/restapi"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/app"
+	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/auth"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/external"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/health"
+	"github.com/gorilla/sessions"
 	"github.com/gosimple/slug"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/oauth2"
 )
 
 /*
@@ -54,11 +60,23 @@ type GoliacServer interface {
 	GetStatistics(app.GetStatiticsParams) middleware.Responder
 	GetUnmanaged(app.GetUnmanagedParams) middleware.Responder
 
+	AuthGetLogin(params auth.GetAuthenticationLoginParams) middleware.Responder
+	AuthGetCallback(params auth.GetAuthenticationCallbackParams) middleware.Responder
+	AuthGetUser(params auth.GetGithubUserParams) middleware.Responder
+	AuthWorkflowForcemerge(params auth.PostWorkflowForcemergeParams) middleware.Responder
+	AuthWorkflowsForcemerge(params auth.GetWorkflowsForcemergeParams) middleware.Responder
+
 	PostExternalCreateRepository(external.PostExternalCreateRepositoryParams) middleware.Responder
+}
+
+type OAuth2Config interface {
+	AuthCodeURL(state string, opts ...oauth2.AuthCodeOption) string
+	Exchange(ctx context.Context, code string, opts ...oauth2.AuthCodeOption) (*oauth2.Token, error)
 }
 
 type GoliacServerImpl struct {
 	goliac              Goliac
+	forcemergeWorflow   workflow.Forcemerge
 	applyLobbyMutex     sync.Mutex
 	applyLobbyCond      *sync.Cond
 	applyCurrent        bool
@@ -76,14 +94,73 @@ type GoliacServerImpl struct {
 	lastTimeToApply     time.Duration
 	maxTimeToApply      time.Duration
 	lastUnmanaged       *engine.UnmanagedResources
+
+	// auth related
+	client       github.GitHubClient
+	oauthConfig  OAuth2Config
+	sessionStore *sessions.CookieStore
+}
+
+type GithubAppInfo struct {
+	Id           int    `json:"id"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+}
+
+func GetSelfGithubAppClientID(client github.GitHubClient) (*GithubAppInfo, error) {
+	appInfo := GithubAppInfo{}
+	jwtToken, err := client.CreateJWT()
+	if err != nil {
+		return &appInfo, err
+	}
+
+	body, err := client.CallRestAPI(context.Background(), "/app", "", "GET", nil, &jwtToken)
+	if err != nil {
+		return &appInfo, err
+	}
+
+	err = json.Unmarshal(body, &appInfo)
+	if err != nil {
+		return &appInfo, fmt.Errorf("not able to get github app information: %v", err)
+	}
+
+	if config.Config.GithubAppClientSecret != "" {
+		appInfo.ClientSecret = config.Config.GithubAppClientSecret
+	} else {
+		return &appInfo, fmt.Errorf("github app client secret is not set in GOLIAC_GITHUB_APP_CLIENT_SECRET")
+	}
+
+	return &appInfo, nil
 }
 
 func NewGoliacServer(goliac Goliac, notificationService notification.NotificationService) GoliacServer {
+	endpoints := oauth2.Endpoint{
+		AuthURL:  "https://github.com/login/oauth/authorize",
+		TokenURL: "https://github.com/login/oauth/access_token",
+	}
+	appInfo, err := GetSelfGithubAppClientID(goliac.GetRemoteClient())
+	if err != nil {
+		logrus.Errorf("Error when getting the Github App client ID: %s", err)
+	}
+
+	oauthConfig := &oauth2.Config{
+		ClientID:     appInfo.ClientID,
+		ClientSecret: appInfo.ClientSecret,
+		RedirectURL:  "http://localhost:18000/api/v1/auth/callback",
+		Endpoint:     endpoints,
+		Scopes:       []string{"openid", "read:org", "user"},
+	}
+
+	forcemergeWorflow := workflow.NewForcemergeImpl(goliac.GetLocal(), goliac.GetRemote(), goliac.GetRemoteClient())
 
 	server := GoliacServerImpl{
 		goliac:              goliac,
+		forcemergeWorflow:   forcemergeWorflow,
 		ready:               false,
 		notificationService: notificationService,
+		oauthConfig:         oauthConfig,
+		sessionStore:        sessions.NewCookieStore([]byte("your-secret-key")),
+		client:              goliac.GetRemoteClient(),
 	}
 	server.applyLobbyCond = sync.NewCond(&server.applyLobbyMutex)
 
@@ -565,16 +642,22 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 }
 
 func (g *GoliacServerImpl) GetStatus(app.GetStatusParams) middleware.Responder {
+	repoconfig := g.goliac.GetLocal().RepoConfig()
+	nbforcemergeworkflows := 0
+	if repoconfig != nil {
+		nbforcemergeworkflows = len(repoconfig.ForceMergeworkflows)
+	}
 	s := models.Status{
-		LastSyncError:    "",
-		LastSyncTime:     "N/A",
-		NbRepos:          int64(len(g.goliac.GetLocal().Repositories())),
-		NbTeams:          int64(len(g.goliac.GetLocal().Teams())),
-		NbUsers:          int64(len(g.goliac.GetLocal().Users())),
-		NbUsersExternal:  int64(len(g.goliac.GetLocal().ExternalUsers())),
-		Version:          config.GoliacBuildVersion,
-		DetailedErrors:   make([]string, 0),
-		DetailedWarnings: make([]string, 0),
+		LastSyncError:         "",
+		LastSyncTime:          "N/A",
+		NbRepos:               int64(len(g.goliac.GetLocal().Repositories())),
+		NbTeams:               int64(len(g.goliac.GetLocal().Teams())),
+		NbUsers:               int64(len(g.goliac.GetLocal().Users())),
+		NbUsersExternal:       int64(len(g.goliac.GetLocal().ExternalUsers())),
+		Version:               config.GoliacBuildVersion,
+		DetailedErrors:        make([]string, 0),
+		DetailedWarnings:      make([]string, 0),
+		NbForcemergeWorkflows: int64(nbforcemergeworkflows),
 	}
 	if g.lastSyncError != nil {
 		s.LastSyncError = g.lastSyncError.Error()
@@ -849,6 +932,12 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.AppGetTeamHandler = app.GetTeamHandlerFunc(g.GetTeam)
 	api.AppGetRepositoriesHandler = app.GetRepositoriesHandlerFunc(g.GetRepositories)
 	api.AppGetRepositoryHandler = app.GetRepositoryHandlerFunc(g.GetRepository)
+
+	api.AuthGetAuthenticationCallbackHandler = auth.GetAuthenticationCallbackHandlerFunc(g.AuthGetCallback)
+	api.AuthGetAuthenticationLoginHandler = auth.GetAuthenticationLoginHandlerFunc(g.AuthGetLogin)
+	api.AuthGetGithubUserHandler = auth.GetGithubUserHandlerFunc(g.AuthGetUser)
+	api.AuthGetWorkflowsForcemergeHandler = auth.GetWorkflowsForcemergeHandlerFunc(g.AuthWorkflowsForcemerge)
+	api.AuthPostWorkflowForcemergeHandler = auth.PostWorkflowForcemergeHandlerFunc(g.AuthWorkflowForcemerge)
 
 	api.ExternalPostExternalCreateRepositoryHandler = external.PostExternalCreateRepositoryHandlerFunc(g.PostExternalCreateRepository)
 

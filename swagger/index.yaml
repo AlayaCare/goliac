@@ -20,6 +20,10 @@ x-tagGroups:
     description: APIs used to update Github synchronously with Goliac
     tags:
       - external
+  - name: auth
+    description: APIs used for authenticated users workflow
+    tags:
+      - auth
 consumes:
 - application/json
 produces:
@@ -60,6 +64,16 @@ paths:
     $ref: ./unmanaged.yaml
   /external/createrepository:
     $ref: ./external_createrepository.yaml
+  /auth/login:
+    $ref: ./auth_login.yaml
+  /auth/callback:
+    $ref: ./auth_callback.yaml
+  /auth/githubuser:
+    $ref: ./auth_githubuser.yaml
+  /auth/workflows_forcemerge:
+    $ref: ./auth_workflows_forcemerge.yaml
+  /auth/workflows_forcemerge/{workflowName}:
+    $ref: ./auth_workflow_forcemerge.yaml
 
 definitions:
 
@@ -296,6 +310,9 @@ definitions:
         type: array
         items:
           type: string
+      nbForcemergeWorkflows:
+        type: integer
+        x-omitempty: false
   
   statistics:
     properties:
@@ -355,3 +372,38 @@ definitions:
       message:
         type: string
         minLength: 1
+
+  # Github user
+  githubuser:
+    type: object
+    properties:
+      github_id:
+        type: string
+        x-isnullable: false
+      name:
+        type: string
+        x-isnullable: false
+  
+  workflows_prmerged:
+    type: array
+    items:
+      type: object
+      properties:
+        workflow_name:
+          type: string
+          x-isnullable: false
+        workflow_description:
+          type: string
+          x-isnullable: false
+  # PR approval bypassed and merged
+  prmerged:
+    type: object
+    properties:
+      message:
+        type: string
+        x-isnullable: false
+      tracking_urls:
+        type: array
+        items:
+          type: string
+          minLength: 1

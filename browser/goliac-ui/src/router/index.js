@@ -8,6 +8,8 @@ import TeamsApp from "@/components/TeamsApp.vue";
 import TeamApp from "@/components/TeamApp.vue";
 import RepositoriesApp from "@/components/RepositoriesApp.vue";
 import RepositoryApp from "@/components/RepositoryApp.vue";
+import ForcemergeWorkflowsApp from "@/components/ForcemergeWorkflowsApp.vue";
+import ForcemergeWorkflowApp from "@/components/ForcemergeWorkflowApp.vue";
 
 const routes = [
   {
@@ -54,6 +56,16 @@ const routes = [
     path: "/repositories/:repositoryId",
     name: "repository",
     component: RepositoryApp,
+  },
+  {
+    path: "/forcemergeworkflows",
+    name: "workflows",
+    component: ForcemergeWorkflowsApp,
+  },
+  {
+    path: "/forcemergeworkflows/:workflowName",
+    name: "workflow",
+    component: ForcemergeWorkflowApp,
   },
 ];
 
