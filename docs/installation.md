@@ -257,6 +257,7 @@ then you just need to start it with
 ```shell
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
+export GOLIAC_GITHUB_APP_CLIENT_SECRET=bed08cd3f542ac3a39c8c1d142888b150d5e2880
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-teams
 
@@ -281,6 +282,7 @@ services:
         environment:
             - GOLIAC_GITHUB_APP_ID=355525
             - GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=/app/private-key.pem
+            - GOLIAC_GITHUB_APP_CLIENT_SECRET=bed08cd3f542ac3a39c8c1d142888b150d5e2880
             - GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
             - GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-teams
             - GOLIAC_SERVER_HOST=0.0.0.0
