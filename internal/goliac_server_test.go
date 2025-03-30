@@ -226,6 +226,86 @@ func NewGoliacMock(local engine.GoliacLocalResources, remote engine.GoliacRemote
 	return &mock
 }
 
+func TestGetSelfGithubAppClientID(t *testing.T) {
+	t.Run("happy path: get clientId", func(t *testing.T) {
+
+		client := GitHubClientMock{}
+		appInfo, err := GetSelfGithubAppClientID(&client, "githubAppClientSecret")
+		assert.NoError(t, err)
+		assert.Equal(t, "githubAppClientID", appInfo.ClientID)
+		assert.Equal(t, "githubAppClientSecret", appInfo.ClientSecret)
+	})
+	t.Run("not happy path: empty client secret", func(t *testing.T) {
+
+		client := GitHubClientMock{}
+		appInfo, err := GetSelfGithubAppClientID(&client, "")
+		assert.Error(t, err)
+		assert.Equal(t, "githubAppClientID", appInfo.ClientID)
+		assert.Equal(t, "", appInfo.ClientSecret)
+	})
+}
+
+func TestGetUnmanaged(t *testing.T) {
+
+	t.Run("happy path: get unmanaged", func(t *testing.T) {
+		server := GoliacServerImpl{
+			lastUnmanaged: &engine.UnmanagedResources{
+				Users:                  make(map[string]bool),
+				ExternallyManagedTeams: make(map[string]bool),
+				Teams:                  make(map[string]bool),
+				Repositories:           make(map[string]bool),
+				RuleSets:               make(map[string]bool),
+			},
+		}
+		server.lastUnmanaged.Users["unmanagedUser"] = true
+		server.lastUnmanaged.ExternallyManagedTeams["unmanagedExternallyManagedTeam"] = true
+		server.lastUnmanaged.Teams["unmanagedTeam"] = true
+		server.lastUnmanaged.Repositories["unmanagedRepository"] = true
+		server.lastUnmanaged.RuleSets["unmanagedRuleset"] = true
+
+		res := server.GetUnmanaged(app.GetUnmanagedParams{})
+		payload := res.(*app.GetUnmanagedOK)
+		assert.Equal(t, 1, len(payload.Payload.Users))
+		assert.Equal(t, 1, len(payload.Payload.ExternallyManagedTeams))
+		assert.Equal(t, 1, len(payload.Payload.Teams))
+		assert.Equal(t, 1, len(payload.Payload.Repos))
+		assert.Equal(t, 1, len(payload.Payload.Rulesets))
+
+		assert.Equal(t, "unmanagedUser", payload.Payload.Users[0])
+		assert.Equal(t, "unmanagedExternallyManagedTeam", payload.Payload.ExternallyManagedTeams[0])
+		assert.Equal(t, "unmanagedTeam", payload.Payload.Teams[0])
+		assert.Equal(t, "unmanagedRepository", payload.Payload.Repos[0])
+		assert.Equal(t, "unmanagedRuleset", payload.Payload.Rulesets[0])
+	})
+}
+
+func TestGetStatistics(t *testing.T) {
+
+	t.Run("happy path: get statistics", func(t *testing.T) {
+		server := GoliacServerImpl{
+			lastTimeToApply: time.Duration(10 * time.Second),
+			lastStatistics: config.GoliacStatistics{
+				GithubApiCalls:  123,
+				GithubThrottled: 4,
+			},
+			maxTimeToApply: time.Duration(20 * time.Second),
+			maxStatistics: config.GoliacStatistics{
+				GithubApiCalls:  567,
+				GithubThrottled: 8,
+			},
+		}
+
+		res := server.GetStatistics(app.GetStatiticsParams{})
+		payload := res.(*app.GetStatiticsOK)
+		assert.Equal(t, "10s", payload.Payload.LastTimeToApply)
+		assert.Equal(t, "20s", payload.Payload.MaxTimeToApply)
+		assert.Equal(t, int64(123), payload.Payload.LastGithubAPICalls)
+		assert.Equal(t, int64(567), payload.Payload.MaxGithubAPICalls)
+		assert.Equal(t, int64(4), payload.Payload.LastGithubThrottled)
+		assert.Equal(t, int64(8), payload.Payload.MaxGithubThrottled)
+	})
+}
+
 func TestAppGetUsers(t *testing.T) {
 	localfixture, remotefixture := fixtureGoliacLocal()
 	goliac := NewGoliacMock(localfixture, remotefixture)
@@ -325,5 +405,52 @@ func TestAppGetRepositories(t *testing.T) {
 	t.Run("not happy path: repository not found", func(t *testing.T) {
 		res := server.GetRepository(app.GetRepositoryParams{RepositoryID: "repoC"})
 		assert.NotZero(t, res.(*app.GetRepositoryDefault))
+	})
+}
+
+func TestGetCollaborators(t *testing.T) {
+	t.Run("happy path: get collaborators", func(t *testing.T) {
+		localfixture, remotefixture := fixtureGoliacLocal()
+		goliac := NewGoliacMock(localfixture, remotefixture)
+		server := GoliacServerImpl{
+			goliac: goliac,
+		}
+
+		res := server.GetCollaborators(app.GetCollaboratorsParams{})
+		payload := res.(*app.GetCollaboratorsOK)
+		assert.Equal(t, 1, len(payload.Payload))
+		assert.Equal(t, "userE1", payload.Payload[0].Name)
+	})
+}
+
+func TestGetCollaborator(t *testing.T) {
+	t.Run("happy path: get collaborator", func(t *testing.T) {
+		localfixture, remotefixture := fixtureGoliacLocal()
+		goliac := NewGoliacMock(localfixture, remotefixture)
+		server := GoliacServerImpl{
+			goliac: goliac,
+		}
+
+		res := server.GetCollaborator(app.GetCollaboratorParams{CollaboratorID: "userE1"})
+		payload := res.(*app.GetCollaboratorOK)
+		assert.Equal(t, "githubE1", payload.Payload.Githubid)
+		assert.Equal(t, 0, len(payload.Payload.Repositories))
+	})
+
+	t.Run("happy path: get collaborator", func(t *testing.T) {
+		localfixture, remotefixture := fixtureGoliacLocal()
+
+		lRepos := localfixture.Repositories()
+		lRepos["repoB"].Spec.ExternalUserReaders = []string{"userE1"}
+		goliac := NewGoliacMock(localfixture, remotefixture)
+		server := GoliacServerImpl{
+			goliac: goliac,
+		}
+
+		res := server.GetCollaborator(app.GetCollaboratorParams{CollaboratorID: "userE1"})
+		payload := res.(*app.GetCollaboratorOK)
+		assert.Equal(t, "githubE1", payload.Payload.Githubid)
+		assert.Equal(t, 1, len(payload.Payload.Repositories))
+		assert.Equal(t, "repoB", payload.Payload.Repositories[0].Name)
 	})
 }

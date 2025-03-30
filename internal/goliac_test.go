@@ -351,6 +351,9 @@ func (c *GitHubClientMock) CallRestAPI(ctx context.Context, endpoint, parameters
 	if strings.HasSuffix(endpoint, "/invitations") {
 		return []byte(`[]`), nil
 	}
+	if strings.HasSuffix(endpoint, "/app") {
+		return []byte(`{"id": 1, "client_id": "githubAppClientID"}`), nil
+	}
 	return nil, nil
 }
 func (c *GitHubClientMock) GetAccessToken(context.Context) (string, error) {
