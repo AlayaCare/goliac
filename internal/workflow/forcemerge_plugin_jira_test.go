@@ -19,7 +19,6 @@ func TestJiraPluginWorkflow(t *testing.T) {
 	t.Run("happy path: jira creation", func(t *testing.T) {
 		httptest := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, _ := io.ReadAll(r.Body)
-			fmt.Println(string(body))
 			var jBody JiraIssue
 			err := json.Unmarshal(body, &jBody)
 			if err != nil {

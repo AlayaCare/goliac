@@ -107,7 +107,7 @@ type GithubAppInfo struct {
 	ClientSecret string `json:"client_secret"`
 }
 
-func GetSelfGithubAppClientID(client github.GitHubClient) (*GithubAppInfo, error) {
+func GetSelfGithubAppClientID(client github.GitHubClient, clientSecret string) (*GithubAppInfo, error) {
 	appInfo := GithubAppInfo{}
 	jwtToken, err := client.CreateJWT()
 	if err != nil {
@@ -124,8 +124,8 @@ func GetSelfGithubAppClientID(client github.GitHubClient) (*GithubAppInfo, error
 		return &appInfo, fmt.Errorf("not able to get github app information: %v", err)
 	}
 
-	if config.Config.GithubAppClientSecret != "" {
-		appInfo.ClientSecret = config.Config.GithubAppClientSecret
+	if clientSecret != "" {
+		appInfo.ClientSecret = clientSecret
 	} else {
 		return &appInfo, fmt.Errorf("github app client secret is not set in GOLIAC_GITHUB_APP_CLIENT_SECRET")
 	}
@@ -138,9 +138,9 @@ func NewGoliacServer(goliac Goliac, notificationService notification.Notificatio
 		AuthURL:  "https://github.com/login/oauth/authorize",
 		TokenURL: "https://github.com/login/oauth/access_token",
 	}
-	appInfo, err := GetSelfGithubAppClientID(goliac.GetRemoteClient())
+	appInfo, err := GetSelfGithubAppClientID(goliac.GetRemoteClient(), config.Config.GithubAppClientSecret)
 	if err != nil {
-		logrus.Errorf("Error when getting the Github App client ID: %s", err)
+		logrus.Errorf("error when getting the Github App client ID: %s", err)
 	}
 
 	oauthConfig := &oauth2.Config{
