@@ -13,7 +13,7 @@ import (
 	"github.com/goliac-project/goliac/internal/config"
 )
 
-type ForcemergeStepPluginJira struct {
+type StepPluginJira struct {
 	AtlassianUrlDomain string // something like "https://mycompany.atlassian.net"
 	ProjectKey         string
 	Email              string
@@ -21,19 +21,19 @@ type ForcemergeStepPluginJira struct {
 	IssueType          string
 }
 
-func NewForcemergeStepPluginJira() ForcemergeStepPlugin {
-	domain := config.Config.PrForcemergeJiraAtlassianDomain
+func NewStepPluginJira() StepPlugin {
+	domain := config.Config.WorkflowJiraAtlassianDomain
 	if !strings.HasPrefix(domain, "https://") || !strings.HasPrefix(domain, "http://") {
 		domain = "https://" + domain
 	}
 	domain = strings.TrimSuffix(domain, "/")
 
-	return &ForcemergeStepPluginJira{
+	return &StepPluginJira{
 		AtlassianUrlDomain: domain,
-		ProjectKey:         config.Config.PrForcemergeJiraProjectKey,
-		Email:              config.Config.PrForcemergeJiraEmail,
-		ApiToken:           config.Config.PrForcemergeJiraApiToken,
-		IssueType:          config.Config.PrForcemergeJiraIssueType,
+		ProjectKey:         config.Config.WorkflowJiraProjectKey,
+		Email:              config.Config.WorkflowJiraEmail,
+		ApiToken:           config.Config.WorkflowJiraApiToken,
+		IssueType:          config.Config.WorkflowJiraIssueType,
 	}
 }
 
@@ -78,7 +78,7 @@ type CreateIssueResponse struct {
 	Self string `json:"self"`
 }
 
-func (f *ForcemergeStepPluginJira) Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error) {
+func (f *StepPluginJira) Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error) {
 	jiraURL := fmt.Sprintf("%s/rest/api/3/issue", f.AtlassianUrlDomain)
 	projectKey := f.ProjectKey
 	issueType := f.IssueType

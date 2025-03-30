@@ -95,12 +95,12 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 	utils.RemoveAll(fs, "teams")
 	utils.RemoveAll(fs, "rulesets")
 	utils.RemoveAll(fs, "archived")
-	utils.RemoveAll(fs, "forcemerge_workflows")
+	utils.RemoveAll(fs, "workflows")
 
 	fs.MkdirAll("archived", 0755)
 	fs.MkdirAll("rulesets", 0755)
 	fs.MkdirAll("teams", 0755)
-	fs.MkdirAll("forcemerge_workflows", 0755)
+	fs.MkdirAll("workflows", 0755)
 
 	usermap, err := s.generateUsers(ctx, fs, "users")
 	if err != nil {
@@ -128,20 +128,21 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 		return fmt.Errorf("error creating the README.md file: %v", err)
 	}
 
-	if err := s.generateForcemergeWorkflowStandard(fs, ".", adminteam); err != nil {
-		return fmt.Errorf("error creating the forcemerge_workflows/standard.yaml file: %v", err)
+	if err := s.generateWorkflowStandard(fs, ".", adminteam); err != nil {
+		return fmt.Errorf("error creating the workflows/standard.yaml file: %v", err)
 	}
 
 	return nil
 }
 
-func (s *Scaffold) generateForcemergeWorkflowStandard(fs billy.Filesystem, rootpath string, adminTeam string) error {
+func (s *Scaffold) generateWorkflowStandard(fs billy.Filesystem, rootpath string, adminTeam string) error {
 
 	workflow := fmt.Sprintf(`#apiVersion: v1
-#kind: ForcemergeWorkflow
+#kind: Workflow
 #name: standard
 #spec:
 #  description: Geneal breaking glass PR merge workflow
+#  workflow_type: forcemerge
 #  repositories:
 #    allowed:
 #      - ~ALL
@@ -153,7 +154,7 @@ func (s *Scaffold) generateForcemergeWorkflowStandard(fs billy.Filesystem, rootp
 #      properties:
 #        project_key: SRE
 `, adminTeam)
-	writeFile(filepath.Join(rootpath, "forcemerge_workflows", "standard.yaml"), []byte(workflow), fs)
+	writeFile(filepath.Join(rootpath, "workflows", "standard.yaml"), []byte(workflow), fs)
 	return nil
 }
 
@@ -586,7 +587,7 @@ usersync:
 #   forbid_public_repositories: false
 #   forbid_public_repositories_exclusions: [] # reponame or regexp
 
-# forcemerge_workflows:
+# workflows:
 #   - standard
 `, adminteam, userplugin)
 	if err := writeFile(filepath.Join(rootpath, "goliac.yaml"), []byte(conf), fs); err != nil {

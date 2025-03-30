@@ -1,7 +1,7 @@
 post:
   tags:
     - auth
-  operationId: postWorkflowForcemerge
+  operationId: postWorkflow
   description: Bypass PR approval and force mere the PR
   parameters:
     - name: workflowName
@@ -31,7 +31,7 @@ post:
     200:
       description: PR merged
       schema:
-        $ref: "#/definitions/prmerged"
+        $ref: "#/definitions/workflow"
     401:
       description: Unauthorized
       schema:

@@ -70,10 +70,10 @@ paths:
     $ref: ./auth_callback.yaml
   /auth/githubuser:
     $ref: ./auth_githubuser.yaml
-  /auth/workflows_forcemerge:
-    $ref: ./auth_workflows_forcemerge.yaml
-  /auth/workflows_forcemerge/{workflowName}:
-    $ref: ./auth_workflow_forcemerge.yaml
+  /auth/workflows:
+    $ref: ./auth_workflows.yaml
+  /auth/workflows/{workflowName}:
+    $ref: ./auth_workflow.yaml
 
 definitions:
 
@@ -310,7 +310,7 @@ definitions:
         type: array
         items:
           type: string
-      nbForcemergeWorkflows:
+      nbWorkflows:
         type: integer
         x-omitempty: false
   
@@ -384,7 +384,7 @@ definitions:
         type: string
         x-isnullable: false
   
-  workflows_prmerged:
+  workflows:
     type: array
     items:
       type: object
@@ -392,11 +392,14 @@ definitions:
         workflow_name:
           type: string
           x-isnullable: false
+        workflow_type:
+          type: string
+          x-isnullable: false
         workflow_description:
           type: string
           x-isnullable: false
   # PR approval bypassed and merged
-  prmerged:
+  workflow:
     type: object
     properties:
       message:

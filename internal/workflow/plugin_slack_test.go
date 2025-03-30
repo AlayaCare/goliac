@@ -36,7 +36,7 @@ func TestSlackPluginWorkflow(t *testing.T) {
 		}))
 		defer httpTest.Close()
 
-		plugin := ForcemergeStepPluginSlack{
+		plugin := StepPluginSlack{
 			SlackUrl:   httpTest.URL,
 			SlackToken: "123456",
 			Channel:    "mychannel",

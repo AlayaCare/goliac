@@ -170,17 +170,29 @@ func (g *GoliacServerImpl) AuthGetUser(params auth.GetGithubUserParams) middlewa
 	})
 }
 
-func (g *GoliacServerImpl) AuthWorkflowForcemerge(params auth.PostWorkflowForcemergeParams) middleware.Responder {
+func (g *GoliacServerImpl) AuthWorkflow(params auth.PostWorkflowParams) middleware.Responder {
 	userinfo, codestatus, merr := g.helperCheckOrgMembership(params.HTTPRequest)
 
 	if merr != nil {
-		return auth.NewPostWorkflowForcemergeDefault(codestatus).WithPayload(merr)
+		return auth.NewPostWorkflowDefault(codestatus).WithPayload(merr)
+	}
+
+	workflow, ok := g.goliac.GetLocal().Workflows()[params.WorkflowName]
+	if !ok {
+		message := fmt.Sprintf("Workflow %s not found", params.WorkflowName)
+		return auth.NewPostWorkflowDefault(404).WithPayload(&models.Error{Message: &message})
+	}
+
+	instance := g.worflowInstances[workflow.Name]
+	if instance == nil {
+		message := fmt.Sprintf("Workflow instance not found: %s", workflow.Name)
+		return auth.NewPostWorkflowDefault(404).WithPayload(&models.Error{Message: &message})
 	}
 
 	// check if the workflow exists and execute it
-	responses, err := g.forcemergeWorflow.ExecuteForcemergeWorkflow(
+	responses, err := instance.ExecuteWorkflow(
 		params.HTTPRequest.Context(),
-		g.goliac.GetLocal().RepoConfig().ForceMergeworkflows,
+		g.goliac.GetLocal().RepoConfig().Workflows,
 		userinfo.Login,
 		params.WorkflowName,
 		params.Body.PrURL,
@@ -188,25 +200,25 @@ func (g *GoliacServerImpl) AuthWorkflowForcemerge(params auth.PostWorkflowForcem
 		false)
 	if err != nil {
 		message := fmt.Sprintf("Failed to execute workflow: %s", err.Error())
-		return auth.NewPostWorkflowForcemergeDefault(500).WithPayload(&models.Error{Message: &message})
+		return auth.NewPostWorkflowDefault(500).WithPayload(&models.Error{Message: &message})
 	}
 
-	return auth.NewPostWorkflowForcemergeOK().WithPayload(&models.Prmerged{
+	return auth.NewPostWorkflowOK().WithPayload(&models.Prmerged{
 		Message:      "PR merged",
 		TrackingUrls: responses,
 	})
 }
 
-func (g *GoliacServerImpl) AuthWorkflowsForcemerge(params auth.GetWorkflowsForcemergeParams) middleware.Responder {
+func (g *GoliacServerImpl) AuthWorkflows(params auth.GetWorkflowsParams) middleware.Responder {
 	_, codestatus, merr := g.helperCheckOrgMembership(params.HTTPRequest)
 
 	if merr != nil {
-		return auth.NewGetWorkflowsForcemergeDefault(codestatus).WithPayload(merr)
+		return auth.NewGetWorkflowsDefault(codestatus).WithPayload(merr)
 	}
 
 	workflows := models.WorkflowsPrmerged{}
 
-	for name, workflow := range g.goliac.GetLocal().ForcemergeWorkflows() {
+	for name, workflow := range g.goliac.GetLocal().Workflows() {
 
 		workflows = append(workflows, &models.WorkflowsPrmergedItems0{
 			WorkflowName:        name,
@@ -214,5 +226,5 @@ func (g *GoliacServerImpl) AuthWorkflowsForcemerge(params auth.GetWorkflowsForce
 		})
 	}
 
-	return auth.NewGetWorkflowsForcemergeOK().WithPayload(workflows)
+	return auth.NewGetWorkflowsOK().WithPayload(workflows)
 }

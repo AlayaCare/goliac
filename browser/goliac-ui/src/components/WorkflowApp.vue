@@ -1,7 +1,7 @@
 <template>
     <el-breadcrumb separator-class="el-icon-arrow-right">
         <el-breadcrumb-item :to="{ path: '/' }">Goliac</el-breadcrumb-item>
-        <el-breadcrumb-item :to="{ path: '/forcemergeworkflows' }">Force Merge Workflows</el-breadcrumb-item>
+        <el-breadcrumb-item :to="{ path: '/workflows' }">Force Merge Workflows</el-breadcrumb-item>
         <el-breadcrumb-item :to="{ path: '/{{ workflowName }}' }">{{ workflowName }}</el-breadcrumb-item>
     </el-breadcrumb>
     <el-divider />
@@ -71,7 +71,7 @@
   const { API_URL } = constants;
 
   export default {
-    name: "ForcemergeWorkflowApp",
+    name: "WorkflowApp",
     components: {
     },
     computed: {
@@ -95,7 +95,7 @@
       submit() {
         this.activeStep=1;
         // Final action after wizard is done
-        Axios.post(`${API_URL}/auth/workflows_forcemerge/${this.workflowName}`,
+        Axios.post(`${API_URL}/auth/workflows/${this.workflowName}`,
             {
                 pr_url: this.pr_url,
                 explanation: this.explanation,

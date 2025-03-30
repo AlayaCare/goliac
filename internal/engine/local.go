@@ -71,44 +71,44 @@ type GoliacLocalResources interface {
 	Repositories() map[string]*entity.Repository // reponame, repo definition
 	Users() map[string]*entity.User              // github username, user definition
 	ExternalUsers() map[string]*entity.User
-	RuleSets() map[string]*entity.RuleSet                       //global rulesets
-	ForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow // global workflows
+	RuleSets() map[string]*entity.RuleSet   //global rulesets
+	Workflows() map[string]*entity.Workflow // global workflows
 	RepoConfig() *config.RepositoryConfig
 }
 
 type GoliacLocalImpl struct {
-	teams               map[string]*entity.Team
-	repositories        map[string]*entity.Repository
-	users               map[string]*entity.User
-	externalUsers       map[string]*entity.User
-	rulesets            map[string]*entity.RuleSet
-	forcemergeworkflows map[string]*entity.ForcemergeWorkflow
-	repoconfig          *config.RepositoryConfig
-	repo                *git.Repository
+	teams         map[string]*entity.Team
+	repositories  map[string]*entity.Repository
+	users         map[string]*entity.User
+	externalUsers map[string]*entity.User
+	rulesets      map[string]*entity.RuleSet
+	workflows     map[string]*entity.Workflow
+	repoconfig    *config.RepositoryConfig
+	repo          *git.Repository
 }
 
 func NewGoliacLocalImpl() GoliacLocal {
 	return &GoliacLocalImpl{
-		teams:               map[string]*entity.Team{},
-		repositories:        map[string]*entity.Repository{},
-		users:               map[string]*entity.User{},
-		externalUsers:       map[string]*entity.User{},
-		rulesets:            map[string]*entity.RuleSet{},
-		forcemergeworkflows: map[string]*entity.ForcemergeWorkflow{},
-		repo:                nil,
+		teams:         map[string]*entity.Team{},
+		repositories:  map[string]*entity.Repository{},
+		users:         map[string]*entity.User{},
+		externalUsers: map[string]*entity.User{},
+		rulesets:      map[string]*entity.RuleSet{},
+		workflows:     map[string]*entity.Workflow{},
+		repo:          nil,
 	}
 }
 
 // NewMockGoliacLocalImpl is used for testing purposes
 func NewGoliacLocalImplWithRepo(repo *git.Repository) GoliacLocal {
 	return &GoliacLocalImpl{
-		teams:               map[string]*entity.Team{},
-		repositories:        map[string]*entity.Repository{},
-		users:               map[string]*entity.User{},
-		externalUsers:       map[string]*entity.User{},
-		rulesets:            map[string]*entity.RuleSet{},
-		forcemergeworkflows: map[string]*entity.ForcemergeWorkflow{},
-		repo:                repo,
+		teams:         map[string]*entity.Team{},
+		repositories:  map[string]*entity.Repository{},
+		users:         map[string]*entity.User{},
+		externalUsers: map[string]*entity.User{},
+		rulesets:      map[string]*entity.RuleSet{},
+		workflows:     map[string]*entity.Workflow{},
+		repo:          repo,
 	}
 }
 
@@ -132,8 +132,8 @@ func (g *GoliacLocalImpl) RuleSets() map[string]*entity.RuleSet {
 	return g.rulesets
 }
 
-func (g *GoliacLocalImpl) ForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow {
-	return g.forcemergeworkflows
+func (g *GoliacLocalImpl) Workflows() map[string]*entity.Workflow {
+	return g.workflows
 }
 func (g *GoliacLocalImpl) RepoConfig() *config.RepositoryConfig {
 	return g.repoconfig
@@ -977,11 +977,11 @@ func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem, errorCollect
 	rulesets := entity.ReadRuleSetDirectory(fs, "rulesets", errorCollection)
 	g.rulesets = rulesets
 
-	forcemergeworkflows := entity.ReadForcemergeWorkflowDirectory(fs, "forcemerge_workflows", errorCollection)
-	g.forcemergeworkflows = make(map[string]*entity.ForcemergeWorkflow)
-	for _, v := range repoconfig.ForceMergeworkflows {
-		if w, ok := forcemergeworkflows[v]; ok {
-			g.forcemergeworkflows[v] = w
+	workflows := entity.ReadWorkflowDirectory(fs, "workflows", errorCollection)
+	g.workflows = make(map[string]*entity.Workflow)
+	for _, v := range repoconfig.Workflows {
+		if w, ok := workflows[v]; ok {
+			g.workflows[v] = w
 		}
 	}
 
@@ -990,5 +990,5 @@ func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem, errorCollect
 	logrus.Debugf("Nb local teams: %d", len(g.teams))
 	logrus.Debugf("Nb local repositories: %d", len(g.repositories))
 	logrus.Debugf("Nb local rulesets: %d", len(g.rulesets))
-	logrus.Debugf("Nb local forcemergeworkflows: %d", len(g.forcemergeworkflows))
+	logrus.Debugf("Nb local workflows: %d", len(g.workflows))
 }

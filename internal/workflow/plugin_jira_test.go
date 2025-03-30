@@ -37,7 +37,7 @@ func TestJiraPluginWorkflow(t *testing.T) {
 		}))
 		defer httptest.Close()
 
-		plugin := ForcemergeStepPluginJira{
+		plugin := StepPluginJira{
 			AtlassianUrlDomain: httptest.URL,
 			ProjectKey:         "",
 			Email:              "serviceaccount@company.com",
@@ -77,7 +77,7 @@ func TestJiraPluginWorkflow(t *testing.T) {
 		}))
 		defer httptest.Close()
 
-		plugin := ForcemergeStepPluginJira{
+		plugin := StepPluginJira{
 			AtlassianUrlDomain: httptest.URL,
 			ProjectKey:         "",
 			Email:              "serviceaccount@company.com",

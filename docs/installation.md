@@ -248,9 +248,9 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_GITHUB_WEBHOOK_PATH        | /webhook      | (optional) Path to listen to GitHub webhook |
 | GOLIAC_OPENTELEMETRY_ENABLED      | false         | (optional) Enable OpenTelemetry tracing |
 | GOLIAC_OPENTELEMETRY_GRPC_ENDPOINT| localhost:4317| (optional) OpenTelemetry grpc endpoint |
-| GOLIAC_PR_FORCEMERGE_JIRA_ATLASSIAN_DOMAIN |      | PR Breaking glass workflow - Jira plugin: company domain  |
-| GOLIAC_PR_FORCEMERGE_JIRA_EMAIL   |               | PR Breaking glass workflow - Jira plugin: email |
-| GOLIAC_PR_FORCEMERGE_JIRA_API_TOKEN |             | PR Breaking glass workflow - Jira plugin: token |
+| GOLIAC_WORKFLOW_JIRA_ATLASSIAN_DOMAIN |      | PR Breaking glass workflow - Jira plugin: company domain  |
+| GOLIAC_WORKFLOW_JIRA_EMAIL   |               | PR Breaking glass workflow - Jira plugin: email |
+| GOLIAC_WORKFLOW_JIRA_API_TOKEN |             | PR Breaking glass workflow - Jira plugin: token |
 
 then you just need to start it with
 

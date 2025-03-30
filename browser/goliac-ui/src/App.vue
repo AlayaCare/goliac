@@ -32,7 +32,7 @@ import { User, MessageBox, Folder, Tools } from '@element-plus/icons-vue'
               <el-icon :size="16"><Folder /></el-icon>Repositories
             </template>
           </el-menu-item>
-          <el-menu-item v-if="nbForcemergeWorkflows>0" index="/forcemergeworkflows">
+          <el-menu-item v-if="nbWorkflows>0" index="/workflows">
             <template #title>
               <el-icon :size="16"><Tools /></el-icon>PR Workflows
             </template>
@@ -61,7 +61,7 @@ export default {
   name: 'App',
   data() {
       return {
-        nbForcemergeWorkflows: 0,
+        nbWorkflows: 0,
       }
   },
   mounted() {
@@ -71,7 +71,7 @@ export default {
     getStatus() {
       Axios.get(`${API_URL}/status`).then(response => {
         let status = response.data;
-        this.nbForcemergeWorkflows = status.nbForcemergeWorkflows;
+        this.nbWorkflows = status.nbWorkflows;
       }, handleErr.bind(this));
     }
   }

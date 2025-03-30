@@ -400,11 +400,11 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
-  /auth/workflows_forcemerge:
+  /auth/workflows:
     get:
       tags:
         - auth
-      operationId: getWorkflowsForcemerge
+      operationId: getWorkflows
       description: Get all PR force merge workflows
       responses:
         '200':
@@ -419,11 +419,11 @@ paths:
           description: generic error response
           schema:
             $ref: '#/definitions/error'
-  /auth/workflows_forcemerge/{workflowName}:
+  /auth/workflows/{workflowName}:
     post:
       tags:
         - auth
-      operationId: postWorkflowForcemerge
+      operationId: postWorkflow
       description: Bypass PR approval and force mere the PR
       parameters:
         - name: workflowName
@@ -683,7 +683,7 @@ definitions:
         type: array
         items:
           type: string
-      nbForcemergeWorkflows:
+      nbWorkflows:
         type: integer
         x-omitempty: false
   statistics:

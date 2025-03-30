@@ -15,17 +15,17 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type ForcemergeStepPlugin interface {
+type StepPlugin interface {
 	Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error)
 }
 
-type Forcemerge interface {
-	ExecuteForcemergeWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, prPathToMerge, explanation string, dryrun bool) ([]string, error)
+type Workflow interface {
+	ExecuteWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, prPathToMerge, explanation string, dryrun bool) ([]string, error)
 }
 
 // strip down version of Goliac Local
 type ForcemergeLocalResource interface {
-	ForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow
+	Workflows() map[string]*entity.Workflow
 	Teams() map[string]*entity.Team
 }
 
@@ -43,13 +43,13 @@ type ForcemergeImpl struct {
 	local        ForcemergeLocalResource
 	remote       ForcemergeRemoteResource
 	githubclient ForcemergeGithubClient
-	stepPlugins  map[string]ForcemergeStepPlugin
+	stepPlugins  map[string]StepPlugin
 }
 
-func NewForcemergeImpl(local ForcemergeLocalResource, remote ForcemergeRemoteResource, githubclient ForcemergeGithubClient) Forcemerge {
-	stepPlugins := map[string]ForcemergeStepPlugin{
-		"jira_ticket_creation": NewForcemergeStepPluginJira(),
-		"slack_notification":   NewForcemergeStepPluginSlack(),
+func NewForcemergeImpl(local ForcemergeLocalResource, remote ForcemergeRemoteResource, githubclient ForcemergeGithubClient) Workflow {
+	stepPlugins := map[string]StepPlugin{
+		"jira_ticket_creation": NewStepPluginJira(),
+		"slack_notification":   NewStepPluginSlack(),
 	}
 	return &ForcemergeImpl{
 		local:        local,
@@ -59,7 +59,7 @@ func NewForcemergeImpl(local ForcemergeLocalResource, remote ForcemergeRemoteRes
 	}
 }
 
-func (g *ForcemergeImpl) ExecuteForcemergeWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, prPathToMerge, explanation string, dryrun bool) ([]string, error) {
+func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, prPathToMerge, explanation string, dryrun bool) ([]string, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
 		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "ExecuteWorkflow")
@@ -121,7 +121,7 @@ func (g *ForcemergeImpl) ExecuteForcemergeWorkflow(ctx context.Context, repoconf
 }
 
 // returns the corresponding workflow
-func (g *ForcemergeImpl) getWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, workflowName, repo, username string) (*entity.ForcemergeWorkflow, error) {
+func (g *ForcemergeImpl) getWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, workflowName, repo, username string) (*entity.Workflow, error) {
 	// check if the workflow is enabled
 	if repoconfigForceMergeworkflows == nil {
 		return nil, fmt.Errorf("workflows not found")
@@ -138,7 +138,7 @@ func (g *ForcemergeImpl) getWorkflow(ctx context.Context, repoconfigForceMergewo
 	}
 
 	// load the workflow
-	forcemergeworkflows := g.local.ForcemergeWorkflows()
+	forcemergeworkflows := g.local.Workflows()
 	if forcemergeworkflows == nil {
 		return nil, fmt.Errorf("workflows not found")
 	}
