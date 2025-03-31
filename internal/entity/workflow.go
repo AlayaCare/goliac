@@ -67,7 +67,7 @@ func (w *Workflow) Validate(filename string) error {
 	if w.Spec.WorkflowType == "" {
 		return fmt.Errorf("spec.workflow_type is empty for Workflow filename %s", filename)
 	}
-	if w.Spec.WorkflowType != "forcemerge" {
+	if w.Spec.WorkflowType != "forcemerge" && w.Spec.WorkflowType != "noop" {
 		return fmt.Errorf("invalid spec.workflow_type: %s for Workflow filename %s", w.Spec.WorkflowType, filename)
 	}
 
@@ -122,34 +122,36 @@ func (w *Workflow) Validate(filename string) error {
 
 func (w *Workflow) PassAcl(usernameTeams []string, repository string) bool {
 	// checking the repository name
-	repoMatch := false
-	for _, repo := range w.Spec.Repositories.Allowed {
-		if repo == "~ALL" {
-			repoMatch = true
-			break
+	if w.Spec.WorkflowType != "noop" {
+		repoMatch := false
+		for _, repo := range w.Spec.Repositories.Allowed {
+			if repo == "~ALL" {
+				repoMatch = true
+				break
+			}
+			repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
+			if err != nil {
+				return false
+			}
+			if repoRegex {
+				repoMatch = true
+				break
+			}
 		}
-		repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
-		if err != nil {
-			return false
-		}
-		if repoRegex {
-			repoMatch = true
-			break
-		}
-	}
 
-	for _, repo := range w.Spec.Repositories.Except {
-		repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
-		if err != nil {
-			return false
+		for _, repo := range w.Spec.Repositories.Except {
+			repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
+			if err != nil {
+				return false
+			}
+			if repoRegex {
+				return false
+			}
 		}
-		if repoRegex {
-			return false
-		}
-	}
 
-	if !repoMatch {
-		return false
+		if !repoMatch {
+			return false
+		}
 	}
 
 	// checking if (one of) the team is allowed

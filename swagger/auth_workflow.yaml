@@ -2,7 +2,7 @@ post:
   tags:
     - auth
   operationId: postWorkflow
-  description: Bypass PR approval and force mere the PR
+  description: Submit a workflow for execution
   parameters:
     - name: workflowName
       in: path
@@ -11,27 +11,71 @@ post:
       type: string
     - name: body
       in: body
-      description: PR to merge (and bypass approval)
+      description: Workflow execution properties
       required: true
       schema:
         type: object
         required:
-          - pr_url
           - explanation
+          - properties
         properties:
-          pr_url:
-            type: string
-            minLength: 10
-            x-nullable: false
+          properties:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  x-nullable: false
+                value:
+                  type: string
+                  minLength: 1
+                  x-nullable: false
           explanation:
             type: string
             minLength: 1
             x-nullable: false
   responses:
     200:
-      description: PR merged
+      description: Workflow executed
       schema:
         $ref: "#/definitions/workflow"
+    401:
+      description: Unauthorized
+      schema:
+        $ref: "#/definitions/error"
+    403:
+      description: Forbidden
+      schema:
+        $ref: "#/definitions/error"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"
+
+
+get:
+  tags:
+    - auth
+  operationId: getWorkflow
+  description: Get Workflow information
+  parameters:
+    - name: workflowName
+      in: path
+      description: workflow name
+      required: true
+      type: string
+  responses:
+    200:
+      description: Workflow information
+      schema:
+        type: object
+        properties:
+          workflow_type:
+            type: string
+            minLength: 1
+            x-nullable: false
     401:
       description: Unauthorized
       schema:

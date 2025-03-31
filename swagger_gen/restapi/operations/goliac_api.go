@@ -95,6 +95,9 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		AppGetUsersHandler: app.GetUsersHandlerFunc(func(params app.GetUsersParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetUsers has not yet been implemented")
 		}),
+		AuthGetWorkflowHandler: auth.GetWorkflowHandlerFunc(func(params auth.GetWorkflowParams) middleware.Responder {
+			return middleware.NotImplemented("operation auth.GetWorkflow has not yet been implemented")
+		}),
 		AuthGetWorkflowsHandler: auth.GetWorkflowsHandlerFunc(func(params auth.GetWorkflowsParams) middleware.Responder {
 			return middleware.NotImplemented("operation auth.GetWorkflows has not yet been implemented")
 		}),
@@ -179,6 +182,8 @@ type GoliacAPI struct {
 	AppGetUserHandler app.GetUserHandler
 	// AppGetUsersHandler sets the operation handler for the get users operation
 	AppGetUsersHandler app.GetUsersHandler
+	// AuthGetWorkflowHandler sets the operation handler for the get workflow operation
+	AuthGetWorkflowHandler auth.GetWorkflowHandler
 	// AuthGetWorkflowsHandler sets the operation handler for the get workflows operation
 	AuthGetWorkflowsHandler auth.GetWorkflowsHandler
 	// ExternalPostExternalCreateRepositoryHandler sets the operation handler for the post external create repository operation
@@ -313,6 +318,9 @@ func (o *GoliacAPI) Validate() error {
 	}
 	if o.AppGetUsersHandler == nil {
 		unregistered = append(unregistered, "app.GetUsersHandler")
+	}
+	if o.AuthGetWorkflowHandler == nil {
+		unregistered = append(unregistered, "auth.GetWorkflowHandler")
 	}
 	if o.AuthGetWorkflowsHandler == nil {
 		unregistered = append(unregistered, "auth.GetWorkflowsHandler")
@@ -481,6 +489,10 @@ func (o *GoliacAPI) initHandlerCache() {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
 	o.handlers["GET"]["/users"] = app.NewGetUsers(o.context, o.AppGetUsersHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/auth/workflows/{workflowName}"] = auth.NewGetWorkflow(o.context, o.AuthGetWorkflowHandler)
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}

@@ -170,7 +170,31 @@ func (g *GoliacServerImpl) AuthGetUser(params auth.GetGithubUserParams) middlewa
 	})
 }
 
-func (g *GoliacServerImpl) AuthWorkflow(params auth.PostWorkflowParams) middleware.Responder {
+func (g *GoliacServerImpl) AuthGetWorkflow(params auth.GetWorkflowParams) middleware.Responder {
+	_, codestatus, merr := g.helperCheckOrgMembership(params.HTTPRequest)
+
+	if merr != nil {
+		return auth.NewGetWorkflowDefault(codestatus).WithPayload(merr)
+	}
+
+	workflow, ok := g.goliac.GetLocal().Workflows()[params.WorkflowName]
+	if !ok {
+		message := fmt.Sprintf("Workflow %s not found", params.WorkflowName)
+		return auth.NewGetWorkflowDefault(404).WithPayload(&models.Error{Message: &message})
+	}
+
+	instance := g.worflowInstances[workflow.Name]
+	if instance == nil {
+		message := fmt.Sprintf("Workflow instance not found: %s", workflow.Name)
+		return auth.NewGetWorkflowDefault(404).WithPayload(&models.Error{Message: &message})
+	}
+
+	return auth.NewGetWorkflowOK().WithPayload(&auth.GetWorkflowOKBody{
+		WorkflowType: workflow.Spec.WorkflowType,
+	})
+}
+
+func (g *GoliacServerImpl) AuthPostWorkflow(params auth.PostWorkflowParams) middleware.Responder {
 	userinfo, codestatus, merr := g.helperCheckOrgMembership(params.HTTPRequest)
 
 	if merr != nil {
@@ -190,20 +214,26 @@ func (g *GoliacServerImpl) AuthWorkflow(params auth.PostWorkflowParams) middlewa
 	}
 
 	// check if the workflow exists and execute it
+	properties := make(map[string]string)
+	if params.Body.Properties != nil {
+		for _, prop := range params.Body.Properties {
+			properties[prop.Name] = prop.Value
+		}
+	}
 	responses, err := instance.ExecuteWorkflow(
 		params.HTTPRequest.Context(),
 		g.goliac.GetLocal().RepoConfig().Workflows,
 		userinfo.Login,
 		params.WorkflowName,
-		params.Body.PrURL,
 		params.Body.Explanation,
+		properties,
 		false)
 	if err != nil {
 		message := fmt.Sprintf("Failed to execute workflow: %s", err.Error())
 		return auth.NewPostWorkflowDefault(500).WithPayload(&models.Error{Message: &message})
 	}
 
-	return auth.NewPostWorkflowOK().WithPayload(&models.Prmerged{
+	return auth.NewPostWorkflowOK().WithPayload(&models.Workflow{
 		Message:      "PR merged",
 		TrackingUrls: responses,
 	})
@@ -216,13 +246,14 @@ func (g *GoliacServerImpl) AuthWorkflows(params auth.GetWorkflowsParams) middlew
 		return auth.NewGetWorkflowsDefault(codestatus).WithPayload(merr)
 	}
 
-	workflows := models.WorkflowsPrmerged{}
+	workflows := models.Workflows{}
 
 	for name, workflow := range g.goliac.GetLocal().Workflows() {
 
-		workflows = append(workflows, &models.WorkflowsPrmergedItems0{
+		workflows = append(workflows, &models.WorkflowsItems0{
 			WorkflowName:        name,
 			WorkflowDescription: workflow.Spec.Description,
+			WorkflowType:        workflow.Spec.WorkflowType,
 		})
 	}
 

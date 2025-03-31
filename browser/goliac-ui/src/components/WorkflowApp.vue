@@ -16,21 +16,38 @@
 
                 <div class="step-content" style="margin: 20px 0;">
                     <div v-if="activeStep === 0">
-                        <el-form :model="form" label-width="auto" style="max-width: 600px">
-                            <el-form-item label="PR URL">
-                                <el-input v-model="pr_url" placeholder="PR URL" />
-                            </el-form-item>
-                            <el-form-item label="Associated justification">
-                                <el-input
-                                    v-model="explanation"
-                                    type="textarea"
-                                    rows="4"
-                                    placeholder="Associated justification"
-                                />
-                            </el-form-item>
-                        </el-form>
-                        <div class="wizard-footer">
-                            <el-button :disabled="explanation.length==0 || pr_url.length<10" type="success" @click="submit">Submit</el-button>
+                        <div v-if="workflow_type === 'forcemerge'">
+                            <el-form :model="form" label-width="auto" style="max-width: 600px">
+                                <el-form-item label="PR URL">
+                                    <el-input v-model="pr_url" placeholder="PR URL" />
+                                </el-form-item>
+                                <el-form-item label="Associated justification">
+                                    <el-input
+                                        v-model="explanation"
+                                        type="textarea"
+                                        rows="4"
+                                        placeholder="Associated justification"
+                                    />
+                                </el-form-item>
+                            </el-form>
+                            <div class="wizard-footer">
+                                <el-button :disabled="explanation.length==0 || pr_url.length<10" type="success" @click="submitForcemerge">Submit</el-button>
+                            </div>
+                        </div>
+                        <div v-if="workflow_type === 'noop'">
+                            <el-form :model="form" label-width="auto" style="max-width: 600px">
+                                <el-form-item label="Associated justification">
+                                    <el-input
+                                        v-model="explanation"
+                                        type="textarea"
+                                        rows="4"
+                                        placeholder="Associated justification"
+                                    />
+                                </el-form-item>
+                            </el-form>
+                            <div class="wizard-footer">
+                                <el-button :disabled="explanation.length==0 || pr_url.length<10" type="success" @click="submitTest">Submit</el-button>
+                            </div>
                         </div>
                     </div>
 
@@ -64,9 +81,9 @@
 <script>
   import Axios from "axios";
   import constants from "@/constants";
-//   import helpers from "@/helpers/helpers";
+   import helpers from "@/helpers/helpers";
 
-//   const { handleErr } = helpers;
+   const { handleErr } = helpers;
   
   const { API_URL } = constants;
 
@@ -82,6 +99,7 @@
     data() {
       return {
         activeStep: 0,
+        workflow_type: "",
         pr_url: "",
         explanation: "",
         message: "",
@@ -90,14 +108,46 @@
       };
     },
     created() {
+      this.getWorkflowType();
     },
     methods: {
-      submit() {
+      getWorkflowType() {
+        // Get the workflow type from the API
+        Axios.get(`${API_URL}/auth/workflows/${this.workflowName}`)
+          .then(response => {
+            this.workflow_type = response.data.workflo_type;
+          }, handleErr.bind(this));
+      },
+      submitForcemerge() {
         this.activeStep=1;
         // Final action after wizard is done
         Axios.post(`${API_URL}/auth/workflows/${this.workflowName}`,
             {
-                pr_url: this.pr_url,
+                explanation: this.explanation,
+                properties: [
+                    {
+                        name: "pr_url",
+                        value: this.pr_url,
+                    },
+                ],
+            }
+        ).then(response => {
+          let result = response.data;
+
+          this.activeStep=2;
+          this.message = result.message;
+          this.tracking_urls = result.tracking_urls;
+        }, error => {
+            this.activeStep=2;
+            this.result_error = true;
+            this.message = error.response.data.message;
+        });
+      },
+      submitTest() {
+        this.activeStep=1;
+        // Final action after wizard is done
+        Axios.post(`${API_URL}/auth/workflows/${this.workflowName}`,
+            {
                 explanation: this.explanation,
             }
         ).then(response => {

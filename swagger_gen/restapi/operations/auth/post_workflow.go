@@ -8,6 +8,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"strconv"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime/middleware"
@@ -37,7 +38,7 @@ func NewPostWorkflow(ctx *middleware.Context, handler PostWorkflowHandler) *Post
 /*
 	PostWorkflow swagger:route POST /auth/workflows/{workflowName} auth postWorkflow
 
-Bypass PR approval and force mere the PR
+Submit a workflow for execution
 */
 type PostWorkflow struct {
 	Context *middleware.Context
@@ -70,10 +71,9 @@ type PostWorkflowBody struct {
 	// Min Length: 1
 	Explanation string `json:"explanation"`
 
-	// pr url
+	// properties
 	// Required: true
-	// Min Length: 10
-	PrURL string `json:"pr_url"`
+	Properties []*PostWorkflowParamsBodyPropertiesItems0 `json:"properties"`
 }
 
 // Validate validates this post workflow body
@@ -84,7 +84,7 @@ func (o *PostWorkflowBody) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := o.validatePrURL(formats); err != nil {
+	if err := o.validateProperties(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -107,21 +107,69 @@ func (o *PostWorkflowBody) validateExplanation(formats strfmt.Registry) error {
 	return nil
 }
 
-func (o *PostWorkflowBody) validatePrURL(formats strfmt.Registry) error {
+func (o *PostWorkflowBody) validateProperties(formats strfmt.Registry) error {
 
-	if err := validate.RequiredString("body"+"."+"pr_url", "body", o.PrURL); err != nil {
+	if err := validate.Required("body"+"."+"properties", "body", o.Properties); err != nil {
 		return err
 	}
 
-	if err := validate.MinLength("body"+"."+"pr_url", "body", o.PrURL, 10); err != nil {
-		return err
+	for i := 0; i < len(o.Properties); i++ {
+		if swag.IsZero(o.Properties[i]) { // not required
+			continue
+		}
+
+		if o.Properties[i] != nil {
+			if err := o.Properties[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("body" + "." + "properties" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("body" + "." + "properties" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
 	}
 
 	return nil
 }
 
-// ContextValidate validates this post workflow body based on context it is used
+// ContextValidate validate this post workflow body based on the context it is used
 func (o *PostWorkflowBody) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := o.contextValidateProperties(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (o *PostWorkflowBody) contextValidateProperties(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(o.Properties); i++ {
+
+		if o.Properties[i] != nil {
+
+			if swag.IsZero(o.Properties[i]) { // not required
+				return nil
+			}
+
+			if err := o.Properties[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("body" + "." + "properties" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("body" + "." + "properties" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
 	return nil
 }
 
@@ -136,6 +184,85 @@ func (o *PostWorkflowBody) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (o *PostWorkflowBody) UnmarshalBinary(b []byte) error {
 	var res PostWorkflowBody
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*o = res
+	return nil
+}
+
+// PostWorkflowParamsBodyPropertiesItems0 post workflow params body properties items0
+//
+// swagger:model PostWorkflowParamsBodyPropertiesItems0
+type PostWorkflowParamsBodyPropertiesItems0 struct {
+
+	// name
+	// Min Length: 1
+	Name string `json:"name,omitempty"`
+
+	// value
+	// Min Length: 1
+	Value string `json:"value,omitempty"`
+}
+
+// Validate validates this post workflow params body properties items0
+func (o *PostWorkflowParamsBodyPropertiesItems0) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := o.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := o.validateValue(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (o *PostWorkflowParamsBodyPropertiesItems0) validateName(formats strfmt.Registry) error {
+	if swag.IsZero(o.Name) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("name", "body", o.Name, 1); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (o *PostWorkflowParamsBodyPropertiesItems0) validateValue(formats strfmt.Registry) error {
+	if swag.IsZero(o.Value) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("value", "body", o.Value, 1); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ContextValidate validates this post workflow params body properties items0 based on context it is used
+func (o *PostWorkflowParamsBodyPropertiesItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (o *PostWorkflowParamsBodyPropertiesItems0) MarshalBinary() ([]byte, error) {
+	if o == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(o)
+}
+
+// UnmarshalBinary interface implementation
+func (o *PostWorkflowParamsBodyPropertiesItems0) UnmarshalBinary(b []byte) error {
+	var res PostWorkflowParamsBodyPropertiesItems0
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

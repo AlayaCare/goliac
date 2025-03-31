@@ -33,7 +33,7 @@ type PostWorkflowParams struct {
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
-	/*PR to merge (and bypass approval)
+	/*Workflow execution properties
 	  Required: true
 	  In: body
 	*/

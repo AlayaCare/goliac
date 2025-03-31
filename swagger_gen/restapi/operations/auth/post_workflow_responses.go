@@ -17,7 +17,7 @@ import (
 const PostWorkflowOKCode int = 200
 
 /*
-PostWorkflowOK PR merged
+PostWorkflowOK Workflow executed
 
 swagger:response postWorkflowOK
 */

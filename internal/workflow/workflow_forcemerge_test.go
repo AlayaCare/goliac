@@ -11,32 +11,32 @@ import (
 )
 
 // strip down version of Goliac Local
-type ForcemergeLocalResourceMoc struct {
-	FcWorkflow map[string]*entity.Workflow
-	LTeams     map[string]*entity.Team
+type LocalResourceMock struct {
+	MockWorkflows map[string]*entity.Workflow
+	LTeams        map[string]*entity.Team
 }
 
-func (m *ForcemergeLocalResourceMoc) Workflows() map[string]*entity.Workflow {
-	return m.FcWorkflow
+func (m *LocalResourceMock) Workflows() map[string]*entity.Workflow {
+	return m.MockWorkflows
 }
-func (m *ForcemergeLocalResourceMoc) Teams() map[string]*entity.Team {
+func (m *LocalResourceMock) Teams() map[string]*entity.Team {
 	return m.LTeams
 }
 
-type ForcemergeRemoteResourceMoc struct {
+type RemoteResourceMock struct {
 	RTeams map[string]*engine.GithubTeam
 }
 
-func (m *ForcemergeRemoteResourceMoc) Teams(ctx context.Context, current bool) map[string]*engine.GithubTeam {
+func (m *RemoteResourceMock) Teams(ctx context.Context, current bool) map[string]*engine.GithubTeam {
 	return m.RTeams
 }
 
-type ForcemergeGithubClientMoc struct {
+type GithubClientMock struct {
 	LastCallEndpoint string
 	LastCallBody     map[string]interface{}
 }
 
-func (m *ForcemergeGithubClientMoc) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error) {
+func (m *GithubClientMock) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.LastCallEndpoint = endpoint
 	m.LastCallBody = body
 	return nil, nil
@@ -53,13 +53,13 @@ func NewStepPluginMock() StepPlugin {
 	return &StepPluginMock{}
 }
 
-func fixtureWForcemergeorkflow() *entity.Workflow {
-	rfcWorkflow := &entity.Workflow{}
-	rfcWorkflow.Name = "fmtest"
-	rfcWorkflow.ApiVersion = "v1"
-	rfcWorkflow.Kind = "ForcemergeWorkflow"
+func fixtureForcemergeWorkflow() *entity.Workflow {
+	w := &entity.Workflow{}
+	w.Name = "fmtest"
+	w.ApiVersion = "v1"
+	w.Kind = "Workflow"
 
-	rfcWorkflow.Spec.Steps = []struct {
+	w.Spec.Steps = []struct {
 		Name       string                 `yaml:"name"`
 		Properties map[string]interface{} `yaml:"properties"`
 	}{
@@ -71,8 +71,9 @@ func fixtureWForcemergeorkflow() *entity.Workflow {
 			},
 		},
 	}
-	rfcWorkflow.Spec.Description = "fmtest"
-	rfcWorkflow.Spec.Repositories = struct {
+	w.Spec.Description = "fmtest"
+	w.Spec.WorkflowType = "forcemerge"
+	w.Spec.Repositories = struct {
 		Allowed []string `yaml:"allowed"`
 		Except  []string `yaml:"except"`
 	}{
@@ -86,7 +87,7 @@ func fixtureWForcemergeorkflow() *entity.Workflow {
 	// 	Allowed: []string{"test-team"},
 	// }
 
-	return rfcWorkflow
+	return w
 }
 
 func TestForcemerge(t *testing.T) {
@@ -97,19 +98,19 @@ func TestForcemerge(t *testing.T) {
 		lTeam.Spec.Owners = []string{"test-user"}
 		lTeam.Spec.Members = []string{}
 
-		local := &ForcemergeLocalResourceMoc{
-			FcWorkflow: map[string]*entity.Workflow{
-				"fmtest": fixtureWForcemergeorkflow(),
+		local := &LocalResourceMock{
+			MockWorkflows: map[string]*entity.Workflow{
+				"fmtest": fixtureForcemergeWorkflow(),
 			},
 			LTeams: map[string]*entity.Team{
 				"test-team": lTeam,
 			},
 		}
-		remote := &ForcemergeRemoteResourceMoc{
+		remote := &RemoteResourceMock{
 			RTeams: map[string]*engine.GithubTeam{},
 		}
 
-		githubclient := &ForcemergeGithubClientMoc{}
+		githubclient := &GithubClientMock{}
 		stepPlugins := map[string]StepPlugin{
 			"jira_ticket_creation": NewStepPluginMock(),
 		}
@@ -121,7 +122,7 @@ func TestForcemerge(t *testing.T) {
 			stepPlugins:  stepPlugins,
 		}
 
-		resUrl, err := fc.ExecuteWorkflow(context.Background(), []string{"fmtest"}, "test-user", "fmtest", "https://github.com/goliac-project/goliac/pull/32", "explanation", false)
+		resUrl, err := fc.ExecuteWorkflow(context.Background(), []string{"fmtest"}, "test-user", "fmtest", "explanation", map[string]string{"pr_url": "https://github.com/goliac-project/goliac/pull/32"}, false)
 
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(resUrl))
@@ -135,15 +136,15 @@ func TestForcemerge(t *testing.T) {
 		lTeam.Spec.Owners = []string{"test-user"}
 		lTeam.Spec.Members = []string{}
 
-		local := &ForcemergeLocalResourceMoc{
-			FcWorkflow: map[string]*entity.Workflow{
-				"fmtest": fixtureWForcemergeorkflow(),
+		local := &LocalResourceMock{
+			MockWorkflows: map[string]*entity.Workflow{
+				"fmtest": fixtureForcemergeWorkflow(),
 			},
 			LTeams: map[string]*entity.Team{
 				"test-team": lTeam,
 			},
 		}
-		remote := &ForcemergeRemoteResourceMoc{
+		remote := &RemoteResourceMock{
 			RTeams: map[string]*engine.GithubTeam{
 				"test-team": {
 					Name:    "test-team",
@@ -153,7 +154,7 @@ func TestForcemerge(t *testing.T) {
 			},
 		}
 
-		githubclient := &ForcemergeGithubClientMoc{}
+		githubclient := &GithubClientMock{}
 		stepPlugins := map[string]StepPlugin{
 			"jira_ticket_creation": NewStepPluginMock(),
 		}
@@ -165,7 +166,7 @@ func TestForcemerge(t *testing.T) {
 			stepPlugins:  stepPlugins,
 		}
 
-		resUrl, err := fc.ExecuteWorkflow(context.Background(), []string{"fmtest"}, "test-user", "fmtest", "https://github.com/goliac-project/goliac/pull/32", "explanation", false)
+		resUrl, err := fc.ExecuteWorkflow(context.Background(), []string{"fmtest"}, "test-user", "fmtest", "explanation", map[string]string{"pr_url": "https://github.com/goliac-project/goliac/pull/32"}, false)
 
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(resUrl))

@@ -63,7 +63,8 @@ type GoliacServer interface {
 	AuthGetLogin(params auth.GetAuthenticationLoginParams) middleware.Responder
 	AuthGetCallback(params auth.GetAuthenticationCallbackParams) middleware.Responder
 	AuthGetUser(params auth.GetGithubUserParams) middleware.Responder
-	AuthWorkflow(params auth.PostWorkflowParams) middleware.Responder
+	AuthGetWorkflow(params auth.GetWorkflowParams) middleware.Responder
+	AuthPostWorkflow(params auth.PostWorkflowParams) middleware.Responder
 	AuthWorkflows(params auth.GetWorkflowsParams) middleware.Responder
 
 	PostExternalCreateRepository(external.PostExternalCreateRepositoryParams) middleware.Responder
@@ -938,7 +939,8 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.AuthGetAuthenticationLoginHandler = auth.GetAuthenticationLoginHandlerFunc(g.AuthGetLogin)
 	api.AuthGetGithubUserHandler = auth.GetGithubUserHandlerFunc(g.AuthGetUser)
 	api.AuthGetWorkflowsHandler = auth.GetWorkflowsHandlerFunc(g.AuthWorkflows)
-	api.AuthPostWorkflowHandler = auth.PostWorkflowHandlerFunc(g.AuthWorkflow)
+	api.AuthGetWorkflowHandler = auth.GetWorkflowHandlerFunc(g.AuthGetWorkflow)
+	api.AuthPostWorkflowHandler = auth.PostWorkflowHandlerFunc(g.AuthPostWorkflow)
 
 	api.ExternalPostExternalCreateRepositoryHandler = external.PostExternalCreateRepositoryHandlerFunc(g.PostExternalCreateRepository)
 
