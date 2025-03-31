@@ -13,6 +13,7 @@ import (
 type WorkflowLocalResource interface {
 	Workflows() map[string]*entity.Workflow
 	Teams() map[string]*entity.Team
+	Users() map[string]*entity.User // github username, user definition
 }
 
 // strip down version of Goliac Remote (if we have an externally managed team)
@@ -21,7 +22,7 @@ type WorkflowRemoteResource interface {
 }
 
 type StepPlugin interface {
-	Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error)
+	Execute(ctx context.Context, username, workflowDescription, explanation string, url *url.URL, properties map[string]interface{}) (string, error)
 }
 
 type Workflow interface {
@@ -29,7 +30,7 @@ type Workflow interface {
 }
 
 // returns the corresponding workflow
-func GetWorkflow(ctx context.Context, local WorkflowLocalResource, remote WorkflowRemoteResource, repoconfigForceMergeworkflows []string, workflowName, repo, username string) (*entity.Workflow, error) {
+func GetWorkflow(ctx context.Context, local WorkflowLocalResource, remote WorkflowRemoteResource, repoconfigForceMergeworkflows []string, workflowName, repo, githubId string) (*entity.Workflow, error) {
 	// check if the workflow is enabled
 	if repoconfigForceMergeworkflows == nil {
 		return nil, fmt.Errorf("workflows not found")
@@ -55,6 +56,22 @@ func GetWorkflow(ctx context.Context, local WorkflowLocalResource, remote Workfl
 	if !ok {
 		return nil, fmt.Errorf("workflows not found")
 	}
+
+	fmt.Println("githubId", githubId)
+	fmt.Println("users", local.Users())
+
+	// get the username
+	username := ""
+	if githubId != "" {
+		users := local.Users()
+		for name, user := range users {
+			if user.Spec.GithubID == githubId {
+				username = name
+				break
+			}
+		}
+	}
+	fmt.Println("username", username)
 
 	// check workflow acl
 	teams := []string{}

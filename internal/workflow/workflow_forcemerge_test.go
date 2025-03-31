@@ -14,6 +14,7 @@ import (
 type LocalResourceMock struct {
 	MockWorkflows map[string]*entity.Workflow
 	LTeams        map[string]*entity.Team
+	LUsers        map[string]*entity.User // map[githubid]githubusername
 }
 
 func (m *LocalResourceMock) Workflows() map[string]*entity.Workflow {
@@ -21,6 +22,9 @@ func (m *LocalResourceMock) Workflows() map[string]*entity.Workflow {
 }
 func (m *LocalResourceMock) Teams() map[string]*entity.Team {
 	return m.LTeams
+}
+func (m *LocalResourceMock) Users() map[string]*entity.User {
+	return m.LUsers
 }
 
 type RemoteResourceMock struct {
@@ -44,7 +48,7 @@ func (m *GithubClientMock) CallRestAPI(ctx context.Context, endpoint, parameters
 
 type StepPluginMock struct{}
 
-func (f *StepPluginMock) Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error) {
+func (f *StepPluginMock) Execute(ctx context.Context, username, workflowDescription, explanation string, url *url.URL, properties map[string]interface{}) (string, error) {
 	// Mock implementation
 	return "mocked_url", nil
 }
@@ -98,12 +102,19 @@ func TestForcemerge(t *testing.T) {
 		lTeam.Spec.Owners = []string{"test-user"}
 		lTeam.Spec.Members = []string{}
 
+		luser := entity.User{}
+		luser.Name = "test-user"
+		luser.Spec.GithubID = "test-user"
+
 		local := &LocalResourceMock{
 			MockWorkflows: map[string]*entity.Workflow{
 				"fmtest": fixtureForcemergeWorkflow(),
 			},
 			LTeams: map[string]*entity.Team{
 				"test-team": lTeam,
+			},
+			LUsers: map[string]*entity.User{
+				"test-user": &luser,
 			},
 		}
 		remote := &RemoteResourceMock{
@@ -136,12 +147,19 @@ func TestForcemerge(t *testing.T) {
 		lTeam.Spec.Owners = []string{"test-user"}
 		lTeam.Spec.Members = []string{}
 
+		luser := entity.User{}
+		luser.Name = "test-user"
+		luser.Spec.GithubID = "test-user"
+
 		local := &LocalResourceMock{
 			MockWorkflows: map[string]*entity.Workflow{
 				"fmtest": fixtureForcemergeWorkflow(),
 			},
 			LTeams: map[string]*entity.Team{
 				"test-team": lTeam,
+			},
+			LUsers: map[string]*entity.User{
+				"test-user": &luser,
 			},
 		}
 		remote := &RemoteResourceMock{

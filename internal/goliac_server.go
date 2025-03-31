@@ -154,6 +154,7 @@ func NewGoliacServer(goliac Goliac, notificationService notification.Notificatio
 
 	worflowInstances := make(map[string]workflow.Workflow)
 	worflowInstances["forcemerge"] = workflow.NewForcemergeImpl(goliac.GetLocal(), goliac.GetRemote(), goliac.GetRemoteClient())
+	worflowInstances["noop"] = workflow.NewNoopImpl(goliac.GetLocal(), goliac.GetRemote())
 
 	server := GoliacServerImpl{
 		goliac:              goliac,
@@ -644,11 +645,7 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 }
 
 func (g *GoliacServerImpl) GetStatus(app.GetStatusParams) middleware.Responder {
-	repoconfig := g.goliac.GetLocal().RepoConfig()
-	nbworkflows := 0
-	if repoconfig != nil {
-		nbworkflows = len(repoconfig.Workflows)
-	}
+	nbworkflows := len(g.goliac.GetLocal().Workflows())
 	s := models.Status{
 		LastSyncError:    "",
 		LastSyncTime:     "N/A",

@@ -183,12 +183,6 @@ func (g *GoliacServerImpl) AuthGetWorkflow(params auth.GetWorkflowParams) middle
 		return auth.NewGetWorkflowDefault(404).WithPayload(&models.Error{Message: &message})
 	}
 
-	instance := g.worflowInstances[workflow.Name]
-	if instance == nil {
-		message := fmt.Sprintf("Workflow instance not found: %s", workflow.Name)
-		return auth.NewGetWorkflowDefault(404).WithPayload(&models.Error{Message: &message})
-	}
-
 	return auth.NewGetWorkflowOK().WithPayload(&auth.GetWorkflowOKBody{
 		WorkflowType: workflow.Spec.WorkflowType,
 	})
@@ -207,9 +201,9 @@ func (g *GoliacServerImpl) AuthPostWorkflow(params auth.PostWorkflowParams) midd
 		return auth.NewPostWorkflowDefault(404).WithPayload(&models.Error{Message: &message})
 	}
 
-	instance := g.worflowInstances[workflow.Name]
+	instance := g.worflowInstances[workflow.Spec.WorkflowType]
 	if instance == nil {
-		message := fmt.Sprintf("Workflow instance not found: %s", workflow.Name)
+		message := fmt.Sprintf("Workflow instance not found: %s", workflow.Spec.WorkflowType)
 		return auth.NewPostWorkflowDefault(404).WithPayload(&models.Error{Message: &message})
 	}
 
@@ -234,7 +228,7 @@ func (g *GoliacServerImpl) AuthPostWorkflow(params auth.PostWorkflowParams) midd
 	}
 
 	return auth.NewPostWorkflowOK().WithPayload(&models.Workflow{
-		Message:      "PR merged",
+		Message:      "Workflow executed successfully",
 		TrackingUrls: responses,
 	})
 }

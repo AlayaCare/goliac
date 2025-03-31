@@ -42,7 +42,7 @@ func TestSlackPluginWorkflow(t *testing.T) {
 			Channel:    "mychannel",
 		}
 
-		url, err := plugin.Execute(context.Background(), "foo", "explanation", &url.URL{}, map[string]interface{}{
+		url, err := plugin.Execute(context.Background(), "foo", "workflowdescription", "explanation", &url.URL{}, map[string]interface{}{
 			"channel": "mychannel",
 		})
 

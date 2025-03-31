@@ -78,7 +78,7 @@ type CreateIssueResponse struct {
 	Self string `json:"self"`
 }
 
-func (f *StepPluginJira) Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error) {
+func (f *StepPluginJira) Execute(ctx context.Context, username, workflowDescription, explanation string, url *url.URL, properties map[string]interface{}) (string, error) {
 	jiraURL := fmt.Sprintf("%s/rest/api/3/issue", f.AtlassianUrlDomain)
 	projectKey := f.ProjectKey
 	issueType := f.IssueType
@@ -89,6 +89,10 @@ func (f *StepPluginJira) Execute(ctx context.Context, username, explanation stri
 		issueType = properties["issue_type"].(string)
 	}
 
+	urlstring := ""
+	if url != nil {
+		urlstring = "(" + url.String() + ")"
+	}
 	description := JiraADFDescription{
 		Type:    "doc",
 		Version: 1,
@@ -96,9 +100,7 @@ func (f *StepPluginJira) Execute(ctx context.Context, username, explanation stri
 			{
 				Type: "paragraph",
 				Content: []JiraText{
-					{Type: "text", Text: fmt.Sprintf("User %s requested to force merge PR ", username)},
-					{Type: "text", Text: url.String()},
-					{Type: "text", Text: ": "},
+					{Type: "text", Text: fmt.Sprintf("Workflow %s %s was requested by user %s:", workflowDescription, urlstring, username)},
 					{Type: "text", Text: explanation},
 				},
 			},
@@ -107,7 +109,7 @@ func (f *StepPluginJira) Execute(ctx context.Context, username, explanation stri
 	issue := JiraIssue{
 		Fields: JiraFields{
 			Project:     JiraProject{Key: projectKey},
-			Summary:     "Github PR Force Merge",
+			Summary:     "Goliac workflow: " + workflowDescription,
 			Description: description,
 			Issuetype:   IssueType{Name: issueType}, // or "Bug", "Story", etc.
 		},

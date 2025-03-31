@@ -11,22 +11,20 @@ import (
 )
 
 type NoopImpl struct {
-	local        WorkflowLocalResource
-	remote       WorkflowRemoteResource
-	githubclient ForcemergeGithubClient
-	stepPlugins  map[string]StepPlugin
+	local       WorkflowLocalResource
+	remote      WorkflowRemoteResource
+	stepPlugins map[string]StepPlugin
 }
 
-func NewNoopImpl(local WorkflowLocalResource, remote WorkflowRemoteResource, githubclient ForcemergeGithubClient) Workflow {
+func NewNoopImpl(local WorkflowLocalResource, remote WorkflowRemoteResource) Workflow {
 	stepPlugins := map[string]StepPlugin{
 		"jira_ticket_creation": NewStepPluginJira(),
 		"slack_notification":   NewStepPluginSlack(),
 	}
 	return &NoopImpl{
-		local:        local,
-		remote:       remote,
-		githubclient: githubclient,
-		stepPlugins:  stepPlugins,
+		local:       local,
+		remote:      remote,
+		stepPlugins: stepPlugins,
 	}
 }
 
@@ -58,7 +56,7 @@ func (g *NoopImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMergework
 		if plugin == nil {
 			return nil, fmt.Errorf("plugin %s not found", step.Name)
 		}
-		resp, err := plugin.Execute(ctx, username, explanation, nil, step.Properties)
+		resp, err := plugin.Execute(ctx, username, w.Spec.Description, explanation, nil, step.Properties)
 		if err != nil {
 			return nil, err
 		}

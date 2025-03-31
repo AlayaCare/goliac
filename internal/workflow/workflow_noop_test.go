@@ -49,6 +49,10 @@ func TestNoop(t *testing.T) {
 		lTeam.Spec.Owners = []string{"test-user"}
 		lTeam.Spec.Members = []string{}
 
+		luser := entity.User{}
+		luser.Name = "test-user"
+		luser.Spec.GithubID = "test-user"
+
 		local := &LocalResourceMock{
 			MockWorkflows: map[string]*entity.Workflow{
 				"nooptest": fixtureNoopWorkflow(),
@@ -56,21 +60,23 @@ func TestNoop(t *testing.T) {
 			LTeams: map[string]*entity.Team{
 				"test-team": lTeam,
 			},
+
+			LUsers: map[string]*entity.User{
+				"test-user": &luser,
+			},
 		}
 		remote := &RemoteResourceMock{
 			RTeams: map[string]*engine.GithubTeam{},
 		}
 
-		githubclient := &GithubClientMock{}
 		stepPlugins := map[string]StepPlugin{
 			"jira_ticket_creation": NewStepPluginMock(),
 		}
 
 		noop := &NoopImpl{
-			local:        local,
-			remote:       remote,
-			githubclient: githubclient,
-			stepPlugins:  stepPlugins,
+			local:       local,
+			remote:      remote,
+			stepPlugins: stepPlugins,
 		}
 
 		resUrl, err := noop.ExecuteWorkflow(context.Background(), []string{"nooptest"}, "test-user", "nooptest", "explanation", map[string]string{}, false)

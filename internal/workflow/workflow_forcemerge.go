@@ -86,7 +86,7 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 		if plugin == nil {
 			return nil, fmt.Errorf("plugin %s not found", step.Name)
 		}
-		resp, err := plugin.Execute(ctx, username, explanation, url, step.Properties)
+		resp, err := plugin.Execute(ctx, username, w.Spec.Description, explanation, url, step.Properties)
 		if err != nil {
 			return nil, err
 		}

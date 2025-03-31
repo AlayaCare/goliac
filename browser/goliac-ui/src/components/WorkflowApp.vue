@@ -1,7 +1,7 @@
 <template>
     <el-breadcrumb separator-class="el-icon-arrow-right">
         <el-breadcrumb-item :to="{ path: '/' }">Goliac</el-breadcrumb-item>
-        <el-breadcrumb-item :to="{ path: '/workflows' }">Force Merge Workflows</el-breadcrumb-item>
+        <el-breadcrumb-item :to="{ path: '/workflows' }">Workflows</el-breadcrumb-item>
         <el-breadcrumb-item :to="{ path: '/{{ workflowName }}' }">{{ workflowName }}</el-breadcrumb-item>
     </el-breadcrumb>
     <el-divider />
@@ -10,8 +10,8 @@
             <div class="wizard-container">
                 <el-steps :active="activeStep" finish-status="success">
                     <el-step title="Collect informations"></el-step>
-                    <el-step title="Submit informations"></el-step>
-                    <el-step title="Force push Pull Request"></el-step>
+                    <el-step title="Submit"></el-step>
+                    <el-step title="Get back status"></el-step>
                 </el-steps>
 
                 <div class="step-content" style="margin: 20px 0;">
@@ -46,7 +46,7 @@
                                 </el-form-item>
                             </el-form>
                             <div class="wizard-footer">
-                                <el-button :disabled="explanation.length==0 || pr_url.length<10" type="success" @click="submitTest">Submit</el-button>
+                                <el-button :disabled="explanation.length==0" type="success" @click="submitTest">Submit</el-button>
                             </div>
                         </div>
                     </div>
@@ -115,7 +115,7 @@
         // Get the workflow type from the API
         Axios.get(`${API_URL}/auth/workflows/${this.workflowName}`)
           .then(response => {
-            this.workflow_type = response.data.workflo_type;
+            this.workflow_type = response.data.workflow_type;
           }, handleErr.bind(this));
       },
       submitForcemerge() {
@@ -149,6 +149,7 @@
         Axios.post(`${API_URL}/auth/workflows/${this.workflowName}`,
             {
                 explanation: this.explanation,
+                properties: [],
             }
         ).then(response => {
           let result = response.data;
