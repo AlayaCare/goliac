@@ -31,7 +31,7 @@ type RepositoryConfig struct {
 		ForbidPublicRepositoriesExclusions []string `yaml:"forbid_public_repositories_exclusions"`
 	} `yaml:"visibility_rules"`
 
-	ForceMergeworkflows []string `yaml:"forcemerge_workflows"`
+	Workflows []string `yaml:"workflows"`
 }
 
 // set default values

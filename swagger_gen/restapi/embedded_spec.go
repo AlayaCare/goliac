@@ -145,18 +145,18 @@ func init() {
         }
       }
     },
-    "/auth/workflows_forcemerge": {
+    "/auth/workflows": {
       "get": {
         "description": "Get all PR force merge workflows",
         "tags": [
           "auth"
         ],
-        "operationId": "getWorkflowsForcemerge",
+        "operationId": "getWorkflows",
         "responses": {
           "200": {
             "description": "get list of all PR force merge workflows",
             "schema": {
-              "$ref": "#/definitions/workflows_prmerged"
+              "$ref": "#/definitions/workflows"
             }
           },
           "401": {
@@ -174,13 +174,62 @@ func init() {
         }
       }
     },
-    "/auth/workflows_forcemerge/{workflowName}": {
-      "post": {
-        "description": "Bypass PR approval and force mere the PR",
+    "/auth/workflows/{workflowName}": {
+      "get": {
+        "description": "Get Workflow information",
         "tags": [
           "auth"
         ],
-        "operationId": "postWorkflowForcemerge",
+        "operationId": "getWorkflow",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "workflow name",
+            "name": "workflowName",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workflow information",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "workflow_type": {
+                  "type": "string",
+                  "minLength": 1,
+                  "x-nullable": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Submit a workflow for execution",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "postWorkflow",
         "parameters": [
           {
             "type": "string",
@@ -190,15 +239,15 @@ func init() {
             "required": true
           },
           {
-            "description": "PR to merge (and bypass approval)",
+            "description": "Workflow execution properties",
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
               "required": [
-                "pr_url",
-                "explanation"
+                "explanation",
+                "properties"
               ],
               "properties": {
                 "explanation": {
@@ -206,10 +255,23 @@ func init() {
                   "minLength": 1,
                   "x-nullable": false
                 },
-                "pr_url": {
-                  "type": "string",
-                  "minLength": 10,
-                  "x-nullable": false
+                "properties": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "x-nullable": false
+                      },
+                      "value": {
+                        "type": "string",
+                        "minLength": 1,
+                        "x-nullable": false
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -217,9 +279,9 @@ func init() {
         ],
         "responses": {
           "200": {
-            "description": "PR merged",
+            "description": "Workflow executed",
             "schema": {
-              "$ref": "#/definitions/prmerged"
+              "$ref": "#/definitions/workflow"
             }
           },
           "401": {
@@ -736,22 +798,6 @@ func init() {
         }
       }
     },
-    "prmerged": {
-      "type": "object",
-      "properties": {
-        "message": {
-          "type": "string",
-          "x-isnullable": false
-        },
-        "tracking_urls": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        }
-      }
-    },
     "repositories": {
       "type": "array",
       "items": {
@@ -908,10 +954,6 @@ func init() {
           "type": "string",
           "minLength": 1
         },
-        "nbForcemergeWorkflows": {
-          "type": "integer",
-          "x-omitempty": false
-        },
         "nbRepos": {
           "type": "integer",
           "x-omitempty": false
@@ -925,6 +967,10 @@ func init() {
           "x-omitempty": false
         },
         "nbUsersExternal": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "nbWorkflows": {
           "type": "integer",
           "x-omitempty": false
         },
@@ -1106,7 +1152,23 @@ func init() {
         "$ref": "#/definitions/user"
       }
     },
-    "workflows_prmerged": {
+    "workflow": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "tracking_urls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "workflows": {
       "type": "array",
       "items": {
         "type": "object",
@@ -1116,6 +1178,10 @@ func init() {
             "x-isnullable": false
           },
           "workflow_name": {
+            "type": "string",
+            "x-isnullable": false
+          },
+          "workflow_type": {
             "type": "string",
             "x-isnullable": false
           }
@@ -1286,18 +1352,18 @@ func init() {
         }
       }
     },
-    "/auth/workflows_forcemerge": {
+    "/auth/workflows": {
       "get": {
         "description": "Get all PR force merge workflows",
         "tags": [
           "auth"
         ],
-        "operationId": "getWorkflowsForcemerge",
+        "operationId": "getWorkflows",
         "responses": {
           "200": {
             "description": "get list of all PR force merge workflows",
             "schema": {
-              "$ref": "#/definitions/workflows_prmerged"
+              "$ref": "#/definitions/workflows"
             }
           },
           "401": {
@@ -1315,13 +1381,62 @@ func init() {
         }
       }
     },
-    "/auth/workflows_forcemerge/{workflowName}": {
-      "post": {
-        "description": "Bypass PR approval and force mere the PR",
+    "/auth/workflows/{workflowName}": {
+      "get": {
+        "description": "Get Workflow information",
         "tags": [
           "auth"
         ],
-        "operationId": "postWorkflowForcemerge",
+        "operationId": "getWorkflow",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "workflow name",
+            "name": "workflowName",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workflow information",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "workflow_type": {
+                  "type": "string",
+                  "minLength": 1,
+                  "x-nullable": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          },
+          "default": {
+            "description": "generic error response",
+            "schema": {
+              "$ref": "#/definitions/error"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Submit a workflow for execution",
+        "tags": [
+          "auth"
+        ],
+        "operationId": "postWorkflow",
         "parameters": [
           {
             "type": "string",
@@ -1331,15 +1446,15 @@ func init() {
             "required": true
           },
           {
-            "description": "PR to merge (and bypass approval)",
+            "description": "Workflow execution properties",
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
               "type": "object",
               "required": [
-                "pr_url",
-                "explanation"
+                "explanation",
+                "properties"
               ],
               "properties": {
                 "explanation": {
@@ -1347,10 +1462,11 @@ func init() {
                   "minLength": 1,
                   "x-nullable": false
                 },
-                "pr_url": {
-                  "type": "string",
-                  "minLength": 10,
-                  "x-nullable": false
+                "properties": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/PropertiesItems0"
+                  }
                 }
               }
             }
@@ -1358,9 +1474,9 @@ func init() {
         ],
         "responses": {
           "200": {
-            "description": "PR merged",
+            "description": "Workflow executed",
             "schema": {
-              "$ref": "#/definitions/prmerged"
+              "$ref": "#/definitions/workflow"
             }
           },
           "401": {
@@ -1829,6 +1945,21 @@ func init() {
     }
   },
   "definitions": {
+    "PropertiesItems0": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "x-nullable": false
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "x-nullable": false
+        }
+      }
+    },
     "RepositoryDetailsCollaboratorsItems0": {
       "type": "object",
       "properties": {
@@ -1891,7 +2022,7 @@ func init() {
         }
       }
     },
-    "WorkflowsPrmergedItems0": {
+    "WorkflowsItems0": {
       "type": "object",
       "properties": {
         "workflow_description": {
@@ -1899,6 +2030,10 @@ func init() {
           "x-isnullable": false
         },
         "workflow_name": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "workflow_type": {
           "type": "string",
           "x-isnullable": false
         }
@@ -1949,22 +2084,6 @@ func init() {
       "properties": {
         "status": {
           "type": "string"
-        }
-      }
-    },
-    "prmerged": {
-      "type": "object",
-      "properties": {
-        "message": {
-          "type": "string",
-          "x-isnullable": false
-        },
-        "tracking_urls": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
         }
       }
     },
@@ -2104,10 +2223,6 @@ func init() {
           "type": "string",
           "minLength": 1
         },
-        "nbForcemergeWorkflows": {
-          "type": "integer",
-          "x-omitempty": false
-        },
         "nbRepos": {
           "type": "integer",
           "x-omitempty": false
@@ -2121,6 +2236,10 @@ func init() {
           "x-omitempty": false
         },
         "nbUsersExternal": {
+          "type": "integer",
+          "x-omitempty": false
+        },
+        "nbWorkflows": {
           "type": "integer",
           "x-omitempty": false
         },
@@ -2272,10 +2391,26 @@ func init() {
         "$ref": "#/definitions/user"
       }
     },
-    "workflows_prmerged": {
+    "workflow": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "x-isnullable": false
+        },
+        "tracking_urls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "workflows": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/WorkflowsPrmergedItems0"
+        "$ref": "#/definitions/WorkflowsItems0"
       }
     }
   },

@@ -9,22 +9,17 @@ import (
 	"errors"
 	"net/url"
 	golangswaggerpaths "path"
-	"strings"
 )
 
-// PostWorkflowForcemergeURL generates an URL for the post workflow forcemerge operation
-type PostWorkflowForcemergeURL struct {
-	WorkflowName string
-
+// GetWorkflowsURL generates an URL for the get workflows operation
+type GetWorkflowsURL struct {
 	_basePath string
-	// avoid unkeyed usage
-	_ struct{}
 }
 
 // WithBasePath sets the base path for this url builder, only required when it's different from the
 // base path specified in the swagger spec.
 // When the value of the base path is an empty string
-func (o *PostWorkflowForcemergeURL) WithBasePath(bp string) *PostWorkflowForcemergeURL {
+func (o *GetWorkflowsURL) WithBasePath(bp string) *GetWorkflowsURL {
 	o.SetBasePath(bp)
 	return o
 }
@@ -32,22 +27,15 @@ func (o *PostWorkflowForcemergeURL) WithBasePath(bp string) *PostWorkflowForceme
 // SetBasePath sets the base path for this url builder, only required when it's different from the
 // base path specified in the swagger spec.
 // When the value of the base path is an empty string
-func (o *PostWorkflowForcemergeURL) SetBasePath(bp string) {
+func (o *GetWorkflowsURL) SetBasePath(bp string) {
 	o._basePath = bp
 }
 
 // Build a url path and query string
-func (o *PostWorkflowForcemergeURL) Build() (*url.URL, error) {
+func (o *GetWorkflowsURL) Build() (*url.URL, error) {
 	var _result url.URL
 
-	var _path = "/auth/workflows_forcemerge/{workflowName}"
-
-	workflowName := o.WorkflowName
-	if workflowName != "" {
-		_path = strings.Replace(_path, "{workflowName}", workflowName, -1)
-	} else {
-		return nil, errors.New("workflowName is required on PostWorkflowForcemergeURL")
-	}
+	var _path = "/auth/workflows"
 
 	_basePath := o._basePath
 	if _basePath == "" {
@@ -59,7 +47,7 @@ func (o *PostWorkflowForcemergeURL) Build() (*url.URL, error) {
 }
 
 // Must is a helper function to panic when the url builder returns an error
-func (o *PostWorkflowForcemergeURL) Must(u *url.URL, err error) *url.URL {
+func (o *GetWorkflowsURL) Must(u *url.URL, err error) *url.URL {
 	if err != nil {
 		panic(err)
 	}
@@ -70,17 +58,17 @@ func (o *PostWorkflowForcemergeURL) Must(u *url.URL, err error) *url.URL {
 }
 
 // String returns the string representation of the path with query string
-func (o *PostWorkflowForcemergeURL) String() string {
+func (o *GetWorkflowsURL) String() string {
 	return o.Must(o.Build()).String()
 }
 
 // BuildFull builds a full url with scheme, host, path and query string
-func (o *PostWorkflowForcemergeURL) BuildFull(scheme, host string) (*url.URL, error) {
+func (o *GetWorkflowsURL) BuildFull(scheme, host string) (*url.URL, error) {
 	if scheme == "" {
-		return nil, errors.New("scheme is required for a full url on PostWorkflowForcemergeURL")
+		return nil, errors.New("scheme is required for a full url on GetWorkflowsURL")
 	}
 	if host == "" {
-		return nil, errors.New("host is required for a full url on PostWorkflowForcemergeURL")
+		return nil, errors.New("host is required for a full url on GetWorkflowsURL")
 	}
 
 	base, err := o.Build()
@@ -94,6 +82,6 @@ func (o *PostWorkflowForcemergeURL) BuildFull(scheme, host string) (*url.URL, er
 }
 
 // StringFull returns the string representation of a complete url
-func (o *PostWorkflowForcemergeURL) StringFull(scheme, host string) string {
+func (o *GetWorkflowsURL) StringFull(scheme, host string) string {
 	return o.Must(o.BuildFull(scheme, host)).String()
 }

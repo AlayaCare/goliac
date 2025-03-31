@@ -250,10 +250,10 @@ func TestAuthWorkflowsForcemerge(t *testing.T) {
 		session, _ := server.sessionStore.Get(httpRequest, "auth-session")
 		session.Values["access_token"] = "my-access-token"
 
-		res := server.AuthWorkflowsForcemerge(auth.GetWorkflowsForcemergeParams{
+		res := server.AuthWorkflows(auth.GetWorkflowsParams{
 			HTTPRequest: httpRequest,
 		})
-		payload := res.(*auth.GetWorkflowsForcemergeOK)
+		payload := res.(*auth.GetWorkflowsOK)
 		fmWorkflows := payload.Payload
 		assert.Equal(t, 1, len(fmWorkflows))
 		fmWorkflow := fmWorkflows[0]

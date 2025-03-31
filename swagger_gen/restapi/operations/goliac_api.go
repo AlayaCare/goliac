@@ -95,8 +95,11 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		AppGetUsersHandler: app.GetUsersHandlerFunc(func(params app.GetUsersParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.GetUsers has not yet been implemented")
 		}),
-		AuthGetWorkflowsForcemergeHandler: auth.GetWorkflowsForcemergeHandlerFunc(func(params auth.GetWorkflowsForcemergeParams) middleware.Responder {
-			return middleware.NotImplemented("operation auth.GetWorkflowsForcemerge has not yet been implemented")
+		AuthGetWorkflowHandler: auth.GetWorkflowHandlerFunc(func(params auth.GetWorkflowParams) middleware.Responder {
+			return middleware.NotImplemented("operation auth.GetWorkflow has not yet been implemented")
+		}),
+		AuthGetWorkflowsHandler: auth.GetWorkflowsHandlerFunc(func(params auth.GetWorkflowsParams) middleware.Responder {
+			return middleware.NotImplemented("operation auth.GetWorkflows has not yet been implemented")
 		}),
 		ExternalPostExternalCreateRepositoryHandler: external.PostExternalCreateRepositoryHandlerFunc(func(params external.PostExternalCreateRepositoryParams) middleware.Responder {
 			return middleware.NotImplemented("operation external.PostExternalCreateRepository has not yet been implemented")
@@ -107,8 +110,8 @@ func NewGoliacAPI(spec *loads.Document) *GoliacAPI {
 		AppPostResyncHandler: app.PostResyncHandlerFunc(func(params app.PostResyncParams) middleware.Responder {
 			return middleware.NotImplemented("operation app.PostResync has not yet been implemented")
 		}),
-		AuthPostWorkflowForcemergeHandler: auth.PostWorkflowForcemergeHandlerFunc(func(params auth.PostWorkflowForcemergeParams) middleware.Responder {
-			return middleware.NotImplemented("operation auth.PostWorkflowForcemerge has not yet been implemented")
+		AuthPostWorkflowHandler: auth.PostWorkflowHandlerFunc(func(params auth.PostWorkflowParams) middleware.Responder {
+			return middleware.NotImplemented("operation auth.PostWorkflow has not yet been implemented")
 		}),
 	}
 }
@@ -179,16 +182,18 @@ type GoliacAPI struct {
 	AppGetUserHandler app.GetUserHandler
 	// AppGetUsersHandler sets the operation handler for the get users operation
 	AppGetUsersHandler app.GetUsersHandler
-	// AuthGetWorkflowsForcemergeHandler sets the operation handler for the get workflows forcemerge operation
-	AuthGetWorkflowsForcemergeHandler auth.GetWorkflowsForcemergeHandler
+	// AuthGetWorkflowHandler sets the operation handler for the get workflow operation
+	AuthGetWorkflowHandler auth.GetWorkflowHandler
+	// AuthGetWorkflowsHandler sets the operation handler for the get workflows operation
+	AuthGetWorkflowsHandler auth.GetWorkflowsHandler
 	// ExternalPostExternalCreateRepositoryHandler sets the operation handler for the post external create repository operation
 	ExternalPostExternalCreateRepositoryHandler external.PostExternalCreateRepositoryHandler
 	// AppPostFlushCacheHandler sets the operation handler for the post flush cache operation
 	AppPostFlushCacheHandler app.PostFlushCacheHandler
 	// AppPostResyncHandler sets the operation handler for the post resync operation
 	AppPostResyncHandler app.PostResyncHandler
-	// AuthPostWorkflowForcemergeHandler sets the operation handler for the post workflow forcemerge operation
-	AuthPostWorkflowForcemergeHandler auth.PostWorkflowForcemergeHandler
+	// AuthPostWorkflowHandler sets the operation handler for the post workflow operation
+	AuthPostWorkflowHandler auth.PostWorkflowHandler
 
 	// ServeError is called when an error is received, there is a default handler
 	// but you can set your own with this
@@ -314,8 +319,11 @@ func (o *GoliacAPI) Validate() error {
 	if o.AppGetUsersHandler == nil {
 		unregistered = append(unregistered, "app.GetUsersHandler")
 	}
-	if o.AuthGetWorkflowsForcemergeHandler == nil {
-		unregistered = append(unregistered, "auth.GetWorkflowsForcemergeHandler")
+	if o.AuthGetWorkflowHandler == nil {
+		unregistered = append(unregistered, "auth.GetWorkflowHandler")
+	}
+	if o.AuthGetWorkflowsHandler == nil {
+		unregistered = append(unregistered, "auth.GetWorkflowsHandler")
 	}
 	if o.ExternalPostExternalCreateRepositoryHandler == nil {
 		unregistered = append(unregistered, "external.PostExternalCreateRepositoryHandler")
@@ -326,8 +334,8 @@ func (o *GoliacAPI) Validate() error {
 	if o.AppPostResyncHandler == nil {
 		unregistered = append(unregistered, "app.PostResyncHandler")
 	}
-	if o.AuthPostWorkflowForcemergeHandler == nil {
-		unregistered = append(unregistered, "auth.PostWorkflowForcemergeHandler")
+	if o.AuthPostWorkflowHandler == nil {
+		unregistered = append(unregistered, "auth.PostWorkflowHandler")
 	}
 
 	if len(unregistered) > 0 {
@@ -484,7 +492,11 @@ func (o *GoliacAPI) initHandlerCache() {
 	if o.handlers["GET"] == nil {
 		o.handlers["GET"] = make(map[string]http.Handler)
 	}
-	o.handlers["GET"]["/auth/workflows_forcemerge"] = auth.NewGetWorkflowsForcemerge(o.context, o.AuthGetWorkflowsForcemergeHandler)
+	o.handlers["GET"]["/auth/workflows/{workflowName}"] = auth.NewGetWorkflow(o.context, o.AuthGetWorkflowHandler)
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/auth/workflows"] = auth.NewGetWorkflows(o.context, o.AuthGetWorkflowsHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
@@ -500,7 +512,7 @@ func (o *GoliacAPI) initHandlerCache() {
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
-	o.handlers["POST"]["/auth/workflows_forcemerge/{workflowName}"] = auth.NewPostWorkflowForcemerge(o.context, o.AuthPostWorkflowForcemergeHandler)
+	o.handlers["POST"]["/auth/workflows/{workflowName}"] = auth.NewPostWorkflow(o.context, o.AuthPostWorkflowHandler)
 }
 
 // Serve creates a http handler to serve the API over HTTP

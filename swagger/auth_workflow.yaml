@@ -1,0 +1,90 @@
+post:
+  tags:
+    - auth
+  operationId: postWorkflow
+  description: Submit a workflow for execution
+  parameters:
+    - name: workflowName
+      in: path
+      description: workflow name
+      required: true
+      type: string
+    - name: body
+      in: body
+      description: Workflow execution properties
+      required: true
+      schema:
+        type: object
+        required:
+          - explanation
+          - properties
+        properties:
+          properties:
+            type: array
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  x-nullable: false
+                value:
+                  type: string
+                  minLength: 1
+                  x-nullable: false
+          explanation:
+            type: string
+            minLength: 1
+            x-nullable: false
+  responses:
+    200:
+      description: Workflow executed
+      schema:
+        $ref: "#/definitions/workflow"
+    401:
+      description: Unauthorized
+      schema:
+        $ref: "#/definitions/error"
+    403:
+      description: Forbidden
+      schema:
+        $ref: "#/definitions/error"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"
+
+
+get:
+  tags:
+    - auth
+  operationId: getWorkflow
+  description: Get Workflow information
+  parameters:
+    - name: workflowName
+      in: path
+      description: workflow name
+      required: true
+      type: string
+  responses:
+    200:
+      description: Workflow information
+      schema:
+        type: object
+        properties:
+          workflow_type:
+            type: string
+            minLength: 1
+            x-nullable: false
+    401:
+      description: Unauthorized
+      schema:
+        $ref: "#/definitions/error"
+    403:
+      description: Forbidden
+      schema:
+        $ref: "#/definitions/error"
+    default:
+      description: generic error response
+      schema:
+        $ref: "#/definitions/error"

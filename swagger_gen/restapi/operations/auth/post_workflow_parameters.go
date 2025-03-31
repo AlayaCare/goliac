@@ -16,28 +16,28 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// NewPostWorkflowForcemergeParams creates a new PostWorkflowForcemergeParams object
+// NewPostWorkflowParams creates a new PostWorkflowParams object
 //
 // There are no default values defined in the spec.
-func NewPostWorkflowForcemergeParams() PostWorkflowForcemergeParams {
+func NewPostWorkflowParams() PostWorkflowParams {
 
-	return PostWorkflowForcemergeParams{}
+	return PostWorkflowParams{}
 }
 
-// PostWorkflowForcemergeParams contains all the bound params for the post workflow forcemerge operation
+// PostWorkflowParams contains all the bound params for the post workflow operation
 // typically these are obtained from a http.Request
 //
-// swagger:parameters postWorkflowForcemerge
-type PostWorkflowForcemergeParams struct {
+// swagger:parameters postWorkflow
+type PostWorkflowParams struct {
 
 	// HTTP Request Object
 	HTTPRequest *http.Request `json:"-"`
 
-	/*PR to merge (and bypass approval)
+	/*Workflow execution properties
 	  Required: true
 	  In: body
 	*/
-	Body PostWorkflowForcemergeBody
+	Body PostWorkflowBody
 	/*workflow name
 	  Required: true
 	  In: path
@@ -48,15 +48,15 @@ type PostWorkflowForcemergeParams struct {
 // BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
 // for simple values it will use straight method calls.
 //
-// To ensure default values, the struct must have been initialized with NewPostWorkflowForcemergeParams() beforehand.
-func (o *PostWorkflowForcemergeParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
+// To ensure default values, the struct must have been initialized with NewPostWorkflowParams() beforehand.
+func (o *PostWorkflowParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
 	var res []error
 
 	o.HTTPRequest = r
 
 	if runtime.HasBody(r) {
 		defer r.Body.Close()
-		var body PostWorkflowForcemergeBody
+		var body PostWorkflowBody
 		if err := route.Consumer.Consume(r.Body, &body); err != nil {
 			if err == io.EOF {
 				res = append(res, errors.Required("body", "body", ""))
@@ -93,7 +93,7 @@ func (o *PostWorkflowForcemergeParams) BindRequest(r *http.Request, route *middl
 }
 
 // bindWorkflowName binds and validates parameter WorkflowName from path.
-func (o *PostWorkflowForcemergeParams) bindWorkflowName(rawData []string, hasKey bool, formats strfmt.Registry) error {
+func (o *PostWorkflowParams) bindWorkflowName(rawData []string, hasKey bool, formats strfmt.Registry) error {
 	var raw string
 	if len(rawData) > 0 {
 		raw = rawData[len(rawData)-1]

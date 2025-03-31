@@ -1,13 +1,13 @@
 get:
   tags:
     - auth
-  operationId: getWorkflowsForcemerge
+  operationId: getWorkflows
   description: Get all PR force merge workflows
   responses:
     200:
       description: get list of all PR force merge workflows
       schema:
-        $ref: "#/definitions/workflows_prmerged"
+        $ref: "#/definitions/workflows"
     401:
       description: Unauthorized
       schema:

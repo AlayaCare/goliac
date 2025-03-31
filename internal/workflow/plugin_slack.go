@@ -11,14 +11,14 @@ import (
 	"github.com/goliac-project/goliac/internal/config"
 )
 
-type ForcemergeStepPluginSlack struct {
+type StepPluginSlack struct {
 	SlackUrl   string
 	SlackToken string
 	Channel    string
 }
 
-func NewForcemergeStepPluginSlack() ForcemergeStepPlugin {
-	return &ForcemergeStepPluginSlack{
+func NewStepPluginSlack() StepPlugin {
+	return &StepPluginSlack{
 		SlackUrl:   "https://slack.com/api/chat.postMessage",
 		SlackToken: config.Config.SlackToken,
 		Channel:    config.Config.SlackChannel,
@@ -30,13 +30,17 @@ type SlackMessage struct {
 	Text    string `json:"text"`
 }
 
-func (f *ForcemergeStepPluginSlack) Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error) {
+func (f *StepPluginSlack) Execute(ctx context.Context, username, workflowDescription, explanation string, url *url.URL, properties map[string]interface{}) (string, error) {
 	channel := f.Channel
 	if properties["channel"] != nil {
 		channel = properties["channel"].(string)
 	}
 
-	message := fmt.Sprintf("PR %s has been merged by %s with explanation: %s", url.Path, username, explanation)
+	urlpath := ""
+	if url != nil {
+		urlpath = "(" + url.Path + ")"
+	}
+	message := fmt.Sprintf("Workflow %s %s was submited by %s with explanation: %s", workflowDescription, urlpath, username, explanation)
 	// Prepare the message payload
 	msg := SlackMessage{
 		Channel: channel,

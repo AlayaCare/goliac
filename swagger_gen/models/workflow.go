@@ -15,10 +15,10 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// Prmerged prmerged
+// Workflow workflow
 //
-// swagger:model prmerged
-type Prmerged struct {
+// swagger:model workflow
+type Workflow struct {
 
 	// message
 	Message string `json:"message,omitempty"`
@@ -27,8 +27,8 @@ type Prmerged struct {
 	TrackingUrls []string `json:"tracking_urls"`
 }
 
-// Validate validates this prmerged
-func (m *Prmerged) Validate(formats strfmt.Registry) error {
+// Validate validates this workflow
+func (m *Workflow) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateTrackingUrls(formats); err != nil {
@@ -41,7 +41,7 @@ func (m *Prmerged) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *Prmerged) validateTrackingUrls(formats strfmt.Registry) error {
+func (m *Workflow) validateTrackingUrls(formats strfmt.Registry) error {
 	if swag.IsZero(m.TrackingUrls) { // not required
 		return nil
 	}
@@ -57,13 +57,13 @@ func (m *Prmerged) validateTrackingUrls(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validates this prmerged based on context it is used
-func (m *Prmerged) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validates this workflow based on context it is used
+func (m *Workflow) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *Prmerged) MarshalBinary() ([]byte, error) {
+func (m *Workflow) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -71,8 +71,8 @@ func (m *Prmerged) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *Prmerged) UnmarshalBinary(b []byte) error {
-	var res Prmerged
+func (m *Workflow) UnmarshalBinary(b []byte) error {
+	var res Workflow
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

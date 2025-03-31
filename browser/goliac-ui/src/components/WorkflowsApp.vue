@@ -16,7 +16,7 @@ import { faFireExtinguisher } from '@fortawesome/free-solid-svg-icons';
       </el-row>
       <el-row :gutter="20">
         <el-col
-          v-for="(item, index) in forcemergeworkflows"
+          v-for="(item, index) in workflows"
           :key="index"
           :xs="24" :sm="12" :md="8" :lg="6" class="mb-4"
         >
@@ -47,21 +47,21 @@ import { faFireExtinguisher } from '@fortawesome/free-solid-svg-icons';
   const { API_URL } = constants;
   
   export default {
-    name: "ForcemergeWorkflowsApp",
+    name: "WorkflowsApp",
     components: {
     },
     data() {
       return {
-        forcemergeworkflows: [],
+        workflows: [],
       };
     },
     mounted() {
-      this.getForcemergeWorkflows()
+      this.getWorkflows()
     },
     methods: {
-      getForcemergeWorkflows() {
-        Axios.get(`${API_URL}/auth/workflows_forcemerge`).then(response => {
-          this.forcemergeworkflows = response.data;
+      getWorkflows() {
+        Axios.get(`${API_URL}/auth/workflows`).then(response => {
+          this.workflows = response.data;
         }, handleErr.bind(this));
       },
       handleClick(item) {

@@ -26,14 +26,15 @@ To be able to enable the Breaking Glass workflow, you need to register the Githu
 ## Enable the Breaking Glass workflow
 
 To enable the Breaking Glass workflow, you need to
-- create (or several) `/forcemerge_workflows/_afile_.yaml`:
+- create (or several) `/workflows/_afile_.yaml`:
 
 ```yaml
 apiVersion: v1
-kind: ForcemergeWorkflow
+kind: Workflow
 name: _afile_
 spec:
   description: General breaking glass PR merge workflow
+  workflow_type: forcemerge
   repositories:
     allowed:
       - .* # you can use ~ALL
@@ -60,7 +61,7 @@ spec:
 
 ```yaml
 ...
-forcemerge_workflows:
+workflows:
 - _afile_
 ```
 
@@ -79,9 +80,9 @@ steps:
 ```
 
 You will need to set the following environment variables:
-- `GOLIAC_PR_FORCEMERGE_JIRA_ATLASSIAN_DOMAIN` like `mycompany.atlassian.net` or `https://mycompany.atlassian.net`
-- `GOLIAC_PR_FORCEMERGE_JIRA_EMAIL` of the service account
-- `GOLIAC_PR_FORCEMERGE_JIRA_API_TOKEN` of the service account
+- `GOLIAC_WORKFLOW_JIRA_ATLASSIAN_DOMAIN` like `mycompany.atlassian.net` or `https://mycompany.atlassian.net`
+- `GOLIAC_WORKFLOW_JIRA_EMAIL` of the service account
+- `GOLIAC_WORKFLOW_JIRA_API_TOKEN` of the service account
 
 
 ## Use the Slack step

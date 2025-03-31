@@ -11,9 +11,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type ForcemergeWorkflow struct {
+type Workflow struct {
 	Entity `yaml:",inline"`
 	Spec   struct {
+		WorkflowType string `yaml:"workflow_type"`
 		Description  string `yaml:"description"`
 		Repositories struct {
 			Allowed []string `yaml:"allowed"`
@@ -31,51 +32,58 @@ type ForcemergeWorkflow struct {
 }
 
 /*
- * NewForcemergeWorkflow reads a file and returns a ForcemergeWorkflow object
- * The next step is to validate the ForcemergeWorkflow object using the Validate method
+ * NewWorkflow reads a file and returns a Workflow object
+ * The next step is to validate the Workflow object using the Validate method
  */
-func NewForcemergeWorkflow(fs billy.Filesystem, filename string) (*ForcemergeWorkflow, error) {
+func NewWorkflow(fs billy.Filesystem, filename string) (*Workflow, error) {
 	filecontent, err := utils.ReadFile(fs, filename)
 	if err != nil {
 		return nil, err
 	}
 
-	ForcemergeWorkflow := &ForcemergeWorkflow{}
-	err = yaml.Unmarshal(filecontent, ForcemergeWorkflow)
+	workflow := &Workflow{}
+	err = yaml.Unmarshal(filecontent, workflow)
 	if err != nil {
 		return nil, err
 	}
 
-	return ForcemergeWorkflow, nil
+	return workflow, nil
 }
 
-func (w *ForcemergeWorkflow) Validate(filename string) error {
+func (w *Workflow) Validate(filename string) error {
 
 	if w.ApiVersion != "v1" {
-		return fmt.Errorf("invalid apiVersion: %s for ForcemergeWorkflow filename %s", w.ApiVersion, filename)
+		return fmt.Errorf("invalid apiVersion: %s for Workflow filename %s", w.ApiVersion, filename)
 	}
 
-	if w.Kind != "ForcemergeWorkflow" {
-		return fmt.Errorf("invalid kind: %s for ForcemergeWorkflow filename %s", w.Kind, filename)
+	if w.Kind != "Workflow" {
+		return fmt.Errorf("invalid kind: %s for Workflow filename %s", w.Kind, filename)
 	}
 
 	if w.Name == "" {
-		return fmt.Errorf("metadata.name is empty for ForcemergeWorkflow filename %s", filename)
+		return fmt.Errorf("metadata.name is empty for Workflow filename %s", filename)
+	}
+
+	if w.Spec.WorkflowType == "" {
+		return fmt.Errorf("spec.workflow_type is empty for Workflow filename %s", filename)
+	}
+	if w.Spec.WorkflowType != "forcemerge" && w.Spec.WorkflowType != "noop" {
+		return fmt.Errorf("invalid spec.workflow_type: %s for Workflow filename %s", w.Spec.WorkflowType, filename)
 	}
 
 	filename = filepath.Base(filename)
 	if w.Name != filename[:len(filename)-len(filepath.Ext(filename))] {
-		return fmt.Errorf("invalid metadata.name: %s for ForcemergeWorkflow filename %s", w.Name, filename)
+		return fmt.Errorf("invalid metadata.name: %s for Workflow filename %s", w.Name, filename)
 	}
 
 	for _, step := range w.Spec.Steps {
 		if step.Name == "" {
-			return fmt.Errorf("step.name is empty for ForcemergeWorkflow filename %s", filename)
+			return fmt.Errorf("step.name is empty for Workflow filename %s", filename)
 		}
 
 		// only one step is allowed for now
 		if step.Name != "jira_ticket_creation" && step.Name != "slack_notification" {
-			return fmt.Errorf("invalid step.name: %s for ForcemergeWorkflow filename %s", step.Name, filename)
+			return fmt.Errorf("invalid step.name: %s for Workflow filename %s", step.Name, filename)
 		}
 		switch step.Name {
 		case "jira_ticket_creation":
@@ -85,12 +93,12 @@ func (w *ForcemergeWorkflow) Validate(filename string) error {
 				if k == "project_key" {
 					jiraProjectSet = true
 					if v == "" {
-						return fmt.Errorf("step.jira_ticket_creation.properties.project_key is empty for ForcemergeWorkflow filename %s", filename)
+						return fmt.Errorf("step.jira_ticket_creation.properties.project_key is empty for Workflow filename %s", filename)
 					}
 				}
 			}
 			if !jiraProjectSet {
-				return fmt.Errorf("step.jira_ticket_creation.properties.project_key is not set for ForcemergeWorkflow filename %s", filename)
+				return fmt.Errorf("step.jira_ticket_creation.properties.project_key is not set for Workflow filename %s", filename)
 			}
 		case "slack_notification":
 			// check if the slackChannel is set
@@ -99,12 +107,12 @@ func (w *ForcemergeWorkflow) Validate(filename string) error {
 				if k == "channel" {
 					slackChannelSet = true
 					if v == "" {
-						return fmt.Errorf("step.slack_notification.properties.channel is empty for ForcemergeWorkflow filename %s", filename)
+						return fmt.Errorf("step.slack_notification.properties.channel is empty for Workflow filename %s", filename)
 					}
 				}
 			}
 			if !slackChannelSet {
-				return fmt.Errorf("step.slack_notification.properties.channel is not set for ForcemergeWorkflow filename %s", filename)
+				return fmt.Errorf("step.slack_notification.properties.channel is not set for Workflow filename %s", filename)
 			}
 		}
 	}
@@ -112,36 +120,38 @@ func (w *ForcemergeWorkflow) Validate(filename string) error {
 	return nil
 }
 
-func (w *ForcemergeWorkflow) PassAcl(usernameTeams []string, repository string) bool {
+func (w *Workflow) PassAcl(usernameTeams []string, repository string) bool {
 	// checking the repository name
-	repoMatch := false
-	for _, repo := range w.Spec.Repositories.Allowed {
-		if repo == "~ALL" {
-			repoMatch = true
-			break
+	if w.Spec.WorkflowType != "noop" {
+		repoMatch := false
+		for _, repo := range w.Spec.Repositories.Allowed {
+			if repo == "~ALL" {
+				repoMatch = true
+				break
+			}
+			repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
+			if err != nil {
+				return false
+			}
+			if repoRegex {
+				repoMatch = true
+				break
+			}
 		}
-		repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
-		if err != nil {
-			return false
-		}
-		if repoRegex {
-			repoMatch = true
-			break
-		}
-	}
 
-	for _, repo := range w.Spec.Repositories.Except {
-		repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
-		if err != nil {
-			return false
+		for _, repo := range w.Spec.Repositories.Except {
+			repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
+			if err != nil {
+				return false
+			}
+			if repoRegex {
+				return false
+			}
 		}
-		if repoRegex {
-			return false
-		}
-	}
 
-	if !repoMatch {
-		return false
+		if !repoMatch {
+			return false
+		}
 	}
 
 	// checking if (one of) the team is allowed
@@ -195,23 +205,23 @@ func (w *ForcemergeWorkflow) PassAcl(usernameTeams []string, repository string) 
 	return false
 }
 
-func ReadForcemergeWorkflowDirectory(fs billy.Filesystem, dirname string, errorCollection *observability.ErrorCollection) map[string]*ForcemergeWorkflow {
-	ForcemergeWorkflows := make(map[string]*ForcemergeWorkflow)
+func ReadWorkflowDirectory(fs billy.Filesystem, dirname string, errorCollection *observability.ErrorCollection) map[string]*Workflow {
+	Workflows := make(map[string]*Workflow)
 
 	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
 		errorCollection.AddError(err)
-		return ForcemergeWorkflows
+		return Workflows
 	}
 	if !exist {
-		return ForcemergeWorkflows
+		return Workflows
 	}
 
-	// Parse all the ForcemergeWorkflows in the dirname directory
+	// Parse all the Workflows in the dirname directory
 	entries, err := fs.ReadDir(dirname)
 	if err != nil {
 		errorCollection.AddError(err)
-		return ForcemergeWorkflows
+		return Workflows
 	}
 
 	for _, e := range entries {
@@ -222,18 +232,18 @@ func ReadForcemergeWorkflowDirectory(fs billy.Filesystem, dirname string, errorC
 		if e.Name()[0] == '.' {
 			continue
 		}
-		ForcemergeWorkflow, err := NewForcemergeWorkflow(fs, filepath.Join(dirname, e.Name()))
+		Workflow, err := NewWorkflow(fs, filepath.Join(dirname, e.Name()))
 		if err != nil {
 			errorCollection.AddError(err)
 		} else {
-			err := ForcemergeWorkflow.Validate(filepath.Join(dirname, e.Name()))
+			err := Workflow.Validate(filepath.Join(dirname, e.Name()))
 			if err != nil {
 				errorCollection.AddError(err)
 			} else {
-				ForcemergeWorkflows[ForcemergeWorkflow.Name] = ForcemergeWorkflow
+				Workflows[Workflow.Name] = Workflow
 			}
 
 		}
 	}
-	return ForcemergeWorkflows
+	return Workflows
 }

@@ -75,11 +75,11 @@ var Config = struct {
 	OpenTelemetryTraceAll     bool   `env:"GOLIAC_OPENTELEMETRY_TRACE_ALL" envDefault:"true"`
 
 	// ForcemergeWorkflow specific configuration
-	PrForcemergeJiraAtlassianDomain string `env:"GOLIAC_PR_FORCEMERGE_JIRA_ATLASSIAN_DOMAIN" envDefault:""`
-	PrForcemergeJiraProjectKey      string `env:"GOLIAC_PR_FORCEMERGE_JIRA_PROJECT_KEY" envDefault:""`
-	PrForcemergeJiraEmail           string `env:"GOLIAC_PR_FORCEMERGE_JIRA_EMAIL" envDefault:""`
-	PrForcemergeJiraApiToken        string `env:"GOLIAC_PR_FORCEMERGE_JIRA_API_TOKEN" envDefault:""`
-	PrForcemergeJiraIssueType       string `env:"GOLIAC_PR_FORCEMERGE_JIRA_ISSUE_TYPE" envDefault:"Task"`
+	WorkflowJiraAtlassianDomain string `env:"GOLIAC_WORKFLOW_JIRA_ATLASSIAN_DOMAIN" envDefault:""`
+	WorkflowJiraProjectKey      string `env:"GOLIAC_WORKFLOW_JIRA_PROJECT_KEY" envDefault:""`
+	WorkflowJiraEmail           string `env:"GOLIAC_WORKFLOW_JIRA_EMAIL" envDefault:""`
+	WorkflowJiraApiToken        string `env:"GOLIAC_WORKFLOW_JIRA_API_TOKEN" envDefault:""`
+	WorkflowJiraIssueType       string `env:"GOLIAC_WORKFLOW_JIRA_ISSUE_TYPE" envDefault:"Task"`
 }{}
 
 // to be overrided at build time with

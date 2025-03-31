@@ -37,7 +37,7 @@ func TestJiraPluginWorkflow(t *testing.T) {
 		}))
 		defer httptest.Close()
 
-		plugin := ForcemergeStepPluginJira{
+		plugin := StepPluginJira{
 			AtlassianUrlDomain: httptest.URL,
 			ProjectKey:         "",
 			Email:              "serviceaccount@company.com",
@@ -48,7 +48,7 @@ func TestJiraPluginWorkflow(t *testing.T) {
 		prurl, err := url.Parse("https://github.com/mycompany/myrepo/pull/123")
 		assert.Nil(t, err)
 
-		returl, err := plugin.Execute(context.Background(), "foo", "explanation", prurl, map[string]interface{}{
+		returl, err := plugin.Execute(context.Background(), "foo", "workflowdescription", "explanation", prurl, map[string]interface{}{
 			"project_key": "SRE",
 		})
 
@@ -77,7 +77,7 @@ func TestJiraPluginWorkflow(t *testing.T) {
 		}))
 		defer httptest.Close()
 
-		plugin := ForcemergeStepPluginJira{
+		plugin := StepPluginJira{
 			AtlassianUrlDomain: httptest.URL,
 			ProjectKey:         "",
 			Email:              "serviceaccount@company.com",
@@ -88,7 +88,7 @@ func TestJiraPluginWorkflow(t *testing.T) {
 		prurl, err := url.Parse("https://github.com/mycompany/myrepo/pull/123")
 		assert.Nil(t, err)
 
-		returl, err := plugin.Execute(context.Background(), "foo", "explanation", prurl, map[string]interface{}{
+		returl, err := plugin.Execute(context.Background(), "foo", "workflowdescription", "explanation", prurl, map[string]interface{}{
 			"project": "SRE",
 		})
 

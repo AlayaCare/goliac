@@ -14,13 +14,13 @@ import (
 	"github.com/go-openapi/swag"
 )
 
-// WorkflowsPrmerged workflows prmerged
+// Workflows workflows
 //
-// swagger:model workflows_prmerged
-type WorkflowsPrmerged []*WorkflowsPrmergedItems0
+// swagger:model workflows
+type Workflows []*WorkflowsItems0
 
-// Validate validates this workflows prmerged
-func (m WorkflowsPrmerged) Validate(formats strfmt.Registry) error {
+// Validate validates this workflows
+func (m Workflows) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	for i := 0; i < len(m); i++ {
@@ -47,8 +47,8 @@ func (m WorkflowsPrmerged) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validate this workflows prmerged based on the context it is used
-func (m WorkflowsPrmerged) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validate this workflows based on the context it is used
+func (m Workflows) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	for i := 0; i < len(m); i++ {
@@ -77,30 +77,33 @@ func (m WorkflowsPrmerged) ContextValidate(ctx context.Context, formats strfmt.R
 	return nil
 }
 
-// WorkflowsPrmergedItems0 workflows prmerged items0
+// WorkflowsItems0 workflows items0
 //
-// swagger:model WorkflowsPrmergedItems0
-type WorkflowsPrmergedItems0 struct {
+// swagger:model WorkflowsItems0
+type WorkflowsItems0 struct {
 
 	// workflow description
 	WorkflowDescription string `json:"workflow_description,omitempty"`
 
 	// workflow name
 	WorkflowName string `json:"workflow_name,omitempty"`
+
+	// workflow type
+	WorkflowType string `json:"workflow_type,omitempty"`
 }
 
-// Validate validates this workflows prmerged items0
-func (m *WorkflowsPrmergedItems0) Validate(formats strfmt.Registry) error {
+// Validate validates this workflows items0
+func (m *WorkflowsItems0) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validates this workflows prmerged items0 based on context it is used
-func (m *WorkflowsPrmergedItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validates this workflows items0 based on context it is used
+func (m *WorkflowsItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *WorkflowsPrmergedItems0) MarshalBinary() ([]byte, error) {
+func (m *WorkflowsItems0) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -108,8 +111,8 @@ func (m *WorkflowsPrmergedItems0) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *WorkflowsPrmergedItems0) UnmarshalBinary(b []byte) error {
-	var res WorkflowsPrmergedItems0
+func (m *WorkflowsItems0) UnmarshalBinary(b []byte) error {
+	var res WorkflowsItems0
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

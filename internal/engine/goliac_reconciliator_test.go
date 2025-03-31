@@ -17,12 +17,12 @@ import (
 )
 
 type GoliacLocalMock struct {
-	users               map[string]*entity.User
-	externals           map[string]*entity.User
-	teams               map[string]*entity.Team
-	repos               map[string]*entity.Repository
-	rulesets            map[string]*entity.RuleSet
-	forcemergeworkflows map[string]*entity.ForcemergeWorkflow
+	users     map[string]*entity.User
+	externals map[string]*entity.User
+	teams     map[string]*entity.Team
+	repos     map[string]*entity.Repository
+	rulesets  map[string]*entity.RuleSet
+	workflows map[string]*entity.Workflow
 }
 
 func (m *GoliacLocalMock) Clone(fs billy.Filesystem, accesstoken, repositoryUrl, branch string) error {
@@ -62,8 +62,8 @@ func (m *GoliacLocalMock) ExternalUsers() map[string]*entity.User {
 func (m *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 	return m.rulesets
 }
-func (m *GoliacLocalMock) ForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow {
-	return m.forcemergeworkflows
+func (m *GoliacLocalMock) Workflows() map[string]*entity.Workflow {
+	return m.workflows
 }
 func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
 	return nil

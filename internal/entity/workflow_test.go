@@ -10,14 +10,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func fixtureCreateForcemergeWorkflow(t *testing.T, fs billy.Filesystem) {
+func fixtureCreateWorkflow(t *testing.T, fs billy.Filesystem) {
 	fs.MkdirAll("rulesets", 0755)
-	err := utils.WriteFile(fs, "forcemerge_workflows/workflow1.yaml", []byte(`
+	err := utils.WriteFile(fs, "workflows/workflow1.yaml", []byte(`
 apiVersion: v1
-kind: ForcemergeWorkflow
+kind: Workflow
 name: workflow1
 spec:
   description: Geneal breaking glass PR merge workflow
+  workflow_type: forcemerge
   repositories:
     allowed:
       - .*
@@ -38,12 +39,13 @@ spec:
 `), 0644)
 	assert.Nil(t, err)
 
-	err = utils.WriteFile(fs, "forcemerge_workflows/workflow2.yaml", []byte(`
+	err = utils.WriteFile(fs, "workflows/workflow2.yaml", []byte(`
 apiVersion: v1
-kind: ForcemergeWorkflow
+kind: Workflow
 name: workflow2
 spec:
   description: Geneal breaking glass PR merge workflow
+  workflow_type: forcemerge
   repositories:
     allowed:
       - repo2
@@ -58,16 +60,16 @@ spec:
 	assert.Nil(t, err)
 }
 
-func TestForcemergeWorkflow(t *testing.T) {
+func TestWorkflow(t *testing.T) {
 
 	// happy path
 	t.Run("happy path", func(t *testing.T) {
 		// create a new user
 		fs := memfs.New()
-		fixtureCreateForcemergeWorkflow(t, fs)
+		fixtureCreateWorkflow(t, fs)
 
 		errorCollector := observability.NewErrorCollection()
-		workflows := ReadForcemergeWorkflowDirectory(fs, "forcemerge_workflows", errorCollector)
+		workflows := ReadWorkflowDirectory(fs, "workflows", errorCollector)
 		assert.Equal(t, false, errorCollector.HasErrors())
 		assert.Equal(t, false, errorCollector.HasWarns())
 		assert.NotNil(t, workflows)
@@ -77,10 +79,10 @@ func TestForcemergeWorkflow(t *testing.T) {
 	t.Run("happy path: testing acls", func(t *testing.T) {
 		// create a new user
 		fs := memfs.New()
-		fixtureCreateForcemergeWorkflow(t, fs)
+		fixtureCreateWorkflow(t, fs)
 
 		errorCollector := observability.NewErrorCollection()
-		workflows := ReadForcemergeWorkflowDirectory(fs, "forcemerge_workflows", errorCollector)
+		workflows := ReadWorkflowDirectory(fs, "workflows", errorCollector)
 		assert.Equal(t, false, errorCollector.HasErrors())
 		assert.Equal(t, false, errorCollector.HasWarns())
 		assert.NotNil(t, workflows)
@@ -99,14 +101,15 @@ func TestForcemergeWorkflow(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		// create a new user
 		fs := memfs.New()
-		fixtureCreateForcemergeWorkflow(t, fs)
+		fixtureCreateWorkflow(t, fs)
 
-		err := utils.WriteFile(fs, "forcemerge_workflows/workflow3.yaml", []byte(`
+		err := utils.WriteFile(fs, "workflows/workflow3.yaml", []byte(`
 apiVersion: v1
-kind: ForcemergeWorkflow
+kind: Workflow
 name: workflow3
 spec:
   description: Geneal breaking glass PR merge workflow
+  workflow_type: forcemerge
   repositories:
     allowed:
       - ~ALL
@@ -117,7 +120,7 @@ spec:
 		assert.Nil(t, err)
 
 		errorCollector := observability.NewErrorCollection()
-		workflows := ReadForcemergeWorkflowDirectory(fs, "forcemerge_workflows", errorCollector)
+		workflows := ReadWorkflowDirectory(fs, "workflows", errorCollector)
 		assert.Equal(t, true, errorCollector.HasErrors()) // invalid jira_ticket_creation step
 		assert.Equal(t, false, errorCollector.HasWarns())
 		assert.NotNil(t, workflows)

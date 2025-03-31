@@ -8,31 +8,10 @@ import (
 	"strings"
 
 	"github.com/goliac-project/goliac/internal/config"
-	"github.com/goliac-project/goliac/internal/engine"
-	"github.com/goliac-project/goliac/internal/entity"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
-
-type ForcemergeStepPlugin interface {
-	Execute(ctx context.Context, username, explanation string, url *url.URL, properties map[string]interface{}) (string, error)
-}
-
-type Forcemerge interface {
-	ExecuteForcemergeWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, prPathToMerge, explanation string, dryrun bool) ([]string, error)
-}
-
-// strip down version of Goliac Local
-type ForcemergeLocalResource interface {
-	ForcemergeWorkflows() map[string]*entity.ForcemergeWorkflow
-	Teams() map[string]*entity.Team
-}
-
-// strip down version of Goliac Remote (if we have an externally managed team)
-type ForcemergeRemoteResource interface {
-	Teams(ctx context.Context, current bool) map[string]*engine.GithubTeam
-}
 
 // strip down version of GithubClient
 type ForcemergeGithubClient interface {
@@ -40,16 +19,16 @@ type ForcemergeGithubClient interface {
 }
 
 type ForcemergeImpl struct {
-	local        ForcemergeLocalResource
-	remote       ForcemergeRemoteResource
+	local        WorkflowLocalResource
+	remote       WorkflowRemoteResource
 	githubclient ForcemergeGithubClient
-	stepPlugins  map[string]ForcemergeStepPlugin
+	stepPlugins  map[string]StepPlugin
 }
 
-func NewForcemergeImpl(local ForcemergeLocalResource, remote ForcemergeRemoteResource, githubclient ForcemergeGithubClient) Forcemerge {
-	stepPlugins := map[string]ForcemergeStepPlugin{
-		"jira_ticket_creation": NewForcemergeStepPluginJira(),
-		"slack_notification":   NewForcemergeStepPluginSlack(),
+func NewForcemergeImpl(local WorkflowLocalResource, remote WorkflowRemoteResource, githubclient ForcemergeGithubClient) Workflow {
+	stepPlugins := map[string]StepPlugin{
+		"jira_ticket_creation": NewStepPluginJira(),
+		"slack_notification":   NewStepPluginSlack(),
 	}
 	return &ForcemergeImpl{
 		local:        local,
@@ -59,16 +38,19 @@ func NewForcemergeImpl(local ForcemergeLocalResource, remote ForcemergeRemoteRes
 	}
 }
 
-func (g *ForcemergeImpl) ExecuteForcemergeWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, prPathToMerge, explanation string, dryrun bool) ([]string, error) {
+func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, explanation string, properties map[string]string, dryrun bool) ([]string, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
 		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "ExecuteWorkflow")
 		defer childSpan.End()
 		childSpan.SetAttributes(
 			attribute.String("workflow_name", workflowName),
-			attribute.String("pr_path_to_merge", prPathToMerge),
+			attribute.String("pr_path_to_merge", properties["pr_url"]),
 		)
 	}
+
+	pr_url := properties["pr_url"]
+	prPathToMerge := strings.TrimSpace(pr_url)
 
 	// check the prToMerge
 	if prPathToMerge == "" {
@@ -88,7 +70,7 @@ func (g *ForcemergeImpl) ExecuteForcemergeWorkflow(ctx context.Context, repoconf
 	prNumber := prMatch[2]
 
 	// check workflow and acl
-	w, err := g.getWorkflow(ctx, repoconfigForceMergeworkflows, workflowName, repo, username)
+	w, err := GetWorkflow(ctx, g.local, g.remote, repoconfigForceMergeworkflows, workflowName, repo, username)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load the workflow: %v", err)
 	}
@@ -104,7 +86,7 @@ func (g *ForcemergeImpl) ExecuteForcemergeWorkflow(ctx context.Context, repoconf
 		if plugin == nil {
 			return nil, fmt.Errorf("plugin %s not found", step.Name)
 		}
-		resp, err := plugin.Execute(ctx, username, explanation, url, step.Properties)
+		resp, err := plugin.Execute(ctx, username, w.Spec.Description, explanation, url, step.Properties)
 		if err != nil {
 			return nil, err
 		}
@@ -118,77 +100,6 @@ func (g *ForcemergeImpl) ExecuteForcemergeWorkflow(ctx context.Context, repoconf
 	}
 
 	return responses, nil
-}
-
-// returns the corresponding workflow
-func (g *ForcemergeImpl) getWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, workflowName, repo, username string) (*entity.ForcemergeWorkflow, error) {
-	// check if the workflow is enabled
-	if repoconfigForceMergeworkflows == nil {
-		return nil, fmt.Errorf("workflows not found")
-	}
-	found := false
-	for _, w := range repoconfigForceMergeworkflows {
-		if w == workflowName {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf("workflow not found")
-	}
-
-	// load the workflow
-	forcemergeworkflows := g.local.ForcemergeWorkflows()
-	if forcemergeworkflows == nil {
-		return nil, fmt.Errorf("workflows not found")
-	}
-
-	w, ok := forcemergeworkflows[workflowName]
-	if !ok {
-		return nil, fmt.Errorf("workflows not found")
-	}
-
-	// check workflow acl
-	teams := []string{}
-	rTeams := g.remote.Teams(ctx, true)
-
-	for _, lTeam := range g.local.Teams() {
-		if lTeam.Spec.ExternallyManaged {
-			// get team definition from github
-			rTeam := rTeams[lTeam.Name]
-			if rTeam == nil {
-				continue
-			}
-			for _, owner := range rTeam.Maintainers {
-				if owner == username {
-					teams = append(teams, lTeam.Name)
-				}
-			}
-			for _, member := range rTeam.Members {
-				if member == username {
-					teams = append(teams, lTeam.Name)
-				}
-			}
-		} else {
-			// get team definition from local
-			for _, owner := range lTeam.Spec.Owners {
-				if owner == username {
-					teams = append(teams, lTeam.Name)
-				}
-			}
-			for _, member := range lTeam.Spec.Members {
-				if member == username {
-					teams = append(teams, lTeam.Name)
-				}
-			}
-		}
-	}
-
-	// check the ACL
-	if !w.PassAcl(teams, repo) {
-		return nil, fmt.Errorf("access denied")
-	}
-	return w, nil
 }
 
 func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo string, prNumber, explanation string) error {

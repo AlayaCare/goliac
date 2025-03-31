@@ -63,8 +63,9 @@ type GoliacServer interface {
 	AuthGetLogin(params auth.GetAuthenticationLoginParams) middleware.Responder
 	AuthGetCallback(params auth.GetAuthenticationCallbackParams) middleware.Responder
 	AuthGetUser(params auth.GetGithubUserParams) middleware.Responder
-	AuthWorkflowForcemerge(params auth.PostWorkflowForcemergeParams) middleware.Responder
-	AuthWorkflowsForcemerge(params auth.GetWorkflowsForcemergeParams) middleware.Responder
+	AuthGetWorkflow(params auth.GetWorkflowParams) middleware.Responder
+	AuthPostWorkflow(params auth.PostWorkflowParams) middleware.Responder
+	AuthWorkflows(params auth.GetWorkflowsParams) middleware.Responder
 
 	PostExternalCreateRepository(external.PostExternalCreateRepositoryParams) middleware.Responder
 }
@@ -76,7 +77,7 @@ type OAuth2Config interface {
 
 type GoliacServerImpl struct {
 	goliac              Goliac
-	forcemergeWorflow   workflow.Forcemerge
+	worflowInstances    map[string]workflow.Workflow
 	applyLobbyMutex     sync.Mutex
 	applyLobbyCond      *sync.Cond
 	applyCurrent        bool
@@ -151,11 +152,13 @@ func NewGoliacServer(goliac Goliac, notificationService notification.Notificatio
 		Scopes:       []string{"openid", "read:org", "user"},
 	}
 
-	forcemergeWorflow := workflow.NewForcemergeImpl(goliac.GetLocal(), goliac.GetRemote(), goliac.GetRemoteClient())
+	worflowInstances := make(map[string]workflow.Workflow)
+	worflowInstances["forcemerge"] = workflow.NewForcemergeImpl(goliac.GetLocal(), goliac.GetRemote(), goliac.GetRemoteClient())
+	worflowInstances["noop"] = workflow.NewNoopImpl(goliac.GetLocal(), goliac.GetRemote())
 
 	server := GoliacServerImpl{
 		goliac:              goliac,
-		forcemergeWorflow:   forcemergeWorflow,
+		worflowInstances:    worflowInstances,
 		ready:               false,
 		notificationService: notificationService,
 		oauthConfig:         oauthConfig,
@@ -642,22 +645,18 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 }
 
 func (g *GoliacServerImpl) GetStatus(app.GetStatusParams) middleware.Responder {
-	repoconfig := g.goliac.GetLocal().RepoConfig()
-	nbforcemergeworkflows := 0
-	if repoconfig != nil {
-		nbforcemergeworkflows = len(repoconfig.ForceMergeworkflows)
-	}
+	nbworkflows := len(g.goliac.GetLocal().Workflows())
 	s := models.Status{
-		LastSyncError:         "",
-		LastSyncTime:          "N/A",
-		NbRepos:               int64(len(g.goliac.GetLocal().Repositories())),
-		NbTeams:               int64(len(g.goliac.GetLocal().Teams())),
-		NbUsers:               int64(len(g.goliac.GetLocal().Users())),
-		NbUsersExternal:       int64(len(g.goliac.GetLocal().ExternalUsers())),
-		Version:               config.GoliacBuildVersion,
-		DetailedErrors:        make([]string, 0),
-		DetailedWarnings:      make([]string, 0),
-		NbForcemergeWorkflows: int64(nbforcemergeworkflows),
+		LastSyncError:    "",
+		LastSyncTime:     "N/A",
+		NbRepos:          int64(len(g.goliac.GetLocal().Repositories())),
+		NbTeams:          int64(len(g.goliac.GetLocal().Teams())),
+		NbUsers:          int64(len(g.goliac.GetLocal().Users())),
+		NbUsersExternal:  int64(len(g.goliac.GetLocal().ExternalUsers())),
+		Version:          config.GoliacBuildVersion,
+		DetailedErrors:   make([]string, 0),
+		DetailedWarnings: make([]string, 0),
+		NbWorkflows:      int64(nbworkflows),
 	}
 	if g.lastSyncError != nil {
 		s.LastSyncError = g.lastSyncError.Error()
@@ -936,8 +935,9 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	api.AuthGetAuthenticationCallbackHandler = auth.GetAuthenticationCallbackHandlerFunc(g.AuthGetCallback)
 	api.AuthGetAuthenticationLoginHandler = auth.GetAuthenticationLoginHandlerFunc(g.AuthGetLogin)
 	api.AuthGetGithubUserHandler = auth.GetGithubUserHandlerFunc(g.AuthGetUser)
-	api.AuthGetWorkflowsForcemergeHandler = auth.GetWorkflowsForcemergeHandlerFunc(g.AuthWorkflowsForcemerge)
-	api.AuthPostWorkflowForcemergeHandler = auth.PostWorkflowForcemergeHandlerFunc(g.AuthWorkflowForcemerge)
+	api.AuthGetWorkflowsHandler = auth.GetWorkflowsHandlerFunc(g.AuthWorkflows)
+	api.AuthGetWorkflowHandler = auth.GetWorkflowHandlerFunc(g.AuthGetWorkflow)
+	api.AuthPostWorkflowHandler = auth.PostWorkflowHandlerFunc(g.AuthPostWorkflow)
 
 	api.ExternalPostExternalCreateRepositoryHandler = external.PostExternalCreateRepositoryHandlerFunc(g.PostExternalCreateRepository)
 
