@@ -1,3 +1,16 @@
+## Goliac v0.17.2
+
+- restructure workflows to be a bit more generic (for example to open the door for a "delete repository" workflow)
+- introduce a "noop" workflow type (for tests)
+
+## Goliac v0.17.1
+
+- oauth2 worflow fix: put redirect url as an env variable
+
+## Goliac v0.17.0
+
+- add a PR merge breaking glass workflow feature
+
 ## Goliac v0.16.3
 
 - move golden_reviewers feature to global rulesets
