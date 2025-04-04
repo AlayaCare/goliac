@@ -244,6 +244,7 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 		},
 		newRepositoryDefaultBranch,
 		&githubToken,
+		"",
 	)
 
 	if errorCollector.HasErrors() {

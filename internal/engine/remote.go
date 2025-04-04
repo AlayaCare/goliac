@@ -70,6 +70,7 @@ type GithubRepository struct {
 	RuleSets          map[string]*GithubRuleSet          // [name]ruleset
 	BranchProtections map[string]*GithubBranchProtection // [pattern]branch protection
 	DefaultBranchName string
+	IsFork            bool
 }
 
 type GithubTeam struct {
@@ -545,6 +546,7 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
 		  id
 		  databaseId
           isArchived
+		  isFork
           visibility
 		  autoMergeAllowed
           deleteBranchOnMerge
@@ -663,6 +665,7 @@ type GraplQLRepositories struct {
 					Id                  string
 					DatabaseId          int
 					IsArchived          bool
+					IsFork              bool
 					Visibility          string
 					AutoMergeAllowed    bool
 					DeleteBranchOnMerge bool
@@ -756,6 +759,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 				RuleSets:          make(map[string]*GithubRuleSet),
 				BranchProtections: make(map[string]*GithubBranchProtection),
 				DefaultBranchName: c.DefaultBranchRef.Name,
+				IsFork:            c.IsFork,
 			}
 			// if the repository has not been populated yet
 			if repo.DefaultBranchName == "" {
@@ -2551,44 +2555,75 @@ boolProperties are:
 - allow_update_branch
 - ...
 */
-func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string, githubToken *string) {
+func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string, githubToken *string, forkFrom string) {
 	repoId := 0
 	repoRefId := reponame
-	// create repository
-	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#create-an-organization-repository
 	if !dryrun {
-		props := map[string]interface{}{
-			"name":           reponame,
-			"description":    description,
-			"visibility":     visibility,
-			"default_branch": defaultBranch,
-		}
-		for k, v := range boolProperties {
-			props[k] = v
-		}
+		if forkFrom != "" {
+			// fork repository
+			// https://docs.github.com/en/rest/repos/forks?apiVersion=2022-11-28
 
-		body, err := g.client.CallRestAPI(
-			ctx,
-			fmt.Sprintf("/orgs/%s/repos", config.Config.GithubAppOrganization),
-			"",
-			"POST",
-			props,
-			githubToken, // if nil, we use the default Goliac token
-		)
-		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to create repository: %v. %s", err, string(body)))
-			return
-		}
+			props := map[string]interface{}{
+				"organization": config.Config.GithubAppOrganization,
+				"name":         reponame,
+			}
+			body, err := g.client.CallRestAPI(
+				ctx,
+				fmt.Sprintf("/orgs/%s/forks", forkFrom),
+				"",
+				"POST",
+				props,
+				githubToken, // if nil, we use the default Goliac token
+			)
+			if err != nil {
+				errorCollector.AddError(fmt.Errorf("failed to fork repository: %v. %s", err, string(body)))
+				return
+			}
+			// get the repo id
+			var resp CreateRepositoryResponse
+			err = json.Unmarshal(body, &resp)
+			if err != nil {
+				errorCollector.AddError(fmt.Errorf("failed to read the create repository action response: %v", err))
+				return
+			}
+			repoId = resp.Id
+			repoRefId = resp.NodeId
+		} else {
+			// create repository
+			// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#create-an-organization-repository
+			props := map[string]interface{}{
+				"name":           reponame,
+				"description":    description,
+				"visibility":     visibility,
+				"default_branch": defaultBranch,
+			}
+			for k, v := range boolProperties {
+				props[k] = v
+			}
 
-		// get the repo id
-		var resp CreateRepositoryResponse
-		err = json.Unmarshal(body, &resp)
-		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to read the create repository action response: %v", err))
-			return
+			body, err := g.client.CallRestAPI(
+				ctx,
+				fmt.Sprintf("/orgs/%s/repos", config.Config.GithubAppOrganization),
+				"",
+				"POST",
+				props,
+				githubToken, // if nil, we use the default Goliac token
+			)
+			if err != nil {
+				errorCollector.AddError(fmt.Errorf("failed to create repository: %v. %s", err, string(body)))
+				return
+			}
+
+			// get the repo id
+			var resp CreateRepositoryResponse
+			err = json.Unmarshal(body, &resp)
+			if err != nil {
+				errorCollector.AddError(fmt.Errorf("failed to read the create repository action response: %v", err))
+				return
+			}
+			repoId = resp.Id
+			repoRefId = resp.NodeId
 		}
-		repoId = resp.Id
-		repoRefId = resp.NodeId
 	}
 
 	g.actionMutex.Lock()
@@ -2602,6 +2637,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 		Visibility:        visibility,
 		BoolProperties:    boolProperties,
 		DefaultBranchName: defaultBranch,
+		IsFork:            forkFrom != "",
 	}
 	g.repositories[reponame] = newRepo
 	g.repositoriesByRefId[repoRefId] = newRepo
