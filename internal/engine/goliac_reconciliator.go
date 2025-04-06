@@ -688,7 +688,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 				r.UpdateRepositoryUpdateProperty(ctx, errorCollector, dryrun, remote, reponame, "visibility", lRepo.Visibility)
 			}
 		}
-		if lRepo.DefaultBranchName != rRepo.DefaultBranchName {
+		if lRepo.DefaultBranchName != "" && lRepo.DefaultBranchName != rRepo.DefaultBranchName {
 			r.UpdateRepositoryUpdateProperty(ctx, errorCollector, dryrun, remote, reponame, "default_branch", lRepo.DefaultBranchName)
 		}
 
