@@ -67,8 +67,8 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
 	}
 
 	repository := &Repository{}
-	repository.Spec.Visibility = "private"     // default visibility
-	repository.Spec.DefaultBranchName = "main" // default branch name
+	repository.Spec.Visibility = "private" // default visibility
+	repository.Spec.DefaultBranchName = "" // default branch name
 	err = yaml.Unmarshal(filecontent, repository)
 	if err != nil {
 		return nil, err

@@ -643,7 +643,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
-		if lRepo.DefaultBranchName != rRepo.DefaultBranchName {
+		if lRepo.DefaultBranchName != "" && lRepo.DefaultBranchName != rRepo.DefaultBranchName {
 			return false
 		}
 
