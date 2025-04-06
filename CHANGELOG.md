@@ -1,3 +1,9 @@
+## Goliac v0.17.3
+
+- allow to create a repository from a fork
+- dont force 'main' branch by default
+- various fixes (ruleset OnExclude collect team's ID at creation)
+
 ## Goliac v0.17.2
 
 - restructure workflows to be a bit more generic (for example to open the door for a "delete repository" workflow)

@@ -93,7 +93,7 @@ func NewGoliacImpl() (Goliac, error) {
 	}
 
 	local := engine.NewGoliacLocalImpl()
-	remote := engine.NewGoliacRemoteImpl(remoteGithubClient)
+	remote := engine.NewGoliacRemoteImpl(remoteGithubClient, config.Config.GithubAppOrganization)
 
 	usersync.InitPlugins(remoteGithubClient)
 
@@ -244,6 +244,7 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, errorCollecto
 		},
 		newRepositoryDefaultBranch,
 		&githubToken,
+		"",
 	)
 
 	if errorCollector.HasErrors() {
@@ -444,7 +445,7 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 		nil,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("error when updating the %s repository: %v", teamreponame, err)
 	}
 
 	// add an extra branch protection
@@ -477,7 +478,10 @@ func (g *GoliacImpl) forceSquashMergeOnTeamsRepo(ctx context.Context, teamrepona
 			"restrictions": nil,
 		},
 		nil)
-	return err
+	if err != nil {
+		return fmt.Errorf("error when updating the branch protection for %s repository: %v", teamreponame, err)
+	}
+	return nil
 }
 
 /*

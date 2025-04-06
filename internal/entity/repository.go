@@ -3,6 +3,7 @@ package entity
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -30,6 +31,7 @@ type Repository struct {
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
 	RenameTo      string  `yaml:"renameTo,omitempty"`
 	DirectoryPath string  `yaml:"-"` // used to know where to rename the repository
+	ForkFrom      string  `yaml:"forkFrom,omitempty"`
 }
 
 type RepositoryRuleSet struct {
@@ -65,8 +67,8 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
 	}
 
 	repository := &Repository{}
-	repository.Spec.Visibility = "private"     // default visibility
-	repository.Spec.DefaultBranchName = "main" // default branch name
+	repository.Spec.Visibility = "private" // default visibility
+	repository.Spec.DefaultBranchName = "" // default branch name
 	err = yaml.Unmarshal(filecontent, repository)
 	if err != nil {
 		return nil, err
@@ -251,6 +253,18 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 
 	if utils.GithubAnsiString(r.Name) != r.Name {
 		return fmt.Errorf("invalid name: %s will be changed to %s (check repository filename %s)", r.Name, utils.GithubAnsiString(r.Name), filename)
+	}
+
+	if r.ForkFrom != "" {
+		// specific to github
+		r.ForkFrom = strings.TrimPrefix(r.ForkFrom, "https://github.com/")
+		r.ForkFrom = strings.TrimSuffix(r.ForkFrom, ".git")
+		// formFrom must be "organization/repository"
+		var forkFromPattern = regexp.MustCompile(`^[^/]+/[^/]+$`)
+
+		if !forkFromPattern.MatchString(r.ForkFrom) {
+			return fmt.Errorf("invalid fork format: %s - must be in the format 'organization/repository'", r.ForkFrom)
+		}
 	}
 
 	return nil
