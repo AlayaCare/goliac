@@ -2719,7 +2719,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 	if !dryrun {
 		if forkFrom != "" {
 			// fork repository
-			// https://docs.github.com/en/rest/repos/forks?apiVersion=2022-11-28
+			// https://docs.github.com/en/rest/repos/forks?apiVersion=2022-11-28#create-a-fork
 
 			props := map[string]interface{}{
 				"organization": g.configGithubOrg,
@@ -2727,7 +2727,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 			}
 			body, err := g.client.CallRestAPI(
 				ctx,
-				fmt.Sprintf("/orgs/%s/forks", forkFrom),
+				fmt.Sprintf("/repos/%s/forks", forkFrom),
 				"",
 				"POST",
 				props,

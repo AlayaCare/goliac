@@ -89,8 +89,8 @@ You can also create the repository from a fork:
 apiVersion: v1
 kind: Repository
 name: awesome-repository
+forkFrom: another_org/another_repository
 spec:
-  forkFrom: "another_org/another_repository"
   ...
 ```
 

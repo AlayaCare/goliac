@@ -256,6 +256,9 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 	}
 
 	if r.ForkFrom != "" {
+		// specific to github
+		r.ForkFrom = strings.TrimPrefix(r.ForkFrom, "https://github.com/")
+		r.ForkFrom = strings.TrimSuffix(r.ForkFrom, ".git")
 		// formFrom must be "organization/repository"
 		var forkFromPattern = regexp.MustCompile(`^[^/]+/[^/]+$`)
 

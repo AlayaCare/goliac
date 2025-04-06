@@ -103,7 +103,7 @@ func TestCreateRepository(t *testing.T) {
 		assert.False(t, errorCollector.HasErrors())
 
 		// Verify the API call was made correctly
-		assert.Equal(t, "/orgs/original-org/source-repo/forks", mockClient.lastEndpoint)
+		assert.Equal(t, "/repos/original-org/source-repo/forks", mockClient.lastEndpoint)
 		assert.Equal(t, "POST", mockClient.lastMethod)
 		assert.Equal(t, map[string]interface{}{
 			"organization": "myorg",
@@ -262,7 +262,7 @@ func TestCreateRepository(t *testing.T) {
 		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to fork repository")
 
 		// Verify the API call was attempted
-		assert.Equal(t, "/orgs/original-org/non-existent-repo/forks", mockClient.lastEndpoint)
+		assert.Equal(t, "/repos/original-org/non-existent-repo/forks", mockClient.lastEndpoint)
 		assert.Equal(t, "POST", mockClient.lastMethod)
 	})
 
