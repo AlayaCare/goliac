@@ -42,7 +42,7 @@ func NewScaffold() (*Scaffold, error) {
 		return nil, err
 	}
 
-	remote := engine.NewGoliacRemoteImpl(githubClient, config.Config.GithubAppOrganization)
+	remote := engine.NewGoliacRemoteImpl(githubClient, config.Config.GithubAppOrganization, config.Config.ManageGithubActionsVariables)
 
 	loadUsersFromGithubOrgSaml := func(feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 		ctx := context.Background()

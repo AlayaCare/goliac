@@ -73,7 +73,9 @@ type GithubRepository struct {
 	IsFork               bool
 	Environments         map[string]*GithubEnvironment         // [name]environment
 	EnvironmentVariables map[string]map[string]*GithubVariable // [name][environment]variable
+	EnvironmentSecrets   map[string]map[string]*GithubVariable // [name][environment]variable
 	RepositoryVariables  map[string]*GithubVariable            // [name]variable
+	RepositorySecrets    map[string]*GithubVariable            // [name]variable
 }
 
 type GithubTeam struct {
@@ -141,6 +143,7 @@ type GoliacRemoteImpl struct {
 	loadTeamsMutex        sync.Mutex
 	actionMutex           sync.Mutex
 	configGithubOrg       string
+	manageGithubVariables bool
 }
 
 type GHESInfo struct {
@@ -230,10 +233,16 @@ func (g *GoliacRemoteImpl) CountAssets(ctx context.Context) (int, error) {
 	if len(gResult.Errors) > 0 {
 		return 0, fmt.Errorf("graphql error on CountAssets: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)
 	}
-	return 5*gResult.Data.Organization.Repositories.TotalCount + // we multiply by 5 because we have the repositories, the teams per repostiory to fetch, the environments per repository, the variables per environment per repository, and the variables per repository to fetch
+	totalCount := 2*gResult.Data.Organization.Repositories.TotalCount + // we multiply by 3 because we have the repositories, the teams per repostiory to fetch
 		2*gResult.Data.Organization.Teams.TotalCount + // we multiply by 2 because we have the teams and the members per team to fetch
 		gResult.Data.Organization.MembersWithRole.TotalCount +
-		gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.TotalCount, nil
+		gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.TotalCount
+
+	if g.manageGithubVariables {
+		totalCount += 3 * gResult.Data.Organization.Repositories.TotalCount // we multiply by 3 because we have the environments per repository, and the variables per repository and the secrets per repository to fetch
+	}
+
+	return totalCount, nil
 }
 
 func (g *GoliacRemoteImpl) SetRemoteObservability(feedback observability.RemoteObservability) {
@@ -286,7 +295,7 @@ func isEnterprise(ctx context.Context, orgname string, client github.GitHubClien
 	return false
 }
 
-func NewGoliacRemoteImpl(client github.GitHubClient, configGithubOrg string) *GoliacRemoteImpl {
+func NewGoliacRemoteImpl(client github.GitHubClient, configGithubOrg string, manageGithubVariables bool) *GoliacRemoteImpl {
 	ctx := context.Background()
 	return &GoliacRemoteImpl{
 		client:                client,
@@ -307,6 +316,7 @@ func NewGoliacRemoteImpl(client github.GitHubClient, configGithubOrg string) *Go
 		isEnterprise:          isEnterprise(ctx, configGithubOrg, client),
 		feedback:              nil,
 		configGithubOrg:       configGithubOrg,
+		manageGithubVariables: manageGithubVariables,
 	}
 }
 
@@ -436,26 +446,6 @@ func (g *GoliacRemoteImpl) Repositories(ctx context.Context) map[string]*GithubR
 			g.repositories = repositories
 			g.repositoriesByRefId = repositoriesByRefIds
 			g.ttlExpireRepositories = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
-		}
-		envPerRepo, err := g.loadEnvironments(ctx, config.Config.GithubConcurrentThreads, repositories)
-		if err == nil {
-			for repo, envs := range envPerRepo {
-				repositories[repo].Environments = envs
-			}
-
-			envVarsPerRepo, err := g.loadEnvironmentVariables(ctx, config.Config.GithubConcurrentThreads, repositories)
-			if err == nil {
-				for repo, envvars := range envVarsPerRepo {
-					repositories[repo].EnvironmentVariables = envvars
-				}
-			}
-		}
-
-		varsPerRepo, err := g.loadRepositoriesVariables(ctx, config.Config.GithubConcurrentThreads, repositories)
-		if err == nil {
-			for repo, vars := range varsPerRepo {
-				repositories[repo].RepositoryVariables = vars
-			}
 		}
 	}
 
@@ -855,30 +845,46 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 		}
 	}
 
-	envPerRepo, err := g.loadEnvironments(ctx, config.Config.GithubConcurrentThreads, repositories)
-	if err != nil {
-		return repositories, repositoriesByRefId, err
-	}
-	for repo, envs := range envPerRepo {
-		repositories[repo].Environments = envs
-	}
+	if g.manageGithubVariables {
+		varsPerRepo, err := g.loadRepositoriesVariables(ctx, config.Config.GithubConcurrentThreads, repositories)
+		if err != nil {
+			return repositories, repositoriesByRefId, err
+		}
+		for repo, vars := range varsPerRepo {
+			repositories[repo].RepositoryVariables = vars
+		}
 
-	envVarsPerRepo, err := g.loadEnvironmentVariables(ctx, config.Config.GithubConcurrentThreads, repositories)
-	if err != nil {
-		return repositories, repositoriesByRefId, err
-	}
-	for repo, envvars := range envVarsPerRepo {
-		repositories[repo].EnvironmentVariables = envvars
-	}
+		repoSecretsPerRepo, err := g.loadRepositoriesSecrets(ctx, config.Config.GithubConcurrentThreads, repositories)
+		if err != nil {
+			return repositories, repositoriesByRefId, err
+		}
+		for repo, envSecrets := range repoSecretsPerRepo {
+			repositories[repo].RepositorySecrets = envSecrets
+		}
 
-	varsPerRepo, err := g.loadRepositoriesVariables(ctx, config.Config.GithubConcurrentThreads, repositories)
-	if err != nil {
-		return repositories, repositoriesByRefId, err
-	}
-	for repo, vars := range varsPerRepo {
-		repositories[repo].RepositoryVariables = vars
-	}
+		envPerRepo, err := g.loadEnvironments(ctx, config.Config.GithubConcurrentThreads, repositories)
+		if err != nil {
+			return repositories, repositoriesByRefId, err
+		}
+		for repo, envs := range envPerRepo {
+			repositories[repo].Environments = envs
+		}
 
+		envVarsPerRepo, err := g.loadEnvironmentVariables(ctx, config.Config.GithubConcurrentThreads, repositories)
+		if err != nil {
+			return repositories, repositoriesByRefId, err
+		}
+		for repo, envvars := range envVarsPerRepo {
+			repositories[repo].EnvironmentVariables = envvars
+		}
+
+		envSecretsPerRepo, err := g.loadEnvironmentSecrets(ctx, config.Config.GithubConcurrentThreads, repositories)
+		if err == nil {
+			for repo, envSecrets := range envSecretsPerRepo {
+				repositories[repo].EnvironmentSecrets = envSecrets
+			}
+		}
+	}
 	return repositories, repositoriesByRefId, retErr
 }
 
@@ -1293,7 +1299,7 @@ func (g *GoliacRemoteImpl) loadEnvironmentVariables(ctx context.Context, maxGoro
 	}
 	logrus.Debug("loading environmentVariables")
 
-	return concurrentCall(ctx, maxGoroutines, repositories, "environment_variables_repos", g.loadEnvironmentVariablesPerRepository, g.feedback)
+	return concurrentCall(ctx, maxGoroutines, repositories, "environment_variables_repos", g.loadEnvironmentVariablesPerRepository, nil)
 }
 
 type EnvironmentsVariablesResponse struct {
@@ -1334,6 +1340,105 @@ func (g *GoliacRemoteImpl) loadEnvironmentVariablesPerRepository(ctx context.Con
 	}
 
 	return envvars, nil
+}
+
+func (g *GoliacRemoteImpl) loadRepositoriesSecrets(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]*GithubVariable, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadRepositoriesSecrets")
+		defer childSpan.End()
+	}
+	logrus.Debug("loading repositoriesSecrets")
+
+	return concurrentCall(ctx, maxGoroutines, repositories, "repositories_secrets_repos", g.loadRepositoriesSecretsPerRepository, g.feedback)
+}
+
+type RepositoriesSecretsResponse struct {
+	TotalCount int               `json:"total_count"`
+	Secrets    []*GithubVariable `json:"secrets"`
+}
+
+func (g *GoliacRemoteImpl) loadRepositoriesSecretsPerRepository(ctx context.Context, repository *GithubRepository) (map[string]*GithubVariable, error) {
+	// https://docs.github.com/en/enterprise-cloud@latest/rest/actions/secrets?apiVersion=2022-11-28#list-repository-secrets
+	envsecrets := make(map[string]*GithubVariable)
+	respenvs := RepositoriesSecretsResponse{}
+
+	page := 1
+	for page == 1 || len(respenvs.Secrets) == 30 {
+		data, err := g.client.CallRestAPI(ctx, "/repos/"+g.configGithubOrg+"/"+repository.Name+"/actions/secrets", fmt.Sprintf("page=%d&per_page=30", page), "GET", nil, nil)
+		if err != nil {
+			return nil, fmt.Errorf("not able to list repositories secrets for repo %s: %v", repository.Name, err)
+		}
+
+		err = json.Unmarshal(data, &respenvs)
+		if err != nil {
+			return nil, fmt.Errorf("not able to unmarshall repositories secrets for repo %s: %v", repository.Name, err)
+		}
+
+		for _, e := range respenvs.Secrets {
+			envsecrets[e.Name] = e
+		}
+
+		page++
+
+		// sanity check to avoid loops
+		if page > FORLOOP_STOP {
+			break
+		}
+	}
+
+	return envsecrets, nil
+}
+
+func (g *GoliacRemoteImpl) loadEnvironmentSecrets(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]map[string]*GithubVariable, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadEnvironmentSecrets")
+		defer childSpan.End()
+	}
+	logrus.Debug("loading environmentSecrets")
+
+	return concurrentCall(ctx, maxGoroutines, repositories, "environment_secrets_repos", g.loadEnvironmentSecretsPerRepository, nil)
+}
+
+type EnvironmentsSecretsResponse struct {
+	TotalCount int               `json:"total_count"`
+	Secrets    []*GithubVariable `json:"secrets"`
+}
+
+func (g *GoliacRemoteImpl) loadEnvironmentSecretsPerRepository(ctx context.Context, repository *GithubRepository) (map[string]map[string]*GithubVariable, error) {
+	// https://docs.github.com/en/enterprise-cloud@latest/rest/actions/secrets?apiVersion=2022-11-28#list-environment-secrets
+	envsecrets := make(map[string]map[string]*GithubVariable)
+	respenvs := EnvironmentsSecretsResponse{}
+
+	for _, environment := range repository.Environments {
+		envsecrets[environment.Name] = make(map[string]*GithubVariable)
+		page := 1
+		for page == 1 || len(respenvs.Secrets) == 30 {
+			data, err := g.client.CallRestAPI(ctx, "/repos/"+g.configGithubOrg+"/"+repository.Name+"/environments/"+environment.Name+"/secrets", fmt.Sprintf("page=%d&per_page=30", page), "GET", nil, nil)
+			if err != nil {
+				return nil, fmt.Errorf("not able to list environments for repo %s: %v", repository.Name, err)
+			}
+
+			err = json.Unmarshal(data, &respenvs)
+			if err != nil {
+				return nil, fmt.Errorf("not able to unmarshall environments for repo %s: %v", repository.Name, err)
+			}
+
+			for _, e := range respenvs.Secrets {
+				envsecrets[environment.Name][e.Name] = e
+			}
+
+			page++
+
+			// sanity check to avoid loops
+			if page > FORLOOP_STOP {
+				break
+			}
+		}
+	}
+
+	return envsecrets, nil
 }
 
 const listAllTeamMembersInOrg = `
