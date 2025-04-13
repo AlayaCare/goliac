@@ -120,6 +120,19 @@ func fixtureGoliacLocal() (*GoliacLocalMock, *GoliacRemoteMock) {
 	repoB.Spec.Readers = []string{"ateam"}
 	repoB.Spec.Writers = []string{}
 
+	// add enviroment and variables
+	repoB.Spec.Environments = []entity.RepositoryEnvironment{
+		{
+			Name: "env1",
+			Variables: map[string]string{
+				"var1": "value1",
+			},
+		},
+	}
+	repoB.Spec.ActionsVariables = map[string]string{
+		"var2": "value2",
+	}
+
 	l.repositories["repoA"] = &repoA
 	l.repositories["repoB"] = &repoB
 
@@ -176,6 +189,29 @@ type GoliacRemoteMock struct {
 
 func (g *GoliacRemoteMock) Teams(ctx context.Context, current bool) map[string]*engine.GithubTeam {
 	return g.teams
+}
+func (g *GoliacRemoteMock) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*engine.GithubVariable, error) {
+	if repositoryName == "repoB" {
+		return map[string]*engine.GithubVariable{
+			"var1": {
+				Name: "var1",
+			},
+		}, nil
+	}
+	return nil, nil
+}
+
+func (g *GoliacRemoteMock) EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*engine.GithubVariable, error) {
+	if repositoryName == "repoB" {
+		return map[string]map[string]*engine.GithubVariable{
+			"env1": {
+				"var1": {
+					Name: "var1",
+				},
+			},
+		}, nil
+	}
+	return nil, nil
 }
 
 type GoliacMock struct {
@@ -406,6 +442,24 @@ func TestAppGetRepositories(t *testing.T) {
 	t.Run("not happy path: repository not found", func(t *testing.T) {
 		res := server.GetRepository(app.GetRepositoryParams{RepositoryID: "repoC"})
 		assert.NotZero(t, res.(*app.GetRepositoryDefault))
+	})
+
+	t.Run("happy path: get repository with secrets", func(t *testing.T) {
+		res := server.GetRepository(app.GetRepositoryParams{RepositoryID: "repoB"})
+		payload := res.(*app.GetRepositoryOK)
+		assert.Equal(t, "repoB", payload.Payload.Name)
+		assert.Equal(t, 2, len(payload.Payload.Teams))
+
+		assert.Equal(t, 1, len(payload.Payload.Environments))
+		assert.Equal(t, "env1", payload.Payload.Environments[0].Name)
+		assert.Equal(t, 1, len(payload.Payload.Environments[0].Secrets))
+		assert.Equal(t, "var1", payload.Payload.Environments[0].Secrets[0].Name)
+		assert.Equal(t, 1, len(payload.Payload.Environments[0].Variables))
+		assert.Equal(t, "var1", payload.Payload.Environments[0].Variables[0].Name)
+		assert.Equal(t, "value1", payload.Payload.Environments[0].Variables[0].Value)
+		assert.Equal(t, 1, len(payload.Payload.Variables))
+		assert.Equal(t, "var2", payload.Payload.Variables[0].Name)
+		assert.Equal(t, "value2", payload.Payload.Variables[0].Value)
 	})
 }
 

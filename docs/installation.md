@@ -24,6 +24,10 @@ In GitHub:
 - Under Organization permissions
   - Give Read/Write access to `Administration`
   - Give Read/Write access to `Members`
+  - Give Read/Write access to `Environments`
+  - Give Read/Write access to `Actions`
+  - Give Read/Write access to `Variables`
+  - Give Read access to `Secret`
 - Under Repository permissions
   - Give Read/Write access to `Administration`
   - Give Read/Write access to `Content` (it is needed to access the default branch of repositories)
@@ -251,6 +255,7 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_WORKFLOW_JIRA_ATLASSIAN_DOMAIN |      | PR Breaking glass workflow - Jira plugin: company domain  |
 | GOLIAC_WORKFLOW_JIRA_EMAIL   |               | PR Breaking glass workflow - Jira plugin: email |
 | GOLIAC_WORKFLOW_JIRA_API_TOKEN |             | PR Breaking glass workflow - Jira plugin: token |
+| GOLIAC_MANAGE_GITHUB_ACTIONS_VARIABLES | true | if Goliac manage repositories environments, variables. For secrets it only scans them for display purposes |
 
 then you just need to start it with
 

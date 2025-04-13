@@ -42,7 +42,7 @@ func NewScaffold() (*Scaffold, error) {
 		return nil, err
 	}
 
-	remote := engine.NewGoliacRemoteImpl(githubClient, config.Config.GithubAppOrganization)
+	remote := engine.NewGoliacRemoteImpl(githubClient, config.Config.GithubAppOrganization, config.Config.ManageGithubActionsVariables)
 
 	loadUsersFromGithubOrgSaml := func(feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 		ctx := context.Background()
@@ -384,6 +384,29 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 
 							lRepo.Spec.BranchProtections = append(lRepo.Spec.BranchProtections, lbranchprotection)
 						}
+					}
+
+					// scaffoldling repository environments, env variables and variables
+					rEnvironments := rRepo.Environments
+					if rEnvironments != nil {
+						lRepo.Spec.Environments = make([]entity.RepositoryEnvironment, 0, len(rEnvironments))
+
+						for _, e := range rEnvironments {
+							re := entity.RepositoryEnvironment{
+								Name:      e.Name,
+								Variables: make(map[string]string),
+							}
+							envVariables := rRepo.EnvironmentVariables[e.Name]
+							for k, v := range envVariables {
+								re.Variables[k] = v.Value
+							}
+							lRepo.Spec.Environments = append(lRepo.Spec.Environments, re)
+						}
+					}
+
+					lRepo.Spec.ActionsVariables = make(map[string]string)
+					for n, v := range rRepo.RepositoryVariables {
+						lRepo.Spec.ActionsVariables[n] = v.Value
 					}
 				}
 

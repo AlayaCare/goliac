@@ -12,6 +12,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type RepositoryEnvironment struct {
+	Name      string            `yaml:"name"`
+	Variables map[string]string `yaml:"variables,omitempty"`
+}
+
 type Repository struct {
 	Entity `yaml:",inline"`
 	Spec   struct {
@@ -26,6 +31,8 @@ type Repository struct {
 		Rulesets            []RepositoryRuleSet          `yaml:"rulesets,omitempty"`
 		BranchProtections   []RepositoryBranchProtection `yaml:"branch_protections,omitempty"`
 		DefaultBranchName   string                       `yaml:"default_branch,omitempty"`
+		Environments        []RepositoryEnvironment      `yaml:"environments,omitempty"`
+		ActionsVariables    map[string]string            `yaml:"actions_variables,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)

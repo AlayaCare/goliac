@@ -670,6 +670,12 @@ func (e *GoliacRemoteExecutorMock) RenameRepository(ctx context.Context, errorCo
 	fmt.Println("*** RenameRepository", reponame, newname)
 	e.nbChanges++
 }
+func (e *GoliacRemoteExecutorMock) EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*engine.GithubVariable, error) {
+	return nil, nil
+}
+func (e *GoliacRemoteExecutorMock) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*engine.GithubVariable, error) {
+	return nil, nil
+}
 
 func (e *GoliacRemoteExecutorMock) Begin(dryrun bool) {
 }

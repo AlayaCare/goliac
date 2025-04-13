@@ -67,7 +67,7 @@ func TestCreateTeam(t *testing.T) {
 	t.Run("happy path: create team", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &CreateTeamMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		errorCollector := observability.NewErrorCollection()
@@ -100,7 +100,7 @@ func TestCreateTeam(t *testing.T) {
 	t.Run("happy path: create team with members", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &CreateTeamMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		errorCollector := observability.NewErrorCollection()
@@ -132,7 +132,7 @@ func TestCreateTeam(t *testing.T) {
 	t.Run("error path: team already exists", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &CreateTeamMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add existing team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -165,7 +165,7 @@ func TestCreateTeam(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to create team",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		errorCollector := observability.NewErrorCollection()
@@ -184,7 +184,7 @@ func TestCreateTeam(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &CreateTeamMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
@@ -212,7 +212,7 @@ func TestCreateTeam(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "Parent team does not exist",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		errorCollector := observability.NewErrorCollection()
@@ -236,7 +236,7 @@ func TestCreateTeam(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "Invalid team name",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		errorCollector := observability.NewErrorCollection()
@@ -302,7 +302,7 @@ func TestDeleteTeam(t *testing.T) {
 	t.Run("happy path: delete existing team", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &DeleteTeamMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -333,7 +333,7 @@ func TestDeleteTeam(t *testing.T) {
 	t.Run("error path: team not found in cache", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &DeleteTeamMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
@@ -357,7 +357,7 @@ func TestDeleteTeam(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to delete team",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -385,7 +385,7 @@ func TestDeleteTeam(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &DeleteTeamMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -421,7 +421,7 @@ func TestDeleteTeam(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "Not Found",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -453,7 +453,7 @@ func TestDeleteTeam(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "Cannot delete team with repositories",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -533,7 +533,7 @@ func TestUpdateTeamAddMember(t *testing.T) {
 	t.Run("happy path: add member to team", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamAddMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -569,7 +569,7 @@ func TestUpdateTeamAddMember(t *testing.T) {
 	t.Run("happy path: add maintainer to team", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamAddMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -603,7 +603,7 @@ func TestUpdateTeamAddMember(t *testing.T) {
 	t.Run("error path: team not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamAddMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
@@ -624,7 +624,7 @@ func TestUpdateTeamAddMember(t *testing.T) {
 	// t.Run("error path: invalid role", func(t *testing.T) {
 	// 	// Setup mock client
 	// 	mockClient := &UpdateTeamAddMemberMockClient{}
-	// 	remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+	// 	remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg",true)
 
 	// 	// Add team to the cache
 	// 	remoteImpl.teams = map[string]*GithubTeam{
@@ -655,7 +655,7 @@ func TestUpdateTeamAddMember(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to add member to team",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -682,7 +682,7 @@ func TestUpdateTeamAddMember(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamAddMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -711,7 +711,7 @@ func TestUpdateTeamAddMember(t *testing.T) {
 	t.Run("error path: empty username", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamAddMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -788,7 +788,7 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 	t.Run("happy path: remove member from team", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamRemoveMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -816,7 +816,7 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 	t.Run("error path: team not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamRemoveMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
@@ -840,7 +840,7 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to remove member from team",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -865,7 +865,7 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamRemoveMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -894,7 +894,7 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 	t.Run("error path: empty username", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamRemoveMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -928,7 +928,7 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "Not Found",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -1005,7 +1005,7 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 	t.Run("happy path: update member role to maintainer", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamUpdateMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -1039,7 +1039,7 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 	t.Run("happy path: update member role to member", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamUpdateMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -1073,7 +1073,7 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 	t.Run("error path: team not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamUpdateMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
@@ -1094,7 +1094,7 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 	// t.Run("error path: invalid role", func(t *testing.T) {
 	// 	// Setup mock client
 	// 	mockClient := &UpdateTeamUpdateMemberMockClient{}
-	// 	remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+	// 	remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg",true)
 
 	// 	// Add team to the cache
 	// 	remoteImpl.teams = map[string]*GithubTeam{
@@ -1125,7 +1125,7 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to update team member",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -1150,7 +1150,7 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamUpdateMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -1179,7 +1179,7 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 	t.Run("error path: empty username", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateTeamUpdateMemberMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -1213,7 +1213,7 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "Not Found",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -1285,7 +1285,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 	t.Run("happy path: add team access with pull permission", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryAddTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1328,7 +1328,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 	t.Run("happy path: add team access with push permission", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryAddTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1368,7 +1368,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 	t.Run("error path: repository not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryAddTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add only team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -1399,7 +1399,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 	t.Run("error path: team not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryAddTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add only repository to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1429,7 +1429,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 	// t.Run("error path: invalid permission", func(t *testing.T) {
 	// 	// Setup mock client
 	// 	mockClient := &UpdateRepositoryAddTeamAccessMockClient{}
-	// 	remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+	// 	remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg",true)
 
 	// 	// Add repository and team to the cache
 	// 	remoteImpl.repositories = map[string]*GithubRepository{
@@ -1469,7 +1469,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to add team access",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)
@@ -1503,7 +1503,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryAddTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)
@@ -1586,7 +1586,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 	t.Run("happy path: update team access to pull permission", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryUpdateTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
@@ -1629,7 +1629,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 	t.Run("happy path: update team access to push permission", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryUpdateTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1669,7 +1669,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 	t.Run("happy path: update team access to admin permission", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryUpdateTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1709,7 +1709,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 	t.Run("error path: repository not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryUpdateTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
@@ -1740,7 +1740,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 	t.Run("error path: team not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryUpdateTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)
@@ -1770,7 +1770,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 	// t.Run("error path: invalid permission", func(t *testing.T) {
 	// 	// Setup mock client
 	// 	mockClient := &UpdateRepositoryUpdateTeamAccessMockClient{}
-	// 	remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+	// 	remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg",true)
 
 	// 	// Add repository and team to the cache
 	// 	remoteImpl.repositories = map[string]*GithubRepository{
@@ -1807,7 +1807,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to update team access",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)
@@ -1841,7 +1841,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryUpdateTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)
@@ -1924,7 +1924,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 	t.Run("happy path: remove team access", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryRemoveTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)
@@ -1961,7 +1961,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 	t.Run("error path: repository not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryRemoveTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
@@ -1991,7 +1991,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 	t.Run("error path: team not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryRemoveTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)
@@ -2023,7 +2023,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to remove team access",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)
@@ -2057,7 +2057,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateRepositoryRemoveTeamAccessMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)
@@ -2097,7 +2097,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "Not Found",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)

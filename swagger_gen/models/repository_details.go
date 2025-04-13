@@ -35,11 +35,20 @@ type RepositoryDetails struct {
 	// delete branch on merge
 	DeleteBranchOnMerge bool `json:"deleteBranchOnMerge"`
 
+	// environments
+	Environments []*RepositoryDetailsEnvironmentsItems0 `json:"environments"`
+
 	// name
 	Name string `json:"name,omitempty"`
 
+	// secrets
+	Secrets []*RepositoryDetailsSecretsItems0 `json:"secrets"`
+
 	// teams
 	Teams []*RepositoryDetailsTeamsItems0 `json:"teams"`
+
+	// variables
+	Variables []*RepositoryDetailsVariablesItems0 `json:"variables"`
 
 	// visibility
 	Visibility string `json:"visibility"`
@@ -53,7 +62,19 @@ func (m *RepositoryDetails) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateEnvironments(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateSecrets(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateTeams(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateVariables(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -79,6 +100,58 @@ func (m *RepositoryDetails) validateCollaborators(formats strfmt.Registry) error
 					return ve.ValidateName("collaborators" + "." + strconv.Itoa(i))
 				} else if ce, ok := err.(*errors.CompositeError); ok {
 					return ce.ValidateName("collaborators" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *RepositoryDetails) validateEnvironments(formats strfmt.Registry) error {
+	if swag.IsZero(m.Environments) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.Environments); i++ {
+		if swag.IsZero(m.Environments[i]) { // not required
+			continue
+		}
+
+		if m.Environments[i] != nil {
+			if err := m.Environments[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("environments" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("environments" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *RepositoryDetails) validateSecrets(formats strfmt.Registry) error {
+	if swag.IsZero(m.Secrets) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.Secrets); i++ {
+		if swag.IsZero(m.Secrets[i]) { // not required
+			continue
+		}
+
+		if m.Secrets[i] != nil {
+			if err := m.Secrets[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("secrets" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("secrets" + "." + strconv.Itoa(i))
 				}
 				return err
 			}
@@ -115,6 +188,32 @@ func (m *RepositoryDetails) validateTeams(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *RepositoryDetails) validateVariables(formats strfmt.Registry) error {
+	if swag.IsZero(m.Variables) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.Variables); i++ {
+		if swag.IsZero(m.Variables[i]) { // not required
+			continue
+		}
+
+		if m.Variables[i] != nil {
+			if err := m.Variables[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("variables" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("variables" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
 // ContextValidate validate this repository details based on the context it is used
 func (m *RepositoryDetails) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
@@ -123,7 +222,19 @@ func (m *RepositoryDetails) ContextValidate(ctx context.Context, formats strfmt.
 		res = append(res, err)
 	}
 
+	if err := m.contextValidateEnvironments(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateSecrets(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateTeams(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateVariables(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -158,6 +269,56 @@ func (m *RepositoryDetails) contextValidateCollaborators(ctx context.Context, fo
 	return nil
 }
 
+func (m *RepositoryDetails) contextValidateEnvironments(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.Environments); i++ {
+
+		if m.Environments[i] != nil {
+
+			if swag.IsZero(m.Environments[i]) { // not required
+				return nil
+			}
+
+			if err := m.Environments[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("environments" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("environments" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *RepositoryDetails) contextValidateSecrets(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.Secrets); i++ {
+
+		if m.Secrets[i] != nil {
+
+			if swag.IsZero(m.Secrets[i]) { // not required
+				return nil
+			}
+
+			if err := m.Secrets[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("secrets" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("secrets" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
 func (m *RepositoryDetails) contextValidateTeams(ctx context.Context, formats strfmt.Registry) error {
 
 	for i := 0; i < len(m.Teams); i++ {
@@ -173,6 +334,31 @@ func (m *RepositoryDetails) contextValidateTeams(ctx context.Context, formats st
 					return ve.ValidateName("teams" + "." + strconv.Itoa(i))
 				} else if ce, ok := err.(*errors.CompositeError); ok {
 					return ce.ValidateName("teams" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *RepositoryDetails) contextValidateVariables(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.Variables); i++ {
+
+		if m.Variables[i] != nil {
+
+			if swag.IsZero(m.Variables[i]) { // not required
+				return nil
+			}
+
+			if err := m.Variables[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("variables" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("variables" + "." + strconv.Itoa(i))
 				}
 				return err
 			}
@@ -280,6 +466,291 @@ func (m *RepositoryDetailsCollaboratorsItems0) UnmarshalBinary(b []byte) error {
 	return nil
 }
 
+// RepositoryDetailsEnvironmentsItems0 repository details environments items0
+//
+// swagger:model RepositoryDetailsEnvironmentsItems0
+type RepositoryDetailsEnvironmentsItems0 struct {
+
+	// name
+	Name string `json:"name,omitempty"`
+
+	// secrets
+	Secrets []*RepositoryDetailsEnvironmentsItems0SecretsItems0 `json:"secrets"`
+
+	// variables
+	Variables []*RepositoryDetailsEnvironmentsItems0VariablesItems0 `json:"variables"`
+}
+
+// Validate validates this repository details environments items0
+func (m *RepositoryDetailsEnvironmentsItems0) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateSecrets(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateVariables(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *RepositoryDetailsEnvironmentsItems0) validateSecrets(formats strfmt.Registry) error {
+	if swag.IsZero(m.Secrets) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.Secrets); i++ {
+		if swag.IsZero(m.Secrets[i]) { // not required
+			continue
+		}
+
+		if m.Secrets[i] != nil {
+			if err := m.Secrets[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("secrets" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("secrets" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *RepositoryDetailsEnvironmentsItems0) validateVariables(formats strfmt.Registry) error {
+	if swag.IsZero(m.Variables) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.Variables); i++ {
+		if swag.IsZero(m.Variables[i]) { // not required
+			continue
+		}
+
+		if m.Variables[i] != nil {
+			if err := m.Variables[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("variables" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("variables" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+// ContextValidate validate this repository details environments items0 based on the context it is used
+func (m *RepositoryDetailsEnvironmentsItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.contextValidateSecrets(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.contextValidateVariables(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *RepositoryDetailsEnvironmentsItems0) contextValidateSecrets(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.Secrets); i++ {
+
+		if m.Secrets[i] != nil {
+
+			if swag.IsZero(m.Secrets[i]) { // not required
+				return nil
+			}
+
+			if err := m.Secrets[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("secrets" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("secrets" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *RepositoryDetailsEnvironmentsItems0) contextValidateVariables(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.Variables); i++ {
+
+		if m.Variables[i] != nil {
+
+			if swag.IsZero(m.Variables[i]) { // not required
+				return nil
+			}
+
+			if err := m.Variables[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("variables" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("variables" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *RepositoryDetailsEnvironmentsItems0) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *RepositoryDetailsEnvironmentsItems0) UnmarshalBinary(b []byte) error {
+	var res RepositoryDetailsEnvironmentsItems0
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// RepositoryDetailsEnvironmentsItems0SecretsItems0 repository details environments items0 secrets items0
+//
+// swagger:model RepositoryDetailsEnvironmentsItems0SecretsItems0
+type RepositoryDetailsEnvironmentsItems0SecretsItems0 struct {
+
+	// name
+	Name string `json:"name,omitempty"`
+}
+
+// Validate validates this repository details environments items0 secrets items0
+func (m *RepositoryDetailsEnvironmentsItems0SecretsItems0) Validate(formats strfmt.Registry) error {
+	return nil
+}
+
+// ContextValidate validates this repository details environments items0 secrets items0 based on context it is used
+func (m *RepositoryDetailsEnvironmentsItems0SecretsItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *RepositoryDetailsEnvironmentsItems0SecretsItems0) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *RepositoryDetailsEnvironmentsItems0SecretsItems0) UnmarshalBinary(b []byte) error {
+	var res RepositoryDetailsEnvironmentsItems0SecretsItems0
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// RepositoryDetailsEnvironmentsItems0VariablesItems0 repository details environments items0 variables items0
+//
+// swagger:model RepositoryDetailsEnvironmentsItems0VariablesItems0
+type RepositoryDetailsEnvironmentsItems0VariablesItems0 struct {
+
+	// name
+	Name string `json:"name,omitempty"`
+
+	// value
+	Value string `json:"value,omitempty"`
+}
+
+// Validate validates this repository details environments items0 variables items0
+func (m *RepositoryDetailsEnvironmentsItems0VariablesItems0) Validate(formats strfmt.Registry) error {
+	return nil
+}
+
+// ContextValidate validates this repository details environments items0 variables items0 based on context it is used
+func (m *RepositoryDetailsEnvironmentsItems0VariablesItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *RepositoryDetailsEnvironmentsItems0VariablesItems0) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *RepositoryDetailsEnvironmentsItems0VariablesItems0) UnmarshalBinary(b []byte) error {
+	var res RepositoryDetailsEnvironmentsItems0VariablesItems0
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// RepositoryDetailsSecretsItems0 repository details secrets items0
+//
+// swagger:model RepositoryDetailsSecretsItems0
+type RepositoryDetailsSecretsItems0 struct {
+
+	// name
+	Name string `json:"name,omitempty"`
+}
+
+// Validate validates this repository details secrets items0
+func (m *RepositoryDetailsSecretsItems0) Validate(formats strfmt.Registry) error {
+	return nil
+}
+
+// ContextValidate validates this repository details secrets items0 based on context it is used
+func (m *RepositoryDetailsSecretsItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *RepositoryDetailsSecretsItems0) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *RepositoryDetailsSecretsItems0) UnmarshalBinary(b []byte) error {
+	var res RepositoryDetailsSecretsItems0
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
 // RepositoryDetailsTeamsItems0 repository details teams items0
 //
 // swagger:model RepositoryDetailsTeamsItems0
@@ -352,6 +823,46 @@ func (m *RepositoryDetailsTeamsItems0) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (m *RepositoryDetailsTeamsItems0) UnmarshalBinary(b []byte) error {
 	var res RepositoryDetailsTeamsItems0
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// RepositoryDetailsVariablesItems0 repository details variables items0
+//
+// swagger:model RepositoryDetailsVariablesItems0
+type RepositoryDetailsVariablesItems0 struct {
+
+	// name
+	Name string `json:"name,omitempty"`
+
+	// value
+	Value string `json:"value,omitempty"`
+}
+
+// Validate validates this repository details variables items0
+func (m *RepositoryDetailsVariablesItems0) Validate(formats strfmt.Registry) error {
+	return nil
+}
+
+// ContextValidate validates this repository details variables items0 based on context it is used
+func (m *RepositoryDetailsVariablesItems0) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *RepositoryDetailsVariablesItems0) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *RepositoryDetailsVariablesItems0) UnmarshalBinary(b []byte) error {
+	var res RepositoryDetailsVariablesItems0
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

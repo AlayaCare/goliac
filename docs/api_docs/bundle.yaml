@@ -629,6 +629,45 @@ definitions:
             access:
               type: string
               minLength: 1
+      variables:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            value:
+              type: string
+      secrets:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+      environments:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            variables:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  value:
+                    type: string
+            secrets:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
   teams:
     type: array
     items:

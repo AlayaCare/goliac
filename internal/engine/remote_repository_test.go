@@ -72,7 +72,7 @@ func TestCreateRepository(t *testing.T) {
 			responseName:   "forked-repo",
 		}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
@@ -138,7 +138,7 @@ func TestCreateRepository(t *testing.T) {
 			responseName:   "forked-repo",
 		}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
@@ -201,7 +201,7 @@ func TestCreateRepository(t *testing.T) {
 			errorMessage: "invalid fork format",
 		}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
@@ -235,7 +235,7 @@ func TestCreateRepository(t *testing.T) {
 			errorMessage: "repository not found",
 		}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
@@ -274,7 +274,7 @@ func TestCreateRepository(t *testing.T) {
 			responseName:   "new-repo",
 		}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
@@ -341,7 +341,7 @@ func TestCreateRepository(t *testing.T) {
 		// Setup mock client
 		mockClient := &CreateRepositoryMockClient{}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
@@ -423,7 +423,7 @@ func TestDeleteRepository(t *testing.T) {
 		// Setup mock client
 		mockClient := &DeleteRepositoryMockClient{}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		errorCollector := observability.NewErrorCollection()
 
@@ -467,7 +467,7 @@ func TestDeleteRepository(t *testing.T) {
 			errorMessage: "repository not found",
 		}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		errorCollector := observability.NewErrorCollection()
 
@@ -493,7 +493,7 @@ func TestDeleteRepository(t *testing.T) {
 		// Setup mock client
 		mockClient := &DeleteRepositoryMockClient{}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		remoteImpl.Load(ctx, false)
 		mockClient.lastEndpoint = ""
@@ -533,7 +533,7 @@ func TestDeleteRepository(t *testing.T) {
 		// Setup mock client
 		mockClient := &DeleteRepositoryMockClient{}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		errorCollector := observability.NewErrorCollection()
 
@@ -646,7 +646,7 @@ func TestRenameRepository(t *testing.T) {
 		// Setup mock client
 		mockClient := &RenameRepositoryMockClient{}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		remoteImpl.Load(ctx, false)
 		errorCollector := observability.NewErrorCollection()
@@ -727,7 +727,7 @@ func TestRenameRepository(t *testing.T) {
 			errorMessage: "repository not found",
 		}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		errorCollector := observability.NewErrorCollection()
 
@@ -754,7 +754,7 @@ func TestRenameRepository(t *testing.T) {
 		// Setup mock client
 		mockClient := &RenameRepositoryMockClient{}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		remoteImpl.Load(ctx, false)
 		mockClient.lastEndpoint = ""
@@ -820,7 +820,7 @@ func TestRenameRepository(t *testing.T) {
 			errorMessage: "repository with this name already exists",
 		}
 
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg")
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true)
 		ctx := context.TODO()
 		remoteImpl.Load(ctx, false)
 		mockClient.lastEndpoint = ""

@@ -242,6 +242,9 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 
 	teams := make([]*models.RepositoryDetailsTeamsItems0, 0)
 	collaborators := make([]*models.RepositoryDetailsCollaboratorsItems0, 0)
+	environments := make([]*models.RepositoryDetailsEnvironmentsItems0, 0)
+	variables := make([]*models.RepositoryDetailsVariablesItems0, 0)
+	secrets := make([]*models.RepositoryDetailsSecretsItems0, 0)
 
 	for _, r := range repository.Spec.Readers {
 		team := models.RepositoryDetailsTeamsItems0{
@@ -283,6 +286,58 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 		collaborators = append(collaborators, &collaborator)
 	}
 
+	lEnvironments := []string{}
+	for _, e := range repository.Spec.Environments {
+		lEnvironments = append(lEnvironments, e.Name)
+	}
+	rEnvironmentsSecrets, err := g.goliac.GetRemote().EnvironmentSecretsPerRepository(context.TODO(), lEnvironments, repository.Name)
+	if err != nil {
+		logrus.Errorf("error when getting the environment secrets for repository %s: %v", repository.Name, err)
+	}
+
+	for _, e := range repository.Spec.Environments {
+		secrets := make([]*models.RepositoryDetailsEnvironmentsItems0SecretsItems0, 0)
+		for _, s := range rEnvironmentsSecrets[e.Name] {
+			secrets = append(secrets, &models.RepositoryDetailsEnvironmentsItems0SecretsItems0{
+				Name: s.Name,
+			})
+		}
+		variables := make([]*models.RepositoryDetailsEnvironmentsItems0VariablesItems0, 0)
+		for k, v := range e.Variables {
+			variables = append(variables, &models.RepositoryDetailsEnvironmentsItems0VariablesItems0{
+				Name:  k,
+				Value: v,
+			})
+		}
+		environment := models.RepositoryDetailsEnvironmentsItems0{
+			Name:      e.Name,
+			Secrets:   secrets,
+			Variables: variables,
+		}
+		environments = append(environments, &environment)
+	}
+
+	for n, v := range repository.Spec.ActionsVariables {
+		variable := models.RepositoryDetailsVariablesItems0{
+			Name:  n,
+			Value: v,
+		}
+		variables = append(variables, &variable)
+	}
+
+	remote := g.goliac.GetRemote()
+	rSecrets, err := remote.RepositoriesSecretsPerRepository(context.TODO(), repository.Name)
+	if err != nil {
+		logrus.Errorf("error when getting the repository secrets for repository %s: %v", repository.Name, err)
+	}
+
+	for _, s := range rSecrets {
+		secret := models.RepositoryDetailsSecretsItems0{
+			Name: s.Name,
+		}
+		secrets = append(secrets, &secret)
+	}
+
 	repositoryDetails := models.RepositoryDetails{
 		Name:                repository.Name,
 		Visibility:          repository.Spec.Visibility,
@@ -292,6 +347,9 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 		Archived:            repository.Archived,
 		Teams:               teams,
 		Collaborators:       collaborators,
+		Environments:        environments,
+		Variables:           variables,
+		Secrets:             secrets,
 	}
 
 	return app.NewGetRepositoryOK().WithPayload(&repositoryDetails)
