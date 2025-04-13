@@ -23,6 +23,8 @@ const FORLOOP_STOP = 100
 
 type GoliacRemoteResources interface {
 	Teams(ctx context.Context, current bool) map[string]*GithubTeam
+	RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*GithubVariable, error)
+	EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*GithubVariable, error)
 }
 
 /*
@@ -52,6 +54,9 @@ type GoliacRemote interface {
 
 	CountAssets(ctx context.Context) (int, error)                      // return the number of (some) assets that will be loaded (to be used with the RemoteObservability/progress bar)
 	SetRemoteObservability(feedback observability.RemoteObservability) // if you want to get feedback on the loading process
+
+	RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*GithubVariable, error)
+	EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*GithubVariable, error)
 }
 
 type GoliacRemoteExecutor interface {
@@ -1342,37 +1347,37 @@ func (g *GoliacRemoteImpl) loadEnvironmentVariablesPerRepository(ctx context.Con
 	return envvars, nil
 }
 
-func (g *GoliacRemoteImpl) loadRepositoriesSecrets(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]*GithubVariable, error) {
-	var childSpan trace.Span
-	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadRepositoriesSecrets")
-		defer childSpan.End()
-	}
-	logrus.Debug("loading repositoriesSecrets")
+// func (g *GoliacRemoteImpl) loadRepositoriesSecrets(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]*GithubVariable, error) {
+// 	var childSpan trace.Span
+// 	if config.Config.OpenTelemetryEnabled {
+// 		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadRepositoriesSecrets")
+// 		defer childSpan.End()
+// 	}
+// 	logrus.Debug("loading repositoriesSecrets")
 
-	return concurrentCall(ctx, maxGoroutines, repositories, "repositories_secrets_repos", g.loadRepositoriesSecretsPerRepository, g.feedback)
-}
+// 	return concurrentCall(ctx, maxGoroutines, repositories, "repositories_secrets_repos", g.loadRepositoriesSecretsPerRepository, g.feedback)
+// }
 
 type RepositoriesSecretsResponse struct {
 	TotalCount int               `json:"total_count"`
 	Secrets    []*GithubVariable `json:"secrets"`
 }
 
-func (g *GoliacRemoteImpl) loadRepositoriesSecretsPerRepository(ctx context.Context, repository *GithubRepository) (map[string]*GithubVariable, error) {
+func (g *GoliacRemoteImpl) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*GithubVariable, error) {
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/actions/secrets?apiVersion=2022-11-28#list-repository-secrets
 	envsecrets := make(map[string]*GithubVariable)
 	respenvs := RepositoriesSecretsResponse{}
 
 	page := 1
 	for page == 1 || len(respenvs.Secrets) == 30 {
-		data, err := g.client.CallRestAPI(ctx, "/repos/"+g.configGithubOrg+"/"+repository.Name+"/actions/secrets", fmt.Sprintf("page=%d&per_page=30", page), "GET", nil, nil)
+		data, err := g.client.CallRestAPI(ctx, "/repos/"+g.configGithubOrg+"/"+repositoryName+"/actions/secrets", fmt.Sprintf("page=%d&per_page=30", page), "GET", nil, nil)
 		if err != nil {
-			return nil, fmt.Errorf("not able to list repositories secrets for repo %s: %v", repository.Name, err)
+			return nil, fmt.Errorf("not able to list repositories secrets for repo %s: %v", repositoryName, err)
 		}
 
 		err = json.Unmarshal(data, &respenvs)
 		if err != nil {
-			return nil, fmt.Errorf("not able to unmarshall repositories secrets for repo %s: %v", repository.Name, err)
+			return nil, fmt.Errorf("not able to unmarshall repositories secrets for repo %s: %v", repositoryName, err)
 		}
 
 		for _, e := range respenvs.Secrets {
@@ -1406,27 +1411,27 @@ type EnvironmentsSecretsResponse struct {
 	Secrets    []*GithubVariable `json:"secrets"`
 }
 
-func (g *GoliacRemoteImpl) loadEnvironmentSecretsPerRepository(ctx context.Context, repository *GithubRepository) (map[string]map[string]*GithubVariable, error) {
+func (g *GoliacRemoteImpl) EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*GithubVariable, error) {
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/actions/secrets?apiVersion=2022-11-28#list-environment-secrets
 	envsecrets := make(map[string]map[string]*GithubVariable)
 	respenvs := EnvironmentsSecretsResponse{}
 
-	for _, environment := range repository.Environments {
-		envsecrets[environment.Name] = make(map[string]*GithubVariable)
+	for _, environment := range environments {
+		envsecrets[environment] = make(map[string]*GithubVariable)
 		page := 1
 		for page == 1 || len(respenvs.Secrets) == 30 {
-			data, err := g.client.CallRestAPI(ctx, "/repos/"+g.configGithubOrg+"/"+repository.Name+"/environments/"+environment.Name+"/secrets", fmt.Sprintf("page=%d&per_page=30", page), "GET", nil, nil)
+			data, err := g.client.CallRestAPI(ctx, "/repos/"+g.configGithubOrg+"/"+repositoryName+"/environments/"+environment+"/secrets", fmt.Sprintf("page=%d&per_page=30", page), "GET", nil, nil)
 			if err != nil {
-				return nil, fmt.Errorf("not able to list environments for repo %s: %v", repository.Name, err)
+				return nil, fmt.Errorf("not able to list environments for repo %s: %v", repositoryName, err)
 			}
 
 			err = json.Unmarshal(data, &respenvs)
 			if err != nil {
-				return nil, fmt.Errorf("not able to unmarshall environments for repo %s: %v", repository.Name, err)
+				return nil, fmt.Errorf("not able to unmarshall environments for repo %s: %v", repositoryName, err)
 			}
 
 			for _, e := range respenvs.Secrets {
-				envsecrets[environment.Name][e.Name] = e
+				envsecrets[environment][e.Name] = e
 			}
 
 			page++

@@ -135,6 +135,12 @@ func (m *GoliacRemoteMock) CountAssets(ctx context.Context) (int, error) {
 }
 func (g *GoliacRemoteMock) SetRemoteObservability(feedback observability.RemoteObservability) {
 }
+func (m *GoliacRemoteMock) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*GithubVariable, error) {
+	return nil, nil
+}
+func (m *GoliacRemoteMock) EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*GithubVariable, error) {
+	return nil, nil
+}
 
 type ReconciliatorListenerRecorder struct {
 	UsersCreated map[string]string

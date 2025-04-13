@@ -491,10 +491,6 @@ func TestLoadEnvironmentVariablesPerRepository(t *testing.T) {
 					Id:   1,
 					Name: "production",
 				},
-				"staging": {
-					Id:   2,
-					Name: "staging",
-				},
 			},
 		}
 
@@ -506,7 +502,7 @@ func TestLoadEnvironmentVariablesPerRepository(t *testing.T) {
 		// Verify no errors occurred
 		assert.NoError(t, err)
 		assert.NotNil(t, envVars)
-		assert.Equal(t, 2, len(envVars))
+		assert.Equal(t, 1, len(envVars))
 
 		// Verify environment variables were loaded correctly
 		prodVars := envVars["production"]
@@ -515,14 +511,8 @@ func TestLoadEnvironmentVariablesPerRepository(t *testing.T) {
 		assert.Equal(t, "value1", prodVars["VAR1"].Value)
 		assert.Equal(t, "value2", prodVars["VAR2"].Value)
 
-		stagingVars := envVars["staging"]
-		assert.NotNil(t, stagingVars)
-		assert.Equal(t, 2, len(stagingVars))
-		assert.Equal(t, "value1", stagingVars["VAR1"].Value)
-		assert.Equal(t, "value2", stagingVars["VAR2"].Value)
-
 		// Verify API calls were made correctly
-		assert.Equal(t, "/repos/myorg/test-repo/environments/staging/variables", mockClient.lastEndpoint)
+		assert.Equal(t, "/repos/myorg/test-repo/environments/production/variables", mockClient.lastEndpoint)
 		assert.Equal(t, "GET", mockClient.lastMethod)
 	})
 

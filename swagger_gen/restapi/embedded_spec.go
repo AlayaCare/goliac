@@ -877,9 +877,56 @@ func init() {
           "x-isnullable": false,
           "x-omitempty": false
         },
+        "environments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "secrets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "variables": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "name": {
           "type": "string",
           "x-isnullable": false
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          }
         },
         "teams": {
           "type": "array",
@@ -893,6 +940,20 @@ func init() {
               "name": {
                 "type": "string",
                 "minLength": 1
+              }
+            }
+          }
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
               }
             }
           }
@@ -1973,6 +2034,53 @@ func init() {
         }
       }
     },
+    "RepositoryDetailsEnvironmentsItems0": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepositoryDetailsEnvironmentsItems0SecretsItems0"
+          }
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepositoryDetailsEnvironmentsItems0VariablesItems0"
+          }
+        }
+      }
+    },
+    "RepositoryDetailsEnvironmentsItems0SecretsItems0": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "RepositoryDetailsEnvironmentsItems0VariablesItems0": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "RepositoryDetailsSecretsItems0": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
     "RepositoryDetailsTeamsItems0": {
       "type": "object",
       "properties": {
@@ -1983,6 +2091,17 @@ func init() {
         "name": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "RepositoryDetailsVariablesItems0": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
         }
       }
     },
@@ -2156,14 +2275,32 @@ func init() {
           "x-isnullable": false,
           "x-omitempty": false
         },
+        "environments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepositoryDetailsEnvironmentsItems0"
+          }
+        },
         "name": {
           "type": "string",
           "x-isnullable": false
+        },
+        "secrets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepositoryDetailsSecretsItems0"
+          }
         },
         "teams": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/RepositoryDetailsTeamsItems0"
+          }
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RepositoryDetailsVariablesItems0"
           }
         },
         "visibility": {

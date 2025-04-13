@@ -63,6 +63,14 @@ func (m *ScaffoldGoliacRemoteMock) CountAssets(ctx context.Context) (int, error)
 func (g *ScaffoldGoliacRemoteMock) SetRemoteObservability(feedback observability.RemoteObservability) {
 }
 
+func (s *ScaffoldGoliacRemoteMock) EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*engine.GithubVariable, error) {
+	return nil, nil
+}
+
+func (s *ScaffoldGoliacRemoteMock) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*engine.GithubVariable, error) {
+	return nil, nil
+}
+
 func NewScaffoldGoliacRemoteMock() engine.GoliacRemote {
 	users := make(map[string]string)
 	teams := make(map[string]*engine.GithubTeam)
@@ -325,6 +333,127 @@ func TestScaffoldUnit(t *testing.T) {
 		assert.Equal(t, true, found)
 	})
 }
+
+func TestEnvironmentsAndVariables(t *testing.T) {
+	t.Run("happy path: test environments and variables", func(t *testing.T) {
+
+		users := make(map[string]string)
+		teams := make(map[string]*engine.GithubTeam)
+		repos := make(map[string]*engine.GithubRepository)
+		teamsRepos := make(map[string]map[string]*engine.GithubTeamRepo)
+
+		users["githubid1"] = "githubid1"
+		users["githubid2"] = "githubid2"
+		users["githubid3"] = "githubid3"
+		users["githubid4"] = "githubid4"
+
+		admin := engine.GithubTeam{
+			Name:        "admin",
+			Slug:        "admin",
+			Members:     []string{"githubid1", "githubid2"},
+			Maintainers: []string{},
+		}
+		teams["admin"] = &admin
+
+		regular := engine.GithubTeam{
+			Name:        "regular",
+			Slug:        "regular",
+			Members:     []string{"githubid1", "githubid4"},
+			Maintainers: []string{"githubid2", "githubid3"},
+		}
+		teams["regular"] = &regular
+
+		repo1 := engine.GithubRepository{
+			Name: "repo1",
+		}
+		repos["repo1"] = &repo1
+
+		repo2 := engine.GithubRepository{
+			Name: "repo2",
+		}
+		repo2.Environments = map[string]*engine.GithubEnvironment{
+			"env1": {
+				Name: "env1",
+			},
+			"env2": {
+				Name: "env2",
+			},
+		}
+		repo2.EnvironmentVariables = map[string]map[string]*engine.GithubVariable{
+			"env1": {
+				"var1": {
+					Name:  "var1",
+					Value: "value1",
+				},
+			},
+		}
+		repo2.RepositoryVariables = map[string]*engine.GithubVariable{
+			"var2": {
+				Name:  "var2",
+				Value: "value2",
+			},
+		}
+
+		repos["repo2"] = &repo2
+
+		teamRepoRegular := make(map[string]*engine.GithubTeamRepo)
+		teamRepoRegular["repo1"] = &engine.GithubTeamRepo{
+			Name:       "repo1",
+			Permission: "WRITE",
+		}
+		teamRepoRegular["repo2"] = &engine.GithubTeamRepo{
+			Name:       "repo2",
+			Permission: "READ",
+		}
+		teamsRepos["regular"] = teamRepoRegular
+
+		teamRepoAdmin := make(map[string]*engine.GithubTeamRepo)
+		teamRepoAdmin["repo2"] = &engine.GithubTeamRepo{
+			Name:       "repo2",
+			Permission: "WRITE",
+		}
+		teamsRepos["admin"] = teamRepoAdmin
+
+		mock := ScaffoldGoliacRemoteMock{
+			users:      users,
+			teams:      teams,
+			repos:      repos,
+			teamsRepos: teamsRepos,
+		}
+
+		fs := memfs.New()
+		// MockGithubClient doesn't support concurrent access
+
+		scaffold := &Scaffold{
+			remote:                     &mock,
+			loadUsersFromGithubOrgSaml: NoLoadGithubSamlUsersMock,
+		}
+
+		err := scaffold.generateTeams(context.TODO(), fs, "/teams", "/archived", users, "admin", false)
+		assert.Nil(t, err)
+
+		found, err := utils.Exists(fs, "/teams/admin/team.yaml")
+		assert.Nil(t, err)
+		assert.Equal(t, true, found)
+		found, err = utils.Exists(fs, "/teams/regular/team.yaml")
+		assert.Nil(t, err)
+		assert.Equal(t, true, found)
+
+		lrepo2, err := utils.ReadFile(fs, "/teams/admin/repo2.yaml")
+		assert.Nil(t, err)
+
+		var r2 entity.Repository
+		err = yaml.Unmarshal(lrepo2, &r2)
+		assert.Nil(t, err)
+		assert.Equal(t, "repo2", r2.Name)
+		assert.Equal(t, 2, len(r2.Spec.Environments))
+		assert.Equal(t, "env1", r2.Spec.Environments[0].Name)
+		assert.Equal(t, "env2", r2.Spec.Environments[1].Name)
+		assert.Equal(t, "value1", r2.Spec.Environments[0].Variables["var1"])
+		assert.Equal(t, "value2", r2.Spec.ActionsVariables["var2"])
+	})
+}
+
 func TestScaffoldFull(t *testing.T) {
 
 	t.Run("happy path: test teams and repos without SAML", func(t *testing.T) {
