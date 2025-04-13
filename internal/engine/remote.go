@@ -73,9 +73,9 @@ type GithubRepository struct {
 	IsFork               bool
 	Environments         map[string]*GithubEnvironment         // [name]environment
 	EnvironmentVariables map[string]map[string]*GithubVariable // [name][environment]variable
-	EnvironmentSecrets   map[string]map[string]*GithubVariable // [name][environment]variable
-	RepositoryVariables  map[string]*GithubVariable            // [name]variable
-	RepositorySecrets    map[string]*GithubVariable            // [name]variable
+	//	EnvironmentSecrets   map[string]map[string]*GithubVariable // [name][environment]variable
+	RepositoryVariables map[string]*GithubVariable // [name]variable
+	// RepositorySecrets    map[string]*GithubVariable            // [name]variable
 }
 
 type GithubTeam struct {
@@ -239,7 +239,7 @@ func (g *GoliacRemoteImpl) CountAssets(ctx context.Context) (int, error) {
 		gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.TotalCount
 
 	if g.manageGithubVariables {
-		totalCount += 3 * gResult.Data.Organization.Repositories.TotalCount // we multiply by 3 because we have the environments per repository, and the variables per repository and the secrets per repository to fetch
+		totalCount += 2 * gResult.Data.Organization.Repositories.TotalCount // we multiply by 3 because we have the environments per repository, and the variables per repository to fetch
 	}
 
 	return totalCount, nil
@@ -854,13 +854,13 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 			repositories[repo].RepositoryVariables = vars
 		}
 
-		repoSecretsPerRepo, err := g.loadRepositoriesSecrets(ctx, config.Config.GithubConcurrentThreads, repositories)
-		if err != nil {
-			return repositories, repositoriesByRefId, err
-		}
-		for repo, envSecrets := range repoSecretsPerRepo {
-			repositories[repo].RepositorySecrets = envSecrets
-		}
+		// repoSecretsPerRepo, err := g.loadRepositoriesSecrets(ctx, config.Config.GithubConcurrentThreads, repositories)
+		// if err != nil {
+		// 	return repositories, repositoriesByRefId, err
+		// }
+		// for repo, envSecrets := range repoSecretsPerRepo {
+		// 	repositories[repo].RepositorySecrets = envSecrets
+		// }
 
 		envPerRepo, err := g.loadEnvironments(ctx, config.Config.GithubConcurrentThreads, repositories)
 		if err != nil {
@@ -878,12 +878,12 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 			repositories[repo].EnvironmentVariables = envvars
 		}
 
-		envSecretsPerRepo, err := g.loadEnvironmentSecrets(ctx, config.Config.GithubConcurrentThreads, repositories)
-		if err == nil {
-			for repo, envSecrets := range envSecretsPerRepo {
-				repositories[repo].EnvironmentSecrets = envSecrets
-			}
-		}
+		// envSecretsPerRepo, err := g.loadEnvironmentSecrets(ctx, config.Config.GithubConcurrentThreads, repositories)
+		// if err == nil {
+		// 	for repo, envSecrets := range envSecretsPerRepo {
+		// 		repositories[repo].EnvironmentSecrets = envSecrets
+		// 	}
+		// }
 	}
 	return repositories, repositoriesByRefId, retErr
 }
@@ -1390,16 +1390,16 @@ func (g *GoliacRemoteImpl) loadRepositoriesSecretsPerRepository(ctx context.Cont
 	return envsecrets, nil
 }
 
-func (g *GoliacRemoteImpl) loadEnvironmentSecrets(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]map[string]*GithubVariable, error) {
-	var childSpan trace.Span
-	if config.Config.OpenTelemetryEnabled {
-		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadEnvironmentSecrets")
-		defer childSpan.End()
-	}
-	logrus.Debug("loading environmentSecrets")
+// func (g *GoliacRemoteImpl) loadEnvironmentSecrets(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]map[string]*GithubVariable, error) {
+// 	var childSpan trace.Span
+// 	if config.Config.OpenTelemetryEnabled {
+// 		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadEnvironmentSecrets")
+// 		defer childSpan.End()
+// 	}
+// 	logrus.Debug("loading environmentSecrets")
 
-	return concurrentCall(ctx, maxGoroutines, repositories, "environment_secrets_repos", g.loadEnvironmentSecretsPerRepository, nil)
-}
+// 	return concurrentCall(ctx, maxGoroutines, repositories, "environment_secrets_repos", g.loadEnvironmentSecretsPerRepository, nil)
+// }
 
 type EnvironmentsSecretsResponse struct {
 	TotalCount int               `json:"total_count"`
