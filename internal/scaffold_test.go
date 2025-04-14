@@ -379,19 +379,14 @@ func TestEnvironmentsAndVariables(t *testing.T) {
 				Name: "env2",
 			},
 		}
-		repo2.EnvironmentVariables = map[string]map[string]*engine.GithubVariable{
-			"env1": {
-				"var1": {
-					Name:  "var1",
-					Value: "value1",
-				},
-			},
+		repo2.Environments["env1"].Variables = map[string]string{
+			"var1": "value1",
 		}
-		repo2.RepositoryVariables = map[string]*engine.GithubVariable{
-			"var2": {
-				Name:  "var2",
-				Value: "value2",
-			},
+		repo2.Environments["env2"].Variables = map[string]string{
+			"var2": "value2",
+		}
+		repo2.RepositoryVariables = map[string]string{
+			"var2": "value2",
 		}
 
 		repos["repo2"] = &repo2

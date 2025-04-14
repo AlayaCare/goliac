@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/goliac-project/goliac/internal/observability"
@@ -112,7 +111,6 @@ func TestCreateRepository(t *testing.T) {
 
 		// Verify the repository was created in our cache
 		repos := remoteImpl.Repositories(ctx)
-		fmt.Println(repos)
 		assert.Contains(t, repos, "forked-repo")
 
 		// Verify the repository properties

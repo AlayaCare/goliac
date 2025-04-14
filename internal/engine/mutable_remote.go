@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 
+	"github.com/goliac-project/goliac/internal/entity"
 	"github.com/gosimple/slug"
 )
 
@@ -40,7 +41,45 @@ func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacRemote) *Mutab
 	rRepositories := make(map[string]*GithubRepository)
 	for k, v := range remote.Repositories(ctx) {
 		ghr := *v
+		ghrulesets := make(map[string]*GithubRuleSet)
+		for k, v := range ghr.RuleSets {
+			ghrulesets[k] = v
+		}
+		ghr.RuleSets = ghrulesets
+		ghbranchprotections := make(map[string]*GithubBranchProtection)
+		for k, v := range v.BranchProtections {
+			ghbranchprotections[k] = v
+		}
+		ghr.BranchProtections = ghbranchprotections
+		ghenv := make(map[string]*GithubEnvironment)
+		for k, v := range v.Environments {
+			ghenv[k] = v
+		}
+		ghr.Environments = ghenv
+		for k, v := range v.RepositoryVariables {
+			ghr.RepositoryVariables[k] = v
+		}
 		rRepositories[k] = &ghr
+		ghVariables := make(map[string]string)
+		for k, v := range v.RepositoryVariables {
+			ghVariables[k] = v
+		}
+		rRepositories[k].RepositoryVariables = ghVariables
+		ghExternalUsers := make(map[string]string)
+		for k, v := range v.ExternalUsers {
+			ghExternalUsers[k] = v
+		}
+		rRepositories[k].ExternalUsers = ghExternalUsers
+		ghInternalUsers := make(map[string]string)
+		for k, v := range v.InternalUsers {
+			ghInternalUsers[k] = v
+		}
+		rRepositories[k].InternalUsers = ghInternalUsers
+		ghProperties := make(map[string]bool)
+		for k, v := range v.BoolProperties {
+			ghProperties[k] = v
+		}
+		rRepositories[k].BoolProperties = ghProperties
 	}
 
 	rTeamRepositories := make(map[string]map[string]*GithubTeamRepo)
@@ -55,7 +94,26 @@ func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacRemote) *Mutab
 
 	rulesets := make(map[string]*GithubRuleSet)
 	for k, v := range remote.RuleSets(ctx) {
-		rulesets[k] = v
+		ghRuleset := *v
+		ghRuleset.Rules = make(map[string]entity.RuleSetParameters)
+		for k, v := range v.Rules {
+			ghRuleset.Rules[k] = v
+		}
+		ghRuleset.Repositories = make([]string, len(v.Repositories))
+		copy(ghRuleset.Repositories, v.Repositories)
+		ghRuleset.OnInclude = make([]string, len(v.OnInclude))
+		copy(ghRuleset.OnInclude, v.OnInclude)
+		ghRuleset.OnExclude = make([]string, len(v.OnExclude))
+		copy(ghRuleset.OnExclude, v.OnExclude)
+		ghRuleset.BypassApps = make(map[string]string)
+		for k, v := range v.BypassApps {
+			ghRuleset.BypassApps[k] = v
+		}
+		ghRuleset.BypassTeams = make(map[string]string)
+		for k, v := range v.BypassTeams {
+			ghRuleset.BypassTeams[k] = v
+		}
+		rulesets[k] = &ghRuleset
 	}
 
 	appids := make(map[string]int)
@@ -285,11 +343,75 @@ func (m *MutableGoliacRemoteImpl) DeleteRepositoryRuleset(reponame string, rules
 }
 
 func (m *MutableGoliacRemoteImpl) AddRuleset(ruleset *GithubRuleSet) {
-
+	m.rulesets[ruleset.Name] = ruleset
 }
 func (m *MutableGoliacRemoteImpl) UpdateRuleset(ruleset *GithubRuleSet) {
-
+	m.rulesets[ruleset.Name] = ruleset
 }
 func (m *MutableGoliacRemoteImpl) DeleteRuleset(rulesetid int) {
+	for _, rs := range m.rulesets {
+		if rs.Id == rulesetid {
+			delete(m.rulesets, rs.Name)
+			break
+		}
+	}
+}
 
+func (m *MutableGoliacRemoteImpl) AddRepositoryEnvironment(repositoryName string, environmentName string) {
+	if r, ok := m.repositories[repositoryName]; ok {
+		r.Environments[environmentName] = &GithubEnvironment{
+			Name:      environmentName,
+			Variables: map[string]string{},
+		}
+	}
+}
+func (m *MutableGoliacRemoteImpl) DeleteRepositoryEnvironment(repositoryName string, environmentName string) {
+	delete(m.repositories[repositoryName].Environments, environmentName)
+}
+
+// Repository variables management
+func (m *MutableGoliacRemoteImpl) AddRepositoryVariable(repositoryName string, variableName string, variableValue string) {
+	if r, ok := m.repositories[repositoryName]; ok {
+		r.RepositoryVariables[variableName] = variableValue
+	}
+}
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryVariable(repositoryName string, variableName string, variableValue string) {
+	if r, ok := m.repositories[repositoryName]; ok {
+		r.RepositoryVariables[variableName] = variableValue
+	}
+}
+
+func (m *MutableGoliacRemoteImpl) DeleteRepositoryVariable(repositoryName string, variableName string) {
+	delete(m.repositories[repositoryName].RepositoryVariables, variableName)
+}
+
+// Environment variables management
+func (m *MutableGoliacRemoteImpl) AddRepositoryEnvironmentVariable(repositoryName string, environmentName string, variableName string, variableValue string) {
+	if r, ok := m.repositories[repositoryName]; ok {
+		if r.Environments[environmentName] == nil {
+			r.Environments[environmentName] = &GithubEnvironment{
+				Name:      environmentName,
+				Variables: map[string]string{},
+			}
+		}
+		r.Environments[environmentName].Variables[variableName] = variableValue
+	}
+}
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryEnvironmentVariable(repositoryName string, environmentName string, variableName string, variableValue string) {
+	if r, ok := m.repositories[repositoryName]; ok {
+		if r.Environments[environmentName] == nil {
+			r.Environments[environmentName] = &GithubEnvironment{
+				Name:      environmentName,
+				Variables: map[string]string{},
+			}
+		}
+		r.Environments[environmentName].Variables[variableName] = variableValue
+	}
+}
+func (m *MutableGoliacRemoteImpl) DeleteRepositoryEnvironmentVariable(repositoryName string, environmentName string, variableName string) {
+	if r, ok := m.repositories[repositoryName]; ok {
+		if r.Environments[environmentName] != nil {
+			delete(r.Environments[environmentName].Variables, variableName)
+		}
+	}
 }

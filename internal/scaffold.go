@@ -396,9 +396,8 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 								Name:      e.Name,
 								Variables: make(map[string]string),
 							}
-							envVariables := rRepo.EnvironmentVariables[e.Name]
-							for k, v := range envVariables {
-								re.Variables[k] = v.Value
+							for k, v := range e.Variables {
+								re.Variables[k] = v
 							}
 							lRepo.Spec.Environments = append(lRepo.Spec.Environments, re)
 						}
@@ -406,7 +405,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 
 					lRepo.Spec.ActionsVariables = make(map[string]string)
 					for n, v := range rRepo.RepositoryVariables {
-						lRepo.Spec.ActionsVariables[n] = v.Value
+						lRepo.Spec.ActionsVariables[n] = v
 					}
 				}
 

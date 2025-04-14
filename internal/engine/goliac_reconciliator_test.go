@@ -153,23 +153,31 @@ type ReconciliatorListenerRecorder struct {
 	TeamParentUpdated map[string]*int
 	TeamDeleted       map[string]bool
 
-	RepositoryCreated                 map[string]bool
-	RepositoryTeamAdded               map[string][]string
-	RepositoryTeamUpdated             map[string][]string
-	RepositoryTeamRemoved             map[string][]string
-	RepositoriesDeleted               map[string]bool
-	RepositoriesRenamed               map[string]bool
-	RepositoriesUpdateProperty        map[string]bool
-	RepositoriesUpdateArchived        map[string]bool
-	RepositoriesSetExternalUser       map[string]string
-	RepositoriesRemoveExternalUser    map[string]bool
-	RepositoriesRemoveInternalUser    map[string]bool
-	RepositoryRuleSetCreated          map[string]map[string]*GithubRuleSet
-	RepositoryRuleSetUpdated          map[string]map[string]*GithubRuleSet
-	RepositoryRuleSetDeleted          map[string][]int
-	RepositoryBranchProtectionCreated map[string]map[string]*GithubBranchProtection
-	RepositoryBranchProtectionUpdated map[string]map[string]*GithubBranchProtection
-	RepositoryBranchProtectionDeleted map[string]map[string]*GithubBranchProtection
+	RepositoryCreated                    map[string]bool
+	RepositoryTeamAdded                  map[string][]string
+	RepositoryTeamUpdated                map[string][]string
+	RepositoryTeamRemoved                map[string][]string
+	RepositoriesDeleted                  map[string]bool
+	RepositoriesRenamed                  map[string]bool
+	RepositoriesUpdateProperty           map[string]bool
+	RepositoriesUpdateArchived           map[string]bool
+	RepositoriesSetExternalUser          map[string]string
+	RepositoriesRemoveExternalUser       map[string]bool
+	RepositoriesRemoveInternalUser       map[string]bool
+	RepositoryRuleSetCreated             map[string]map[string]*GithubRuleSet
+	RepositoryRuleSetUpdated             map[string]map[string]*GithubRuleSet
+	RepositoryRuleSetDeleted             map[string][]int
+	RepositoryBranchProtectionCreated    map[string]map[string]*GithubBranchProtection
+	RepositoryBranchProtectionUpdated    map[string]map[string]*GithubBranchProtection
+	RepositoryBranchProtectionDeleted    map[string]map[string]*GithubBranchProtection
+	RepositoryEnvironmentCreated         map[string]string
+	RepositoryEnvironmentDeleted         map[string]string
+	RepositoryVariableCreated            map[string]string
+	RepositoryVariableUpdated            map[string]string
+	RepositoryVariableDeleted            map[string]string
+	RepositoryEnvironmentVariableCreated map[string]string
+	RepositoryEnvironmentVariableUpdated map[string]string
+	RepositoryEnvironmentVariableDeleted map[string]string
 
 	RuleSetCreated map[string]*GithubRuleSet
 	RuleSetUpdated map[string]*GithubRuleSet
@@ -178,34 +186,42 @@ type ReconciliatorListenerRecorder struct {
 
 func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 	r := ReconciliatorListenerRecorder{
-		UsersCreated:                      make(map[string]string),
-		UsersRemoved:                      make(map[string]string),
-		TeamsCreated:                      make(map[string][]string),
-		TeamMemberAdded:                   make(map[string][]string),
-		TeamMemberRemoved:                 make(map[string][]string),
-		TeamMemberUpdated:                 make(map[string][]string),
-		TeamParentUpdated:                 make(map[string]*int),
-		TeamDeleted:                       make(map[string]bool),
-		RepositoryCreated:                 make(map[string]bool),
-		RepositoryTeamAdded:               make(map[string][]string),
-		RepositoryTeamUpdated:             make(map[string][]string),
-		RepositoryTeamRemoved:             make(map[string][]string),
-		RepositoriesDeleted:               make(map[string]bool),
-		RepositoriesRenamed:               make(map[string]bool),
-		RepositoriesUpdateProperty:        make(map[string]bool),
-		RepositoriesUpdateArchived:        make(map[string]bool),
-		RepositoriesSetExternalUser:       make(map[string]string),
-		RepositoriesRemoveExternalUser:    make(map[string]bool),
-		RepositoriesRemoveInternalUser:    make(map[string]bool),
-		RepositoryRuleSetCreated:          make(map[string]map[string]*GithubRuleSet),
-		RepositoryRuleSetUpdated:          make(map[string]map[string]*GithubRuleSet),
-		RepositoryRuleSetDeleted:          make(map[string][]int, 0),
-		RepositoryBranchProtectionCreated: make(map[string]map[string]*GithubBranchProtection),
-		RepositoryBranchProtectionUpdated: make(map[string]map[string]*GithubBranchProtection),
-		RepositoryBranchProtectionDeleted: make(map[string]map[string]*GithubBranchProtection),
-		RuleSetCreated:                    make(map[string]*GithubRuleSet),
-		RuleSetUpdated:                    make(map[string]*GithubRuleSet),
-		RuleSetDeleted:                    make([]int, 0),
+		UsersCreated:                         make(map[string]string),
+		UsersRemoved:                         make(map[string]string),
+		TeamsCreated:                         make(map[string][]string),
+		TeamMemberAdded:                      make(map[string][]string),
+		TeamMemberRemoved:                    make(map[string][]string),
+		TeamMemberUpdated:                    make(map[string][]string),
+		TeamParentUpdated:                    make(map[string]*int),
+		TeamDeleted:                          make(map[string]bool),
+		RepositoryCreated:                    make(map[string]bool),
+		RepositoryTeamAdded:                  make(map[string][]string),
+		RepositoryTeamUpdated:                make(map[string][]string),
+		RepositoryTeamRemoved:                make(map[string][]string),
+		RepositoriesDeleted:                  make(map[string]bool),
+		RepositoriesRenamed:                  make(map[string]bool),
+		RepositoriesUpdateProperty:           make(map[string]bool),
+		RepositoriesUpdateArchived:           make(map[string]bool),
+		RepositoriesSetExternalUser:          make(map[string]string),
+		RepositoriesRemoveExternalUser:       make(map[string]bool),
+		RepositoriesRemoveInternalUser:       make(map[string]bool),
+		RepositoryRuleSetCreated:             make(map[string]map[string]*GithubRuleSet),
+		RepositoryRuleSetUpdated:             make(map[string]map[string]*GithubRuleSet),
+		RepositoryRuleSetDeleted:             make(map[string][]int, 0),
+		RepositoryBranchProtectionCreated:    make(map[string]map[string]*GithubBranchProtection),
+		RepositoryBranchProtectionUpdated:    make(map[string]map[string]*GithubBranchProtection),
+		RepositoryBranchProtectionDeleted:    make(map[string]map[string]*GithubBranchProtection),
+		RuleSetCreated:                       make(map[string]*GithubRuleSet),
+		RuleSetUpdated:                       make(map[string]*GithubRuleSet),
+		RuleSetDeleted:                       make([]int, 0),
+		RepositoryEnvironmentCreated:         make(map[string]string),
+		RepositoryEnvironmentDeleted:         make(map[string]string),
+		RepositoryVariableCreated:            make(map[string]string),
+		RepositoryVariableUpdated:            make(map[string]string),
+		RepositoryVariableDeleted:            make(map[string]string),
+		RepositoryEnvironmentVariableCreated: make(map[string]string),
+		RepositoryEnvironmentVariableUpdated: make(map[string]string),
+		RepositoryEnvironmentVariableDeleted: make(map[string]string),
 	}
 	return &r
 }
@@ -319,6 +335,30 @@ func (r *ReconciliatorListenerRecorder) UpdateRuleset(ctx context.Context, error
 }
 func (r *ReconciliatorListenerRecorder) DeleteRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, rulesetid int) {
 	r.RuleSetDeleted = append(r.RuleSetDeleted, rulesetid)
+}
+func (r *ReconciliatorListenerRecorder) AddRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+	r.RepositoryEnvironmentCreated[repositoryName] = environmentName
+}
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+	r.RepositoryEnvironmentDeleted[repositoryName] = environmentName
+}
+func (r *ReconciliatorListenerRecorder) AddRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+	r.RepositoryVariableCreated[repositoryName] = variableName
+}
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+	r.RepositoryVariableUpdated[repositoryName] = variableName
+}
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string) {
+	r.RepositoryVariableDeleted[repositoryName] = variableName
+}
+func (r *ReconciliatorListenerRecorder) AddRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+	r.RepositoryEnvironmentVariableCreated[repositoryName] = environmentName
+}
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+	r.RepositoryEnvironmentVariableUpdated[repositoryName] = environmentName
+}
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
+	r.RepositoryEnvironmentVariableDeleted[repositoryName] = environmentName
 }
 func (r *ReconciliatorListenerRecorder) Begin(dryrun bool) {
 }
@@ -2393,7 +2433,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		assert.Equal(t, 1, len(recorder.RuleSetDeleted))
 	})
 
-	t.Run("happy path: same bypass team inn ruleset in goliac conf", func(t *testing.T) {
+	t.Run("happy path: same bypass team in ruleset in goliac conf", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 		repoconf := config.RepositoryConfig{}
 
@@ -2826,5 +2866,172 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 		assert.Equal(t, 1, len(recorder.RepositoryBranchProtectionCreated["myrepo"]))
 		assert.Equal(t, 0, len(recorder.RepositoryBranchProtectionUpdated["myrepo"]))
 		assert.Equal(t, 0, len(recorder.RepositoryBranchProtectionDeleted["myrepo"]))
+	})
+}
+
+func TestReconciliationRepositoryEnvironments(t *testing.T) {
+	t.Run("happy path: add new environment to repository", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		// Create a repository with a new environment
+		repo := &entity.Repository{}
+		repo.Name = "test-repo"
+		repo.Spec.Environments = []entity.RepositoryEnvironment{
+			{
+				Name: "production",
+				Variables: map[string]string{
+					"DB_URL": "prod-db-url",
+				},
+			},
+		}
+		local.repos["test-repo"] = repo
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		// Add the repository to remote without any environments
+		remoteRepo := &GithubRepository{
+			Name:           "test-repo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+			Environments:   map[string]*GithubEnvironment{},
+		}
+		remote.repos["test-repo"] = remoteRepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		// Verify environment was added
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, "production", recorder.RepositoryEnvironmentCreated["test-repo"])
+	})
+
+	t.Run("happy path: remove environment from repository", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		// Create a repository without any environments
+		repo := &entity.Repository{}
+		repo.Name = "test-repo"
+		repo.Spec.Environments = []entity.RepositoryEnvironment{}
+		local.repos["test-repo"] = repo
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		// Add the repository to remote with a production environment
+		remoteRepo := &GithubRepository{
+			Name:           "test-repo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+			Environments: map[string]*GithubEnvironment{
+				"production": {
+					Name: "production",
+					Variables: map[string]string{
+						"DB_URL": "prod-db-url",
+					},
+				},
+			},
+		}
+		remote.repos["test-repo"] = remoteRepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		// Verify environment was removed
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, "production", recorder.RepositoryEnvironmentDeleted["test-repo"])
+	})
+
+	t.Run("happy path: update environment variables", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		// Create a repository with updated environment variables
+		repo := &entity.Repository{}
+		repo.Name = "test-repo"
+		repo.Spec.Environments = []entity.RepositoryEnvironment{
+			{
+				Name: "production",
+				Variables: map[string]string{
+					"DB_URL":  "new-prod-db-url",
+					"API_KEY": "new-api-key",
+				},
+			},
+		}
+		local.repos["test-repo"] = repo
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		// Add the repository to remote with old environment variables
+		remoteRepo := &GithubRepository{
+			Name:           "test-repo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+			Environments: map[string]*GithubEnvironment{
+				"production": {
+					Name: "production",
+					Variables: map[string]string{
+						"DB_URL": "old-prod-db-url",
+					},
+				},
+			},
+		}
+		remote.repos["test-repo"] = remoteRepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		// Verify environment variables were updated
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, "production", recorder.RepositoryEnvironmentVariableUpdated["test-repo"])
 	})
 }

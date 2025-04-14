@@ -109,17 +109,11 @@ func TestLoadEnvironmentsPerRepository(t *testing.T) {
 		// Verify environments were loaded correctly
 		prodEnv, exists := envMap["production"]
 		assert.True(t, exists)
-		assert.Equal(t, 1, prodEnv.Id)
 		assert.Equal(t, "production", prodEnv.Name)
-		assert.Equal(t, "123", prodEnv.NodeId)
-		assert.Equal(t, 1, len(prodEnv.ProtectionRules))
 
 		stagingEnv, exists := envMap["staging"]
 		assert.True(t, exists)
-		assert.Equal(t, 2, stagingEnv.Id)
 		assert.Equal(t, "staging", stagingEnv.Name)
-		assert.Equal(t, "456", stagingEnv.NodeId)
-		assert.Empty(t, stagingEnv.ProtectionRules)
 
 		// Verify API call was made correctly
 		assert.Equal(t, "/repos/myorg/test-repo/environments", mockClient.lastEndpoint)
@@ -488,8 +482,8 @@ func TestLoadEnvironmentVariablesPerRepository(t *testing.T) {
 			Id:   123,
 			Environments: map[string]*GithubEnvironment{
 				"production": {
-					Id:   1,
-					Name: "production",
+					Name:      "production",
+					Variables: map[string]string{},
 				},
 			},
 		}
@@ -528,8 +522,8 @@ func TestLoadEnvironmentVariablesPerRepository(t *testing.T) {
 			Id:   123,
 			Environments: map[string]*GithubEnvironment{
 				"production": {
-					Id:   1,
-					Name: "production",
+					Name:      "production",
+					Variables: map[string]string{},
 				},
 			},
 		}
@@ -577,8 +571,8 @@ func TestLoadEnvironmentVariablesPerRepository(t *testing.T) {
 			Id:   123,
 			Environments: map[string]*GithubEnvironment{
 				"production": {
-					Id:   1,
-					Name: "production",
+					Name:      "production",
+					Variables: map[string]string{},
 				},
 			},
 		}
@@ -605,8 +599,8 @@ func TestLoadEnvironmentVariablesPerRepository(t *testing.T) {
 			Id:   123,
 			Environments: map[string]*GithubEnvironment{
 				"production": {
-					Id:   1,
-					Name: "production",
+					Name:      "production",
+					Variables: map[string]string{},
 				},
 			},
 		}
@@ -636,8 +630,8 @@ func TestLoadEnvironmentVariablesPerRepository(t *testing.T) {
 			Id:   123,
 			Environments: map[string]*GithubEnvironment{
 				"production": {
-					Id:   1,
-					Name: "production",
+					Name:      "production",
+					Variables: map[string]string{},
 				},
 			},
 		}
