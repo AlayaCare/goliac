@@ -676,7 +676,38 @@ func (e *GoliacRemoteExecutorMock) EnvironmentSecretsPerRepository(ctx context.C
 func (e *GoliacRemoteExecutorMock) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*engine.GithubVariable, error) {
 	return nil, nil
 }
-
+func (e *GoliacRemoteExecutorMock) AddRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+	fmt.Println("*** AddRepositoryEnvironment", repositoryName, environmentName)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) DeleteRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+	fmt.Println("*** DeleteRepositoryEnvironment", repositoryName, environmentName)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) AddRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+	fmt.Println("*** AddRepositoryVariable", repositoryName, variableName, variableValue)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+	fmt.Println("*** UpdateRepositoryVariable", repositoryName, variableName, variableValue)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) DeleteRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string) {
+	fmt.Println("*** DeleteRepositoryVariable", repositoryName, variableName)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) AddRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+	fmt.Println("*** AddRepositoryEnvironmentVariable", repositoryName, environmentName, variableName, variableValue)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+	fmt.Println("*** UpdateRepositoryEnvironmentVariable", repositoryName, environmentName, variableName, variableValue)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) RemoveRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
+	fmt.Println("*** RemoveRepositoryEnvironmentVariable", repositoryName, environmentName, variableName)
+	e.nbChanges++
+}
 func (e *GoliacRemoteExecutorMock) Begin(dryrun bool) {
 }
 func (e *GoliacRemoteExecutorMock) Rollback(dryrun bool, err error) {

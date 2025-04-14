@@ -153,23 +153,31 @@ type ReconciliatorListenerRecorder struct {
 	TeamParentUpdated map[string]*int
 	TeamDeleted       map[string]bool
 
-	RepositoryCreated                 map[string]bool
-	RepositoryTeamAdded               map[string][]string
-	RepositoryTeamUpdated             map[string][]string
-	RepositoryTeamRemoved             map[string][]string
-	RepositoriesDeleted               map[string]bool
-	RepositoriesRenamed               map[string]bool
-	RepositoriesUpdateProperty        map[string]bool
-	RepositoriesUpdateArchived        map[string]bool
-	RepositoriesSetExternalUser       map[string]string
-	RepositoriesRemoveExternalUser    map[string]bool
-	RepositoriesRemoveInternalUser    map[string]bool
-	RepositoryRuleSetCreated          map[string]map[string]*GithubRuleSet
-	RepositoryRuleSetUpdated          map[string]map[string]*GithubRuleSet
-	RepositoryRuleSetDeleted          map[string][]int
-	RepositoryBranchProtectionCreated map[string]map[string]*GithubBranchProtection
-	RepositoryBranchProtectionUpdated map[string]map[string]*GithubBranchProtection
-	RepositoryBranchProtectionDeleted map[string]map[string]*GithubBranchProtection
+	RepositoryCreated                    map[string]bool
+	RepositoryTeamAdded                  map[string][]string
+	RepositoryTeamUpdated                map[string][]string
+	RepositoryTeamRemoved                map[string][]string
+	RepositoriesDeleted                  map[string]bool
+	RepositoriesRenamed                  map[string]bool
+	RepositoriesUpdateProperty           map[string]bool
+	RepositoriesUpdateArchived           map[string]bool
+	RepositoriesSetExternalUser          map[string]string
+	RepositoriesRemoveExternalUser       map[string]bool
+	RepositoriesRemoveInternalUser       map[string]bool
+	RepositoryRuleSetCreated             map[string]map[string]*GithubRuleSet
+	RepositoryRuleSetUpdated             map[string]map[string]*GithubRuleSet
+	RepositoryRuleSetDeleted             map[string][]int
+	RepositoryBranchProtectionCreated    map[string]map[string]*GithubBranchProtection
+	RepositoryBranchProtectionUpdated    map[string]map[string]*GithubBranchProtection
+	RepositoryBranchProtectionDeleted    map[string]map[string]*GithubBranchProtection
+	RepositoryEnvironmentCreated         map[string]string
+	RepositoryEnvironmentDeleted         map[string]string
+	RepositoryVariableCreated            map[string]string
+	RepositoryVariableUpdated            map[string]string
+	RepositoryVariableDeleted            map[string]string
+	RepositoryEnvironmentVariableCreated map[string]string
+	RepositoryEnvironmentVariableUpdated map[string]string
+	RepositoryEnvironmentVariableDeleted map[string]string
 
 	RuleSetCreated map[string]*GithubRuleSet
 	RuleSetUpdated map[string]*GithubRuleSet
@@ -178,34 +186,42 @@ type ReconciliatorListenerRecorder struct {
 
 func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 	r := ReconciliatorListenerRecorder{
-		UsersCreated:                      make(map[string]string),
-		UsersRemoved:                      make(map[string]string),
-		TeamsCreated:                      make(map[string][]string),
-		TeamMemberAdded:                   make(map[string][]string),
-		TeamMemberRemoved:                 make(map[string][]string),
-		TeamMemberUpdated:                 make(map[string][]string),
-		TeamParentUpdated:                 make(map[string]*int),
-		TeamDeleted:                       make(map[string]bool),
-		RepositoryCreated:                 make(map[string]bool),
-		RepositoryTeamAdded:               make(map[string][]string),
-		RepositoryTeamUpdated:             make(map[string][]string),
-		RepositoryTeamRemoved:             make(map[string][]string),
-		RepositoriesDeleted:               make(map[string]bool),
-		RepositoriesRenamed:               make(map[string]bool),
-		RepositoriesUpdateProperty:        make(map[string]bool),
-		RepositoriesUpdateArchived:        make(map[string]bool),
-		RepositoriesSetExternalUser:       make(map[string]string),
-		RepositoriesRemoveExternalUser:    make(map[string]bool),
-		RepositoriesRemoveInternalUser:    make(map[string]bool),
-		RepositoryRuleSetCreated:          make(map[string]map[string]*GithubRuleSet),
-		RepositoryRuleSetUpdated:          make(map[string]map[string]*GithubRuleSet),
-		RepositoryRuleSetDeleted:          make(map[string][]int, 0),
-		RepositoryBranchProtectionCreated: make(map[string]map[string]*GithubBranchProtection),
-		RepositoryBranchProtectionUpdated: make(map[string]map[string]*GithubBranchProtection),
-		RepositoryBranchProtectionDeleted: make(map[string]map[string]*GithubBranchProtection),
-		RuleSetCreated:                    make(map[string]*GithubRuleSet),
-		RuleSetUpdated:                    make(map[string]*GithubRuleSet),
-		RuleSetDeleted:                    make([]int, 0),
+		UsersCreated:                         make(map[string]string),
+		UsersRemoved:                         make(map[string]string),
+		TeamsCreated:                         make(map[string][]string),
+		TeamMemberAdded:                      make(map[string][]string),
+		TeamMemberRemoved:                    make(map[string][]string),
+		TeamMemberUpdated:                    make(map[string][]string),
+		TeamParentUpdated:                    make(map[string]*int),
+		TeamDeleted:                          make(map[string]bool),
+		RepositoryCreated:                    make(map[string]bool),
+		RepositoryTeamAdded:                  make(map[string][]string),
+		RepositoryTeamUpdated:                make(map[string][]string),
+		RepositoryTeamRemoved:                make(map[string][]string),
+		RepositoriesDeleted:                  make(map[string]bool),
+		RepositoriesRenamed:                  make(map[string]bool),
+		RepositoriesUpdateProperty:           make(map[string]bool),
+		RepositoriesUpdateArchived:           make(map[string]bool),
+		RepositoriesSetExternalUser:          make(map[string]string),
+		RepositoriesRemoveExternalUser:       make(map[string]bool),
+		RepositoriesRemoveInternalUser:       make(map[string]bool),
+		RepositoryRuleSetCreated:             make(map[string]map[string]*GithubRuleSet),
+		RepositoryRuleSetUpdated:             make(map[string]map[string]*GithubRuleSet),
+		RepositoryRuleSetDeleted:             make(map[string][]int, 0),
+		RepositoryBranchProtectionCreated:    make(map[string]map[string]*GithubBranchProtection),
+		RepositoryBranchProtectionUpdated:    make(map[string]map[string]*GithubBranchProtection),
+		RepositoryBranchProtectionDeleted:    make(map[string]map[string]*GithubBranchProtection),
+		RuleSetCreated:                       make(map[string]*GithubRuleSet),
+		RuleSetUpdated:                       make(map[string]*GithubRuleSet),
+		RuleSetDeleted:                       make([]int, 0),
+		RepositoryEnvironmentCreated:         make(map[string]string),
+		RepositoryEnvironmentDeleted:         make(map[string]string),
+		RepositoryVariableCreated:            make(map[string]string),
+		RepositoryVariableUpdated:            make(map[string]string),
+		RepositoryVariableDeleted:            make(map[string]string),
+		RepositoryEnvironmentVariableCreated: make(map[string]string),
+		RepositoryEnvironmentVariableUpdated: make(map[string]string),
+		RepositoryEnvironmentVariableDeleted: make(map[string]string),
 	}
 	return &r
 }
@@ -319,6 +335,30 @@ func (r *ReconciliatorListenerRecorder) UpdateRuleset(ctx context.Context, error
 }
 func (r *ReconciliatorListenerRecorder) DeleteRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, rulesetid int) {
 	r.RuleSetDeleted = append(r.RuleSetDeleted, rulesetid)
+}
+func (r *ReconciliatorListenerRecorder) AddRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+	r.RepositoryEnvironmentCreated[repositoryName] = environmentName
+}
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+	r.RepositoryEnvironmentDeleted[repositoryName] = environmentName
+}
+func (r *ReconciliatorListenerRecorder) AddRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+	r.RepositoryVariableCreated[repositoryName] = variableName
+}
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+	r.RepositoryVariableUpdated[repositoryName] = variableName
+}
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string) {
+	r.RepositoryVariableDeleted[repositoryName] = variableName
+}
+func (r *ReconciliatorListenerRecorder) AddRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+	r.RepositoryEnvironmentVariableCreated[repositoryName] = environmentName
+}
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+	r.RepositoryEnvironmentVariableUpdated[repositoryName] = environmentName
+}
+func (r *ReconciliatorListenerRecorder) RemoveRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
+	r.RepositoryEnvironmentVariableDeleted[repositoryName] = environmentName
 }
 func (r *ReconciliatorListenerRecorder) Begin(dryrun bool) {
 }

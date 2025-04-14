@@ -146,7 +146,7 @@ type GoliacRemoteImpl struct {
 	isEnterprise          bool
 	feedback              observability.RemoteObservability
 	loadTeamsMutex        sync.Mutex
-	actionMutex           sync.Mutex
+	actionMutex           sync.Mutex // used when an action (like a REST CALL to create a repository) is launched while a load is in progress
 	configGithubOrg       string
 	manageGithubVariables bool
 }
@@ -3450,6 +3450,336 @@ func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, errorCollector 
 		}
 	}
 }
+
+// AddRepositoryEnvironment adds a new environment to a repository
+func (g *GoliacRemoteImpl) AddRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+	// Check if repository exists
+	repo, exists := g.repositories[repositoryName]
+	if !exists {
+		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+
+	// Check if environment already exists
+	if _, exists := repo.Environments[environmentName]; exists {
+		errorCollector.AddError(fmt.Errorf("environment %s already exists in repository %s", environmentName, repositoryName))
+		return
+	}
+
+	if !dryrun {
+
+		// Call GitHub API to create environment
+		// https://docs.github.com/en/rest/deployments/environments?apiVersion=2022-11-28#create-or-update-an-environment
+		endpoint := fmt.Sprintf("/repos/%s/%s/environments/%s", g.configGithubOrg, repositoryName, environmentName)
+
+		_, err := g.client.CallRestAPI(ctx, endpoint, "", "PUT", nil, nil)
+		if err != nil {
+			errorCollector.AddError(fmt.Errorf("failed to create environment %s in repository %s: %v", environmentName, repositoryName, err))
+			return
+		}
+	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	repo.Environments[environmentName] = &GithubEnvironment{
+		Name: environmentName,
+	}
+}
+
+// DeleteRepositoryEnvironment deletes an environment from a repository
+func (g *GoliacRemoteImpl) DeleteRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+	// Check if repository exists
+	repo, exists := g.repositories[repositoryName]
+	if !exists {
+		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+
+	// Check if environment exists
+	if _, exists := repo.Environments[environmentName]; !exists {
+		errorCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
+		return
+	}
+
+	if !dryrun {
+
+		// Call GitHub API to delete environment
+		// https://docs.github.com/en/rest/deployments/environments?apiVersion=2022-11-28#delete-an-environment
+		endpoint := fmt.Sprintf("/repos/%s/%s/environments/%s", g.configGithubOrg, repositoryName, environmentName)
+
+		_, err := g.client.CallRestAPI(ctx, endpoint, "", "DELETE", nil, nil)
+		if err != nil {
+			errorCollector.AddError(fmt.Errorf("failed to delete environment %s from repository %s: %v", environmentName, repositoryName, err))
+			return
+		}
+	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	delete(repo.Environments, environmentName)
+}
+
+// AddRepositoryVariable adds a new variable to a repository
+func (g *GoliacRemoteImpl) AddRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+	// Check if repository exists
+	repo, exists := g.repositories[repositoryName]
+	if !exists {
+		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+
+	// Check if variable already exists
+	if _, exists := repo.RepositoryVariables[variableName]; exists {
+		errorCollector.AddError(fmt.Errorf("variable %s already exists in repository %s", variableName, repositoryName))
+		return
+	}
+
+	if !dryrun {
+
+		// Call GitHub API to create variable
+		// https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#create-a-repository-variable
+		endpoint := fmt.Sprintf("/repos/%s/%s/actions/variables", g.configGithubOrg, repositoryName)
+
+		body := map[string]interface{}{
+			"name":  variableName,
+			"value": variableValue,
+		}
+
+		_, err := g.client.CallRestAPI(ctx, endpoint, "", "POST", body, nil)
+		if err != nil {
+			errorCollector.AddError(fmt.Errorf("failed to create variable %s in repository %s: %v", variableName, repositoryName, err))
+			return
+		}
+	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	repo.RepositoryVariables[variableName] = &GithubVariable{
+		Name:  variableName,
+		Value: variableValue,
+	}
+}
+
+// UpdateRepositoryVariable updates a variable's value in a repository
+func (g *GoliacRemoteImpl) UpdateRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+	// Check if repository exists
+	repo, exists := g.repositories[repositoryName]
+	if !exists {
+		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+
+	// Check if variable exists
+	if _, exists := repo.RepositoryVariables[variableName]; !exists {
+		errorCollector.AddError(fmt.Errorf("variable %s not found in repository %s", variableName, repositoryName))
+		return
+	}
+
+	if !dryrun {
+
+		// Call GitHub API to update variable
+		// https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#update-a-repository-variable
+		endpoint := fmt.Sprintf("/repos/%s/%s/actions/variables/%s", g.configGithubOrg, repositoryName, variableName)
+
+		body := map[string]interface{}{
+			"name":  variableName,
+			"value": variableValue,
+		}
+
+		_, err := g.client.CallRestAPI(ctx, endpoint, "", "PATCH", body, nil)
+		if err != nil {
+			errorCollector.AddError(fmt.Errorf("failed to update variable %s in repository %s: %v", variableName, repositoryName, err))
+			return
+		}
+	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	repo.RepositoryVariables[variableName].Value = variableValue
+}
+
+// DeleteRepositoryVariable deletes a variable from a repository
+func (g *GoliacRemoteImpl) DeleteRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string) {
+	// Check if repository exists
+	repo, exists := g.repositories[repositoryName]
+	if !exists {
+		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+
+	// Check if variable exists
+	if _, exists := repo.RepositoryVariables[variableName]; !exists {
+		errorCollector.AddError(fmt.Errorf("variable %s not found in repository %s", variableName, repositoryName))
+		return
+	}
+
+	if !dryrun {
+
+		// Call GitHub API to delete variable
+		// https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#delete-a-repository-variable
+		endpoint := fmt.Sprintf("/repos/%s/%s/actions/variables/%s", g.configGithubOrg, repositoryName, variableName)
+
+		_, err := g.client.CallRestAPI(ctx, endpoint, "", "DELETE", nil, nil)
+		if err != nil {
+			errorCollector.AddError(fmt.Errorf("failed to delete variable %s from repository %s: %v", variableName, repositoryName, err))
+			return
+		}
+	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	delete(repo.RepositoryVariables, variableName)
+}
+
+// AddRepositoryEnvironmentVariable adds a new variable to a repository environment
+func (g *GoliacRemoteImpl) AddRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+	// Check if repository exists
+	repo, exists := g.repositories[repositoryName]
+	if !exists {
+		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+
+	// Check if environment exists
+	if _, exists := repo.Environments[environmentName]; !exists {
+		errorCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
+		return
+	}
+
+	// Check if variable already exists
+	if _, exists := repo.EnvironmentVariables[environmentName][variableName]; exists {
+		errorCollector.AddError(fmt.Errorf("variable %s already exists in environment %s of repository %s", variableName, environmentName, repositoryName))
+		return
+	}
+
+	if !dryrun {
+
+		// Call GitHub API to create variable
+		// https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#create-an-environment-variable
+		endpoint := fmt.Sprintf("/repos/%s/%s/environments/%s/variables", g.configGithubOrg, repositoryName, environmentName)
+
+		body := map[string]interface{}{
+			"name":  variableName,
+			"value": variableValue,
+		}
+
+		_, err := g.client.CallRestAPI(ctx, endpoint, "", "POST", body, nil)
+		if err != nil {
+			errorCollector.AddError(fmt.Errorf("failed to create variable %s in environment %s of repository %s: %v", variableName, environmentName, repositoryName, err))
+			return
+		}
+	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	if repo.EnvironmentVariables[environmentName] == nil {
+		repo.EnvironmentVariables[environmentName] = make(map[string]*GithubVariable)
+	}
+	repo.EnvironmentVariables[environmentName][variableName] = &GithubVariable{
+		Name:  variableName,
+		Value: variableValue,
+	}
+}
+
+// UpdateRepositoryEnvironmentVariable updates a variable's value in a repository environment
+func (g *GoliacRemoteImpl) UpdateRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+	// Check if repository exists
+	repo, exists := g.repositories[repositoryName]
+	if !exists {
+		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+
+	// Check if environment exists
+	if _, exists := repo.Environments[environmentName]; !exists {
+		errorCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
+		return
+	}
+
+	// Check if variable exists
+	if _, exists := repo.EnvironmentVariables[environmentName][variableName]; !exists {
+		errorCollector.AddError(fmt.Errorf("variable %s not found in environment %s of repository %s", variableName, environmentName, repositoryName))
+		return
+	}
+
+	if !dryrun {
+
+		// Call GitHub API to update variable
+		// https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#update-an-environment-variable
+		endpoint := fmt.Sprintf("/repos/%s/%s/environments/%s/variables/%s", g.configGithubOrg, repositoryName, environmentName, variableName)
+
+		body := map[string]interface{}{
+			"name":  variableName,
+			"value": variableValue,
+		}
+
+		_, err := g.client.CallRestAPI(ctx, endpoint, "", "PATCH", body, nil)
+		if err != nil {
+			errorCollector.AddError(fmt.Errorf("failed to update variable %s in environment %s of repository %s: %v", variableName, environmentName, repositoryName, err))
+			return
+		}
+	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	repo.EnvironmentVariables[environmentName][variableName].Value = variableValue
+}
+
+// RemoveRepositoryEnvironmentVariable removes a variable from a repository environment
+func (g *GoliacRemoteImpl) RemoveRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
+	// Check if repository exists
+	repo, exists := g.repositories[repositoryName]
+	if !exists {
+		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+
+	// Check if environment exists
+	if _, exists := repo.Environments[environmentName]; !exists {
+		errorCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
+		return
+	}
+
+	// Check if variable exists
+	if _, exists := repo.EnvironmentVariables[environmentName][variableName]; !exists {
+		errorCollector.AddError(fmt.Errorf("variable %s not found in environment %s of repository %s", variableName, environmentName, repositoryName))
+		return
+	}
+
+	if !dryrun {
+
+		// Call GitHub API to delete variable
+		// https://docs.github.com/en/rest/actions/variables?apiVersion=2022-11-28#delete-an-environment-variable
+		endpoint := fmt.Sprintf("/repos/%s/%s/environments/%s/variables/%s", g.configGithubOrg, repositoryName, environmentName, variableName)
+
+		_, err := g.client.CallRestAPI(ctx, endpoint, "", "DELETE", nil, nil)
+		if err != nil {
+			errorCollector.AddError(fmt.Errorf("failed to remove variable %s from environment %s in repository %s: %v", variableName, environmentName, repositoryName, err))
+			return
+		}
+	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	delete(repo.EnvironmentVariables[environmentName], variableName)
+}
+
 func (g *GoliacRemoteImpl) Begin(dryrun bool) {
 }
 func (g *GoliacRemoteImpl) Rollback(dryrun bool, err error) {
