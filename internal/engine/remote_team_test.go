@@ -3,7 +3,6 @@ package engine
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/goliac-project/goliac/internal/observability"
@@ -88,7 +87,6 @@ func TestCreateTeam(t *testing.T) {
 			"description": "Test team description",
 			"privacy":     "closed",
 		}
-		fmt.Println(mockClient.lastBody)
 		assert.True(t, utils.DeepEqualUnordered(expectedBody, mockClient.lastBody))
 
 		// Verify the team was added to the cache
@@ -120,7 +118,6 @@ func TestCreateTeam(t *testing.T) {
 		expectedBody := map[string]interface{}{
 			"role": "member",
 		}
-		fmt.Println(mockClient.lastBody)
 		assert.True(t, utils.DeepEqualUnordered(expectedBody, mockClient.lastBody))
 
 		// Verify the team was added to the cache

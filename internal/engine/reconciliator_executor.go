@@ -50,7 +50,7 @@ type ReconciliatorExecutor interface {
 	// Environment variables management
 	AddRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string)
 	UpdateRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string)
-	RemoveRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string)
+	DeleteRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string)
 
 	Begin(dryrun bool)
 	Rollback(dryrun bool, err error)

@@ -363,8 +363,8 @@ func (g *GithubBatchExecutor) UpdateRepositoryEnvironmentVariable(ctx context.Co
 	})
 }
 
-func (g *GithubBatchExecutor) RemoveRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, environment string, variable string) {
-	g.commands = append(g.commands, &GithubCommandRemoveRepositoryEnvironmentVariable{
+func (g *GithubBatchExecutor) DeleteRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, environment string, variable string) {
+	g.commands = append(g.commands, &GithubCommandDeleteRepositoryEnvironmentVariable{
 		client:      g.client,
 		dryrun:      dryrun,
 		reponame:    reponame,
@@ -778,7 +778,7 @@ func (g *GithubCommandUpdateRepositoryEnvironmentVariable) Apply(ctx context.Con
 	g.client.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, g.dryrun, g.reponame, g.environment, g.variable, g.value)
 }
 
-type GithubCommandRemoveRepositoryEnvironmentVariable struct {
+type GithubCommandDeleteRepositoryEnvironmentVariable struct {
 	client      engine.ReconciliatorExecutor
 	dryrun      bool
 	reponame    string
@@ -786,6 +786,6 @@ type GithubCommandRemoveRepositoryEnvironmentVariable struct {
 	variable    string
 }
 
-func (g *GithubCommandRemoveRepositoryEnvironmentVariable) Apply(ctx context.Context, errorCollector *observability.ErrorCollection) {
-	g.client.RemoveRepositoryEnvironmentVariable(ctx, errorCollector, g.dryrun, g.reponame, g.environment, g.variable)
+func (g *GithubCommandDeleteRepositoryEnvironmentVariable) Apply(ctx context.Context, errorCollector *observability.ErrorCollection) {
+	g.client.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, g.dryrun, g.reponame, g.environment, g.variable)
 }

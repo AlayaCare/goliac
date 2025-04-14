@@ -65,22 +65,20 @@ type GoliacRemoteExecutor interface {
 }
 
 type GithubRepository struct {
-	Name                 string
-	Id                   int
-	RefId                string
-	Visibility           string                             // public, internal, private
-	BoolProperties       map[string]bool                    // archived, allow_auto_merge, delete_branch_on_merge, allow_update_branch
-	ExternalUsers        map[string]string                  // [githubid]permission
-	InternalUsers        map[string]string                  // [githubid]permission
-	RuleSets             map[string]*GithubRuleSet          // [name]ruleset
-	BranchProtections    map[string]*GithubBranchProtection // [pattern]branch protection
-	DefaultBranchName    string
-	IsFork               bool
-	Environments         map[string]*GithubEnvironment         // [name]environment
-	EnvironmentVariables map[string]map[string]*GithubVariable // [name][environment]variable
-	//	EnvironmentSecrets   map[string]map[string]*GithubVariable // [name][environment]variable
-	RepositoryVariables map[string]*GithubVariable // [name]variable
-	// RepositorySecrets    map[string]*GithubVariable            // [name]variable
+	Name                string
+	Id                  int
+	RefId               string
+	Visibility          string                             // public, internal, private
+	BoolProperties      map[string]bool                    // archived, allow_auto_merge, delete_branch_on_merge, allow_update_branch
+	ExternalUsers       map[string]string                  // [githubid]permission
+	InternalUsers       map[string]string                  // [githubid]permission
+	RuleSets            map[string]*GithubRuleSet          // [name]ruleset
+	BranchProtections   map[string]*GithubBranchProtection // [pattern]branch protection
+	DefaultBranchName   string
+	IsFork              bool
+	Environments        map[string]*GithubEnvironment // [name]environment
+	RepositoryVariables map[string]string             // [variableName]variableValue
+	// RepositorySecrets    map[string]string            // [variableName]variableValue
 }
 
 type GithubTeam struct {
@@ -97,8 +95,8 @@ type GithubTeamRepo struct {
 	Permission string // possible values: ADMIN, MAINTAIN, WRITE, TRIAGE, READ
 }
 
-// GithubEnvironment represents a GitHub environment
-type GithubEnvironment struct {
+// GithubRemoteEnvironment represents a GitHub environment
+type GithubRemoteEnvironment struct {
 	Id              int    `json:"id"`
 	Name            string `json:"name"`
 	NodeId          string `json:"node_id"`
@@ -856,7 +854,11 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 			return repositories, repositoriesByRefId, err
 		}
 		for repo, vars := range varsPerRepo {
-			repositories[repo].RepositoryVariables = vars
+			repoVars := make(map[string]string)
+			for k, v := range vars {
+				repoVars[k] = v.Value
+			}
+			repositories[repo].RepositoryVariables = repoVars
 		}
 
 		// repoSecretsPerRepo, err := g.loadRepositoriesSecrets(ctx, config.Config.GithubConcurrentThreads, repositories)
@@ -880,7 +882,14 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 			return repositories, repositoriesByRefId, err
 		}
 		for repo, envvars := range envVarsPerRepo {
-			repositories[repo].EnvironmentVariables = envvars
+			for envname, vars := range envvars {
+				env, ok := repositories[repo].Environments[envname]
+				if ok {
+					for k, v := range vars {
+						env.Variables[k] = v.Value
+					}
+				}
+			}
 		}
 
 		// envSecretsPerRepo, err := g.loadEnvironmentSecrets(ctx, config.Config.GithubConcurrentThreads, repositories)
@@ -1212,8 +1221,8 @@ func (g *GoliacRemoteImpl) loadEnvironments(ctx context.Context, maxGoroutines i
 }
 
 type EnvironmentsResponse struct {
-	TotalCount   int                  `json:"total_count"`
-	Environments []*GithubEnvironment `json:"environments"`
+	TotalCount   int                        `json:"total_count"`
+	Environments []*GithubRemoteEnvironment `json:"environments"`
 }
 
 func (g *GoliacRemoteImpl) loadEnvironmentsPerRepository(ctx context.Context, repository *GithubRepository) (map[string]*GithubEnvironment, error) {
@@ -1234,7 +1243,10 @@ func (g *GoliacRemoteImpl) loadEnvironmentsPerRepository(ctx context.Context, re
 		}
 
 		for _, e := range respenvs.Environments {
-			envs[e.Name] = e
+			envs[e.Name] = &GithubEnvironment{
+				Name:      e.Name,
+				Variables: map[string]string{},
+			}
 		}
 
 		page++
@@ -3484,7 +3496,8 @@ func (g *GoliacRemoteImpl) AddRepositoryEnvironment(ctx context.Context, errorCo
 
 	// Update local cache
 	repo.Environments[environmentName] = &GithubEnvironment{
-		Name: environmentName,
+		Name:      environmentName,
+		Variables: map[string]string{},
 	}
 }
 
@@ -3560,10 +3573,7 @@ func (g *GoliacRemoteImpl) AddRepositoryVariable(ctx context.Context, errorColle
 	defer g.actionMutex.Unlock()
 
 	// Update local cache
-	repo.RepositoryVariables[variableName] = &GithubVariable{
-		Name:  variableName,
-		Value: variableValue,
-	}
+	repo.RepositoryVariables[variableName] = variableValue
 }
 
 // UpdateRepositoryVariable updates a variable's value in a repository
@@ -3603,7 +3613,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryVariable(ctx context.Context, errorCo
 	defer g.actionMutex.Unlock()
 
 	// Update local cache
-	repo.RepositoryVariables[variableName].Value = variableValue
+	repo.RepositoryVariables[variableName] = variableValue
 }
 
 // DeleteRepositoryVariable deletes a variable from a repository
@@ -3657,7 +3667,7 @@ func (g *GoliacRemoteImpl) AddRepositoryEnvironmentVariable(ctx context.Context,
 	}
 
 	// Check if variable already exists
-	if _, exists := repo.EnvironmentVariables[environmentName][variableName]; exists {
+	if _, exists := repo.Environments[environmentName].Variables[variableName]; exists {
 		errorCollector.AddError(fmt.Errorf("variable %s already exists in environment %s of repository %s", variableName, environmentName, repositoryName))
 		return
 	}
@@ -3684,13 +3694,14 @@ func (g *GoliacRemoteImpl) AddRepositoryEnvironmentVariable(ctx context.Context,
 	defer g.actionMutex.Unlock()
 
 	// Update local cache
-	if repo.EnvironmentVariables[environmentName] == nil {
-		repo.EnvironmentVariables[environmentName] = make(map[string]*GithubVariable)
+	if repo.Environments[environmentName] == nil {
+		e := &GithubEnvironment{
+			Name:      environmentName,
+			Variables: map[string]string{},
+		}
+		repo.Environments[environmentName] = e
 	}
-	repo.EnvironmentVariables[environmentName][variableName] = &GithubVariable{
-		Name:  variableName,
-		Value: variableValue,
-	}
+	repo.Environments[environmentName].Variables[variableName] = variableValue
 }
 
 // UpdateRepositoryEnvironmentVariable updates a variable's value in a repository environment
@@ -3709,7 +3720,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryEnvironmentVariable(ctx context.Conte
 	}
 
 	// Check if variable exists
-	if _, exists := repo.EnvironmentVariables[environmentName][variableName]; !exists {
+	if _, exists := repo.Environments[environmentName].Variables[variableName]; !exists {
 		errorCollector.AddError(fmt.Errorf("variable %s not found in environment %s of repository %s", variableName, environmentName, repositoryName))
 		return
 	}
@@ -3736,11 +3747,18 @@ func (g *GoliacRemoteImpl) UpdateRepositoryEnvironmentVariable(ctx context.Conte
 	defer g.actionMutex.Unlock()
 
 	// Update local cache
-	repo.EnvironmentVariables[environmentName][variableName].Value = variableValue
+	if repo.Environments[environmentName] == nil {
+		e := &GithubEnvironment{
+			Name:      environmentName,
+			Variables: map[string]string{},
+		}
+		repo.Environments[environmentName] = e
+	}
+	repo.Environments[environmentName].Variables[variableName] = variableValue
 }
 
-// RemoveRepositoryEnvironmentVariable removes a variable from a repository environment
-func (g *GoliacRemoteImpl) RemoveRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
+// DeleteRepositoryEnvironmentVariable removes a variable from a repository environment
+func (g *GoliacRemoteImpl) DeleteRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
@@ -3755,7 +3773,7 @@ func (g *GoliacRemoteImpl) RemoveRepositoryEnvironmentVariable(ctx context.Conte
 	}
 
 	// Check if variable exists
-	if _, exists := repo.EnvironmentVariables[environmentName][variableName]; !exists {
+	if _, exists := repo.Environments[environmentName].Variables[variableName]; !exists {
 		errorCollector.AddError(fmt.Errorf("variable %s not found in environment %s of repository %s", variableName, environmentName, repositoryName))
 		return
 	}
@@ -3777,7 +3795,14 @@ func (g *GoliacRemoteImpl) RemoveRepositoryEnvironmentVariable(ctx context.Conte
 	defer g.actionMutex.Unlock()
 
 	// Update local cache
-	delete(repo.EnvironmentVariables[environmentName], variableName)
+	if repo.Environments[environmentName] == nil {
+		e := &GithubEnvironment{
+			Name:      environmentName,
+			Variables: map[string]string{},
+		}
+		repo.Environments[environmentName] = e
+	}
+	delete(repo.Environments[environmentName].Variables, variableName)
 }
 
 func (g *GoliacRemoteImpl) Begin(dryrun bool) {

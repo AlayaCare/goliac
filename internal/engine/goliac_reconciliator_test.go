@@ -357,7 +357,7 @@ func (r *ReconciliatorListenerRecorder) AddRepositoryEnvironmentVariable(ctx con
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
 	r.RepositoryEnvironmentVariableUpdated[repositoryName] = environmentName
 }
-func (r *ReconciliatorListenerRecorder) RemoveRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
 	r.RepositoryEnvironmentVariableDeleted[repositoryName] = environmentName
 }
 func (r *ReconciliatorListenerRecorder) Begin(dryrun bool) {
@@ -2433,7 +2433,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		assert.Equal(t, 1, len(recorder.RuleSetDeleted))
 	})
 
-	t.Run("happy path: same bypass team inn ruleset in goliac conf", func(t *testing.T) {
+	t.Run("happy path: same bypass team in ruleset in goliac conf", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 		repoconf := config.RepositoryConfig{}
 
@@ -2866,5 +2866,172 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 		assert.Equal(t, 1, len(recorder.RepositoryBranchProtectionCreated["myrepo"]))
 		assert.Equal(t, 0, len(recorder.RepositoryBranchProtectionUpdated["myrepo"]))
 		assert.Equal(t, 0, len(recorder.RepositoryBranchProtectionDeleted["myrepo"]))
+	})
+}
+
+func TestReconciliationRepositoryEnvironments(t *testing.T) {
+	t.Run("happy path: add new environment to repository", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		// Create a repository with a new environment
+		repo := &entity.Repository{}
+		repo.Name = "test-repo"
+		repo.Spec.Environments = []entity.RepositoryEnvironment{
+			{
+				Name: "production",
+				Variables: map[string]string{
+					"DB_URL": "prod-db-url",
+				},
+			},
+		}
+		local.repos["test-repo"] = repo
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		// Add the repository to remote without any environments
+		remoteRepo := &GithubRepository{
+			Name:           "test-repo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+			Environments:   map[string]*GithubEnvironment{},
+		}
+		remote.repos["test-repo"] = remoteRepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		// Verify environment was added
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, "production", recorder.RepositoryEnvironmentCreated["test-repo"])
+	})
+
+	t.Run("happy path: remove environment from repository", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		// Create a repository without any environments
+		repo := &entity.Repository{}
+		repo.Name = "test-repo"
+		repo.Spec.Environments = []entity.RepositoryEnvironment{}
+		local.repos["test-repo"] = repo
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		// Add the repository to remote with a production environment
+		remoteRepo := &GithubRepository{
+			Name:           "test-repo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+			Environments: map[string]*GithubEnvironment{
+				"production": {
+					Name: "production",
+					Variables: map[string]string{
+						"DB_URL": "prod-db-url",
+					},
+				},
+			},
+		}
+		remote.repos["test-repo"] = remoteRepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		// Verify environment was removed
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, "production", recorder.RepositoryEnvironmentDeleted["test-repo"])
+	})
+
+	t.Run("happy path: update environment variables", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		// Create a repository with updated environment variables
+		repo := &entity.Repository{}
+		repo.Name = "test-repo"
+		repo.Spec.Environments = []entity.RepositoryEnvironment{
+			{
+				Name: "production",
+				Variables: map[string]string{
+					"DB_URL":  "new-prod-db-url",
+					"API_KEY": "new-api-key",
+				},
+			},
+		}
+		local.repos["test-repo"] = repo
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		// Add the repository to remote with old environment variables
+		remoteRepo := &GithubRepository{
+			Name:           "test-repo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+			Environments: map[string]*GithubEnvironment{
+				"production": {
+					Name: "production",
+					Variables: map[string]string{
+						"DB_URL": "old-prod-db-url",
+					},
+				},
+			},
+		}
+		remote.repos["test-repo"] = remoteRepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		// Verify environment variables were updated
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, "production", recorder.RepositoryEnvironmentVariableUpdated["test-repo"])
 	})
 }

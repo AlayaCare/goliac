@@ -704,7 +704,7 @@ func (e *GoliacRemoteExecutorMock) UpdateRepositoryEnvironmentVariable(ctx conte
 	fmt.Println("*** UpdateRepositoryEnvironmentVariable", repositoryName, environmentName, variableName, variableValue)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) RemoveRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
+func (e *GoliacRemoteExecutorMock) DeleteRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
 	fmt.Println("*** RemoveRepositoryEnvironmentVariable", repositoryName, environmentName, variableName)
 	e.nbChanges++
 }

@@ -363,6 +363,13 @@ type GithubRepoComparable struct {
 	Rulesets            map[string]*GithubRuleSet
 	BranchProtections   map[string]*GithubBranchProtection
 	DefaultBranchName   string
+	ActionVariables     map[string]string
+	Environments        map[string]*GithubEnvironment
+}
+
+type GithubEnvironment struct {
+	Name      string
+	Variables map[string]string
 }
 
 /*
@@ -411,6 +418,8 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			Rulesets:            v.RuleSets,
 			BranchProtections:   v.BranchProtections,
 			DefaultBranchName:   v.DefaultBranchName,
+			Environments:        v.Environments,
+			ActionVariables:     v.RepositoryVariables,
 		}
 		for pk, pv := range v.BoolProperties {
 			repo.BoolProperties[pk] = pv
@@ -561,6 +570,14 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			branchprotections[bp.Pattern] = &branchprotection
 		}
 
+		environments := make(map[string]*GithubEnvironment)
+		for _, e := range lRepo.Spec.Environments {
+			environments[e.Name] = &GithubEnvironment{
+				Name:      e.Name,
+				Variables: e.Variables,
+			}
+		}
+
 		lRepos[utils.GithubAnsiString(reponame)] = r.reconciliatorFilter.RepositoryFilter(reponame, &GithubRepoComparable{
 			BoolProperties: map[string]bool{
 				"archived":               lRepo.Archived,
@@ -577,6 +594,8 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			Rulesets:            rulesets,
 			BranchProtections:   branchprotections,
 			DefaultBranchName:   lRepo.Spec.DefaultBranchName,
+			Environments:        environments,
+			ActionVariables:     lRepo.Spec.ActionsVariables,
 		})
 	}
 
@@ -620,6 +639,38 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 				r.UpdateRepositoryBranchProtection(ctx, errorCollector, dryrun, reponame, lBp)
 			}
 			CompareEntities(lRepo.BranchProtections, rRepo.BranchProtections, compareBranchProtections, onBranchProtectionAdded, onBranchProtectionRemoved, onBranchProtectionChange)
+
+			//
+			// "recursive" environments comparison
+			//
+			onEnvironmentAdded := func(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) {
+				// CREATE repo environment
+				r.AddRepositoryEnvironment(ctx, errorCollector, dryrun, remote, reponame, environment)
+			}
+			onEnvironmentChange := func(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) {
+				// UPDATE repo environment
+
+				// Check for removed or changed keys
+				for name, value := range lEnv.Variables {
+					if rValue, ok := rEnv.Variables[name]; !ok {
+						r.AddRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, remote, reponame, environment, name, value)
+					} else if rValue != value {
+						r.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, remote, reponame, environment, name, value)
+					}
+				}
+
+				// Check for added keys
+				for name := range rEnv.Variables {
+					if _, ok := lEnv.Variables[name]; !ok {
+						r.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, remote, reponame, environment, name)
+					}
+				}
+			}
+			onEnvironmentRemoved := func(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) {
+				// DELETE repo environment
+				r.DeleteRepositoryEnvironment(ctx, errorCollector, dryrun, remote, reponame, environment)
+			}
+			CompareEntities(lRepo.Environments, rRepo.Environments, compareEnvironments, onEnvironmentAdded, onEnvironmentRemoved, onEnvironmentChange)
 		}
 
 		//
@@ -664,6 +715,10 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		}
 
 		if res, _, _ := entity.StringArrayEquivalent(lRepo.ExternalUserWriters, rRepo.ExternalUserWriters); !res {
+			return false
+		}
+
+		if !utils.DeepEqualUnordered(lRepo.ActionVariables, rRepo.ActionVariables) {
 			return false
 		}
 
@@ -757,6 +812,24 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
+		if !utils.DeepEqualUnordered(lRepo.ActionVariables, rRepo.ActionVariables) {
+
+			// Check for removed or changed keys
+			for name, value := range lRepo.ActionVariables {
+				if rValue, ok := rRepo.ActionVariables[name]; !ok {
+					r.AddRepositoryVariable(ctx, errorCollector, dryrun, remote, reponame, name, value)
+				} else if rValue != value {
+					r.UpdateRepositoryVariable(ctx, errorCollector, dryrun, remote, reponame, name, value)
+				}
+			}
+
+			// Check for added keys
+			for name := range rRepo.ActionVariables {
+				if _, ok := lRepo.ActionVariables[name]; !ok {
+					r.DeleteRepositoryVariable(ctx, errorCollector, dryrun, remote, reponame, name)
+				}
+			}
+		}
 	}
 
 	onAdded := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) {
@@ -849,6 +922,21 @@ func compareBranchProtections(bpname string, lbp *GithubBranchProtection, rbp *G
 	}
 	if lbp.AllowsDeletions != rbp.AllowsDeletions {
 		return false
+	}
+	return true
+}
+
+func compareEnvironments(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) bool {
+	if lEnv.Name != rEnv.Name {
+		return false
+	}
+	if len(lEnv.Variables) != len(rEnv.Variables) {
+		return false
+	}
+	for k, v := range lEnv.Variables {
+		if rEnv.Variables[k] != v {
+			return false
+		}
 	}
 	return true
 }
@@ -1179,6 +1267,62 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryRemoveExternalUser(ctx context
 	remote.UpdateRepositoryRemoveExternalUser(reponame, collaboatorGithubId)
 	if r.executor != nil {
 		r.executor.UpdateRepositoryRemoveExternalUser(ctx, errorCollector, dryrun, reponame, collaboatorGithubId)
+	}
+}
+func (r *GoliacReconciliatorImpl) AddRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, environment string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_repository_environment"}).Infof("repository: %s, environment: %s", reponame, environment)
+	remote.AddRepositoryEnvironment(reponame, environment)
+	if r.executor != nil {
+		r.executor.AddRepositoryEnvironment(ctx, errorCollector, dryrun, reponame, environment)
+	}
+}
+func (r *GoliacReconciliatorImpl) DeleteRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, environment string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_repository_environment"}).Infof("repository: %s, environment: %s", reponame, environment)
+	remote.DeleteRepositoryEnvironment(reponame, environment)
+	if r.executor != nil {
+		r.executor.DeleteRepositoryEnvironment(ctx, errorCollector, dryrun, reponame, environment)
+	}
+}
+func (r *GoliacReconciliatorImpl) AddRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, variable string, value string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_repository_variable"}).Infof("repository: %s, variable: %s, value: %s", reponame, variable, value)
+	remote.AddRepositoryVariable(reponame, variable, value)
+	if r.executor != nil {
+		r.executor.AddRepositoryVariable(ctx, errorCollector, dryrun, reponame, variable, value)
+	}
+}
+func (r *GoliacReconciliatorImpl) UpdateRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, variable string, value string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_variable"}).Infof("repository: %s, variable: %s, value: %s", reponame, variable, value)
+	remote.UpdateRepositoryVariable(reponame, variable, value)
+	if r.executor != nil {
+		r.executor.UpdateRepositoryVariable(ctx, errorCollector, dryrun, reponame, variable, value)
+	}
+}
+func (r *GoliacReconciliatorImpl) DeleteRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, variable string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_repository_variable"}).Infof("repository: %s, variable: %s", reponame, variable)
+	remote.DeleteRepositoryVariable(reponame, variable)
+	if r.executor != nil {
+		r.executor.DeleteRepositoryVariable(ctx, errorCollector, dryrun, reponame, variable)
+	}
+}
+func (r *GoliacReconciliatorImpl) AddRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, environment string, variable string, value string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "add_repository_environment_variable"}).Infof("repository: %s, environment: %s, variable: %s, value: %s", reponame, environment, variable, value)
+	remote.AddRepositoryEnvironmentVariable(reponame, environment, variable, value)
+	if r.executor != nil {
+		r.executor.AddRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, reponame, environment, variable, value)
+	}
+}
+func (r *GoliacReconciliatorImpl) UpdateRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, environment string, variable string, value string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_environment_variable"}).Infof("repository: %s, environment: %s, variable: %s, value: %s", reponame, environment, variable, value)
+	remote.UpdateRepositoryEnvironmentVariable(reponame, environment, variable, value)
+	if r.executor != nil {
+		r.executor.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, reponame, environment, variable, value)
+	}
+}
+func (r *GoliacReconciliatorImpl) DeleteRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, environment string, variable string) {
+	logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "delete_repository_environment_variable"}).Infof("repository: %s, environment: %s, variable: %s", reponame, environment, variable)
+	remote.DeleteRepositoryEnvironmentVariable(reponame, environment, variable)
+	if r.executor != nil {
+		r.executor.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, reponame, environment, variable)
 	}
 }
 func (r *GoliacReconciliatorImpl) Begin(ctx context.Context, dryrun bool) {
