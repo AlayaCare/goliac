@@ -49,7 +49,7 @@ var Config = struct {
 	MiddlewareGzipEnabled bool `env:"GOLIAC_MIDDLEWARE_GZIP_ENABLED" envDefault:"true"`
 
 	// CORSEnabled - enable CORS
-	CORSEnabled          bool     `env:"GOLIAC_CORS_ENABLED" envDefault:"true"`
+	CORSEnabled          bool     `env:"GOLIAC_CORS_ENABLED" envDefault:"false"`
 	CORSAllowCredentials bool     `env:"GOLIAC_CORS_ALLOW_CREDENTIALS" envDefault:"true"`
 	CORSAllowedHeaders   []string `env:"GOLIAC_CORS_ALLOWED_HEADERS" envDefault:"Origin,Accept,Content-Type,X-Requested-With,Authorization,Time_Zone" envSeparator:","`
 	CORSAllowedMethods   []string `env:"GOLIAC_CORS_ALLOWED_METHODS" envDefault:"GET,POST,PUT,DELETE,PATCH" envSeparator:","`

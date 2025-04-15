@@ -85,6 +85,100 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <el-row v-if="repositoryVariables.length > 0">
+        &nbsp;
+    </el-row>
+
+    <el-row v-if="repositoryVariables.length > 0">
+        <el-col :span="20" :offset="2">
+            <el-card>
+                <el-text>Variables</el-text>
+                <el-table
+                    :data="repositoryVariables"
+                    :stripe="true"
+                    :highlight-current-row="false"
+                    :default-sort="{ prop: 'name', order: 'descending' }"
+                >
+                    <el-table-column prop="name" align="left" label="Name" sortable />
+                    <el-table-column prop="value" align="left" label="Value" sortable />
+                </el-table>
+            </el-card>
+        </el-col>
+    </el-row>
+
+    <el-row v-if="repositorySecrets.length > 0">
+        &nbsp;
+    </el-row>
+
+    <el-row v-if="repositorySecrets.length > 0">
+        <el-col :span="20" :offset="2">
+            <el-card>
+                <el-text>Secrets</el-text>
+                <el-table
+                    :data="repositorySecrets"
+                    :stripe="true"
+                    :highlight-current-row="false"
+                    :default-sort="{ prop: 'name', order: 'descending' }"
+                >
+                    <el-table-column prop="name" :width="200" align="left" label="Name" sortable />
+                    <el-table-column prop="name" align="left" label="Value" sortable >
+                        <template #default="scope">
+                           Use <code>`gh secret set {{ scope.row.name }} --repo {{ repository.organization }}/{{ repositoryid }} --body "value"`</code> to set a new value
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-card>
+        </el-col>
+    </el-row>
+
+    <el-row v-if="environmentVariables.length > 0">
+        &nbsp;
+    </el-row>
+
+    <el-row v-if="environmentVariables.length > 0">
+        <el-col :span="20" :offset="2">
+            <el-card>
+                <el-text>Environment Variables</el-text>
+                <el-table
+                    :data="environmentVariables"
+                    :stripe="true"
+                    :highlight-current-row="false"
+                    :default-sort="{ prop: 'name', order: 'descending' }"
+                >
+                    <el-table-column prop="name" align="left" label="Name" sortable />
+                    <el-table-column prop="value" align="left" label="Value" sortable />
+                    <el-table-column prop="environment" align="left" label="Environment" sortable />
+                </el-table>
+            </el-card>
+        </el-col>
+    </el-row>
+
+    <el-row v-if="environmentSecrets.length > 0">
+        &nbsp;
+    </el-row>
+
+    <el-row v-if="environmentSecrets.length > 0">
+        <el-col :span="20" :offset="2">
+            <el-card>
+                <el-text>Environment Secrets</el-text>
+                <el-table
+                    :data="environmentSecrets"
+                    :stripe="true"
+                    :highlight-current-row="false"
+                    :default-sort="{ prop: 'name', order: 'descending' }"
+                >
+                    <el-table-column prop="name" align="left" label="Name" sortable />
+                    <el-table-column prop="environment" align="left" label="Environment" sortable />
+                    <el-table-column align="left" label="Value" sortable >
+                        <template #default="scope">
+                           Use <code>`gh secret set {{ scope.row.name }} --env {{ scope.row.environment }} --repo {{ repository.organization }}/{{ repositoryid }} --body "value"`</code> to set a new value
+                        </template>
+                    </el-table-column>
+                </el-table>
+            </el-card>
+        </el-col>
+    </el-row>
 </template>
     
   <script>
@@ -112,6 +206,10 @@
           repository: {},
           teams: [],
           collaborators: [],
+          repositoryVariables: [],
+          repositorySecrets: [],
+          environmentVariables: [],
+          environmentSecrets: [],
         };
       },
       created() {
@@ -130,6 +228,23 @@
                   this.repository = repository
                   this.teams=repository.teams
                   this.collaborators=repository.collaborators
+                  this.repositoryVariables=repository.variables
+                  this.repositorySecrets=repository.secrets
+                  for (let environment of repository.environments) {
+                    for (let variable of environment.variables) {
+                      this.environmentVariables.push({
+                        name: variable.name,
+                        value: variable.value,
+                        environment: environment.name
+                      })
+                    }
+                    for (let secret of environment.secrets) {
+                      this.environmentSecrets.push({
+                        name: secret.name,
+                        environment: environment.name
+                      })
+                    }
+                  }
               }, handleErr.bind(this));
           },
       }

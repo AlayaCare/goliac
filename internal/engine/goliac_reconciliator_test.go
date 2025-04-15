@@ -835,6 +835,118 @@ func TestReconciliationTeam(t *testing.T) {
 		assert.Equal(t, 1, len(recorder.TeamParentUpdated))
 	})
 
+	t.Run("happy path: change parent from a team", func(t *testing.T) {
+		// here we have remote a parent -> child -> grandchild
+		// and locally a parent -> [child, grandchild]
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		lParentTeam := &entity.Team{}
+		lParentTeam.Name = "parentTeam"
+		lParentTeam.Spec.Owners = []string{"existing_owner"}
+		lParentTeam.Spec.Members = []string{}
+		local.teams["parentTeam"] = lParentTeam
+
+		lChildTeam := &entity.Team{}
+		lChildTeam.Name = "childTeam"
+		lChildTeam.Spec.Owners = []string{"existing_owner"}
+		lChildTeam.Spec.Members = []string{}
+		// let's put the child under the parent
+		parenta := "parentTeam"
+		lChildTeam.ParentTeam = &parenta
+
+		local.teams["childTeam"] = lChildTeam
+
+		lGrandChildTeam := &entity.Team{}
+		lGrandChildTeam.Name = "grandChildTeam"
+		lGrandChildTeam.Spec.Owners = []string{"existing_owner"}
+		lGrandChildTeam.Spec.Members = []string{}
+		// let's put the grand child under the parent
+		parentb := "parentTeam"
+		lGrandChildTeam.ParentTeam = &parentb
+
+		local.teams["grandChildTeam"] = lGrandChildTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		parentTeam := &GithubTeam{
+			Name:    "parentTeam",
+			Slug:    "parentteam",
+			Members: []string{"existing_owner"},
+			Id:      1,
+		}
+
+		parentTeamOwners := &GithubTeam{
+			Name:    "parentteam" + config.Config.GoliacTeamOwnerSuffix,
+			Slug:    "parentteam" + config.Config.GoliacTeamOwnerSuffix,
+			Members: []string{"existing_owner"},
+			Id:      2,
+		}
+
+		rParentA := 1
+		childTeam := &GithubTeam{
+			Name:       "childTeam",
+			Slug:       "childteam",
+			Members:    []string{"existing_owner"},
+			Id:         3,
+			ParentTeam: &rParentA,
+		}
+
+		childTeamOwners := &GithubTeam{
+			Name:    "childTeam" + config.Config.GoliacTeamOwnerSuffix,
+			Slug:    "childteam" + config.Config.GoliacTeamOwnerSuffix,
+			Members: []string{"existing_owner"},
+			Id:      4,
+		}
+
+		rParentB := 3
+		grandChildTeam := &GithubTeam{
+			Name:       "grandChildTeam",
+			Slug:       "grandchildteam",
+			Members:    []string{"existing_owner"},
+			Id:         5,
+			ParentTeam: &rParentB,
+		}
+
+		grandChildTeamOwners := &GithubTeam{
+			Name:    "grandChildTeam" + config.Config.GoliacTeamOwnerSuffix,
+			Slug:    "grandchildteam" + config.Config.GoliacTeamOwnerSuffix,
+			Members: []string{"existing_owner"},
+			Id:      6,
+		}
+
+		remote.teams["parentteam"] = parentTeam
+		remote.teams["parentteam"+config.Config.GoliacTeamOwnerSuffix] = parentTeamOwners
+		remote.teams["childteam"] = childTeam
+		remote.teams["childteam"+config.Config.GoliacTeamOwnerSuffix] = childTeamOwners
+		remote.teams["grandchildteam"] = grandChildTeam
+		remote.teams["grandchildteam"+config.Config.GoliacTeamOwnerSuffix] = grandChildTeamOwners
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+
+		// 1 team parent updated
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, 1, len(recorder.TeamParentUpdated))
+	})
+
 	t.Run("happy path: removed team", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 		repoconfig := &config.RepositoryConfig{}

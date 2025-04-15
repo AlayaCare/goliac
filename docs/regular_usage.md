@@ -231,3 +231,48 @@ spec:
       requires_approving_reviews: true
       required_approving_review_count: 1
 ```
+
+## Github action variables and secrets
+
+You can define Github action variables in the repository definition
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  ...
+  actions_variables:
+    VAR1: VALUE1
+    VAR2: VALUE2
+```
+
+You cannot set secrets via Goliac, but you can still use the [gh CLI](https://cli.github.com/) to set secrets like
+
+```shell
+gh secret set SECRET1 --repo <my organization>/<repository> --body "value"
+```
+
+## Environments variables and secrets
+
+
+You can define Environment variables in the repository definition
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  ...
+  environments:
+  - name: staging
+    variables:
+      VAR1: VALUE1
+      VAR2: VALUE2
+```
+
+You cannot set environment secrets via Goliac, but you can still use the [gh CLI](https://cli.github.com/) to set secrets like
+
+```shell
+gh secret set SECRET1 --env staging --repo <my organization>/<repository> --body "value"
+```

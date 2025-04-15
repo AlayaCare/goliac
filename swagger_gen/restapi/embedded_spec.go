@@ -917,6 +917,10 @@ func init() {
           "type": "string",
           "x-isnullable": false
         },
+        "organization": {
+          "type": "string",
+          "x-isnullable": false
+        },
         "secrets": {
           "type": "array",
           "items": {
@@ -1034,6 +1038,10 @@ func init() {
         "nbWorkflows": {
           "type": "integer",
           "x-omitempty": false
+        },
+        "organization": {
+          "type": "string",
+          "x-isnullable": false
         },
         "version": {
           "type": "string"
@@ -2285,6 +2293,10 @@ func init() {
           "type": "string",
           "x-isnullable": false
         },
+        "organization": {
+          "type": "string",
+          "x-isnullable": false
+        },
         "secrets": {
           "type": "array",
           "items": {
@@ -2379,6 +2391,10 @@ func init() {
         "nbWorkflows": {
           "type": "integer",
           "x-omitempty": false
+        },
+        "organization": {
+          "type": "string",
+          "x-isnullable": false
         },
         "version": {
           "type": "string"

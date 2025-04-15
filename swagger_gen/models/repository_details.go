@@ -41,6 +41,9 @@ type RepositoryDetails struct {
 	// name
 	Name string `json:"name,omitempty"`
 
+	// organization
+	Organization string `json:"organization,omitempty"`
+
 	// secrets
 	Secrets []*RepositoryDetailsSecretsItems0 `json:"secrets"`
 
