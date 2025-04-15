@@ -40,9 +40,9 @@ func (p *ProgressBar) Init(nbTotalAssets int) {
 		progressbar.OptionSetPredictTime(false),
 		progressbar.OptionSetDescription("fetching github"),
 		//progressbar.OptionSetWriter(os.Stderr),
-		progressbar.OptionSetWidth(40),
+		progressbar.OptionSetWidth(36),
 		progressbar.OptionShowTotalBytes(true),
-		progressbar.OptionThrottle(65*time.Millisecond),
+		progressbar.OptionThrottle(100*time.Millisecond),
 		progressbar.OptionShowCount(),
 		progressbar.OptionShowIts(),
 		progressbar.OptionOnCompletion(func() {
