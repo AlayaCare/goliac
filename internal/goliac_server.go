@@ -339,6 +339,7 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 	}
 
 	repositoryDetails := models.RepositoryDetails{
+		Organization:        config.Config.GithubAppOrganization,
 		Name:                repository.Name,
 		Visibility:          repository.Spec.Visibility,
 		AutoMergeAllowed:    repository.Spec.AllowAutoMerge,
@@ -705,6 +706,7 @@ func (g *GoliacServerImpl) GetUser(params app.GetUserParams) middleware.Responde
 func (g *GoliacServerImpl) GetStatus(app.GetStatusParams) middleware.Responder {
 	nbworkflows := len(g.goliac.GetLocal().Workflows())
 	s := models.Status{
+		Organization:     config.Config.GithubAppOrganization,
 		LastSyncError:    "",
 		LastSyncTime:     "N/A",
 		NbRepos:          int64(len(g.goliac.GetLocal().Repositories())),

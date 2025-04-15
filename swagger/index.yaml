@@ -162,6 +162,9 @@ definitions:
   repositoryDetails:
     type: object
     properties:
+      organization:
+        type: string
+        x-isnullable: false
       name:
         type: string
         x-isnullable: false
@@ -322,6 +325,9 @@ definitions:
   status:
     type: object
     properties:
+      organization:
+        type: string
+        x-isnullable: false
       lastSyncTime:
         type: string
         minLength: 1

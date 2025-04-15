@@ -47,6 +47,9 @@ type Status struct {
 	// nb workflows
 	NbWorkflows int64 `json:"nbWorkflows"`
 
+	// organization
+	Organization string `json:"organization,omitempty"`
+
 	// version
 	Version string `json:"version,omitempty"`
 }
