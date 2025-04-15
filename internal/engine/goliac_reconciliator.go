@@ -196,6 +196,34 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, errorCo
 			slugTeams[teamslug+config.Config.GoliacTeamOwnerSuffix] = team
 
 			r.unmanaged.ExternallyManagedTeams[teamslug] = true
+
+			// before we skip the team, let's check if the parent team is the same
+			// if not, we need to update the parent team
+
+			var lParentTeam *string
+			if teamvalue.ParentTeam != nil {
+				parentTeam := slug.Make(*teamvalue.ParentTeam)
+				lParentTeam = &parentTeam
+			}
+			rTeam, ok := rTeams[teamslug]
+			if ok {
+				if (lParentTeam == nil && rTeam.ParentTeam != nil) ||
+					(lParentTeam != nil && rTeam.ParentTeam == nil) ||
+					(lParentTeam != nil && rTeam.ParentTeam != nil && *lParentTeam != *rTeam.ParentTeam) {
+
+					var parentTeam *int
+					parentTeamName := ""
+					if lParentTeam != nil && ghTeams[*lParentTeam] != nil {
+						parentTeam = &ghTeams[*lParentTeam].Id
+						parentTeamName = *lParentTeam
+					}
+
+					r.UpdateTeamSetParent(ctx, errorCollector, dryrun, remote, teamslug, parentTeam, parentTeamName)
+				}
+			}
+
+			// delete the team from the map
+			// we don't want to process it anymore (it is externally managed)
 			delete(rTeams, teamslug)
 			continue
 		}
