@@ -1,3 +1,10 @@
+## Goliac v0.18.0
+
+- CLI UI fix: reduce progressbar width
+- bugfix: update correctly team's parent when the team is externally managed
+- introducing github environment, variables, and (UI) secret listing
+- bugfix: update correctly team's membership when it was in ADMIN in Github
+
 ## Goliac v0.17.3
 
 - allow to create a repository from a fork
