@@ -101,8 +101,7 @@ name: repo2
 	utils.WriteFile(fs, "goliac.yaml", []byte(`admin_team: admin
 
 rulesets:
-  - pattern: .*
-    ruleset: default
+  - default
 
 max_changesets: 50
 archive_on_delete: true
@@ -122,18 +121,22 @@ usersync:
 kind: Ruleset
 name: default
 spec:
-  enforcement: active
-  bypassapps:
-    - appname: goliac-project-app
-      mode: always
-  conditions:
-    include: 
-      - "~DEFAULT_BRANCH"
+  repositories:
+    included:
+      - ~ALL
+  ruleset:
+    enforcement: active
+    bypassapps:
+      - appname: goliac-project-app
+        mode: always
+    conditions:
+      include: 
+        - "~DEFAULT_BRANCH"
 
-  rules:
-    - ruletype: pull_request
-      parameters:
-        requiredApprovingReviewCount: 1
+    rules:
+      - ruletype: pull_request
+        parameters:
+          requiredApprovingReviewCount: 1
 `), 0644)
 
 	// create .github/CODEOWNERS

@@ -8,10 +8,7 @@ type RepositoryConfig struct {
 	AdminTeam           string `yaml:"admin_team"`
 	EveryoneTeamEnabled bool   `yaml:"everyone_team_enabled"`
 
-	Rulesets []struct {
-		Pattern string
-		Ruleset string
-	}
+	Rulesets                []string
 	MaxChangesets           int `yaml:"max_changesets"`
 	GithubConcurrentThreads int `yaml:"github_concurrent_threads"`
 	UserSync                struct {

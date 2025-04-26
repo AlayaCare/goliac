@@ -561,17 +561,20 @@ func (s *Scaffold) generateRuleset(fs billy.Filesystem, rulesetspath string) err
 kind: Ruleset
 name: default
 spec:
-  enforcement: active
-  bypassapps:
-    - appname: %s
-      mode: always
-  conditions:
-    include: 
-    - "~DEFAULT_BRANCH"
-  rules:
-    - ruletype: pull_request
-      parameters:
-        requiredApprovingReviewCount: 1
+  repositories:
+    - ~ALL
+  ruleset:
+    enforcement: active
+    bypassapps:
+      - appname: %s
+        mode: always
+    conditions:
+      include: 
+      - "~DEFAULT_BRANCH"
+    rules:
+      - ruletype: pull_request
+        parameters:
+          requiredApprovingReviewCount: 1
 `, s.githubappname)
 	if err := writeFile(path.Join(rulesetspath, "default.yaml"), []byte(ruleset), fs); err != nil {
 		return err
@@ -590,8 +593,7 @@ func (s *Scaffold) generateGoliacConf(fs billy.Filesystem, rootpath string, admi
 admin_team: %s
 
 rulesets:
-  - pattern: .*
-    ruleset: default
+  - default
 
 max_changesets: 50
 archive_on_delete: true

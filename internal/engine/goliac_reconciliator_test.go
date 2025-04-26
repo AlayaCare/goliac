@@ -2346,8 +2346,8 @@ func TestReconciliationRulesets(t *testing.T) {
 
 		newRuleset := &entity.RuleSet{}
 		newRuleset.Name = "new"
-		newRuleset.Spec.Enforcement = "evaluate"
-		newRuleset.Spec.Rules = append(newRuleset.Spec.Rules, struct {
+		newRuleset.Spec.Ruleset.Enforcement = "evaluate"
+		newRuleset.Spec.Ruleset.Rules = append(newRuleset.Spec.Ruleset.Rules, struct {
 			Ruletype   string
 			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
@@ -2379,18 +2379,8 @@ func TestReconciliationRulesets(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
 		repoconf := config.RepositoryConfig{
-			Rulesets: make([]struct {
-				Pattern string
-				Ruleset string
-			}, 0),
+			Rulesets: []string{"new"},
 		}
-		repoconf.Rulesets = append(repoconf.Rulesets, struct {
-			Pattern string
-			Ruleset string
-		}{
-			Pattern: ".*",
-			Ruleset: "new",
-		})
 
 		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
@@ -2403,8 +2393,8 @@ func TestReconciliationRulesets(t *testing.T) {
 
 		newRuleset := &entity.RuleSet{}
 		newRuleset.Name = "new"
-		newRuleset.Spec.Enforcement = "evaluate"
-		newRuleset.Spec.Rules = append(newRuleset.Spec.Rules, struct {
+		newRuleset.Spec.Ruleset.Enforcement = "evaluate"
+		newRuleset.Spec.Ruleset.Rules = append(newRuleset.Spec.Ruleset.Rules, struct {
 			Ruletype   string
 			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
@@ -2436,18 +2426,8 @@ func TestReconciliationRulesets(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
 		repoconf := config.RepositoryConfig{
-			Rulesets: make([]struct {
-				Pattern string
-				Ruleset string
-			}, 0),
+			Rulesets: []string{"update"},
 		}
-		repoconf.Rulesets = append(repoconf.Rulesets, struct {
-			Pattern string
-			Ruleset string
-		}{
-			Pattern: ".*",
-			Ruleset: "update",
-		})
 
 		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
 
@@ -2460,8 +2440,8 @@ func TestReconciliationRulesets(t *testing.T) {
 
 		lRuleset := &entity.RuleSet{}
 		lRuleset.Name = "update"
-		lRuleset.Spec.Enforcement = "evaluate"
-		lRuleset.Spec.Rules = append(lRuleset.Spec.Rules, struct {
+		lRuleset.Spec.Ruleset.Enforcement = "evaluate"
+		lRuleset.Spec.Ruleset.Rules = append(lRuleset.Spec.Ruleset.Rules, struct {
 			Ruletype   string
 			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
@@ -2501,10 +2481,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
 		repoconf := config.RepositoryConfig{
-			Rulesets: make([]struct {
-				Pattern string
-				Ruleset string
-			}, 0),
+			Rulesets: []string{},
 		}
 		repoconf.DestructiveOperations.AllowDestructiveRulesets = true
 
@@ -2565,14 +2542,15 @@ func TestReconciliationRulesets(t *testing.T) {
 
 		newRuleset := &entity.RuleSet{}
 		newRuleset.Name = "new"
-		newRuleset.Spec.Enforcement = "active"
-		newRuleset.Spec.Rules = append(newRuleset.Spec.Rules, struct {
+		newRuleset.Spec.Repositories.Included = []string{"foobar"}
+		newRuleset.Spec.Ruleset.Enforcement = "active"
+		newRuleset.Spec.Ruleset.Rules = append(newRuleset.Spec.Ruleset.Rules, struct {
 			Ruletype   string
 			Parameters entity.RuleSetParameters `yaml:"parameters,omitempty"`
 		}{
 			"required_signatures", entity.RuleSetParameters{},
 		})
-		newRuleset.Spec.BypassTeams = []struct {
+		newRuleset.Spec.Ruleset.BypassTeams = []struct {
 			TeamName string
 			Mode     string
 		}{
@@ -2603,13 +2581,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
 
-		repoconf.Rulesets = append(repoconf.Rulesets, struct {
-			Pattern string
-			Ruleset string
-		}{
-			Pattern: "foobar",
-			Ruleset: "new",
-		})
+		repoconf.Rulesets = []string{"new"}
 
 		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
 

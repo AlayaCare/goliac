@@ -3,6 +3,7 @@ package entity
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/goliac-project/goliac/internal/observability"
@@ -93,7 +94,13 @@ type RuleSetDefinition struct {
  */
 type RuleSet struct {
 	Entity `yaml:",inline"`
-	Spec   RuleSetDefinition `yaml:"spec"`
+	Spec   struct {
+		Repositories struct {
+			Included []string `yaml:"included"`
+			Except   []string `yaml:"except"`
+		} `yaml:"repositories"`
+		Ruleset RuleSetDefinition `yaml:"ruleset"`
+	}
 }
 
 /*
@@ -183,7 +190,7 @@ func (r *RuleSet) Validate(filename string) error {
 		return fmt.Errorf("invalid metadata.name: %s for ruleset filename %s", r.Name, filename)
 	}
 
-	for _, rule := range r.Spec.Rules {
+	for _, rule := range r.Spec.Ruleset.Rules {
 		if rule.Ruletype != "required_signatures" &&
 			rule.Ruletype != "pull_request" &&
 			rule.Ruletype != "required_status_checks" &&
@@ -195,11 +202,11 @@ func (r *RuleSet) Validate(filename string) error {
 		}
 	}
 
-	if r.Spec.Enforcement != "disable" && r.Spec.Enforcement != "active" && r.Spec.Enforcement != "evaluate" {
-		return fmt.Errorf("invalid enforcement: %s for ruleset filename %s", r.Spec.Enforcement, filename)
+	if r.Spec.Ruleset.Enforcement != "disable" && r.Spec.Ruleset.Enforcement != "active" && r.Spec.Ruleset.Enforcement != "evaluate" {
+		return fmt.Errorf("invalid enforcement: %s for ruleset filename %s", r.Spec.Ruleset.Enforcement, filename)
 	}
 
-	for _, ba := range r.Spec.BypassApps {
+	for _, ba := range r.Spec.Ruleset.BypassApps {
 		if ba.AppName == "" {
 			return fmt.Errorf("invalid appname: %s for bypassapp in ruleset filename %s", ba.AppName, filename)
 		}
@@ -207,7 +214,7 @@ func (r *RuleSet) Validate(filename string) error {
 			return fmt.Errorf("invalid mode: %s for bypassapp %s in ruleset filename %s", ba.Mode, ba.AppName, filename)
 		}
 	}
-	for _, bt := range r.Spec.BypassTeams {
+	for _, bt := range r.Spec.Ruleset.BypassTeams {
 		if bt.TeamName == "" {
 			return fmt.Errorf("invalid teamname: %s for bypassteam in ruleset filename %s", bt.TeamName, filename)
 		}
@@ -215,16 +222,76 @@ func (r *RuleSet) Validate(filename string) error {
 			return fmt.Errorf("invalid mode: %s for bypassteam %s in ruleset filename %s", bt.Mode, bt.TeamName, filename)
 		}
 	}
-	for _, include := range r.Spec.Conditions.Include {
+	for _, include := range r.Spec.Ruleset.Conditions.Include {
 		if include[0] == '~' && (include != "~DEFAULT_BRANCH" && include != "~ALL") {
 			return fmt.Errorf("invalid include: %s in ruleset filename %s", include, filename)
 		}
 	}
-	for _, exclude := range r.Spec.Conditions.Exclude {
+	for _, exclude := range r.Spec.Ruleset.Conditions.Exclude {
 		if exclude[0] == '~' && (exclude != "~DEFAULT_BRANCH" && exclude != "~ALL") {
 			return fmt.Errorf("invalid exclude: %s in ruleset filename %s", exclude, filename)
 		}
 	}
 
+	// validate Repositories regex
+	for _, repo := range r.Spec.Repositories.Included {
+		if repo == "~ALL" {
+			continue
+		}
+		_, err := regexp.Compile(fmt.Sprintf("^%s$", repo))
+		if err != nil {
+			return fmt.Errorf("error compiling regex %s: %v", repo, err)
+		}
+	}
+
+	for _, repo := range r.Spec.Repositories.Except {
+		_, err := regexp.Compile(fmt.Sprintf("^%s$", repo))
+		if err != nil {
+			return fmt.Errorf("error compiling regex %s: %v", repo, err)
+		}
+	}
+
 	return nil
+}
+
+// this function will return repositories impacted by this Ruleset
+func (r *RuleSet) BuildRepositoriesList(repos []string) ([]string, error) {
+	repositoriesList := make([]string, 0)
+	for _, repository := range repos {
+		repoMatch := false
+		if len(r.Spec.Repositories.Included) == 0 {
+			repoMatch = true
+		} else {
+			for _, repo := range r.Spec.Repositories.Included {
+				if repo == "~ALL" {
+					repoMatch = true
+					break
+				}
+				repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
+				if err != nil {
+					return nil, err
+				}
+				if repoRegex {
+					repoMatch = true
+					break
+				}
+			}
+		}
+
+		for _, repo := range r.Spec.Repositories.Except {
+			repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
+			if err != nil {
+				return nil, err
+			}
+			if repoRegex {
+				repoMatch = false
+				break
+			}
+		}
+
+		if repoMatch {
+			repositoriesList = append(repositoriesList, repository)
+		}
+	}
+	return repositoriesList, nil
 }
