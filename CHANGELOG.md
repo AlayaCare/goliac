@@ -1,3 +1,7 @@
+## Goliac v0.18.2
+
+- put back repository filter in the ruleset definition
+
 ## Goliac v0.18.1
 
 - update documentation (resources)
