@@ -1,3 +1,7 @@
+## Goliac v0.18.1
+
+- update documentation (resources)
+
 ## Goliac v0.18.0
 
 - CLI UI fix: reduce progressbar width
