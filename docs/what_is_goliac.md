@@ -18,6 +18,22 @@ Goliac can improve your Github organization management in several ways:
 - developer friendly
 - cost
 
+### Security
+
+For example, if you need to be SOC 2 compliant, you are supposed to
+- have controls around change management, development lifecycle, access control, and review of changes to systems.
+- but do you manage to enforce and reduce the number of people who are Gitub admins?
+
+### Developer friendly
+
+How do you ensure your IT team creates/give access to the proper repositories to individuals and teams often without any context?
+
+
+### Cost
+
+You may achieve similar result than Goliac with tools like terraform (even if not as flexible than Goliac), but Terraform Cloud costs can ramp up quickly.
+
+
 ## How it works
 
 ![goliac workflow](images/goliac_basic_workflow.png)

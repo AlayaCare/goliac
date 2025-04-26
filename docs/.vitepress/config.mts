@@ -16,17 +16,26 @@ export default defineConfig({
       { text: 'Home', link: '/' },
       { text: 'Documentation',
         items: [
-            { text: 'What is Goliac', link: '/what_is_goliac' },
-            { text: 'Quick start', link: '/quick_start' },
-            { text: 'Installation', link: '/installation' },
-            { text: 'Regular Usage', link: '/regular_usage' },
-            { text: 'Admin Usage', link: '/admin_usage' },
-            { text: 'Security', link: '/security' },
-            { text: 'Troubleshooting', link: '/troubleshooting' },
-            { text: 'APIs', link: '/apis' },
-          ]
-        }
-      ],
+          { text: 'What is Goliac', link: '/what_is_goliac' },
+          { text: 'Quick start', link: '/quick_start' },
+          { text: 'Installation', link: '/installation' },
+          { text: 'Admin Usage', link: '/admin_usage' },
+          { text: 'Security', link: '/security' },
+          { text: 'Troubleshooting', link: '/troubleshooting' },
+          { text: 'APIs', link: '/apis' },
+        ]
+      },
+      {
+        text: 'Goliac Resources',
+        items: [
+          { text: 'User', link: '/resource_user'},
+          { text: 'Team', link: '/resource_team'},
+          { text: 'Repository', link: '/resource_repository'},
+          { text: 'Ruleset', link: '/resource_ruleset'},
+          { text: 'Workflow', link: '/resource_workflow'}
+        ]
+      }
+    ],
 
     sidebar: [
       {
@@ -35,7 +44,16 @@ export default defineConfig({
           { text: 'What is Goliac', link: '/what_is_goliac' },
           { text: 'Quick start', link: '/quick_start' },
           { text: 'Installation', link: '/installation' },
-          { text: 'Regular Usage', link: '/regular_usage' },
+          {
+            text: 'Goliac Resources',
+            items: [
+              { text: 'User', link: '/resource_user'},
+              { text: 'Team', link: '/resource_team'},
+              { text: 'Repository', link: '/resource_repository'},
+              { text: 'Ruleset', link: '/resource_ruleset'},
+              { text: 'Workflow', link: '/resource_workflow'}
+            ]
+          },
           { text: 'Admin Usage', link: '/admin_usage' },
           { text: 'PR Breaking glass', link: '/breakingglass' },
           { text: 'Security', link: '/security' },
