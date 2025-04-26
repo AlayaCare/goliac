@@ -1,32 +1,8 @@
-# For regular users
+# Repository
 
-As a regular user, you want to be able to
-- create new team
-- edit team's definition
-- manage your team's repositories
+Under a team directory, you find the `team.yaml` definition of the team (see (Team)[resource_team]), but also one yaml file per repository owned by the team
 
-## Create a new team
-
-If you want to create a new team (like `foobar`), you need to create a PR with a `/teams/foobar/team.yaml` file:
-
-```yaml
-apiVersion: v1
-kind: Team
-name: foobar
-spec:
-  owners:
-    - user1
-    - user2
-  members:
-    - user3
-    - user4
-```
-
-The users defined there are in 2 different categories
-- members: are part of the team (and will be writer on all repositories of the team)
-- owners: are part of the team (and will be writer on all repositories of the team) AMD can approve PR in the `foobar` teams repository (when you want to change a team definition, or when you want to create/update a repository definition)
-
-The users name used are the one defined in the `/users` sub directories (like `alice`)
+Special case: if you want to archive a repository, just create/move the repository yaml file under the `/archived` directory (see below)
 
 ## Create a repository
 
@@ -275,4 +251,35 @@ You cannot set environment secrets via Goliac, but you can still use the [gh CLI
 
 ```shell
 gh secret set SECRET1 --env staging --repo <my organization>/<repository> --body "value"
+```
+
+## Add external users to a repository
+
+If you want to give access (read or write) to users external to your organization, you need to
+- add a definition of the user in the `/users/external` directory 
+- add them to the repository
+
+To add them to the repository you can use the `externalUserReaders` and `externalUserWriters` properties, like
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  externalUserReaders:
+    - alice
+    ...
+  externalUserWriters:
+    - bob
+    ...
+```
+
+where `alice` for example has been defined in the `/users/external/alice.yaml` like:
+
+```yaml
+apiVersion: v1
+kind: User
+name: alice
+spec:
+  githubID: aliceGithubUserName
 ```
