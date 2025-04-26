@@ -247,8 +247,7 @@ func createEmptyTeamRepo(src billy.Filesystem) (*git.Repository, error) {
 admin_team: github-admins
 
 rulesets:
-  - pattern: .*
-    ruleset: default
+  - default
 
 max_changesets: 50
 archive_on_delete: true

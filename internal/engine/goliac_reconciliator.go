@@ -3,7 +3,6 @@ package engine
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/goliac-project/goliac/internal/config"
@@ -1019,42 +1018,42 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, erro
 	lgrs := map[string]*GithubRuleSet{}
 	// prepare local comparable
 	for _, confrs := range conf.Rulesets {
-		match, err := regexp.Compile(confrs.Pattern)
-		if err != nil {
-			return fmt.Errorf("not able to parse ruleset regular expression %s: %v", confrs.Pattern, err)
-		}
-		rs, ok := local.RuleSets()[confrs.Ruleset]
+		rs, ok := local.RuleSets()[confrs]
 		if !ok {
-			return fmt.Errorf("not able to find ruleset %s definition", confrs.Ruleset)
+			return fmt.Errorf("not able to find ruleset %s definition", confrs)
 		}
 
 		grs := GithubRuleSet{
 			Name:        rs.Name,
-			Enforcement: rs.Spec.Enforcement,
+			Enforcement: rs.Spec.Ruleset.Enforcement,
 			BypassApps:  map[string]string{},
 			BypassTeams: map[string]string{},
-			OnInclude:   rs.Spec.Conditions.Include,
-			OnExclude:   rs.Spec.Conditions.Exclude,
+			OnInclude:   rs.Spec.Ruleset.Conditions.Include,
+			OnExclude:   rs.Spec.Ruleset.Conditions.Exclude,
 			Rules:       map[string]entity.RuleSetParameters{},
 		}
-		for _, b := range rs.Spec.BypassApps {
+		for _, b := range rs.Spec.Ruleset.BypassApps {
 			grs.BypassApps[b.AppName] = b.Mode
 		}
-		for _, b := range rs.Spec.BypassTeams {
+		for _, b := range rs.Spec.Ruleset.BypassTeams {
 			teamslug := slug.Make(b.TeamName)
 			grs.BypassTeams[teamslug] = b.Mode
 		}
-		for _, r := range rs.Spec.Rules {
+		for _, r := range rs.Spec.Ruleset.Rules {
 			grs.Rules[r.Ruletype] = r.Parameters
 		}
+		repolist := []string{}
 		for reponame := range repositories {
-			if match.Match([]byte(reponame)) {
-				grs.Repositories = append(grs.Repositories, reponame)
-			}
+			repolist = append(repolist, reponame)
 		}
-		if match.Match([]byte(teamsreponame)) {
-			grs.Repositories = append(grs.Repositories, teamsreponame)
+		repolist = append(repolist, teamsreponame)
+
+		includedRepositories, err := rs.BuildRepositoriesList(repolist)
+		if err != nil {
+			return fmt.Errorf("not able to parse ruleset regular expression %s: %v", confrs, err)
 		}
+		grs.Repositories = includedRepositories
+
 		lgrs[rs.Name] = &grs
 	}
 

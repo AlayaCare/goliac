@@ -95,8 +95,7 @@ In particular it will creates a `/goliac.yaml` file:
 admin_team: goliac-admin
 
 rulesets:
-  - pattern: .*
-    ruleset: default
+  - default
 
 max_changesets: 50
 archive_on_delete: true

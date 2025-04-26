@@ -129,8 +129,7 @@ admin_team: goliac-admin # the name of the team (in the `/teams` directory ) tha
 everyone_team_enabled: false # if you want all members to have read access to all repositories
 
 rulesets: # if you want to have organization-wide enforced rules (see the /rulesets directory)
-  - pattern: .*
-    ruleset: default
+  - default
 
 max_changesets: 50 # protection measure: how many changes Goliac can do at once before considering that suspicious
 archive_on_delete: true # allow to not delete directly repository, but archive them first. (only usefull if destructive_operations.repository = true. See below)
@@ -158,18 +157,19 @@ apiVersion: v1
 kind: Ruleset
 name: default
 spec:
-  enforcement: evaluate # can be disable, active or evaluate
-  bypassapps:
-    - appname: goliac-project-app
-      mode: always # always or pull_request
-  conditions:
-    include:
-      - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
+  ruleset:
+    enforcement: evaluate # can be disable, active or evaluate
+    bypassapps:
+      - appname: goliac-project-app
+        mode: always # always or pull_request
+    conditions:
+      include:
+        - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
 
-  rules:
-    - ruletype: pull_request # currently supported: pull_request, required_signatures,required_status_checks, creation, update, deletion, non_fast_forward, required_linear_history
-      parameters:
-        requiredApprovingReviewCount: 1
+    rules:
+      - ruletype: pull_request # currently supported: pull_request, required_signatures,required_status_checks, creation, update, deletion, non_fast_forward, required_linear_history
+        parameters:
+          requiredApprovingReviewCount: 1
 ```
 
 ### Testing your IAC github repository

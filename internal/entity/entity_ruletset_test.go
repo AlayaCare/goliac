@@ -17,18 +17,19 @@ apiVersion: v1
 kind: Ruleset
 name: ruleset1
 spec:
-  enforcement: evaluate
-  bypassapps:
-    - appname: goliac-project-app
-      mode: always
-  conditions:
-    include: 
-    - "~DEFAULT_BRANCH"
+  ruleset:
+    enforcement: evaluate
+    bypassapps:
+      - appname: goliac-project-app
+        mode: always
+    conditions:
+      include: 
+        - "~DEFAULT_BRANCH"
 
-  rules:
-    - ruletype: pull_request
-      parameters:
-        requiredApprovingReviewCount: 1
+    rules:
+      - ruletype: pull_request
+        parameters:
+          requiredApprovingReviewCount: 1
 `), 0644)
 	assert.Nil(t, err)
 
@@ -37,20 +38,21 @@ apiVersion: v1
 kind: Ruleset
 name: ruleset2
 spec:
-  enforcement: evaluate
-  bypassapps:
-    - appname: goliac-project-app
-      mode: always
-  conditions:
-    include: 
-    - "~DEFAULT_BRANCH"
+  ruleset:
+    enforcement: evaluate
+    bypassapps:
+      - appname: goliac-project-app
+        mode: always
+    conditions:
+      include: 
+        - "~DEFAULT_BRANCH"
 
-  rules:
-    - ruletype: required_status_checks
-      parameters:
-        requiredStatusChecks:
-        - circleCI check
-        - jenkins check
+    rules:
+      - ruletype: required_status_checks
+        parameters:
+          requiredStatusChecks:
+            - circleCI check
+            - jenkins check
 `), 0644)
 	assert.Nil(t, err)
 }
@@ -87,13 +89,13 @@ func TestRulesetParametersComparison(t *testing.T) {
 		assert.Equal(t, false, errorCollector.HasWarns())
 		assert.NotNil(t, rulesets)
 
-		res := CompareRulesetParameters(rulesets["ruleset1"].Spec.Rules[0].Ruletype, rulesets["ruleset1"].Spec.Rules[0].Parameters, rulesets["ruleset2"].Spec.Rules[0].Parameters)
+		res := CompareRulesetParameters(rulesets["ruleset1"].Spec.Ruleset.Rules[0].Ruletype, rulesets["ruleset1"].Spec.Ruleset.Rules[0].Parameters, rulesets["ruleset2"].Spec.Ruleset.Rules[0].Parameters)
 		assert.False(t, res)
 
-		res = CompareRulesetParameters(rulesets["ruleset1"].Spec.Rules[0].Ruletype, rulesets["ruleset1"].Spec.Rules[0].Parameters, rulesets["ruleset1"].Spec.Rules[0].Parameters)
+		res = CompareRulesetParameters(rulesets["ruleset1"].Spec.Ruleset.Rules[0].Ruletype, rulesets["ruleset1"].Spec.Ruleset.Rules[0].Parameters, rulesets["ruleset1"].Spec.Ruleset.Rules[0].Parameters)
 		assert.True(t, res)
 
-		res = CompareRulesetParameters(rulesets["ruleset2"].Spec.Rules[0].Ruletype, rulesets["ruleset2"].Spec.Rules[0].Parameters, rulesets["ruleset2"].Spec.Rules[0].Parameters)
+		res = CompareRulesetParameters(rulesets["ruleset2"].Spec.Ruleset.Rules[0].Ruletype, rulesets["ruleset2"].Spec.Ruleset.Rules[0].Parameters, rulesets["ruleset2"].Spec.Ruleset.Rules[0].Parameters)
 		assert.True(t, res)
 	})
 }

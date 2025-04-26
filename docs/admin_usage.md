@@ -16,17 +16,18 @@ apiVersion: v1
 kind: Ruleset
 name: default
 spec:
-  enforcement: active # active, evaluate or disabled
-  bypassapps:
-    - appname: alayacare-goliac # the name of your Github App
-      mode: always
-  conditions:
-    include: 
-    - "~DEFAULT_BRANCH"
-  rules:
-    - ruletype: pull_request
-      parameters:
-        requiredApprovingReviewCount: 1
+  ruleset:
+    enforcement: active # active, evaluate or disabled
+    bypassapps:
+      - appname: alayacare-goliac # the name of your Github App
+        mode: always
+    conditions:
+      include: 
+      - "~DEFAULT_BRANCH"
+    rules:
+      - ruletype: pull_request
+        parameters:
+          requiredApprovingReviewCount: 1
 ```
 
 And in the `goliac.yaml` file
@@ -34,8 +35,7 @@ And in the `goliac.yaml` file
 ```yaml
 ...
 rulesets:
-  - pattern: .* # to apply to all repositories managed by Goliac
-    ruleset: default # the name of the ruleset file without the `.yaml` extension
+  - default # the name of the ruleset file without the `.yaml` extension
 ...
 ```
 
@@ -49,20 +49,21 @@ apiVersion: v1
 kind: Ruleset
 name: default
 spec:
-  enforcement: active
-  bypassapps:
-    - appname: alayacare-goliac # the name of your Github App
-      mode: always
-  bypassteams:
-    - teamname: GoldenReviewers
-      mode: pull_request # it can be always or pull_request
-  conditions:
-    include: 
-    - "~DEFAULT_BRANCH"
-  rules:
-    - ruletype: pull_request
-      parameters:
-        requiredApprovingReviewCount: 1
+  ruleset:
+    enforcement: active
+    bypassapps:
+      - appname: alayacare-goliac # the name of your Github App
+        mode: always
+    bypassteams:
+      - teamname: GoldenReviewers
+        mode: pull_request # it can be always or pull_request
+    conditions:
+      include: 
+      - "~DEFAULT_BRANCH"
+    rules:
+      - ruletype: pull_request
+        parameters:
+          requiredApprovingReviewCount: 1
 ```
 
 ## externally managed teams

@@ -9,24 +9,28 @@ This page is about organization wide ruleset. Usually it is done by the Security
 
 ## Create Organization Ruleset
 
-You can create a ruleset file in the `/rulesets` directory, like `/rulesets/rule1.yaml`:
+You can create a ruleset file in the `/rulesets` directory, like `/rulesets/default.yaml`:
 
 ```yaml
 apiVersion: v1
 kind: Ruleset
 name: default
 spec:
-  enforcement: evaluate
-  bypassapps:
-    - appname: goliac-project-app
-      mode: always
-  conditions:
-    include: 
-      - "~DEFAULT_BRANCH"
-  rules:
-    - ruletype: pull_request
-      parameters:
-        requiredApprovingReviewCount: 1
+  repositories:
+    included:
+      - ~ALL
+  ruleset:
+    enforcement: evaluate
+    bypassapps:
+        - appname: goliac-project-app
+        mode: always
+    conditions:
+        include: 
+        - "~DEFAULT_BRANCH"
+    rules:
+        - ruletype: pull_request
+        parameters:
+            requiredApprovingReviewCount: 1
 ```
 
 
@@ -35,12 +39,26 @@ spec:
 ```yaml
 ...
 rulesets:
-  - pattern: .*
-    ruleset: default
+  - default
 ```
 
 - the `pattern` is the regex to know on which repositories to apply the rulesets
 - the `ruleset`, is the name of the file in the `/rulesets` directory
+
+## Repositories section
+
+You can define which repositories will be impacted (using regular expressions):
+
+```yaml
+  repositories:
+    included:
+      # - ~ALL
+      - .*
+      # - prefix-.*
+    except:
+      - foo
+      - bar.*
+```
 
 ## Bypass section
 

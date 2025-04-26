@@ -57,8 +57,8 @@ func GetWorkflow(ctx context.Context, local WorkflowLocalResource, remote Workfl
 		return nil, fmt.Errorf("workflows not found")
 	}
 
-	fmt.Println("githubId", githubId)
-	fmt.Println("users", local.Users())
+	// fmt.Println("githubId", githubId)
+	// fmt.Println("users", local.Users())
 
 	// get the username
 	username := ""
@@ -71,7 +71,7 @@ func GetWorkflow(ctx context.Context, local WorkflowLocalResource, remote Workfl
 			}
 		}
 	}
-	fmt.Println("username", username)
+	// fmt.Println("username", username)
 
 	// check workflow acl
 	teams := []string{}
