@@ -1,3 +1,7 @@
+## Goliac v0.18.3
+
+- ruleset new definition bugfix
+
 ## Goliac v0.18.2
 
 - put back repository filter in the ruleset definition

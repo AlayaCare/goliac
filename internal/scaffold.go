@@ -562,7 +562,8 @@ kind: Ruleset
 name: default
 spec:
   repositories:
-    - ~ALL
+    included:
+      - ~ALL
   ruleset:
     enforcement: active
     bypassapps:
