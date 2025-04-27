@@ -5,7 +5,7 @@ export default defineConfig({
   title: "Goliac project",
   description: "Github Organization IAC made simple",
   ignoreDeadLinks: true,
-  head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
+  head: [['link', { rel: 'icon', href: 'favicon.ico' }]],
   base: '/goliac',
   themeConfig: {
     outline: 'deep',
