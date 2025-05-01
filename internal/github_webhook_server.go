@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -16,7 +17,7 @@ import (
 
 type GithubWebhookServerCallback func()
 
-type GithubWebhookServerIssueCommentCallback func(repository, prUrl, githubIdCaller, comment string, comment_id int)
+type GithubWebhookServerIssueCommentCallback func(organization, repository, prUrl, githubIdCaller, comment string, comment_id int)
 
 /*
 GithubWebhookServer is the interface for the webhook server
@@ -188,8 +189,16 @@ func (s *GithubWebhookServerImpl) handleIssueCommentEvent(w http.ResponseWriter,
 	}
 	prUrl := fmt.Sprintf("https://github.com/%s/pull/%d", issueCommentEvent.Repository.FullName, issueCommentEvent.Issue.Number)
 
+	repoSplit := strings.Split(issueCommentEvent.Repository.FullName, "/")
+	if len(repoSplit) != 2 || repoSplit[0] != s.organization {
+		logrus.Debugf("Organization/Repository %s does not match organization %s", issueCommentEvent.Repository.FullName, s.organization)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	s.issueCommentCallback(
-		issueCommentEvent.Repository.FullName,
+		s.organization,
+		repoSplit[1],
 		prUrl,
 		issueCommentEvent.Sender.Login,
 		issueCommentEvent.Comment.Body,

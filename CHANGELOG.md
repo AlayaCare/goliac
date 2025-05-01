@@ -1,3 +1,11 @@
+## Goliac v0.18.6
+
+- bugfix: passing organization to create a comment in an issue
+
+## Goliac v0.18.5
+
+- update PR merge github command
+
 ## Goliac v0.18.4
 
 - allow to start a workflow (like forcemerge) via an update on a PR

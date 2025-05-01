@@ -857,7 +857,7 @@ func (g *GoliacServerImpl) Serve() {
 					}
 				}()
 			},
-			func(repository, prUrl, githubIdCaller, comment string, comment_id int) {
+			func(organization, repository, prUrl, githubIdCaller, comment string, comment_id int) {
 				go func() {
 					ctx := context.Background()
 					var span trace.Span
@@ -865,7 +865,7 @@ func (g *GoliacServerImpl) Serve() {
 						tracer := otel.Tracer("goliac")
 						ctx, span = tracer.Start(ctx, "github-webhook")
 					}
-					g.handleIssueComment(ctx, repository, prUrl, githubIdCaller, comment, comment_id)
+					g.handleIssueComment(ctx, organization, repository, prUrl, githubIdCaller, comment, comment_id)
 					if span != nil {
 						span.End()
 					}
@@ -931,10 +931,11 @@ func (g *GoliacServerImpl) Serve() {
 
 // handleIssueComment handles the issue comment event
 // it is mainly used for PR comments
-func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, prUrl, githubIdCaller, comment string, comment_id int) {
-	logrus.Debugf("Issue comment event received for repository %s, githubIdCaller %s, comment %s", repository, githubIdCaller, comment)
+func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization, repository, prUrl, githubIdCaller, comment string, comment_id int) {
+	logrus.Debugf("Issue comment event received for organization %s, repository %s, githubIdCaller %s, prUrl %s, comment %s", organization, repository, githubIdCaller, prUrl, comment)
 
 	commentRegex := regexp.MustCompile(`^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+):(.*)`)
+	comment = strings.Trim(comment, " \r\n\t")
 	matches := commentRegex.FindStringSubmatch(comment)
 	if len(matches) == 4 {
 		workflowInstance := matches[1]
@@ -948,6 +949,7 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, p
 
 			err := g.CreateComment(
 				ctx,
+				organization,
 				repository,
 				prUrl,
 				githubIdCaller,
@@ -955,7 +957,7 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, p
 				comment_id,
 			)
 			if err != nil {
-				logrus.Error(err)
+				logrus.Error("error when creating 'no explanation provided' comment: " + err.Error())
 			}
 			return
 		}
@@ -975,6 +977,7 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, p
 				if err != nil {
 					err = g.CreateComment(
 						ctx,
+						organization,
 						repository,
 						prUrl,
 						githubIdCaller,
@@ -982,7 +985,7 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, p
 						comment_id,
 					)
 					if err != nil {
-						logrus.Error(err)
+						logrus.Error("error when creating 'error when executing workflow' comment: " + err.Error())
 					}
 				} else {
 					comment := "Workflow executed successfully"
@@ -994,6 +997,7 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, p
 					}
 					err = g.CreateComment(
 						ctx,
+						organization,
 						repository,
 						prUrl,
 						githubIdCaller,
@@ -1001,7 +1005,7 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, p
 						comment_id,
 					)
 					if err != nil {
-						logrus.Error(err)
+						logrus.Error("error when creating 'workflow executed successfully' comment: " + err.Error())
 					}
 				}
 			}
@@ -1009,13 +1013,13 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, p
 	}
 }
 
-func (g *GoliacServerImpl) CreateComment(ctx context.Context, repository, prUrl, githubIdCaller, comment string, comment_id int) error {
+func (g *GoliacServerImpl) CreateComment(ctx context.Context, organization, repository, prUrl, githubIdCaller, comment string, comment_id int) error {
 	ghClient := g.goliac.GetRemoteClient()
 
 	// POST /repos/{owner}/{repo}/pulls/{pull_number}/comments
 	_, err := ghClient.CallRestAPI(
 		ctx,
-		fmt.Sprintf("/repos/%s/%s/pulls/%s/comments/%d", config.Config.GithubAppOrganization, repository, prUrl, comment_id),
+		fmt.Sprintf("/repos/%s/%s/pulls/%s/comments/%d", organization, repository, prUrl, comment_id),
 		"",
 		"POST",
 		map[string]interface{}{

@@ -20,7 +20,7 @@ func TestWebhookHandler(t *testing.T) {
 		callback := func() {
 			callbackreceived = true
 		}
-		issueCommentCallback := func(repository, prUrl, githubIdCaller, comment string, comment_id int) {
+		issueCommentCallback := func(organization, repository, prUrl, githubIdCaller, comment string, comment_id int) {
 			issueCommentCallbackReceived = true
 		}
 		wh := NewGithubWebhookServerImpl("localhost", 8080, "/web", "secret", "org", "teams-repo", "main", callback, issueCommentCallback).(*GithubWebhookServerImpl)
@@ -54,7 +54,7 @@ func TestWebhookHandler(t *testing.T) {
 		callback := func() {
 			callbackreceived = true
 		}
-		issueCommentCallback := func(repository, prUrl, githubIdCaller, comment string, comment_id int) {
+		issueCommentCallback := func(organization, repository, prUrl, githubIdCaller, comment string, comment_id int) {
 			issueCommentCallbackReceived = true
 		}
 		wh := NewGithubWebhookServerImpl("localhost", 8080, "/web", "secret", "org", "teams-repo", "main", callback, issueCommentCallback).(*GithubWebhookServerImpl)
@@ -90,7 +90,7 @@ func TestWebhookHandler(t *testing.T) {
 		callback := func() {
 			callbackreceived = true
 		}
-		issueCommentCallback := func(repository, prUrl, githubIdCaller, comment string, comment_id int) {
+		issueCommentCallback := func(organization, repository, prUrl, githubIdCaller, comment string, comment_id int) {
 			issueCommentCallbackReceived = true
 		}
 		wh := NewGithubWebhookServerImpl("localhost", 8080, "/web", "secret", "org", "teams-repo", "main", callback, issueCommentCallback).(*GithubWebhookServerImpl)
