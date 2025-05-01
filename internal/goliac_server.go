@@ -969,7 +969,9 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization,
 					githubIdCaller,
 					workflowName,
 					explanation,
-					map[string]string{},
+					map[string]string{
+						"pr_url": prUrl,
+					},
 					false,
 				)
 

@@ -1,3 +1,7 @@
+## Goliac v0.18.8
+
+- bugfix: pass pr url to workflow when receiving a PR command
+
 ## Goliac v0.18.7
 
 - bugfix: fixing comment creation issue
