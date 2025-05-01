@@ -24,6 +24,7 @@ In GitHub:
 - Under Organization permissions
   - Give Read/Write access to `Administration`
   - Give Read/Write access to `Members`
+  - Give Read/Write access to `Issues` (needed for the Breaking glass workflow)
   - Give Read/Write access to `Environments`
   - Give Read/Write access to `Actions`
   - Give Read/Write access to `Variables`
@@ -31,6 +32,8 @@ In GitHub:
 - Under Repository permissions
   - Give Read/Write access to `Administration`
   - Give Read/Write access to `Content` (it is needed to access the default branch of repositories)
+- Under Subscribe to events
+  - Select `Issue comments` (needed for the Breaking glass workflow)
 - Where can this GitHub App be installed: `Only on this account`
 - And Create
 - then you must
