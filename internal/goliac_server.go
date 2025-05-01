@@ -954,7 +954,6 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization,
 				prUrl,
 				githubIdCaller,
 				explanation,
-				comment_id,
 			)
 			if err != nil {
 				logrus.Error("error when creating 'no explanation provided' comment: " + err.Error())
@@ -982,7 +981,6 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization,
 						prUrl,
 						githubIdCaller,
 						"Error when executing workflow: "+err.Error(),
-						comment_id,
 					)
 					if err != nil {
 						logrus.Error("error when creating 'error when executing workflow' comment: " + err.Error())
@@ -1002,7 +1000,6 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization,
 						prUrl,
 						githubIdCaller,
 						comment,
-						comment_id,
 					)
 					if err != nil {
 						logrus.Error("error when creating 'workflow executed successfully' comment: " + err.Error())
@@ -1013,13 +1010,20 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization,
 	}
 }
 
-func (g *GoliacServerImpl) CreateComment(ctx context.Context, organization, repository, prUrl, githubIdCaller, comment string, comment_id int) error {
+func (g *GoliacServerImpl) CreateComment(ctx context.Context, organization, repository, prUrl, githubIdCaller, comment string) error {
 	ghClient := g.goliac.GetRemoteClient()
 
-	// POST /repos/{owner}/{repo}/pulls/{pull_number}/comments
+	prExtract := regexp.MustCompile(`.*/([^/]*)/pull/(\d+)`)
+	prMatch := prExtract.FindStringSubmatch(prUrl)
+	if len(prMatch) != 3 {
+		return fmt.Errorf("prUrl %s is not a valid PR URL", prUrl)
+	}
+	prNumber := prMatch[2]
+
+	//https://docs.github.com/en/rest/issues/comments?apiVersion=2022-11-28#create-an-issue-comment
 	_, err := ghClient.CallRestAPI(
 		ctx,
-		fmt.Sprintf("/repos/%s/%s/pulls/%s/comments/%d", organization, repository, prUrl, comment_id),
+		fmt.Sprintf("/repos/%s/%s/issues/%s/comments", organization, repository, prNumber),
 		"",
 		"POST",
 		map[string]interface{}{

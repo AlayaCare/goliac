@@ -1,3 +1,7 @@
+## Goliac v0.18.7
+
+- bugfix: fixing comment creation issue
+
 ## Goliac v0.18.6
 
 - bugfix: passing organization to create a comment in an issue
