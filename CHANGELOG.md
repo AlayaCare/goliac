@@ -1,3 +1,8 @@
+## Goliac v0.18.4
+
+- allow to start a workflow (like forcemerge) via an update on a PR
+- bugfix: handle correctly the case where the repository is not the teams-repo
+
 ## Goliac v0.18.3
 
 - ruleset new definition bugfix
