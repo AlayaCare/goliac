@@ -88,7 +88,7 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 		}
 		resp, err := plugin.Execute(ctx, username, w.Spec.Description, explanation, url, step.Properties)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error when executing step %s: %v", step.Name, err)
 		}
 		responses = append(responses, resp)
 	}
@@ -96,7 +96,7 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 	// merge the PR
 	err = g.mergePR(ctx, username, repo, prNumber, explanation)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error when merging the PR: %v", err)
 	}
 
 	return responses, nil

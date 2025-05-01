@@ -24,7 +24,7 @@ In GitHub:
 - Under Organization permissions
   - Give Read/Write access to `Administration`
   - Give Read/Write access to `Members`
-  - Give Read/Write access to `Issues` (needed for the Breaking glass workflow)
+  - Give Read/Write access to `Pull requests` (needed for the Breaking glass workflow)
   - Give Read/Write access to `Environments`
   - Give Read/Write access to `Actions`
   - Give Read/Write access to `Variables`
