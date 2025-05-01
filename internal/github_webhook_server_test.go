@@ -16,10 +16,14 @@ func TestWebhookHandler(t *testing.T) {
 
 	t.Run("happy path: test ping webhook", func(t *testing.T) {
 		callbackreceived := false
+		issueCommentCallbackReceived := false
 		callback := func() {
 			callbackreceived = true
 		}
-		wh := NewGithubWebhookServerImpl("localhost", 8080, "/web", "secret", "main", callback).(*GithubWebhookServerImpl)
+		issueCommentCallback := func(repository, prUrl, githubIdCaller, comment string, comment_id int) {
+			issueCommentCallbackReceived = true
+		}
+		wh := NewGithubWebhookServerImpl("localhost", 8080, "/web", "secret", "org", "teams-repo", "main", callback, issueCommentCallback).(*GithubWebhookServerImpl)
 
 		body := `{
 			"zen": "testing",
@@ -41,18 +45,26 @@ func TestWebhookHandler(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		assert.Equal(t, false, callbackreceived)
+		assert.Equal(t, false, issueCommentCallbackReceived)
 	})
 
 	t.Run("happy path: test pull webhook", func(t *testing.T) {
 		callbackreceived := false
+		issueCommentCallbackReceived := false
 		callback := func() {
 			callbackreceived = true
 		}
-		wh := NewGithubWebhookServerImpl("localhost", 8080, "/web", "secret", "main", callback).(*GithubWebhookServerImpl)
+		issueCommentCallback := func(repository, prUrl, githubIdCaller, comment string, comment_id int) {
+			issueCommentCallbackReceived = true
+		}
+		wh := NewGithubWebhookServerImpl("localhost", 8080, "/web", "secret", "org", "teams-repo", "main", callback, issueCommentCallback).(*GithubWebhookServerImpl)
 
 		body := `{
-			"ref": "refs/heads/main"
-	}`
+			"ref": "refs/heads/main",
+			"repository": {
+				"full_name": "org/teams-repo"
+			}
+		}`
 
 		bodyReader := strings.NewReader(body)
 		req := httptest.NewRequest("POST", "/webhook", bodyReader)
@@ -69,14 +81,19 @@ func TestWebhookHandler(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 		assert.Equal(t, true, callbackreceived)
+		assert.Equal(t, false, issueCommentCallbackReceived)
 	})
 
 	t.Run("not happy path: unsigned webhook", func(t *testing.T) {
 		callbackreceived := false
+		issueCommentCallbackReceived := false
 		callback := func() {
 			callbackreceived = true
 		}
-		wh := NewGithubWebhookServerImpl("localhost", 8080, "/web", "secret", "main", callback).(*GithubWebhookServerImpl)
+		issueCommentCallback := func(repository, prUrl, githubIdCaller, comment string, comment_id int) {
+			issueCommentCallbackReceived = true
+		}
+		wh := NewGithubWebhookServerImpl("localhost", 8080, "/web", "secret", "org", "teams-repo", "main", callback, issueCommentCallback).(*GithubWebhookServerImpl)
 
 		body := `{
 			"zen": "testing",
@@ -95,6 +112,7 @@ func TestWebhookHandler(t *testing.T) {
 
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 		assert.Equal(t, false, callbackreceived)
+		assert.Equal(t, false, issueCommentCallbackReceived)
 	})
 
 }

@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -837,6 +839,8 @@ func (g *GoliacServerImpl) Serve() {
 			config.Config.GithubWebhookDedicatedPort,
 			config.Config.GithubWebhookPath,
 			config.Config.GithubWebhookSecret,
+			config.Config.GithubAppOrganization,
+			config.Config.ServerGitRepository,
 			config.Config.ServerGitBranch, func() {
 				// when receiving a Github webhook event
 				// let's start the apply process asynchronously
@@ -848,6 +852,20 @@ func (g *GoliacServerImpl) Serve() {
 						ctx, span = tracer.Start(ctx, "github-webhook")
 					}
 					g.triggerApply(ctx)
+					if span != nil {
+						span.End()
+					}
+				}()
+			},
+			func(repository, prUrl, githubIdCaller, comment string, comment_id int) {
+				go func() {
+					ctx := context.Background()
+					var span trace.Span
+					if config.Config.OpenTelemetryEnabled {
+						tracer := otel.Tracer("goliac")
+						ctx, span = tracer.Start(ctx, "github-webhook")
+					}
+					g.handleIssueComment(ctx, repository, prUrl, githubIdCaller, comment, comment_id)
 					if span != nil {
 						span.End()
 					}
@@ -909,6 +927,69 @@ func (g *GoliacServerImpl) Serve() {
 	close(stopCh)
 	wg.Wait()
 	config.ShutdownTraceProvider()
+}
+
+// handleIssueComment handles the issue comment event
+// it is mainly used for PR comments
+func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, prUrl, githubIdCaller, comment string, comment_id int) {
+	logrus.Debugf("Issue comment event received for repository %s, githubIdCaller %s, comment %s", repository, githubIdCaller, comment)
+
+	commentRegex := regexp.MustCompile(`^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+): (.*)`)
+	matches := commentRegex.FindStringSubmatch(comment)
+	if len(matches) == 4 {
+		workflowInstance := matches[1]
+		workflowName := matches[2]
+		explanation := matches[3]
+
+		if strings.Trim(explanation, " ") == "" {
+			explanation = "No explanation provided"
+			logrus.Warnf("No explanation provided for workflow %s", workflowName)
+
+			err := g.CreateComment(
+				ctx,
+				repository,
+				prUrl,
+				githubIdCaller,
+				explanation,
+				comment_id,
+			)
+			if err != nil {
+				logrus.Error(err)
+			}
+			return
+		}
+		// check if the comment is a command to apply
+		for instanceName, workflow := range g.worflowInstances {
+			if workflowInstance == instanceName {
+				workflow.ExecuteWorkflow(
+					ctx,
+					g.goliac.GetLocal().RepoConfig().Workflows,
+					githubIdCaller,
+					workflowName,
+					explanation,
+					map[string]string{},
+					false,
+				)
+			}
+		}
+	}
+}
+
+func (g *GoliacServerImpl) CreateComment(ctx context.Context, repository, prUrl, githubIdCaller, comment string, comment_id int) error {
+	ghClient := g.goliac.GetRemoteClient()
+
+	// POST /repos/{owner}/{repo}/pulls/{pull_number}/comments
+	_, err := ghClient.CallRestAPI(
+		ctx,
+		fmt.Sprintf("/repos/%s/%s/pulls/%s/comments/%d", config.Config.GithubAppOrganization, repository, prUrl, comment_id),
+		"",
+		"POST",
+		map[string]interface{}{
+			"body": comment,
+		},
+		nil,
+	)
+	return err
 }
 
 /*
