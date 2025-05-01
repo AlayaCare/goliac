@@ -541,12 +541,12 @@ func TestHandleIssueComment(t *testing.T) {
 			},
 		}
 
-		server.handleIssueComment(context.Background(), "repoB", "123", "userE1", "/forcemerge:fmtest:", 456)
+		server.handleIssueComment(context.Background(), "org", "repoB", "123", "userE1", "/forcemerge:fmtest:", 456)
 		assert.Equal(t, "", fmtest.workflowName)
 		assert.Equal(t, "", fmtest.explanation)
 
 		// config.Config.Organization is empty so we have a '//' here
-		assert.Equal(t, "/repos//repoB/pulls/123/comments/456", githubClient.lastEndpoint)
+		assert.Equal(t, "/repos/org/repoB/pulls/123/comments/456", githubClient.lastEndpoint)
 		assert.Equal(t, "POST", githubClient.lastMethod)
 		assert.Equal(t, "No explanation provided", githubClient.lastBody["body"])
 	})
@@ -563,7 +563,7 @@ func TestHandleIssueComment(t *testing.T) {
 			},
 		}
 
-		server.handleIssueComment(context.Background(), "repoB", "123", "userE1", "/forcemerge:fmtest: foobar", 123)
+		server.handleIssueComment(context.Background(), "org", "repoB", "123", "userE1", "/forcemerge:fmtest: foobar", 123)
 		assert.Equal(t, "foobar", fmtest.explanation)
 		assert.Equal(t, "fmtest", fmtest.workflowName)
 
