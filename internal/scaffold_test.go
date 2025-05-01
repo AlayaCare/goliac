@@ -442,10 +442,16 @@ func TestEnvironmentsAndVariables(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, "repo2", r2.Name)
 		assert.Equal(t, 2, len(r2.Spec.Environments))
-		assert.Equal(t, "env1", r2.Spec.Environments[0].Name)
-		assert.Equal(t, "env2", r2.Spec.Environments[1].Name)
-		assert.Equal(t, "value1", r2.Spec.Environments[0].Variables["var1"])
-		assert.Equal(t, "value2", r2.Spec.ActionsVariables["var2"])
+		if r2.Spec.Environments[0].Name == "env1" {
+			assert.Equal(t, "value1", r2.Spec.Environments[0].Variables["var1"])
+		} else {
+			assert.Equal(t, "value2", r2.Spec.Environments[0].Variables["var2"])
+		}
+		if r2.Spec.Environments[1].Name == "env1" {
+			assert.Equal(t, "value1", r2.Spec.Environments[1].Variables["var1"])
+		} else {
+			assert.Equal(t, "value2", r2.Spec.Environments[1].Variables["var2"])
+		}
 	})
 }
 

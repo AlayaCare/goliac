@@ -27,12 +27,18 @@ func (a *OAuth2ConfigMock) Exchange(ctx context.Context, code string, opts ...oa
 }
 
 type GithubClientMock struct {
+	lastEndpoint string
+	lastMethod   string
+	lastBody     map[string]interface{}
 }
 
 func (g *GithubClientMock) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
 	return nil, nil
 }
 func (g *GithubClientMock) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error) {
+	g.lastEndpoint = endpoint
+	g.lastMethod = method
+	g.lastBody = body
 	if endpoint == "/user" {
 		return []byte(`{"login": "testuser", "name":"Test User"}`), nil
 	}
@@ -51,7 +57,7 @@ func (g *GithubClientMock) GetAppSlug() string {
 func TestAuthGetLogin(t *testing.T) {
 	t.Run("happy path: ", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac: goliac,
 			oauthConfig: &oauth2.Config{
@@ -73,7 +79,7 @@ func TestAuthGetLogin(t *testing.T) {
 func TestAuthGetCallback(t *testing.T) {
 	t.Run("happy path: ", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac:       goliac,
 			sessionStore: sessions.NewCookieStore([]byte("your-secret-key")),
@@ -104,7 +110,7 @@ func TestAuthGetCallback(t *testing.T) {
 
 	t.Run("not happy path: ", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac:       goliac,
 			sessionStore: sessions.NewCookieStore([]byte("your-secret-key")),
@@ -134,7 +140,7 @@ func TestAuthGetCallback(t *testing.T) {
 func TestGetUserInfo(t *testing.T) {
 	t.Run("happy path: ", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac: goliac,
 			oauthConfig: &OAuth2ConfigMock{
@@ -153,7 +159,7 @@ func TestGetUserInfo(t *testing.T) {
 func TestHhelperCheckOrgMembership(t *testing.T) {
 	t.Run("happy path: ", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac:       goliac,
 			client:       &GithubClientMock{},
@@ -179,7 +185,7 @@ func TestHhelperCheckOrgMembership(t *testing.T) {
 
 	t.Run("not happy path: no auth-session ", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac:       goliac,
 			client:       &GithubClientMock{},
@@ -202,7 +208,7 @@ func TestHhelperCheckOrgMembership(t *testing.T) {
 func TestAuthGetUser(t *testing.T) {
 	t.Run("happy path: ", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac:       goliac,
 			client:       &GithubClientMock{},
@@ -232,7 +238,7 @@ func TestAuthGetUser(t *testing.T) {
 func TestAuthWorkflowsForcemerge(t *testing.T) {
 	t.Run("happy path: ", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac:       goliac,
 			client:       &GithubClientMock{},

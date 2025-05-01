@@ -934,14 +934,15 @@ func (g *GoliacServerImpl) Serve() {
 func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, prUrl, githubIdCaller, comment string, comment_id int) {
 	logrus.Debugf("Issue comment event received for repository %s, githubIdCaller %s, comment %s", repository, githubIdCaller, comment)
 
-	commentRegex := regexp.MustCompile(`^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+): (.*)`)
+	commentRegex := regexp.MustCompile(`^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+):(.*)`)
 	matches := commentRegex.FindStringSubmatch(comment)
 	if len(matches) == 4 {
 		workflowInstance := matches[1]
 		workflowName := matches[2]
 		explanation := matches[3]
 
-		if strings.Trim(explanation, " ") == "" {
+		explanation = strings.Trim(explanation, " \r\n\t")
+		if explanation == "" {
 			explanation = "No explanation provided"
 			logrus.Warnf("No explanation provided for workflow %s", workflowName)
 
@@ -961,7 +962,7 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, p
 		// check if the comment is a command to apply
 		for instanceName, workflow := range g.worflowInstances {
 			if workflowInstance == instanceName {
-				workflow.ExecuteWorkflow(
+				urls, err := workflow.ExecuteWorkflow(
 					ctx,
 					g.goliac.GetLocal().RepoConfig().Workflows,
 					githubIdCaller,
@@ -970,6 +971,39 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, repository, p
 					map[string]string{},
 					false,
 				)
+
+				if err != nil {
+					err = g.CreateComment(
+						ctx,
+						repository,
+						prUrl,
+						githubIdCaller,
+						"Error when executing workflow: "+err.Error(),
+						comment_id,
+					)
+					if err != nil {
+						logrus.Error(err)
+					}
+				} else {
+					comment := "Workflow executed successfully"
+					if len(urls) > 0 {
+						comment += ". Urls to follow:"
+						for _, url := range urls {
+							comment += "\n- " + url
+						}
+					}
+					err = g.CreateComment(
+						ctx,
+						repository,
+						prUrl,
+						githubIdCaller,
+						comment,
+						comment_id,
+					)
+					if err != nil {
+						logrus.Error(err)
+					}
+				}
 			}
 		}
 	}

@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/goliac-project/goliac/internal/entity"
 	"github.com/goliac-project/goliac/internal/github"
 	"github.com/goliac-project/goliac/internal/observability"
+	"github.com/goliac-project/goliac/internal/workflow"
 	"github.com/goliac-project/goliac/swagger_gen/restapi/operations/app"
 )
 
@@ -58,6 +60,7 @@ func fixtureGoliacLocal() (*GoliacLocalMock, *GoliacRemoteMock) {
 		externalUsers: make(map[string]*entity.User),
 		rulesets:      make(map[string]*entity.RuleSet),
 		workflows:     make(map[string]*entity.Workflow),
+		repoconfig:    &config.RepositoryConfig{},
 	}
 
 	// users
@@ -168,6 +171,7 @@ func fixtureGoliacLocal() (*GoliacLocalMock, *GoliacRemoteMock) {
 		Allowed: []string{"test-team"},
 	}
 	l.workflows["fmtest"] = &fmtest
+	l.repoconfig.Workflows = []string{"fmtest"}
 
 	// remote mock
 	r := GoliacRemoteMock{
@@ -217,6 +221,7 @@ func (g *GoliacRemoteMock) EnvironmentSecretsPerRepository(ctx context.Context, 
 type GoliacMock struct {
 	local  engine.GoliacLocalResources
 	remote engine.GoliacRemoteResources
+	client *GithubClientMock
 }
 
 func (g *GoliacMock) Apply(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, dryrun bool, repo string, branch string) *engine.UnmanagedResources {
@@ -242,7 +247,7 @@ func (g *GoliacMock) GetRemote() engine.GoliacRemoteResources {
 	return g.remote
 }
 func (g *GoliacMock) GetRemoteClient() github.GitHubClient {
-	return &GitHubClientMock{}
+	return g.client
 }
 func (g *GoliacMock) ExternalCreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, githubToken, newRepositoryName, team, visibility, newRepositoryDefaultBranch string, repositoryUrl, branch string) {
 }
@@ -255,10 +260,11 @@ func (g *GoliacMock) ExecuteWorkflow(ctx context.Context, username string, workf
 func (g *GoliacMock) GetWorkflows() map[string]*entity.Workflow {
 	return nil
 }
-func NewGoliacMock(local engine.GoliacLocalResources, remote engine.GoliacRemoteResources) Goliac {
+func NewGoliacMock(local engine.GoliacLocalResources, remote engine.GoliacRemoteResources, client *GithubClientMock) Goliac {
 	mock := GoliacMock{
 		local:  local,
 		remote: remote,
+		client: client,
 	}
 	return &mock
 }
@@ -345,7 +351,7 @@ func TestGetStatistics(t *testing.T) {
 
 func TestAppGetUsers(t *testing.T) {
 	localfixture, remotefixture := fixtureGoliacLocal()
-	goliac := NewGoliacMock(localfixture, remotefixture)
+	goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 	now := time.Now()
 	server := GoliacServerImpl{
 		goliac:        goliac,
@@ -379,7 +385,7 @@ func TestAppGetUsers(t *testing.T) {
 }
 func TestAppGetTeams(t *testing.T) {
 	localfixture, remotefixture := fixtureGoliacLocal()
-	goliac := NewGoliacMock(localfixture, remotefixture)
+	goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 	now := time.Now()
 	server := GoliacServerImpl{
 		goliac:        goliac,
@@ -417,7 +423,7 @@ func TestAppGetTeams(t *testing.T) {
 
 func TestAppGetRepositories(t *testing.T) {
 	localfixture, remotefixture := fixtureGoliacLocal()
-	goliac := NewGoliacMock(localfixture, remotefixture)
+	goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 	now := time.Now()
 	server := GoliacServerImpl{
 		goliac:        goliac,
@@ -466,7 +472,7 @@ func TestAppGetRepositories(t *testing.T) {
 func TestGetCollaborators(t *testing.T) {
 	t.Run("happy path: get collaborators", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac: goliac,
 		}
@@ -481,7 +487,7 @@ func TestGetCollaborators(t *testing.T) {
 func TestGetCollaborator(t *testing.T) {
 	t.Run("happy path: get collaborator", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac: goliac,
 		}
@@ -497,7 +503,7 @@ func TestGetCollaborator(t *testing.T) {
 
 		lRepos := localfixture.Repositories()
 		lRepos["repoB"].Spec.ExternalUserReaders = []string{"userE1"}
-		goliac := NewGoliacMock(localfixture, remotefixture)
+		goliac := NewGoliacMock(localfixture, remotefixture, &GithubClientMock{})
 		server := GoliacServerImpl{
 			goliac: goliac,
 		}
@@ -507,5 +513,61 @@ func TestGetCollaborator(t *testing.T) {
 		assert.Equal(t, "githubE1", payload.Payload.Githubid)
 		assert.Equal(t, 1, len(payload.Payload.Repositories))
 		assert.Equal(t, "repoB", payload.Payload.Repositories[0].Name)
+	})
+}
+
+type WorkflowMock struct {
+	workflowName string
+	explanation  string
+}
+
+func (w *WorkflowMock) ExecuteWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, explanation string, properties map[string]string, dryrun bool) ([]string, error) {
+	w.workflowName = workflowName
+	w.explanation = explanation
+	return nil, nil
+}
+func TestHandleIssueComment(t *testing.T) {
+	t.Run("happy path: handle issue comment without explanation", func(t *testing.T) {
+		localfixture, remotefixture := fixtureGoliacLocal()
+		fmtest := WorkflowMock{}
+
+		githubClient := &GithubClientMock{}
+
+		goliac := NewGoliacMock(localfixture, remotefixture, githubClient)
+		server := GoliacServerImpl{
+			goliac: goliac,
+			worflowInstances: map[string]workflow.Workflow{
+				"forcemerge": &fmtest,
+			},
+		}
+
+		server.handleIssueComment(context.Background(), "repoB", "123", "userE1", "/forcemerge:fmtest:", 456)
+		assert.Equal(t, "", fmtest.workflowName)
+		assert.Equal(t, "", fmtest.explanation)
+
+		// config.Config.Organization is empty so we have a '//' here
+		assert.Equal(t, "/repos//repoB/pulls/123/comments/456", githubClient.lastEndpoint)
+		assert.Equal(t, "POST", githubClient.lastMethod)
+		assert.Equal(t, "No explanation provided", githubClient.lastBody["body"])
+	})
+
+	t.Run("happy path: handle issue comment with explanation", func(t *testing.T) {
+		localfixture, remotefixture := fixtureGoliacLocal()
+		githubClient := &GithubClientMock{}
+		fmtest := WorkflowMock{}
+		goliac := NewGoliacMock(localfixture, remotefixture, githubClient)
+		server := GoliacServerImpl{
+			goliac: goliac,
+			worflowInstances: map[string]workflow.Workflow{
+				"forcemerge": &fmtest,
+			},
+		}
+
+		server.handleIssueComment(context.Background(), "repoB", "123", "userE1", "/forcemerge:fmtest: foobar", 123)
+		assert.Equal(t, "foobar", fmtest.explanation)
+		assert.Equal(t, "fmtest", fmtest.workflowName)
+
+		fmt.Println(githubClient.lastBody)
+		assert.Equal(t, "Workflow executed successfully", githubClient.lastBody["body"])
 	})
 }
