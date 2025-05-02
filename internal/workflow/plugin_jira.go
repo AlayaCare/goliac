@@ -11,6 +11,10 @@ import (
 	"strings"
 
 	"github.com/goliac-project/goliac/internal/config"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type StepPluginJira struct {
@@ -120,8 +124,28 @@ func (f *StepPluginJira) Execute(ctx context.Context, username, workflowDescript
 		return "", fmt.Errorf("error marshalling JSON: %s", err)
 	}
 
-	req, err := http.NewRequest("POST", jiraURL, bytes.NewBuffer(jsonData))
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		if config.Config.OpenTelemetryTraceAll {
+			// get back the tracer from the context
+			ctx, childSpan = otel.Tracer("goliac").Start(ctx, fmt.Sprintf("StepPluginJira.Execute %s", jiraURL))
+			defer childSpan.End()
+
+			childSpan.SetAttributes(
+				attribute.String("method", "POST"),
+				attribute.String("endpoint", jiraURL),
+				attribute.String("body", string(jsonData)),
+				attribute.String("auth user", f.Email),
+				attribute.String("auth pass", f.ApiToken[:20]+"***"),
+			)
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", jiraURL, bytes.NewBuffer(jsonData))
 	if err != nil {
+		if childSpan != nil {
+			childSpan.SetStatus(codes.Error, err.Error())
+		}
 		return "", fmt.Errorf("error creating request: %s", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -130,12 +154,18 @@ func (f *StepPluginJira) Execute(ctx context.Context, username, workflowDescript
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		if childSpan != nil {
+			childSpan.SetStatus(codes.Error, err.Error())
+		}
 		return "", fmt.Errorf("error sending request: %s", err)
 	}
 	defer resp.Body.Close()
 
 	if !(resp.StatusCode >= 200 && resp.StatusCode < 300) {
 		bodyContent, _ := io.ReadAll(resp.Body)
+		if childSpan != nil {
+			childSpan.SetStatus(codes.Error, string(bodyContent))
+		}
 		return "", fmt.Errorf("failed to create issue. Status: %s (%s)", resp.Status, bodyContent)
 	}
 
