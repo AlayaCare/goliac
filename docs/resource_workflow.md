@@ -23,6 +23,7 @@ To be able to enable the workflows, you need to register the Github Appwith OAut
   - `GOLIAC_GITHUB_APP_CLIENT_SECRET` (the secret associated with the webhook)
   - `GOLIAC_GITHUB_APP_CALLBACK_URL` (the `Callback URL` of your Github App)
 
+Note: to create an Atlassian API token, follow [the instructions here](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/).
 
 ## Create a PullRequest Review (breaking glass) workflow
 
