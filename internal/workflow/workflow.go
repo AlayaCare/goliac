@@ -268,7 +268,10 @@ func (ws *WorkflowServiceImpl) getRepositoryApprovers(repository, username strin
 	// Call the GitHub REST API to get the file content
 	responseBytes, err := ws.ghclient.CallRestAPI(ctx, endpoint, "", "GET", nil, nil)
 	if err != nil {
-		// If the file doesn't exist or there's an error, return empty teams list
+		// If the file doesn't exist, return empty teams list
+		if err.Error() == "unexpected status: 404 Not Found" {
+			return []string{}, nil
+		}
 		return []string{}, err
 	}
 
@@ -280,20 +283,20 @@ func (ws *WorkflowServiceImpl) getRepositoryApprovers(repository, username strin
 
 	if err := json.Unmarshal(responseBytes, &fileResponse); err != nil {
 		// If there's an error parsing the response, return empty teams list
-		return []string{}, err
+		return []string{}, fmt.Errorf("error fetching .goliac/forcemerge.approvers: %v", err)
 	}
 
 	// GitHub returns content as base64 encoded
 	decodedContent, err := base64.StdEncoding.DecodeString(fileResponse.Content)
 	if err != nil {
-		return []string{}, err
+		return []string{}, fmt.Errorf("error fetching base64 .goliac/forcemerge.approvers: %v", err)
 	}
 
 	// Parse the file content to extract teams and users
 	var approvers RepositoryGoliacApprovers
 	if err := yaml.Unmarshal(decodedContent, &approvers); err != nil {
 		// If there's an error parsing the JSON, return empty teams list
-		return []string{}, err
+		return []string{}, fmt.Errorf("error fetching .goliac/forcemerge.approvers: %v", err)
 	}
 
 	var allowedTeams []string

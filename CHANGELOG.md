@@ -1,3 +1,7 @@
+## Goliac v0.18.10
+
+- better .goliac/forcemerge.approvers error handling
+
 ## Goliac v0.18.9
 
 - allows to specify workflow approver from repo's .goliac/forcemerge.approvers
