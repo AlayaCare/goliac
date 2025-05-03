@@ -15,7 +15,7 @@ require (
 	github.com/go-openapi/strfmt v0.23.0
 	github.com/go-openapi/swag v0.23.0
 	github.com/go-openapi/validate v0.24.0
-	github.com/golang-jwt/jwt v3.2.2+incompatible
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/go-github/v55 v55.0.0
 	github.com/gorilla/sessions v1.4.0
 	github.com/gosimple/slug v1.15.0
