@@ -1,3 +1,8 @@
+## Goliac v0.18.11
+
+- security fix: Bumps http-proxy-middleware from 2.0.7 to 2.0.9
+- security fix: update go jwt library 
+
 ## Goliac v0.18.10
 
 - better .goliac/forcemerge.approvers error handling
