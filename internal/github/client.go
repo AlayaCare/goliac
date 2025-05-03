@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/sirupsen/logrus"
