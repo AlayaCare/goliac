@@ -63,7 +63,7 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 	// check workflow and acl
 	w, err := g.ws.GetWorkflow(ctx, repoconfigForceMergeworkflows, workflowName, repo, username)
 	if err != nil {
-		return nil, fmt.Errorf("unable to load the workflow: %v", err)
+		return nil, fmt.Errorf("unable to execute the workflow: %v", err)
 	}
 
 	// execute the workflow
