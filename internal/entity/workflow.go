@@ -3,7 +3,6 @@ package entity
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/goliac-project/goliac/internal/observability"
@@ -118,91 +117,6 @@ func (w *Workflow) Validate(filename string) error {
 	}
 
 	return nil
-}
-
-func (w *Workflow) PassAcl(usernameTeams []string, repository string) bool {
-	// checking the repository name
-	if w.Spec.WorkflowType != "noop" {
-		repoMatch := false
-		for _, repo := range w.Spec.Repositories.Allowed {
-			if repo == "~ALL" {
-				repoMatch = true
-				break
-			}
-			repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
-			if err != nil {
-				return false
-			}
-			if repoRegex {
-				repoMatch = true
-				break
-			}
-		}
-
-		for _, repo := range w.Spec.Repositories.Except {
-			repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
-			if err != nil {
-				return false
-			}
-			if repoRegex {
-				return false
-			}
-		}
-
-		if !repoMatch {
-			return false
-		}
-	}
-
-	// checking if (one of) the team is allowed
-
-	teamsOwned := make(map[string]bool)
-	for _, team := range usernameTeams {
-		teamsOwned[team] = false
-	}
-
-	if len(w.Spec.Acls.Allowed) > 0 {
-		for _, allowed := range w.Spec.Acls.Allowed {
-			if allowed == "~ALL" {
-				break
-			}
-			for _, team := range usernameTeams {
-				teamRegex, err := regexp.Match(fmt.Sprintf("^%s$", allowed), []byte(team))
-				if err != nil {
-					return false
-				}
-				if teamRegex {
-					teamsOwned[team] = true
-				}
-			}
-		}
-	} else {
-		for _, team := range usernameTeams {
-			teamsOwned[team] = true
-		}
-	}
-
-	if len(w.Spec.Acls.Except) > 0 {
-		for _, except := range w.Spec.Acls.Except {
-			for _, team := range usernameTeams {
-				teamRegex, err := regexp.Match(fmt.Sprintf("^%s$", except), []byte(team))
-				if err != nil {
-					return false
-				}
-				if teamRegex {
-					teamsOwned[team] = false
-				}
-			}
-		}
-	}
-
-	for _, v := range teamsOwned {
-		if v {
-			return true
-		}
-	}
-
-	return false
 }
 
 func ReadWorkflowDirectory(fs billy.Filesystem, dirname string, errorCollection *observability.ErrorCollection) map[string]*Workflow {

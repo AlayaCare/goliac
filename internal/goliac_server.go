@@ -154,9 +154,11 @@ func NewGoliacServer(goliac Goliac, notificationService notification.Notificatio
 		Scopes:       []string{"openid", "read:org", "user"},
 	}
 
+	ws := workflow.NewWorkflowService(config.Config.GithubAppOrganization, goliac.GetLocal(), goliac.GetRemote(), goliac.GetRemoteClient())
+
 	worflowInstances := make(map[string]workflow.Workflow)
-	worflowInstances["forcemerge"] = workflow.NewForcemergeImpl(goliac.GetLocal(), goliac.GetRemote(), goliac.GetRemoteClient())
-	worflowInstances["noop"] = workflow.NewNoopImpl(goliac.GetLocal(), goliac.GetRemote())
+	worflowInstances["forcemerge"] = workflow.NewForcemergeImpl(ws)
+	worflowInstances["noop"] = workflow.NewNoopImpl(ws)
 
 	server := GoliacServerImpl{
 		goliac:              goliac,

@@ -13,28 +13,19 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// strip down version of GithubClient
-type ForcemergeGithubClient interface {
-	CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error)
-}
-
 type ForcemergeImpl struct {
-	local        WorkflowLocalResource
-	remote       WorkflowRemoteResource
-	githubclient ForcemergeGithubClient
-	stepPlugins  map[string]StepPlugin
+	ws          WorkflowService
+	stepPlugins map[string]StepPlugin
 }
 
-func NewForcemergeImpl(local WorkflowLocalResource, remote WorkflowRemoteResource, githubclient ForcemergeGithubClient) Workflow {
+func NewForcemergeImpl(ws WorkflowService) Workflow {
 	stepPlugins := map[string]StepPlugin{
 		"jira_ticket_creation": NewStepPluginJira(),
 		"slack_notification":   NewStepPluginSlack(),
 	}
 	return &ForcemergeImpl{
-		local:        local,
-		remote:       remote,
-		githubclient: githubclient,
-		stepPlugins:  stepPlugins,
+		ws:          ws,
+		stepPlugins: stepPlugins,
 	}
 }
 
@@ -70,7 +61,7 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 	prNumber := prMatch[2]
 
 	// check workflow and acl
-	w, err := GetWorkflow(ctx, g.local, g.remote, repoconfigForceMergeworkflows, workflowName, repo, username)
+	w, err := g.ws.GetWorkflow(ctx, repoconfigForceMergeworkflows, workflowName, repo, username)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load the workflow: %v", err)
 	}
@@ -103,7 +94,7 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 }
 
 func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo string, prNumber, explanation string) error {
-	body, err := g.githubclient.CallRestAPI(
+	body, err := g.ws.CallRestAPI(
 		ctx,
 		fmt.Sprintf("/repos/%s/%s/pulls/%s/reviews", config.Config.GithubAppOrganization, repo, prNumber),
 		"",
@@ -118,7 +109,7 @@ func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo stri
 	}
 
 	// https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#merge-a-pull-request
-	body, err = g.githubclient.CallRestAPI(
+	body, err = g.ws.CallRestAPI(
 		ctx,
 		fmt.Sprintf("/repos/%s/%s/pulls/%s/merge", config.Config.GithubAppOrganization, repo, prNumber),
 		"",
@@ -132,7 +123,7 @@ func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo stri
 	if err != nil {
 		if strings.Contains(err.Error(), "Method Not Allowed") {
 			// in case of we want a squash merge
-			body, err = g.githubclient.CallRestAPI(
+			body, err = g.ws.CallRestAPI(
 				ctx,
 				fmt.Sprintf("/repos/%s/%s/pulls/%s/merge", config.Config.GithubAppOrganization, repo, prNumber),
 				"",

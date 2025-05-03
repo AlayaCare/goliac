@@ -30,6 +30,14 @@ func fixtureNoopWorkflow() *entity.Workflow {
 	w.Spec.Description = "noop test"
 	w.Spec.WorkflowType = "noop"
 
+	w.Spec.Repositories = struct {
+		Allowed []string `yaml:"allowed"`
+		Except  []string `yaml:"except"`
+	}{
+		Allowed: []string{".*"},
+		Except:  []string{},
+	}
+
 	w.Spec.Acls = struct {
 		Allowed []string `yaml:"allowed"`
 		Except  []string `yaml:"except"`
@@ -73,9 +81,10 @@ func TestNoop(t *testing.T) {
 			"jira_ticket_creation": NewStepPluginMock(),
 		}
 
+		ws := NewWorkflowService("myorg", local, remote, &GithubClientMock{})
+
 		noop := &NoopImpl{
-			local:       local,
-			remote:      remote,
+			ws:          ws,
 			stepPlugins: stepPlugins,
 		}
 
