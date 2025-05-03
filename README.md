@@ -1,5 +1,7 @@
 # ![Goliac](docs/images/logo_small.png) Goliac
 
+Find an exhaustive documentation at https://goliac-project.github.io/goliac
+
 Goliac (Github Organization Leveraged by Infrastructure As Code), is a collaborative tool to manage your Github Organization (users/teams/repositories) via
 - yaml manifests files structured in a Github repository
 - this IAC Github repositories can be updated by teams from your organization, but only the repositories they owns
