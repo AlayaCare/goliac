@@ -118,6 +118,31 @@ The ACL are here to let you know for this workflow
 - who can see / action it
 - on which repositories
 
+The ACL section has two fields:
+- `allowed`: list of teams or users that can see / action it
+- `except`: list of teams or users that should be excluded
+
+The except field can contain:
+- a list of teams (e.g. `team1`, `team2`)
+- a list of regular expressions on teams (e.g. `team.*`)
+
+The allowed field can contain:
+- a list of teams (e.g. `team1`, `team2`)
+- a list of regular expressions on teams (e.g. `team.*`)
+- the special value `~ALL` to allow all teams
+- the special value `~GOLIAC_REPOSITORY_APPROVERS` to fetch the list of repository approvers from the `.goliac/forcemerge.approvers` file in the repository
+
+The `.goliac/forcemerge.approvers` file in the repository has the following format:
+
+```yaml
+teams:
+- team1
+- team2
+users:
+- username1
+- username2
+```
+
 
 ## Use the Jira step
 

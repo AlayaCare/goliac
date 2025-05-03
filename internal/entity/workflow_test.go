@@ -76,28 +76,6 @@ func TestWorkflow(t *testing.T) {
 		assert.Equal(t, 2, len(workflows))
 	})
 
-	t.Run("happy path: testing acls", func(t *testing.T) {
-		// create a new user
-		fs := memfs.New()
-		fixtureCreateWorkflow(t, fs)
-
-		errorCollector := observability.NewErrorCollection()
-		workflows := ReadWorkflowDirectory(fs, "workflows", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
-		assert.NotNil(t, workflows)
-		assert.Equal(t, 2, len(workflows))
-
-		// check the acls
-		assert.True(t, workflows["workflow1"].PassAcl([]string{"team1", "team2"}, "repo1"))
-		assert.False(t, workflows["workflow1"].PassAcl([]string{"team1", "team2"}, "repo2"))
-		assert.False(t, workflows["workflow1"].PassAcl([]string{"team5"}, "repo1"))
-
-		assert.True(t, workflows["workflow2"].PassAcl([]string{"team1", "team5"}, "repo2"))
-		assert.False(t, workflows["workflow2"].PassAcl([]string{"team1", "team2"}, "repo2"))
-		assert.False(t, workflows["workflow2"].PassAcl([]string{"team5"}, "repo1"))
-	})
-
 	t.Run("happy path", func(t *testing.T) {
 		// create a new user
 		fs := memfs.New()

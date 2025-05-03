@@ -11,19 +11,17 @@ import (
 )
 
 type NoopImpl struct {
-	local       WorkflowLocalResource
-	remote      WorkflowRemoteResource
+	ws          WorkflowService
 	stepPlugins map[string]StepPlugin
 }
 
-func NewNoopImpl(local WorkflowLocalResource, remote WorkflowRemoteResource) Workflow {
+func NewNoopImpl(ws WorkflowService) Workflow {
 	stepPlugins := map[string]StepPlugin{
 		"jira_ticket_creation": NewStepPluginJira(),
 		"slack_notification":   NewStepPluginSlack(),
 	}
 	return &NoopImpl{
-		local:       local,
-		remote:      remote,
+		ws:          ws,
 		stepPlugins: stepPlugins,
 	}
 }
@@ -40,7 +38,7 @@ func (g *NoopImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMergework
 	}
 
 	// check workflow and acl
-	w, err := GetWorkflow(ctx, g.local, g.remote, repoconfigForceMergeworkflows, workflowName, "", username)
+	w, err := g.ws.GetWorkflow(ctx, repoconfigForceMergeworkflows, workflowName, "", username)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load the workflow: %v", err)
 	}

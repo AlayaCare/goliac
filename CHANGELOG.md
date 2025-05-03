@@ -1,3 +1,7 @@
+## Goliac v0.18.9
+
+- allows to specify workflow approver from repo's .goliac/forcemerge.approvers
+
 ## Goliac v0.18.8
 
 - bugfix: pass pr url to workflow when receiving a PR command
