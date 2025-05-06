@@ -651,6 +651,7 @@ func TestLoadEnvironmentVariablesPerRepository(t *testing.T) {
 
 // LoadRepositoriesVariablesMockClient is a mock client for testing repository variables loading
 type LoadRepositoriesVariablesMockClient struct {
+	mutex           sync.Mutex
 	lastEndpoint    string
 	lastParameters  string
 	lastMethod      string
@@ -669,6 +670,8 @@ func (m *LoadRepositoriesVariablesMockClient) QueryGraphQLAPI(ctx context.Contex
 }
 
 func (m *LoadRepositoriesVariablesMockClient) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	m.callCount++
 	m.lastEndpoint = endpoint
 	m.lastParameters = parameters

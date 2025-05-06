@@ -570,4 +570,32 @@ func TestHandleIssueComment(t *testing.T) {
 		fmt.Println(githubClient.lastBody)
 		assert.Equal(t, "Workflow executed successfully", githubClient.lastBody["body"])
 	})
+
+	t.Run("happy path: handle issue comment with unknown workflow", func(t *testing.T) {
+		localfixture, remotefixture := fixtureGoliacLocal()
+		githubClient := &GithubClientMock{}
+		goliac := NewGoliacMock(localfixture, remotefixture, githubClient)
+		server := GoliacServerImpl{
+			goliac: goliac,
+		}
+
+		server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", "/forcemerge", 123)
+		assert.Equal(t, nil, githubClient.lastBody["body"])
+	})
+
+	t.Run("happy path: handle issue comment without mentioning a workflow", func(t *testing.T) {
+		localfixture, remotefixture := fixtureGoliacLocal()
+		githubClient := &GithubClientMock{}
+		fmtest := WorkflowMock{}
+		goliac := NewGoliacMock(localfixture, remotefixture, githubClient)
+		server := GoliacServerImpl{
+			goliac: goliac,
+			worflowInstances: map[string]workflow.Workflow{
+				"forcemerge": &fmtest,
+			},
+		}
+
+		server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", "/forcemerge", 123)
+		assert.Equal(t, "Available workflows:\n- `/forcemerge:fmtest: <explanation>`\n", githubClient.lastBody["body"])
+	})
 }
