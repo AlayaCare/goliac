@@ -936,81 +936,177 @@ func (g *GoliacServerImpl) Serve() {
 func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization, repository, prUrl, githubIdCaller, comment string, comment_id int) {
 	logrus.Debugf("Issue comment event received for organization %s, repository %s, githubIdCaller %s, prUrl %s, comment %s", organization, repository, githubIdCaller, prUrl, comment)
 
-	commentRegex := regexp.MustCompile(`^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+):(.*)`)
-	comment = strings.Trim(comment, " \r\n\t")
-	matches := commentRegex.FindStringSubmatch(comment)
-	if len(matches) == 4 {
-		workflowInstance := matches[1]
-		workflowName := matches[2]
-		explanation := matches[3]
+	// check if the comment is a command to apply
+	commandRegex := regexp.MustCompile(`^/([a-zA-Z0-9_-]+):?(.*)`)
+	matches := commandRegex.FindStringSubmatch(comment)
+	if len(matches) == 3 {
+		command := matches[1]
 
-		explanation = strings.Trim(explanation, " \r\n\t")
-		if explanation == "" {
-			explanation = "No explanation provided"
-			logrus.Warnf("No explanation provided for workflow %s", workflowName)
+		// looking for something like "/forcemerge:default: an explanation"
+		commentRegex := regexp.MustCompile(`^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+):(.*)`)
+		comment = strings.Trim(comment, " \r\n\t")
+		matches := commentRegex.FindStringSubmatch(comment)
+		if len(matches) == 4 {
+			workflowInstance := matches[1]
+			workflowName := matches[2]
+			explanation := matches[3]
 
-			err := g.CreateComment(
-				ctx,
-				organization,
-				repository,
-				prUrl,
-				githubIdCaller,
-				explanation,
-			)
-			if err != nil {
-				logrus.Error("error when creating 'no explanation provided' comment: " + err.Error())
-			}
-			return
+			// trying to execute the workflow
+			g.handleIssueCommandExecuteWorkflow(ctx, organization, repository, prUrl, githubIdCaller, workflowInstance, workflowName, explanation)
+		} else {
+			// the command is missing the workflow name
+			// let's send a comment to the user
+			g.handleIssueCommandProvideHelp(ctx, organization, repository, prUrl, githubIdCaller, command)
 		}
-		// check if the comment is a command to apply
-		for instanceName, workflow := range g.worflowInstances {
-			if workflowInstance == instanceName {
-				urls, err := workflow.ExecuteWorkflow(
-					ctx,
-					g.goliac.GetLocal().RepoConfig().Workflows,
-					githubIdCaller,
-					workflowName,
-					explanation,
-					map[string]string{
-						"pr_url": prUrl,
-					},
-					false,
-				)
+	}
+}
 
+func (g *GoliacServerImpl) handleIssueCommandExecuteWorkflow(ctx context.Context, organization, repository, prUrl, githubIdCaller, workflowInstance, workflowName, explanation string) {
+	found := false
+	// list enabled workflows
+	for _, workflowName := range g.goliac.GetLocal().RepoConfig().Workflows {
+		// list available workflows
+		for name := range g.goliac.GetLocal().Workflows() {
+			if name == workflowName {
+				found = true
+				break
+			}
+		}
+	}
+	if !found {
+		g.handleIssueCommandProvideHelp(ctx, organization, repository, prUrl, githubIdCaller, workflowInstance)
+		return
+	}
+
+	explanation = strings.Trim(explanation, " \r\n\t")
+	if explanation == "" {
+		explanation = "No explanation provided"
+		logrus.Warnf("No explanation provided for workflow %s", workflowName)
+
+		err := g.CreateComment(
+			ctx,
+			organization,
+			repository,
+			prUrl,
+			githubIdCaller,
+			explanation,
+		)
+		if err != nil {
+			logrus.Error("error when creating 'no explanation provided' comment: " + err.Error())
+		}
+		return
+	}
+
+	// check if the comment is a command to apply
+	for instanceName, workflow := range g.worflowInstances {
+		if workflowInstance == instanceName {
+			urls, err := workflow.ExecuteWorkflow(
+				ctx,
+				g.goliac.GetLocal().RepoConfig().Workflows,
+				githubIdCaller,
+				workflowName,
+				explanation,
+				map[string]string{
+					"pr_url": prUrl,
+				},
+				false,
+			)
+
+			if err != nil {
+				err = g.CreateComment(
+					ctx,
+					organization,
+					repository,
+					prUrl,
+					githubIdCaller,
+					"Error when executing workflow: "+err.Error(),
+				)
 				if err != nil {
-					err = g.CreateComment(
-						ctx,
-						organization,
-						repository,
-						prUrl,
-						githubIdCaller,
-						"Error when executing workflow: "+err.Error(),
-					)
-					if err != nil {
-						logrus.Error("error when creating 'error when executing workflow' comment: " + err.Error())
+					logrus.Error("error when creating 'error when executing workflow' comment: " + err.Error())
+				}
+			} else {
+				comment := "Workflow executed successfully"
+				if len(urls) > 0 {
+					comment += ". Urls to follow:"
+					for _, url := range urls {
+						comment += "\n- " + url
 					}
-				} else {
-					comment := "Workflow executed successfully"
-					if len(urls) > 0 {
-						comment += ". Urls to follow:"
-						for _, url := range urls {
-							comment += "\n- " + url
-						}
-					}
-					err = g.CreateComment(
-						ctx,
-						organization,
-						repository,
-						prUrl,
-						githubIdCaller,
-						comment,
-					)
-					if err != nil {
-						logrus.Error("error when creating 'workflow executed successfully' comment: " + err.Error())
-					}
+				}
+				err = g.CreateComment(
+					ctx,
+					organization,
+					repository,
+					prUrl,
+					githubIdCaller,
+					comment,
+				)
+				if err != nil {
+					logrus.Error("error when creating 'workflow executed successfully' comment: " + err.Error())
 				}
 			}
 		}
+	}
+}
+
+func (g *GoliacServerImpl) handleIssueCommandProvideHelp(ctx context.Context, organization, repository, prUrl, githubIdCaller, command string) {
+	// checking if the is a command for us
+	found := false
+	for workflowInstanceName := range g.worflowInstances {
+		if workflowInstanceName == command {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return
+	}
+
+	// checking if a workflow is enabled
+	enabledWorkflows := g.goliac.GetLocal().RepoConfig().Workflows
+	if len(enabledWorkflows) == 0 {
+		comment := "No workflow enabled. Check with your administrator."
+		err := g.CreateComment(
+			ctx,
+			organization,
+			repository,
+			prUrl,
+			githubIdCaller,
+			comment,
+		)
+		if err != nil {
+			logrus.Error("error when creating 'no workflows enabled' comment: " + err.Error())
+		}
+		return
+	}
+
+	// collect the list of workflows
+	workflows := []string{}
+
+	// list enabled workflows
+	for _, workflowName := range enabledWorkflows {
+		// list available workflows
+		for name, workflow := range g.goliac.GetLocal().Workflows() {
+			if name == workflowName {
+				workflows = append(workflows, fmt.Sprintf("/%s:%s: <explanation>", workflow.Spec.WorkflowType, workflow.Name))
+			}
+		}
+	}
+
+	comment := "Available workflows:\n"
+	for _, workflow := range workflows {
+		comment += fmt.Sprintf("- `%s`\n", workflow)
+	}
+
+	err := g.CreateComment(
+		ctx,
+		organization,
+		repository,
+		prUrl,
+		githubIdCaller,
+		comment,
+	)
+	if err != nil {
+		logrus.Error("error when creating 'available workflows' comment: " + err.Error())
 	}
 }
 
