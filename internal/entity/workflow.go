@@ -80,8 +80,10 @@ func (w *Workflow) Validate(filename string) error {
 			return fmt.Errorf("step.name is empty for Workflow filename %s", filename)
 		}
 
-		// only one step is allowed for now
-		if step.Name != "jira_ticket_creation" && step.Name != "slack_notification" {
+		// only few step types are allowed for now
+		if step.Name != "jira_ticket_creation" &&
+			step.Name != "slack_notification" &&
+			step.Name != "dynamodb" {
 			return fmt.Errorf("invalid step.name: %s for Workflow filename %s", step.Name, filename)
 		}
 		switch step.Name {

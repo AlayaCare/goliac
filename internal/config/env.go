@@ -82,6 +82,7 @@ var Config = struct {
 	WorkflowJiraEmail           string `env:"GOLIAC_WORKFLOW_JIRA_EMAIL" envDefault:""`
 	WorkflowJiraApiToken        string `env:"GOLIAC_WORKFLOW_JIRA_API_TOKEN" envDefault:""`
 	WorkflowJiraIssueType       string `env:"GOLIAC_WORKFLOW_JIRA_ISSUE_TYPE" envDefault:"Task"`
+	WorkflowDynamoDBTableName   string `env:"GOLIAC_WORKFLOW_DYNAMODB_TABLE_NAME" envDefault:"goliac-workflows"`
 }{}
 
 // to be overrided at build time with

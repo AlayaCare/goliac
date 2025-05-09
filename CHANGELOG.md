@@ -1,3 +1,7 @@
+## Goliac v0.18.13
+
+- adding a dynamodb workflow plugin
+
 ## Goliac v0.18.12
 
 - better /forcemerge interactive PR workflow documentation
