@@ -182,3 +182,69 @@ You will need to set the following environment variables:
 Dont forget to invite the Slack bot to the channel.
 
 
+## Use the DynamoDB step
+
+The DynamoDB step is optional and can be used to store the workflow in a DynamoDB table. The step is defined as follows:
+
+```yaml
+steps:
+  - name: dynamodb
+```
+
+You will need to set the following environment variables:
+- `GOLIAC_WORKFLOW_DYNAMODB_TABLE_NAME` the DynamoDB table name
+
+To create the DynamoDB table, use the following AWS CLI command:
+
+```bash
+aws dynamodb create-table \
+    --table-name your-table-name \
+    --attribute-definitions \
+        AttributeName=pull_request,AttributeType=S \
+        AttributeName=timestamp,AttributeType=S \
+    --key-schema \
+        AttributeName=pull_request,KeyType=HASH \
+        AttributeName=timestamp,KeyType=RANGE \
+    --global-secondary-indexes \
+        "[
+            {
+                \"IndexName\": \"TimestampIndex\",
+                \"KeySchema\": [
+                    {\"AttributeName\":\"timestamp\",\"KeyType\":\"HASH\"}
+                ],
+                \"Projection\": {
+                    \"ProjectionType\":\"ALL\"
+                }
+            }
+        ]" \
+    --billing-mode PAY_PER_REQUEST
+```
+
+or in terraform:
+```hcl
+resource "aws_dynamodb_table" "goliac_forcemerge_audit" {
+  name = "your-table-name"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key = "pull_request"
+  range_key = "timestamp"
+  attribute {
+    name = "pull_request"
+    type = "S"
+  }
+  attribute {
+    name = "timestamp"
+    type = "S"
+  }
+  global_secondary_index {
+    name = "TimestampIndex"
+    hash_key = "timestamp"
+    projection_type = "ALL"
+  }
+}
+```
+
+This creates a table with:
+- Primary key: pull_request (HASH)
+- Range key: timestamp (RANGE)
+- Global Secondary Index: timestamp (HASH)
+- Pay-per-request billing mode
