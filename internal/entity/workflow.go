@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/go-git/go-billy/v5"
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"gopkg.in/yaml.v3"
@@ -114,6 +115,20 @@ func (w *Workflow) Validate(filename string) error {
 			}
 			if !slackChannelSet {
 				return fmt.Errorf("step.slack_notification.properties.channel is not set for Workflow filename %s", filename)
+			}
+		case "dynamodb":
+			// check if the dynamodb table is set
+			dynamodbTableSet := false
+			for k, v := range step.Properties {
+				if k == "table_name" {
+					dynamodbTableSet = true
+					if v == "" {
+						return fmt.Errorf("step.dynamodb.properties.table_name is empty for Workflow filename %s", filename)
+					}
+				}
+			}
+			if !dynamodbTableSet && config.Config.WorkflowDynamoDBTableName == "" {
+				return fmt.Errorf("step.dynamodb.properties.table_name is not set for Workflow filename %s and GOLIAC_WORKFLOW_DYNAMODB_TABLE_NAME environment variable is not set", filename)
 			}
 		}
 	}
