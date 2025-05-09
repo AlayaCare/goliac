@@ -16,13 +16,9 @@ type NoopImpl struct {
 }
 
 func NewNoopImpl(ws WorkflowService) Workflow {
-	stepPlugins := map[string]StepPlugin{
-		"jira_ticket_creation": NewStepPluginJira(),
-		"slack_notification":   NewStepPluginSlack(),
-	}
 	return &NoopImpl{
 		ws:          ws,
-		stepPlugins: stepPlugins,
+		stepPlugins: GetPlugins(),
 	}
 }
 

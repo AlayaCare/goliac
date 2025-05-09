@@ -1,3 +1,7 @@
+## Goliac v0.18.16
+
+- enable dynamodb plugin
+
 ## Goliac v0.18.15
 
 - enable dynamodb plugin

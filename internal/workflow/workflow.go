@@ -14,6 +14,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// GetPlugins returns a map of all the plugins
+func GetPlugins() map[string]StepPlugin {
+	return map[string]StepPlugin{
+		"jira_ticket_creation": NewStepPluginJira(),
+		"slack_notification":   NewStepPluginSlack(),
+		"dynamodb":             NewStepPluginDynamoDB(),
+	}
+}
+
 // strip down version of GithubClient
 type WorkflowGithubClient interface {
 	CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error)
