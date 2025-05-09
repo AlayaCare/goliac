@@ -10,6 +10,7 @@ import (
 
 	"github.com/goliac-project/goliac/internal/engine"
 	"github.com/goliac-project/goliac/internal/entity"
+	"github.com/gosimple/slug"
 	"gopkg.in/yaml.v3"
 )
 
@@ -27,6 +28,7 @@ type WorkflowLocalResource interface {
 
 // strip down version of Goliac Remote (if we have an externally managed team)
 type WorkflowRemoteResource interface {
+	// return the teams from github (with the slugified name as)
 	Teams(ctx context.Context, current bool) map[string]*engine.GithubTeam
 }
 
@@ -115,17 +117,17 @@ func (ws *WorkflowServiceImpl) GetWorkflow(ctx context.Context, repoconfigForceM
 	for _, lTeam := range ws.local.Teams() {
 		if lTeam.Spec.ExternallyManaged {
 			// get team definition from github
-			rTeam := rTeams[lTeam.Name]
+			rTeam := rTeams[slug.Make(lTeam.Name)]
 			if rTeam == nil {
 				continue
 			}
 			for _, owner := range rTeam.Maintainers {
-				if owner == username {
+				if owner == githubId {
 					teams = append(teams, lTeam.Name)
 				}
 			}
 			for _, member := range rTeam.Members {
-				if member == username {
+				if member == githubId {
 					teams = append(teams, lTeam.Name)
 				}
 			}
