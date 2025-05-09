@@ -1,3 +1,7 @@
+## Goliac v0.18.14
+
+- fix fetching externally managed repo for workflow
+
 ## Goliac v0.18.13
 
 - adding a dynamodb workflow plugin
