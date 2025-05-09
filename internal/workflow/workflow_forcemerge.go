@@ -19,13 +19,9 @@ type ForcemergeImpl struct {
 }
 
 func NewForcemergeImpl(ws WorkflowService) Workflow {
-	stepPlugins := map[string]StepPlugin{
-		"jira_ticket_creation": NewStepPluginJira(),
-		"slack_notification":   NewStepPluginSlack(),
-	}
 	return &ForcemergeImpl{
 		ws:          ws,
-		stepPlugins: stepPlugins,
+		stepPlugins: GetPlugins(),
 	}
 }
 
