@@ -171,6 +171,27 @@ func ReadRuleSetDirectory(fs billy.Filesystem, dirname string, errorCollection *
 	return rulesets
 }
 
+func ValidateRulesetDefinition(r *RuleSetDefinition, filename string) error {
+	for _, rule := range r.Rules {
+		if rule.Ruletype != "required_signatures" &&
+			rule.Ruletype != "pull_request" &&
+			rule.Ruletype != "required_status_checks" &&
+			rule.Ruletype != "creation" &&
+			rule.Ruletype != "update" &&
+			rule.Ruletype != "deletion" &&
+			rule.Ruletype != "non_fast_forward" &&
+			rule.Ruletype != "required_linear_history" {
+			return fmt.Errorf("invalid ruletype: %s for ruleset filename %s", rule.Ruletype, filename)
+		}
+	}
+
+	if r.Enforcement != "disable" && r.Enforcement != "active" && r.Enforcement != "evaluate" {
+		return fmt.Errorf("invalid enforcement: %s for ruleset filename %s", r.Enforcement, filename)
+	}
+
+	return nil
+}
+
 func (r *RuleSet) Validate(filename string) error {
 
 	if r.ApiVersion != "v1" {
@@ -190,20 +211,9 @@ func (r *RuleSet) Validate(filename string) error {
 		return fmt.Errorf("invalid metadata.name: %s for ruleset filename %s", r.Name, filename)
 	}
 
-	for _, rule := range r.Spec.Ruleset.Rules {
-		if rule.Ruletype != "required_signatures" &&
-			rule.Ruletype != "pull_request" &&
-			rule.Ruletype != "required_status_checks" &&
-			rule.Ruletype != "creation" &&
-			rule.Ruletype != "update" &&
-			rule.Ruletype != "deletion" &&
-			rule.Ruletype != "non_fast_forward" {
-			return fmt.Errorf("invalid rulettype: %s for ruleset filename %s", rule.Ruletype, filename)
-		}
-	}
-
-	if r.Spec.Ruleset.Enforcement != "disable" && r.Spec.Ruleset.Enforcement != "active" && r.Spec.Ruleset.Enforcement != "evaluate" {
-		return fmt.Errorf("invalid enforcement: %s for ruleset filename %s", r.Spec.Ruleset.Enforcement, filename)
+	err := ValidateRulesetDefinition(&r.Spec.Ruleset, filename)
+	if err != nil {
+		return err
 	}
 
 	for _, ba := range r.Spec.Ruleset.BypassApps {

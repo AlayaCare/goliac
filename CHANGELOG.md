@@ -1,3 +1,8 @@
+## Goliac v0.18.17
+
+- bugfix: better ruleset type check
+- bugfix: better support for GOLIAC_MANAGE_GITHUB_ACTIONS_VARIABLES
+
 ## Goliac v0.18.16
 
 - enable dynamodb plugin

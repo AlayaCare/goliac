@@ -407,7 +407,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 2 members created
 		assert.False(t, errorCollector.HasErrors())
@@ -453,7 +453,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 2 members created
 		assert.False(t, errorCollector.HasErrors())
@@ -517,7 +517,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 members added
 		assert.False(t, errorCollector.HasErrors())
@@ -582,7 +582,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 members added
 		ctx := context.TODO()
@@ -632,7 +632,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 2 members created
 		assert.False(t, errorCollector.HasErrors())
@@ -672,7 +672,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team deleted
 		assert.False(t, errorCollector.HasErrors())
@@ -748,7 +748,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 0 parent updated
 		assert.False(t, errorCollector.HasErrors())
@@ -828,7 +828,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team parent updated
 		assert.False(t, errorCollector.HasErrors())
@@ -940,7 +940,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team parent updated
 		assert.False(t, errorCollector.HasErrors())
@@ -975,7 +975,7 @@ func TestReconciliationTeam(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team deleted
 		assert.False(t, errorCollector.HasErrors())
@@ -1017,7 +1017,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 repo created
 		assert.False(t, errorCollector.HasErrors())
@@ -1072,7 +1072,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 repo created
 		assert.False(t, errorCollector.HasErrors())
@@ -1139,7 +1139,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team updated
 		assert.False(t, errorCollector.HasErrors())
@@ -1212,7 +1212,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team updated
 		assert.False(t, errorCollector.HasErrors())
@@ -1296,7 +1296,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team added
 		assert.False(t, errorCollector.HasErrors())
@@ -1384,7 +1384,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team removed
 		assert.False(t, errorCollector.HasErrors())
@@ -1461,7 +1461,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 member removed
 		assert.False(t, errorCollector.HasErrors())
@@ -1540,7 +1540,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 member removed
 		assert.False(t, errorCollector.HasErrors())
@@ -1618,7 +1618,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 repo updated
 		assert.False(t, errorCollector.HasErrors())
@@ -1693,7 +1693,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 repo updated
 		assert.False(t, errorCollector.HasErrors())
@@ -1771,7 +1771,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team updated
 		assert.False(t, errorCollector.HasErrors())
@@ -1848,7 +1848,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team updated
 		assert.False(t, errorCollector.HasErrors())
@@ -1931,7 +1931,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 team updated
 		assert.False(t, errorCollector.HasErrors())
@@ -1973,7 +1973,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 repo deleted
 		assert.False(t, errorCollector.HasErrors())
@@ -2011,7 +2011,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 repo deleted
 		assert.False(t, errorCollector.HasErrors())
@@ -2050,7 +2050,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 repo deleted
 		assert.False(t, errorCollector.HasErrors())
@@ -2177,7 +2177,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "goliac-teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "goliac-teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 repo renamed
 		assert.False(t, errorCollector.HasErrors())
@@ -2313,7 +2313,7 @@ func TestReconciliationRepo(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "goliac-teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "goliac-teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 repo renamed
 		assert.False(t, errorCollector.HasErrors())
@@ -2366,7 +2366,7 @@ func TestReconciliationRulesets(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 ruleset created
 		assert.False(t, errorCollector.HasErrors())
@@ -2413,7 +2413,7 @@ func TestReconciliationRulesets(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 ruleset created
 		assert.False(t, errorCollector.HasErrors())
@@ -2468,7 +2468,7 @@ func TestReconciliationRulesets(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 ruleset created
 		assert.False(t, errorCollector.HasErrors())
@@ -2513,7 +2513,7 @@ func TestReconciliationRulesets(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 1 ruleset created
 		assert.False(t, errorCollector.HasErrors())
@@ -2583,7 +2583,7 @@ func TestReconciliationRulesets(t *testing.T) {
 
 		repoconf.Rulesets = []string{"new"}
 
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// 0 ruleset changed
 		assert.False(t, errorCollector.HasErrors())
@@ -2683,7 +2683,7 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		assert.False(t, errorCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
@@ -2771,7 +2771,7 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		assert.False(t, errorCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
@@ -2861,7 +2861,7 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		assert.False(t, errorCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
@@ -2943,7 +2943,7 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		assert.False(t, errorCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
@@ -2999,7 +2999,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// Verify environment was added
 		assert.False(t, errorCollector.HasErrors())
@@ -3052,7 +3052,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// Verify environment was removed
 		assert.False(t, errorCollector.HasErrors())
@@ -3112,7 +3112,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 
 		toArchive := make(map[string]*GithubRepoComparable)
 		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{})
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true)
 
 		// Verify environment variables were updated
 		assert.False(t, errorCollector.HasErrors())
