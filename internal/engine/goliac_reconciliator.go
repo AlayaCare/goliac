@@ -25,7 +25,7 @@ type UnmanagedResources struct {
  * GoliacReconciliator is here to sync the local state to the remote state
  */
 type GoliacReconciliator interface {
-	Reconciliate(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote GoliacRemote, teamreponame string, branch string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error)
+	Reconciliate(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote GoliacRemote, teamreponame string, branch string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository, manageGithubVariables bool) (*UnmanagedResources, error)
 }
 
 type GoliacReconciliatorImpl struct {
@@ -44,7 +44,7 @@ func NewGoliacReconciliatorImpl(isEntreprise bool, executor ReconciliatorExecuto
 	}
 }
 
-func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote GoliacRemote, teamsreponame string, branch string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) (*UnmanagedResources, error) {
+func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote GoliacRemote, teamsreponame string, branch string, dryrun bool, goliacAdminSlug string, reposToArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository, manageGithubVariables bool) (*UnmanagedResources, error) {
 	rremote := NewMutableGoliacRemoteImpl(ctx, remote)
 	r.Begin(ctx, dryrun)
 	unmanaged := &UnmanagedResources{
@@ -68,7 +68,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, errorCollect
 		return nil, err
 	}
 
-	err = r.reconciliateRepositories(ctx, errorCollector, local, rremote, teamsreponame, branch, dryrun, reposToArchive, reposToRename)
+	err = r.reconciliateRepositories(ctx, errorCollector, local, rremote, teamsreponame, branch, dryrun, reposToArchive, reposToRename, manageGithubVariables)
 	if err != nil {
 		r.Rollback(ctx, dryrun, err)
 		return nil, err
@@ -403,7 +403,7 @@ type GithubEnvironment struct {
  * This function sync repositories and team's repositories permissions
  * It returns the list of deleted repos that must not be deleted but archived
  */
-func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, branch string, dryrun bool, toArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository) error {
+func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, errorCollector *observability.ErrorCollection, local GoliacLocal, remote *MutableGoliacRemoteImpl, teamsreponame string, branch string, dryrun bool, toArchive map[string]*GithubRepoComparable, reposToRename map[string]*entity.Repository, manageGithubVariables bool) error {
 
 	// let's start with the local cloned github-teams repo
 	lRepos := make(map[string]*GithubRepoComparable)
@@ -667,37 +667,39 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 			CompareEntities(lRepo.BranchProtections, rRepo.BranchProtections, compareBranchProtections, onBranchProtectionAdded, onBranchProtectionRemoved, onBranchProtectionChange)
 
-			//
-			// "recursive" environments comparison
-			//
-			onEnvironmentAdded := func(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) {
-				// CREATE repo environment
-				r.AddRepositoryEnvironment(ctx, errorCollector, dryrun, remote, reponame, environment)
-			}
-			onEnvironmentChange := func(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) {
-				// UPDATE repo environment
+			if manageGithubVariables {
+				//
+				// "recursive" environments comparison
+				//
+				onEnvironmentAdded := func(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) {
+					// CREATE repo environment
+					r.AddRepositoryEnvironment(ctx, errorCollector, dryrun, remote, reponame, environment)
+				}
+				onEnvironmentChange := func(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) {
+					// UPDATE repo environment
 
-				// Check for removed or changed keys
-				for name, value := range lEnv.Variables {
-					if rValue, ok := rEnv.Variables[name]; !ok {
-						r.AddRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, remote, reponame, environment, name, value)
-					} else if rValue != value {
-						r.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, remote, reponame, environment, name, value)
+					// Check for removed or changed keys
+					for name, value := range lEnv.Variables {
+						if rValue, ok := rEnv.Variables[name]; !ok {
+							r.AddRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, remote, reponame, environment, name, value)
+						} else if rValue != value {
+							r.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, remote, reponame, environment, name, value)
+						}
+					}
+
+					// Check for added keys
+					for name := range rEnv.Variables {
+						if _, ok := lEnv.Variables[name]; !ok {
+							r.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, remote, reponame, environment, name)
+						}
 					}
 				}
-
-				// Check for added keys
-				for name := range rEnv.Variables {
-					if _, ok := lEnv.Variables[name]; !ok {
-						r.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, dryrun, remote, reponame, environment, name)
-					}
+				onEnvironmentRemoved := func(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) {
+					// DELETE repo environment
+					r.DeleteRepositoryEnvironment(ctx, errorCollector, dryrun, remote, reponame, environment)
 				}
+				CompareEntities(lRepo.Environments, rRepo.Environments, compareEnvironments, onEnvironmentAdded, onEnvironmentRemoved, onEnvironmentChange)
 			}
-			onEnvironmentRemoved := func(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) {
-				// DELETE repo environment
-				r.DeleteRepositoryEnvironment(ctx, errorCollector, dryrun, remote, reponame, environment)
-			}
-			CompareEntities(lRepo.Environments, rRepo.Environments, compareEnvironments, onEnvironmentAdded, onEnvironmentRemoved, onEnvironmentChange)
 		}
 
 		//
@@ -745,8 +747,10 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			return false
 		}
 
-		if !utils.DeepEqualUnordered(lRepo.ActionVariables, rRepo.ActionVariables) {
-			return false
+		if manageGithubVariables {
+			if !utils.DeepEqualUnordered(lRepo.ActionVariables, rRepo.ActionVariables) {
+				return false
+			}
 		}
 
 		return true
@@ -839,21 +843,23 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			}
 		}
 
-		if !utils.DeepEqualUnordered(lRepo.ActionVariables, rRepo.ActionVariables) {
+		if manageGithubVariables {
+			if !utils.DeepEqualUnordered(lRepo.ActionVariables, rRepo.ActionVariables) {
 
-			// Check for removed or changed keys
-			for name, value := range lRepo.ActionVariables {
-				if rValue, ok := rRepo.ActionVariables[name]; !ok {
-					r.AddRepositoryVariable(ctx, errorCollector, dryrun, remote, reponame, name, value)
-				} else if rValue != value {
-					r.UpdateRepositoryVariable(ctx, errorCollector, dryrun, remote, reponame, name, value)
+				// Check for removed or changed keys
+				for name, value := range lRepo.ActionVariables {
+					if rValue, ok := rRepo.ActionVariables[name]; !ok {
+						r.AddRepositoryVariable(ctx, errorCollector, dryrun, remote, reponame, name, value)
+					} else if rValue != value {
+						r.UpdateRepositoryVariable(ctx, errorCollector, dryrun, remote, reponame, name, value)
+					}
 				}
-			}
 
-			// Check for added keys
-			for name := range rRepo.ActionVariables {
-				if _, ok := lRepo.ActionVariables[name]; !ok {
-					r.DeleteRepositoryVariable(ctx, errorCollector, dryrun, remote, reponame, name)
+				// Check for added keys
+				for name := range rRepo.ActionVariables {
+					if _, ok := lRepo.ActionVariables[name]; !ok {
+						r.DeleteRepositoryVariable(ctx, errorCollector, dryrun, remote, reponame, name)
+					}
 				}
 			}
 		}
