@@ -57,7 +57,7 @@ func (s *ScaffoldGoliacRemoteMock) AppIds(ctx context.Context) map[string]int {
 func (s *ScaffoldGoliacRemoteMock) IsEnterprise() bool {
 	return true
 }
-func (m *ScaffoldGoliacRemoteMock) CountAssets(ctx context.Context) (int, error) {
+func (m *ScaffoldGoliacRemoteMock) CountAssets(ctx context.Context, warmup bool) (int, error) {
 	return 2*len(m.repos) + len(m.teams) + len(m.users), nil
 }
 func (g *ScaffoldGoliacRemoteMock) SetRemoteObservability(feedback observability.RemoteObservability) {
@@ -99,18 +99,24 @@ func NewScaffoldGoliacRemoteMock() engine.GoliacRemote {
 	teams["regular"] = &regular
 
 	repo1 := engine.GithubRepository{
-		Name: "repo1",
+		Name:                "repo1",
+		Environments:        NewMockMappedEntityLazyLoader(map[string]*engine.GithubEnvironment{}),
+		RepositoryVariables: NewMockMappedEntityLazyLoader[string](map[string]string{}),
 	}
 	repos["repo1"] = &repo1
 
 	repo2 := engine.GithubRepository{
-		Name: "repo2",
+		Name:                "repo2",
+		Environments:        NewMockMappedEntityLazyLoader(map[string]*engine.GithubEnvironment{}),
+		RepositoryVariables: NewMockMappedEntityLazyLoader[string](map[string]string{}),
 	}
 	repos["repo2"] = &repo2
 
 	archivedRepo := engine.GithubRepository{
-		Name:           "archived_repo",
-		BoolProperties: map[string]bool{"archived": true},
+		Name:                "archived_repo",
+		Environments:        NewMockMappedEntityLazyLoader(map[string]*engine.GithubEnvironment{}),
+		RepositoryVariables: NewMockMappedEntityLazyLoader[string](map[string]string{}),
+		BoolProperties:      map[string]bool{"archived": true},
 	}
 	repos["archived_repo"] = &archivedRepo
 
@@ -174,12 +180,16 @@ func NewScaffoldGoliacRemoteMockWithMaintainers() engine.GoliacRemote {
 	teams["regular"] = &regular
 
 	repo1 := engine.GithubRepository{
-		Name: "repo1",
+		Name:                "repo1",
+		Environments:        NewMockMappedEntityLazyLoader(map[string]*engine.GithubEnvironment{}),
+		RepositoryVariables: NewMockMappedEntityLazyLoader[string](map[string]string{}),
 	}
 	repos["repo1"] = &repo1
 
 	repo2 := engine.GithubRepository{
-		Name: "repo2",
+		Name:                "repo2",
+		Environments:        NewMockMappedEntityLazyLoader(map[string]*engine.GithubEnvironment{}),
+		RepositoryVariables: NewMockMappedEntityLazyLoader[string](map[string]string{}),
 	}
 	repos["repo2"] = &repo2
 
@@ -376,7 +386,9 @@ func TestEnvironmentsAndVariables(t *testing.T) {
 		teams["regular"] = &regular
 
 		repo1 := engine.GithubRepository{
-			Name: "repo1",
+			Name:                "repo1",
+			Environments:        NewMockMappedEntityLazyLoader(map[string]*engine.GithubEnvironment{}),
+			RepositoryVariables: NewMockMappedEntityLazyLoader[string](map[string]string{}),
 		}
 		repos["repo1"] = &repo1
 

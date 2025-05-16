@@ -130,7 +130,7 @@ func (m *GoliacRemoteMock) TeamRepositories(ctx context.Context) map[string]map[
 func (m *GoliacRemoteMock) AppIds(ctx context.Context) map[string]int {
 	return m.appids
 }
-func (m *GoliacRemoteMock) CountAssets(ctx context.Context) (int, error) {
+func (m *GoliacRemoteMock) CountAssets(ctx context.Context, warmup bool) (int, error) {
 	return 3, nil
 }
 func (g *GoliacRemoteMock) SetRemoteObservability(feedback observability.RemoteObservability) {

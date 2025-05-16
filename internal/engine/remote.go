@@ -52,7 +52,7 @@ type GoliacRemote interface {
 
 	IsEnterprise() bool // check if we are on an Enterprise version, or if we are on GHES 3.11+
 
-	CountAssets(ctx context.Context) (int, error)                      // return the number of (some) assets that will be loaded (to be used with the RemoteObservability/progress bar)
+	CountAssets(ctx context.Context, warmup bool) (int, error)         // return the number of (some) assets that will be loaded (to be used with the RemoteObservability/progress bar)
 	SetRemoteObservability(feedback observability.RemoteObservability) // if you want to get feedback on the loading process
 
 	RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*GithubVariable, error)
@@ -218,7 +218,7 @@ type GraplQLAssets struct {
 	} `json:"errors"`
 }
 
-func (g *GoliacRemoteImpl) CountAssets(ctx context.Context) (int, error) {
+func (g *GoliacRemoteImpl) CountAssets(ctx context.Context, warmup bool) (int, error) {
 	variables := make(map[string]interface{})
 	variables["orgLogin"] = g.configGithubOrg
 
@@ -241,9 +241,9 @@ func (g *GoliacRemoteImpl) CountAssets(ctx context.Context) (int, error) {
 		gResult.Data.Organization.MembersWithRole.TotalCount +
 		gResult.Data.Organization.SamlIdentityProvider.ExternalIdentities.TotalCount
 
-	// if g.manageGithubVariables {
-	// 	totalCount += 2 * gResult.Data.Organization.Repositories.TotalCount // we multiply by 3 because we have the environments per repository, and the variables per repository to fetch
-	// }
+	if warmup {
+		totalCount += 2 * gResult.Data.Organization.Repositories.TotalCount // we add 2 times because we have the environments per repository, and the variables per repository to fetch
+	}
 
 	return totalCount, nil
 }
