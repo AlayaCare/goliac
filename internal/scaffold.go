@@ -389,9 +389,9 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 					// scaffoldling repository environments, env variables and variables
 					rEnvironments := rRepo.Environments
 					if rEnvironments != nil {
-						lRepo.Spec.Environments = make([]entity.RepositoryEnvironment, 0, len(rEnvironments))
+						lRepo.Spec.Environments = make([]entity.RepositoryEnvironment, 0, len(rEnvironments.GetEntity()))
 
-						for _, e := range rEnvironments {
+						for _, e := range rEnvironments.GetEntity() {
 							re := entity.RepositoryEnvironment{
 								Name:      e.Name,
 								Variables: make(map[string]string),
@@ -404,8 +404,10 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 					}
 
 					lRepo.Spec.ActionsVariables = make(map[string]string)
-					for n, v := range rRepo.RepositoryVariables {
-						lRepo.Spec.ActionsVariables[n] = v
+					if rRepo.RepositoryVariables != nil {
+						for n, v := range rRepo.RepositoryVariables.GetEntity() {
+							lRepo.Spec.ActionsVariables[n] = v
+						}
 					}
 				}
 
