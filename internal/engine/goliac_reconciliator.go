@@ -632,7 +632,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 		archived := lRepo.BoolProperties["archived"]
 		if !archived {
 			//
-			// "recursive" rulesets comparison
+			// "nested" rulesets comparison
 			//
 			onRulesetAdded := func(rulename string, lRuleset *GithubRuleSet, rRuleset *GithubRuleSet) {
 				// CREATE repo ruleset
@@ -650,7 +650,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 			CompareEntities(lRepo.Rulesets, rRepo.Rulesets, compareRulesets, onRulesetAdded, onRulesetRemoved, onRulesetChange)
 
 			//
-			// "recursive" branchprotections comparison
+			// "nested" branchprotections comparison
 			//
 			onBranchProtectionAdded := func(rulename string, lBp *GithubBranchProtection, rBp *GithubBranchProtection) {
 				// CREATE repo branchprotection
@@ -669,7 +669,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(ctx context.Context, 
 
 			if manageGithubVariables {
 				//
-				// "recursive" environments comparison
+				// "nested" environments comparison
 				//
 				onEnvironmentAdded := func(environment string, lEnv *GithubEnvironment, rEnv *GithubEnvironment) {
 					// CREATE repo environment
