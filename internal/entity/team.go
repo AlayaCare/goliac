@@ -127,57 +127,47 @@ func recursiveReadTeamDirectory(fs billy.Filesystem, dirname string, parentTeam 
 func (t *Team) Validate(dirname string, users map[string]*User, errorCollector *observability.ErrorCollection) {
 	if t.ApiVersion != "v1" {
 		errorCollector.AddError(fmt.Errorf("invalid apiVersion: %s for team filename %s/team.yaml", t.ApiVersion, dirname))
-		return
 	}
 
 	if t.Kind != "Team" {
 		errorCollector.AddError(fmt.Errorf("invalid kind: %s for team filename %s/team.yaml", t.Kind, dirname))
-		return
 	}
 
 	if t.Name == "" {
 		errorCollector.AddError(fmt.Errorf("metadata.name is empty for team filename %s/team.yaml", dirname))
-		return
 	}
 
 	if t.Name == "everyone" {
 		errorCollector.AddError(fmt.Errorf("team name 'everyone' is reserved for team filename %s/team.yaml", dirname))
-		return
 	}
 
 	if strings.HasSuffix(t.Name, config.Config.GoliacTeamOwnerSuffix) {
 		errorCollector.AddError(fmt.Errorf("metadata.name cannot finish with '%s' for team filename %s/team.yaml. It is a reserved suffix", config.Config.GoliacTeamOwnerSuffix, dirname))
-		return
 	}
 
 	teamname := filepath.Base(dirname)
 	if t.Name != teamname {
 		errorCollector.AddError(fmt.Errorf("invalid metadata.name: %s for team filename %s/team.yaml", t.Name, dirname))
-		return
 	}
 
 	if t.Spec.ExternallyManaged {
 		if len(t.Spec.Owners) > 0 {
 			errorCollector.AddError(fmt.Errorf("externallyManaged team cannot have owners for team filename %s/team.yaml", dirname))
-			return
 		}
 		if len(t.Spec.Members) > 0 {
 			errorCollector.AddError(fmt.Errorf("externallyManaged team cannot have members for team filename %s/team.yaml", dirname))
-			return
 		}
 	}
 
 	for _, owner := range t.Spec.Owners {
 		if _, ok := users[owner]; !ok {
 			errorCollector.AddError(fmt.Errorf("invalid owner: %s doesn't exist in team filename %s/team.yaml", owner, dirname))
-			return
 		}
 	}
 
 	for _, member := range t.Spec.Members {
 		if _, ok := users[member]; !ok {
 			errorCollector.AddError(fmt.Errorf("invalid member: %s doesn't exist in team filename %s/team.yaml", member, dirname))
-			return
 		}
 	}
 
