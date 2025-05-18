@@ -2,6 +2,28 @@
 
 For the full installation documentation, check the [installation](installation.md) page
 
+What we plan to do is to create a new repository called `goliac-teams` in your Github organization, and put there the teams and repositories definitions.
+
+This repository will looks like:
+
+```
+goliac-teams/
+├── goliac.yaml # the main configuration file
+├── teams/
+│   ├── myteam/ # a team
+│   │   ├── team.yaml # the team definition
+│   │   ├── myrepository.yaml # a repository owned by the 'myteam' team
+|   │   └── ... # more repositories owned by the 'myteam' team
+|   └── ... # more teams
+├── users/
+│   └── org/
+│       ├── user1.yaml # a user definition
+│       ├── user2.yaml # a user definition
+|       └── ...
+└── rulesets/
+    └── default.yaml # a company-wide ruleset definition
+```
+
 ## Preparation
 
 ### You need a Github app
@@ -57,11 +79,11 @@ The best way to do it is to:
 - use the `goliac apply` command to apply the changes or merge the PRs
 
 
-### Create a goliac admin team
+### 1. Create a goliac admin team
 
 If you dont have yet one, you will need to create a team in Github, where you will add your IT/Github admins (in our example, the team is called `goliac-admin` ), that will administer Goliac.
 
-### Scaffold
+### 2. Scaffold
 
 And now you can use the goliac application to assist you:
 
@@ -117,7 +139,7 @@ This default behaviour
 - uses a global ruleset called `default` for all repositories (check the `rulesets/default.yaml` file)
 
 
-## Starting the onboarding
+### 3. Starting the onboarding
 
 If you want to start simple, in the `teams` repository you can remove all the teams (except one) and repositories (except one), to have something like
 
@@ -143,7 +165,32 @@ name: myrepository
 ...
 ```
 
-### Verify
+Summarizing, you should have something like:
+
+```
+goliac-teams/
+├── goliac.yaml
+├── teams/
+│   ├── myteam/
+│   │   ├── team.yaml
+│   │   └── myrepository.yaml
+├── users/
+│   └── org/
+│       └── user1.yaml
+│       └── user2.yaml
+└── rulesets/
+    └── default.yaml
+```
+
+where:
+- `goliac.yaml` is the main configuration file
+- `teams/` is the directory where you can put your teams (and repositories's team) definitions
+- `users/` is the directory where you can put your users definitions (especially in the `org` directory, you will have users definitions of the organization)
+- `rulesets/` is the directory where you can put your company rulesets definitions (i.e. the rules that will be applied to all repositories)
+
+
+
+### 4. Verify
 
 Eventually you can check the structure of your configuration, by running 
 
@@ -176,7 +223,7 @@ export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 ./goliac plan --repository https://github.com/goliac-project/goliac-teams --branch main
 ```
 
-### Apply
+### 5. Apply
 
 If you are happy with the new structure:
 
@@ -187,7 +234,7 @@ export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 ./goliac apply --repository https://github.com/goliac-project/goliac-teams --branch main
 ```
 
-### Run the server
+### 6. Run the server
 
 You can run it locally
 
