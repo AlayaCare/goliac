@@ -332,6 +332,8 @@ spec:
               value: warning
             - name: GOLIAC_SERVER_GIT_REPOSITORY
               value: 'https://github.com/goliac-project/goliac-teams'
+            - name: GOLIAC_GITHUB_WEBHOOK_HOST # optional, if webhook is desired (see below)
+              value: 0.0.0.0
           envFrom:
             - secretRef:
                 name: goliac-secrets
@@ -350,6 +352,9 @@ spec:
           ports:
             - containerPort: 18000
               name: http
+              protocol: TCP
+            - containerPort: 18001 # optional, if webhook is desired
+              name: webhook
               protocol: TCP
           readinessProbe:
             failureThreshold: 3
@@ -388,6 +393,10 @@ spec:
       port: 18000
       protocol: TCP
       targetPort: http
+    - name: webhook # optional, if webhook is desired
+      port: 18001
+      protocol: TCP
+      targetPort: webhook
   selector:
     app.kubernetes.io/name: goliac
   type: ClusterIP
