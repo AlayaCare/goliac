@@ -90,6 +90,13 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 }
 
 func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo string, prNumber, explanation string) error {
+	mergeMethod := "commit"
+	if strings.Contains(explanation, "/squash") {
+		mergeMethod = "squash"
+	}
+	// let's remove the /squash string from the explanation
+	explanation = strings.ReplaceAll(explanation, "/squash", "")
+
 	body, err := g.ws.CallRestAPI(
 		ctx,
 		fmt.Sprintf("/repos/%s/%s/pulls/%s/reviews", config.Config.GithubAppOrganization, repo, prNumber),
@@ -113,10 +120,10 @@ func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo stri
 		map[string]interface{}{
 			"commit_title":   fmt.Sprintf("force merge PR %s for %s", prNumber, username),
 			"commit_message": fmt.Sprintf("force merge PR %s via Goliac on behalf of %s", prNumber, username),
-			"merge_method":   "merge", // can be "merge", "squash", or "rebase"
+			"merge_method":   mergeMethod, // can be "merge", "squash", or "rebase"
 		},
 		nil)
-	if err != nil {
+	if err != nil && mergeMethod == "commit" {
 		if strings.Contains(err.Error(), "Method Not Allowed") {
 			// in case of we want a squash merge
 			body, err = g.ws.CallRestAPI(

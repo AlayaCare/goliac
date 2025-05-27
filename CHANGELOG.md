@@ -1,3 +1,7 @@
+## Goliac v0.18.19
+
+- allow to force merge with a squash merge
+
 ## Goliac v0.18.18
 
 - better team validation mechanic
