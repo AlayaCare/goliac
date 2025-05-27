@@ -143,6 +143,20 @@ users:
 - username2
 ```
 
+For example: if you have a user defined in the `users/org/` directory (e.g. `users/org/firstname_lastname@mycompany.com.yaml`), you can add it to the `users` section of the `.goliac/forcemerge.approvers` file:
+
+```yaml
+users:
+- firstname_lastname@mycompany.com
+```
+
+If you have a team defined in the `teams/` directory (e.g. `teams/My Team/team.yaml`), you can add it to the `teams` section of the `.goliac/forcemerge.approvers` file:
+
+```yaml
+teams:
+- My Team
+```
+
 
 ## Use the Jira step
 
