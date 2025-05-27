@@ -31,3 +31,17 @@ Example:
 
 This will trigger the `standard` workflow to merge the PR.
 
+## Squash merge
+
+By default, the PR will be merged with the `commit` merge type.
+
+
+If you want to squash merge the PR, you can add the `/squash` string in the explanation.
+
+Example:
+
+```
+/forcemerge:standard: need to merge this PR out of regular office hours to fix the production issue /squash
+```
+
+This will trigger the `standard` workflow to merge the PR with the `squash` merge type.
