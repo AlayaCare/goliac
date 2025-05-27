@@ -1,3 +1,8 @@
+## Goliac v0.18.20
+
+- explicit link to GH cli in the UI
+- bugfix: force teams to not be repo admins
+
 ## Goliac v0.18.19
 
 - allow to force merge with a squash merge
