@@ -114,7 +114,7 @@
     <el-row v-if="repositorySecrets.length > 0">
         <el-col :span="20" :offset="2">
             <el-card>
-                <el-text>Secrets</el-text>
+                <el-text>Secrets (to update, you will need the <a href="https://cli.github.com/" target="_blank">gh cli</a> installed)</el-text>
                 <el-table
                     :data="repositorySecrets"
                     :stripe="true"
@@ -161,7 +161,7 @@
     <el-row v-if="environmentSecrets.length > 0">
         <el-col :span="20" :offset="2">
             <el-card>
-                <el-text>Environment Secrets</el-text>
+                <el-text>Environment Secrets (to update, you will need the <a href="https://cli.github.com/" target="_blank">gh cli</a> installed)</el-text>
                 <el-table
                     :data="environmentSecrets"
                     :stripe="true"
