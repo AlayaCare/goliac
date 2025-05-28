@@ -90,7 +90,7 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 }
 
 func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo string, prNumber, explanation string) error {
-	mergeMethod := "commit"
+	mergeMethod := "merge"
 	if strings.Contains(explanation, "/squash") {
 		mergeMethod = "squash"
 	}
@@ -123,7 +123,7 @@ func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo stri
 			"merge_method":   mergeMethod, // can be "merge", "squash", or "rebase"
 		},
 		nil)
-	if err != nil && mergeMethod == "commit" {
+	if err != nil && mergeMethod == "merge" {
 		if strings.Contains(err.Error(), "Method Not Allowed") {
 			// in case of we want a squash merge
 			body, err = g.ws.CallRestAPI(
