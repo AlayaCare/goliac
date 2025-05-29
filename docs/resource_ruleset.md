@@ -19,16 +19,22 @@ spec:
   repositories:
     included:
       - ~ALL
+    # except:
+    #   - foo
+    #   - bar.*
   ruleset:
-    enforcement: evaluate
+    enforcement: evaluate # can be disable, active or evaluate
     bypassapps:
         - appname: goliac-project-app
-        mode: always
+        mode: always # can be always or pull_request
+#    bypassteams:
+#      - teamname: GoldenReviewers
+#        mode: pull_request # can be always or pull_request
     conditions:
         include: 
-        - "~DEFAULT_BRANCH"
+        - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
     rules:
-        - ruletype: pull_request
+        - ruletype: pull_request # currently supported: pull_request, required_signatures,required_status_checks, creation, update, deletion, non_fast_forward, required_linear_history
         parameters:
             requiredApprovingReviewCount: 1
 ```
