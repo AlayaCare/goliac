@@ -19,6 +19,9 @@ spec:
   repositories:
     included:
       - ~ALL
+    # except:
+    #   - foo
+    #   - bar.*
   ruleset:
     enforcement: evaluate # can be disable, active or evaluate
     bypassapps:
