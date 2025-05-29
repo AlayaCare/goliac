@@ -34,6 +34,7 @@ In GitHub:
   - Give Read/Write access to `Administration`
   - Give Read/Write access to `Content` (it is needed to access the default branch of repositories)
 - Under Subscribe to events
+  - (optional)Select `Push` (if you want to be notified immedately of changes on the goliac teams repository. else it will be polled every 10 minutes)
   - Select `Issue comments` (needed for the Breaking glass workflow)
 - Where can this GitHub App be installed: `Only on this account`
 - And Create
@@ -488,8 +489,9 @@ To do so, you need to update the GitHub App configuration:
   - change the Content-Type for `application/json`
   - set a webhook secret
   - set the webhook URL to be able to reach `http://GOLIAC_SERVER_HOST:GOLIAC_SERVER_PORT/webhook`
-- in Subscribe to events
-  - select `Push`
+- in Permissions and events
+  - in Subscribe to events
+    - select `Push`
 
 And you need to configure the Goliac server with
 - the `GOLIAC_GITHUB_WEBHOOK_SECRET` environment variable.
