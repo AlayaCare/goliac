@@ -74,9 +74,16 @@ func main() {
 			errorCollector := observability.NewErrorCollection()
 			goliac.Validate(path, errorCollector)
 			if errorCollector.HasErrors() {
-				logrus.Fatalf("failed to verify:")
+				logrus.Errorf("failed to verify:")
 				for _, err := range errorCollector.Errors {
 					logrus.Errorf("- %s", err)
+				}
+				os.Exit(1)
+			}
+			if errorCollector.HasWarns() {
+				logrus.Warnf("Warnings:")
+				for _, err := range errorCollector.Warns {
+					logrus.Warnf("- %s", err)
 				}
 			}
 		},
