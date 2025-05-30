@@ -5,7 +5,6 @@ import (
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/engine"
 	"github.com/goliac-project/goliac/internal/observability"
-	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -33,13 +32,4 @@ func NewGoliacLightImpl() (GoliacLight, error) {
 func (g *GoliacLightImpl) Validate(path string, errorCollector *observability.ErrorCollection) {
 	fs := osfs.New(path)
 	g.local.LoadAndValidateLocal(fs, errorCollector)
-
-	for _, warn := range errorCollector.Warns {
-		logrus.Warn(warn)
-	}
-	if errorCollector.HasErrors() {
-		for _, err := range errorCollector.Errors {
-			logrus.Error(err)
-		}
-	}
 }
