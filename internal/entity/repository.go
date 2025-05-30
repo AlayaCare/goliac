@@ -170,7 +170,11 @@ func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, team
 		if sube.IsDir() && sube.Name()[0] != '.' {
 			recursiveReadRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), sube.Name(), repos, teams, externalUsers, errorCollection)
 		}
-		if !sube.IsDir() && filepath.Ext(sube.Name()) == ".yaml" && sube.Name() != "team.yaml" {
+		if !sube.IsDir() && sube.Name() != "team.yaml" {
+			if filepath.Ext(sube.Name()) != ".yaml" {
+				errorCollection.AddError(fmt.Errorf("file %s doesn't have a .yaml extension", sube.Name()))
+				continue
+			}
 			repo, err := NewRepository(fs, filepath.Join(teamDirPath, sube.Name()))
 			if err != nil {
 				errorCollection.AddError(err)

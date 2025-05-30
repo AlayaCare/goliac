@@ -1,3 +1,7 @@
+## Goliac v0.18.21
+
+- update the verify to check all files have a .yaml extensions in the teams subdir
+
 ## Goliac v0.18.20
 
 - explicit link to GH cli in the UI
