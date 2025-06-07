@@ -1723,15 +1723,19 @@ query listRulesets ($orgLogin: String!) {
 		  enforcement
 		  bypassActors(first:100) {
 			actors:nodes {
-			  actor {
-				... on App {
-					databaseId
-					name
-				}
-				... on Team {
-					teamslug:slug
-				}
-			  }
+# Note: not able to find the bypassActors
+# It is working as a human, but not as a Github App
+# The  field 'actor' is restricted for GitHub Apps,
+# even with full administration permissions
+#			  actor {
+#				... on App {
+#					databaseId
+#					name
+#				}
+#				... on Team {
+#					teamslug:slug
+#				}
+#			  }
 			  bypassMode
 			}
 		  }
@@ -1954,14 +1958,14 @@ func (g *GoliacRemoteImpl) loadRulesets(ctx context.Context) (map[string]*Github
 	for hasNextPage {
 		data, err := g.client.QueryGraphQLAPI(ctx, listRulesets, variables)
 		if err != nil {
-			return rulesets, err
+			return rulesets, fmt.Errorf("failed to load rulesets: %v", err)
 		}
 		var gResult GraplQLRuleSets
 
 		// parse first page
 		err = json.Unmarshal(data, &gResult)
 		if err != nil {
-			return rulesets, err
+			return rulesets, fmt.Errorf("failed to unmarshal rulesets: %v (%s)", err, string(data))
 		}
 		if len(gResult.Errors) > 0 {
 			return rulesets, fmt.Errorf("graphql error on loadRulesets: %v (%v)", gResult.Errors[0].Message, gResult.Errors[0].Path)

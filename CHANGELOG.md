@@ -1,3 +1,8 @@
+## Goliac v0.18.22
+
+- bugfix: githubapp cannot fetch global ruleset actors
+- slimmer validation error message
+
 ## Goliac v0.18.21
 
 - update the verify to check all files have a .yaml extensions in the teams subdir
