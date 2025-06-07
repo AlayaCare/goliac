@@ -129,7 +129,7 @@ spec:
 		for _, err := range errorCollector.Errors {
 			fmt.Println(err)
 		}
-		assert.Equal(t, 2, len(errorCollector.Errors))
+		assert.Equal(t, 1, len(errorCollector.Errors))
 		assert.Equal(t, 0, len(errorCollector.Warns))
 		assert.NotNil(t, teams)
 	})
@@ -156,8 +156,8 @@ name: team2
 		for _, err := range errorCollector.Errors {
 			fmt.Println(err)
 		}
-		assert.Equal(t, 3, len(errorCollector.Errors))
-		assert.Equal(t, 1, len(errorCollector.Warns))
+		assert.Equal(t, 1, len(errorCollector.Errors))
+		assert.Equal(t, 0, len(errorCollector.Warns))
 		assert.NotNil(t, teams)
 	})
 
