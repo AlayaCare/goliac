@@ -41,8 +41,8 @@ func NewStepPluginDynamoDBWithClient(client DynamoDBClientInterface) StepPlugin 
 }
 
 type DynamoDBRecord struct {
-	Timestamp    string `dynamodbav:"timestamp"`
 	PullRequest  string `dynamodbav:"pull_request"`
+	Timestamp    int64  `dynamodbav:"timestamp"`
 	GithubCaller string `dynamodbav:"github_caller"`
 	Organization string `dynamodbav:"organization"`
 	Repository   string `dynamodbav:"repository"`
@@ -83,7 +83,7 @@ func (f *StepPluginDynamoDB) Execute(ctx context.Context, username, workflowDesc
 
 	// Create record
 	record := DynamoDBRecord{
-		Timestamp:    time.Now().UTC().Format(time.RFC3339),
+		Timestamp:    time.Now().UTC().Unix(),
 		PullRequest:  url.String(),
 		GithubCaller: username,
 		Organization: config.Config.GithubAppOrganization,
