@@ -247,7 +247,7 @@ resource "aws_dynamodb_table" "goliac_forcemerge_audit" {
   }
   attribute {
     name = "timestamp"
-    type = "S"
+    type = "N"
   }
   global_secondary_index {
     name = "TimestampIndex"
