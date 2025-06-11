@@ -1,3 +1,7 @@
+## Goliac v0.18.23
+
+- update workflow dynamodb plugin to set timestamp as number
+
 ## Goliac v0.18.22
 
 - bugfix: githubapp cannot fetch global ruleset actors
