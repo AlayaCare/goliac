@@ -1,3 +1,7 @@
+## Goliac v1.0.0
+
+- add an architecture.md document
+
 ## Goliac v0.18.23
 
 - update workflow dynamodb plugin to set timestamp as number
