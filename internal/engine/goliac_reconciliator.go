@@ -736,6 +736,22 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 				}
 				CompareEntities(lRepo.Environments.GetEntity(), rRepo.Environments.GetEntity(), compareEnvironments, onEnvironmentAdded, onEnvironmentRemoved, onEnvironmentChange)
 			}
+
+			if manageGithubAutolinks {
+				// nested autolinks comparison IF it is defined locally
+				if lRepo.Autolinks != nil {
+					onAutolinkAdded := func(autolinkprefix string, lal *GithubAutolink, ral *GithubAutolink) {
+						r.AddRepositoryAutolink(ctx, errorCollector, dryrun, remote, reponame, lal)
+					}
+					onAutolinkRemoved := func(autolinkprefix string, lal *GithubAutolink, ral *GithubAutolink) {
+						r.DeleteRepositoryAutolink(ctx, errorCollector, dryrun, remote, reponame, ral.Id)
+					}
+					onAutolinkChange := func(autolinkname string, lal *GithubAutolink, ral *GithubAutolink) {
+						r.UpdateRepositoryAutolink(ctx, errorCollector, dryrun, remote, reponame, ral)
+					}
+					CompareEntities(lRepo.Autolinks.GetEntity(), rRepo.Autolinks.GetEntity(), compareAutolinks, onAutolinkAdded, onAutolinkRemoved, onAutolinkChange)
+				}
+			}
 		}
 
 		//
@@ -791,23 +807,6 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 			}
 		}
 
-		if manageGithubAutolinks {
-			if !archived {
-				// nested autolinks comparison IF it is defined locally
-				if lRepo.Autolinks != nil {
-					onAutolinkAdded := func(autolinkprefix string, lal *GithubAutolink, ral *GithubAutolink) {
-						r.AddRepositoryAutolink(ctx, errorCollector, dryrun, remote, reponame, lal)
-					}
-					onAutolinkRemoved := func(autolinkprefix string, lal *GithubAutolink, ral *GithubAutolink) {
-						r.DeleteRepositoryAutolink(ctx, errorCollector, dryrun, remote, reponame, ral.Id)
-					}
-					onAutolinkChange := func(autolinkname string, lal *GithubAutolink, ral *GithubAutolink) {
-						r.UpdateRepositoryAutolink(ctx, errorCollector, dryrun, remote, reponame, ral)
-					}
-					CompareEntities(lRepo.Autolinks.GetEntity(), rRepo.Autolinks.GetEntity(), compareAutolinks, onAutolinkAdded, onAutolinkRemoved, onAutolinkChange)
-				}
-			}
-		}
 		return true
 	}
 

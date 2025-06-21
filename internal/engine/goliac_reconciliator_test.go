@@ -3165,3 +3165,164 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 		assert.Equal(t, "production", recorder.RepositoryEnvironmentVariableUpdated["test-repo"])
 	})
 }
+
+func TestReconciliationAutolinks(t *testing.T) {
+	t.Run("happy path: add new autolink to repository", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		// Create a repository with a new environment
+		repo := &entity.Repository{}
+		repo.Name = "test-repo"
+		autolinks := []entity.RepositoryAutolink{
+			{
+				KeyPrefix:      "TICKET-",
+				UrlTemplate:    "https://example.com/TICKET?query=<num>",
+				IsAlphanumeric: true,
+			},
+		}
+		repo.Spec.Autolinks = &autolinks
+		local.repos["test-repo"] = repo
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		// Add the repository to remote without any environments
+		remoteRepo := &GithubRepository{
+			Name:           "test-repo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+			Environments:   NewMockMappedEntityLazyLoader(map[string]*GithubEnvironment{}),
+			Autolinks:      NewMockMappedEntityLazyLoader(map[string]*GithubAutolink{}),
+		}
+		remote.repos["test-repo"] = remoteRepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true, true)
+
+		// Verify environment was added
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, "https://example.com/TICKET?query=<num>", recorder.RepositoryAutolinkCreated["test-repo"]["TICKET-"].UrlTemplate)
+	})
+	t.Run("happy path: removing autolink", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		// Create a repository with a new environment
+		repo := &entity.Repository{}
+		repo.Name = "test-repo"
+		autolinks := []entity.RepositoryAutolink{}
+		repo.Spec.Autolinks = &autolinks
+		local.repos["test-repo"] = repo
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		// Add the repository to remote without any environments
+		remoteRepo := &GithubRepository{
+			Name:           "test-repo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+			Environments:   NewMockMappedEntityLazyLoader(map[string]*GithubEnvironment{}),
+			Autolinks:      NewMockMappedEntityLazyLoader(map[string]*GithubAutolink{}),
+		}
+		remoteRepo.Autolinks.GetEntity()["TICKET-"] = &GithubAutolink{
+			Id:             12345,
+			KeyPrefix:      "TICKET-",
+			UrlTemplate:    "https://example.com/TICKET?query=<num>",
+			IsAlphanumeric: true,
+		}
+		remote.repos["test-repo"] = remoteRepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true, true)
+
+		// Verify environment was added
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, 12345, recorder.RepositoryAutolinkDeleted["test-repo"][0])
+	})
+
+	t.Run("happy path: not removing autolink", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconf := config.RepositoryConfig{}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		// Create a repository with a new environment
+		repo := &entity.Repository{}
+		repo.Name = "test-repo"
+		// let's set autolink to nil, to not manage it
+		// autolinks := []entity.RepositoryAutolink{}
+		repo.Spec.Autolinks = nil
+		local.repos["test-repo"] = repo
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]string),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]int),
+		}
+
+		// Add the repository to remote without any environments
+		remoteRepo := &GithubRepository{
+			Name:           "test-repo",
+			ExternalUsers:  map[string]string{},
+			BoolProperties: map[string]bool{},
+			Environments:   NewMockMappedEntityLazyLoader(map[string]*GithubEnvironment{}),
+			Autolinks:      NewMockMappedEntityLazyLoader(map[string]*GithubAutolink{}),
+		}
+		remoteRepo.Autolinks.GetEntity()["TICKET-"] = &GithubAutolink{
+			Id:             12345,
+			KeyPrefix:      "TICKET-",
+			UrlTemplate:    "https://example.com/TICKET?query=<num>",
+			IsAlphanumeric: true,
+		}
+		remote.repos["test-repo"] = remoteRepo
+
+		toArchive := make(map[string]*GithubRepoComparable)
+		errorCollector := observability.NewErrorCollection()
+		r.Reconciliate(context.TODO(), errorCollector, &local, &remote, "teams", "main", false, "goliac-admin", toArchive, map[string]*entity.Repository{}, true, true)
+
+		// Verify environment was added
+		assert.False(t, errorCollector.HasErrors())
+		assert.Equal(t, 0, len(recorder.RepositoryAutolinkDeleted["test-repo"]))
+	})
+}
