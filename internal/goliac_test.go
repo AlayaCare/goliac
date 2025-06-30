@@ -443,10 +443,11 @@ func (e *GoliacRemoteExecutorMock) Teams(ctx context.Context, current bool) map[
 func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]*engine.GithubRepository {
 	return map[string]*engine.GithubRepository{
 		"src": {
-			Name:       "src", // this is the "teams" repository
-			Id:         0,
-			RefId:      "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
-			Visibility: "private",
+			Name:              "src", // this is the "teams" repository
+			Id:                0,
+			RefId:             "MDEwOlJlcG9zaXRvcnkaMTMxNjExOQ==",
+			Visibility:        "internal",
+			DefaultBranchName: "master",
 			BoolProperties: map[string]bool{
 				"archived":               false,
 				"allow_auto_merge":       false,
