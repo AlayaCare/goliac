@@ -8,6 +8,9 @@ It is mostly used for UX purposes (on the plan)
 type RemoteObservability interface {
 	// Init is called to specify the number of assets we will be loading
 	Init(nbTotalAssets int)
+
+	// second pass, we need to extend the total
+	Extend(nbAssets int)
 	// LoadingAsset is called when we start loading a github asset
 	LoadingAsset(entity string, nb int)
 }

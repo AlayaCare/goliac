@@ -247,7 +247,7 @@ func (g *GoliacRemoteImpl) CountAssets(ctx context.Context, warmup bool) (int, e
 		totalCount += 2 * gResult.Data.Organization.Repositories.TotalCount // we add 2 times because we have the environments per repository, and the variables per repository to fetch
 	}
 
-	return totalCount, nil
+	return totalCount + 1, nil
 }
 
 func (g *GoliacRemoteImpl) SetRemoteObservability(feedback observability.RemoteObservability) {
@@ -859,6 +859,8 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 		for reponame, repo := range repositories {
 			repo.RepositoryVariables = NewRemoteLazyLoader[string](func() map[string]string {
 				ctx := context.Background()
+				g.feedback.Extend(1)
+				g.feedback.LoadingAsset("repo_variable", 1)
 				variables, err := g.loadVariablesPerRepository(ctx, repo)
 				if err != nil {
 					logrus.Errorf("error loading variables for repository %s: %v", reponame, err)
@@ -883,6 +885,8 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 		for reponame, repo := range repositories {
 			repo.Environments = NewRemoteLazyLoader[*GithubEnvironment](func() map[string]*GithubEnvironment {
 				ctx := context.Background()
+				g.feedback.Extend(1)
+				g.feedback.LoadingAsset("repo_environment", 1)
 
 				envs, err := g.loadEnvironmentsPerRepository(ctx, repo)
 				if err != nil {
@@ -916,6 +920,8 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 		for reponame, repo := range repositories {
 			repo.Autolinks = NewRemoteLazyLoader[*GithubAutolink](func() map[string]*GithubAutolink {
 				ctx := context.Background()
+				g.feedback.Extend(1)
+				g.feedback.LoadingAsset("repo_autolink", 1)
 				autolinks, err := g.loadAutolinksPerRepository(ctx, repo)
 				if err != nil {
 					logrus.Errorf("error loading autolinks for repository %s: %v", reponame, err)

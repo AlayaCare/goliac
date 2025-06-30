@@ -546,6 +546,9 @@ func (g *GoliacImpl) applyToGithub(ctx context.Context, dryrun bool, githubOrgan
 	//
 	// post
 	//
+	if g.feedback != nil {
+		g.feedback.LoadingAsset("finish", 1)
+	}
 
 	// we update the codeowners file
 	if !dryrun {

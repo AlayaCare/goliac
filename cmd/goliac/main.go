@@ -55,6 +55,10 @@ func (p *ProgressBar) Init(nbTotalAssets int) {
 	p.bar = bar
 }
 
+func (p *ProgressBar) Extend(nbAssets int) {
+	p.bar.AddMax(nbAssets)
+}
+
 func (p *ProgressBar) LoadingAsset(entity string, nb int) {
 	p.bar.Add(nb)
 }
