@@ -10,11 +10,6 @@ import (
 	"github.com/gosimple/slug"
 )
 
-// TBD
-// - externally managed teams: put the externally managed flag in the comparable
-// - renameTo: a/ we have to keep the processing in the reconciliator, b/ we must not comparable it
-// - visibility filter: we need to know if we are on an enterprise or not (is "internal" possible ?)
-
 type GoliacReconciliatorDatasource interface {
 	Users() map[string]string                                                   // githubuserid -> goliacuserid
 	Teams() (map[string]*GithubTeamComparable, map[string]bool, error)          // team, externallyManaged, error
@@ -66,57 +61,6 @@ func (d *GoliacReconciliatorDatasourceLocal) Teams() (map[string]*GithubTeamComp
 		if teamvalue.Spec.ExternallyManaged {
 			externallyManagedTeams[teamslug] = true
 		}
-
-		// if the team is externally managed, we don't want to touch it
-		// we just remove it from the list
-		// if teamvalue.Spec.ExternallyManaged {
-		// 	// let's add it to the special -goliac-owners
-		// 	membersOwners := []string{}
-		// 	membersMaintainers := []string{}
-		// 	if rt, ok := rTeams[teamslug]; ok {
-		// 		membersOwners = append(membersOwners, rt.Members...)
-		// 		membersMaintainers = append(membersMaintainers, rt.Maintainers...)
-		// 	}
-		// 	team := &GithubTeamComparable{
-		// 		Name:        teamslug + config.Config.GoliacTeamOwnerSuffix,
-		// 		Slug:        teamslug + config.Config.GoliacTeamOwnerSuffix,
-		// 		Members:     membersOwners,
-		// 		Maintainers: membersMaintainers,
-		// 	}
-		// 	slugTeams[teamslug+config.Config.GoliacTeamOwnerSuffix] = team
-
-		// 	r.unmanaged.ExternallyManagedTeams[teamslug] = true
-
-		// 	// before we skip the team, let's check if the parent team is the same
-		// 	// if not, we need to update the parent team
-
-		// 	var lParentTeam *string
-		// 	if teamvalue.ParentTeam != nil {
-		// 		parentTeam := slug.Make(*teamvalue.ParentTeam)
-		// 		lParentTeam = &parentTeam
-		// 	}
-		// 	rTeam, ok := rTeams[teamslug]
-		// 	if ok {
-		// 		if (lParentTeam == nil && rTeam.ParentTeam != nil) ||
-		// 			(lParentTeam != nil && rTeam.ParentTeam == nil) ||
-		// 			(lParentTeam != nil && rTeam.ParentTeam != nil && *lParentTeam != *rTeam.ParentTeam) {
-
-		// 			var parentTeam *int
-		// 			parentTeamName := ""
-		// 			if lParentTeam != nil && ghTeams[*lParentTeam] != nil {
-		// 				parentTeam = &ghTeams[*lParentTeam].Id
-		// 				parentTeamName = *lParentTeam
-		// 			}
-
-		// 			r.UpdateTeamSetParent(ctx, errorCollector, dryrun, remote, teamslug, parentTeam, parentTeamName)
-		// 		}
-		// 	}
-
-		// 	// delete the team from the map
-		// 	// we don't want to process it anymore (it is externally managed)
-		// 	delete(rTeams, teamslug)
-		// 	continue
-		// }
 
 		members := []string{}
 		membersOwners := []string{}
@@ -176,28 +120,6 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 	renameTo := make(map[string]string)
 
 	localRepositories := make(map[string]*entity.Repository)
-	for reponame, repo := range d.local.Repositories() {
-
-		// we rename the repository before we start to reconciliate
-		// if repo.RenameTo != "" {
-		// 	oldName := repo.Name
-		// 	renamedRepo := *repo
-		// 	renamedRepo.Name = repo.RenameTo
-		// 	renamedRepo.RenameTo = ""
-		// 	reponame = repo.RenameTo
-
-		// 	r.RenameRepository(ctx, errorCollector, dryrun, remote, repo.Name, repo.RenameTo)
-
-		// 	// in the post action we have to also update the git repository
-		// 	reposToRename[oldName] = repo
-		// 	repo = &renamedRepo
-		// }
-		if repo.RenameTo != "" {
-			renameTo[reponame] = repo.RenameTo
-		}
-
-		localRepositories[reponame] = repo
-	}
 
 	// adding the goliac-teams repo
 	teamsRepo := &entity.Repository{}
@@ -206,13 +128,7 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 	teamsRepo.Name = d.teamsreponame
 	teamsRepo.Spec.Writers = []string{d.conf.AdminTeam}
 	teamsRepo.Spec.Readers = []string{}
-	// teamsRepo.Spec.Visibility = "internal"
-	// teamsRepo.Spec.DefaultBranchName = "main"
 
-	// if ghtr, ok := ghRepos[d.teamsreponame]; ok {
-	// 	teamsRepo.Spec.Visibility = ghtr.Visibility
-	// 	teamsRepo.Spec.DefaultBranchName = ghtr.DefaultBranchName
-	// }
 	teamsRepo.Spec.Visibility = "internal"
 	teamsRepo.Spec.DefaultBranchName = d.teamsDefaultBranch
 
@@ -232,6 +148,16 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 	}
 	teamsRepo.Spec.BranchProtections = []entity.RepositoryBranchProtection{bp}
 	localRepositories[d.teamsreponame] = teamsRepo
+
+	// addming regular repositories
+	for reponame, repo := range d.local.Repositories() {
+
+		if repo.RenameTo != "" {
+			renameTo[reponame] = repo.RenameTo
+		}
+
+		localRepositories[reponame] = repo
+	}
 
 	for reponame, lRepo := range localRepositories {
 		writers := make([]string, 0)
