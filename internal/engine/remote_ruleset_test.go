@@ -368,13 +368,13 @@ func TestAddRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call AddRuleset
-		remoteImpl.AddRuleset(ctx, errorCollector, false, ruleset)
+		remoteImpl.AddRuleset(ctx, logsCollector, false, ruleset)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made correctly
 		assert.Equal(t, "/orgs/myorg/rulesets", mockClient.lastEndpoint)
@@ -451,15 +451,15 @@ func TestAddRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call AddRuleset
-		remoteImpl.AddRuleset(ctx, errorCollector, false, ruleset)
+		remoteImpl.AddRuleset(ctx, logsCollector, false, ruleset)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to add ruleset to org")
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to create ruleset")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to add ruleset to org")
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to create ruleset")
 
 		// Verify the ruleset was not added to the cache
 		assert.NotContains(t, remoteImpl.rulesets, "test-ruleset")
@@ -480,13 +480,13 @@ func TestAddRuleset(t *testing.T) {
 		remoteImpl.loadRulesets(ctx)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call AddRuleset in dry run mode
-		remoteImpl.AddRuleset(ctx, errorCollector, true, ruleset)
+		remoteImpl.AddRuleset(ctx, logsCollector, true, ruleset)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -513,14 +513,14 @@ func TestAddRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call AddRuleset
-		remoteImpl.AddRuleset(ctx, errorCollector, false, ruleset)
+		remoteImpl.AddRuleset(ctx, logsCollector, false, ruleset)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "Invalid ruleset configuration")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "Invalid ruleset configuration")
 
 		// Verify the ruleset was not added to the cache
 		assert.NotContains(t, remoteImpl.rulesets, "test-ruleset")
@@ -588,13 +588,13 @@ func TestDeleteRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRuleset
-		remoteImpl.DeleteRuleset(ctx, errorCollector, false, 123)
+		remoteImpl.DeleteRuleset(ctx, logsCollector, false, 123)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made correctly
 		assert.Equal(t, "/orgs/myorg/rulesets/123", mockClient.lastEndpoint)
@@ -624,15 +624,15 @@ func TestDeleteRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRuleset
-		remoteImpl.DeleteRuleset(ctx, errorCollector, false, 123)
+		remoteImpl.DeleteRuleset(ctx, logsCollector, false, 123)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to remove ruleset from org")
-		assert.Contains(t, errorCollector.Errors[0].Error(), "ruleset not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to remove ruleset from org")
+		assert.Contains(t, logsCollector.Errors[0].Error(), "ruleset not found")
 
 		// Verify the ruleset remains in the cache due to error
 		assert.Contains(t, remoteImpl.rulesets, "test-ruleset")
@@ -657,13 +657,13 @@ func TestDeleteRuleset(t *testing.T) {
 		remoteImpl.loadRulesets(ctx)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRuleset in dry run mode
-		remoteImpl.DeleteRuleset(ctx, errorCollector, true, 123)
+		remoteImpl.DeleteRuleset(ctx, logsCollector, true, 123)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -689,13 +689,13 @@ func TestDeleteRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRuleset with non-existent ID
-		remoteImpl.DeleteRuleset(ctx, errorCollector, false, 123)
+		remoteImpl.DeleteRuleset(ctx, logsCollector, false, 123)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made
 		assert.Equal(t, "/orgs/myorg/rulesets/123", mockClient.lastEndpoint)
@@ -727,13 +727,13 @@ func TestDeleteRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRuleset
-		remoteImpl.DeleteRuleset(ctx, errorCollector, false, 123)
+		remoteImpl.DeleteRuleset(ctx, logsCollector, false, 123)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made correctly
 		assert.Equal(t, "/orgs/myorg/rulesets/123", mockClient.lastEndpoint)
@@ -855,13 +855,13 @@ func TestUpdateRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRuleset
-		remoteImpl.UpdateRuleset(ctx, errorCollector, false, ruleset)
+		remoteImpl.UpdateRuleset(ctx, logsCollector, false, ruleset)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made correctly
 		assert.Equal(t, "/orgs/myorg/rulesets/123", mockClient.lastEndpoint)
@@ -947,14 +947,14 @@ func TestUpdateRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRuleset
-		remoteImpl.UpdateRuleset(ctx, errorCollector, false, ruleset)
+		remoteImpl.UpdateRuleset(ctx, logsCollector, false, ruleset)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to update ruleset")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to update ruleset")
 
 		// Verify the cache remains unchanged
 		assert.Equal(t, originalRuleset, remoteImpl.rulesets["test-ruleset"])
@@ -985,13 +985,13 @@ func TestUpdateRuleset(t *testing.T) {
 		remoteImpl.loadRulesets(ctx)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRuleset in dry run mode
-		remoteImpl.UpdateRuleset(ctx, errorCollector, true, ruleset)
+		remoteImpl.UpdateRuleset(ctx, logsCollector, true, ruleset)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1028,14 +1028,14 @@ func TestUpdateRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRuleset
-		remoteImpl.UpdateRuleset(ctx, errorCollector, false, ruleset)
+		remoteImpl.UpdateRuleset(ctx, logsCollector, false, ruleset)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "Invalid ruleset configuration")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "Invalid ruleset configuration")
 
 		// Verify the cache remains unchanged
 		assert.Equal(t, originalRuleset, remoteImpl.rulesets["test-ruleset"])
@@ -1054,10 +1054,10 @@ func TestUpdateRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRuleset
-		remoteImpl.UpdateRuleset(ctx, errorCollector, false, ruleset)
+		remoteImpl.UpdateRuleset(ctx, logsCollector, false, ruleset)
 
 		// Verify the API call was still made
 		assert.Equal(t, "/orgs/myorg/rulesets/123", mockClient.lastEndpoint)

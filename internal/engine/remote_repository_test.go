@@ -75,12 +75,12 @@ func TestCreateRepository(t *testing.T) {
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Test creating a forked repository
 		remoteImpl.CreateRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false,
 			"forked-repo",
 			"A forked repository",
@@ -99,7 +99,7 @@ func TestCreateRepository(t *testing.T) {
 		)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made correctly
 		assert.Equal(t, "/repos/original-org/source-repo/forks", mockClient.lastEndpoint)
@@ -140,12 +140,12 @@ func TestCreateRepository(t *testing.T) {
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Test creating a forked repository
 		remoteImpl.CreateRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false,
 			"forked-repo",
 			"A forked repository",
@@ -164,7 +164,7 @@ func TestCreateRepository(t *testing.T) {
 		)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made correctly
 		assert.Equal(t, "orgs/myorg/teams/team1/repos/myorg/forked-repo", mockClient.lastEndpoint)
@@ -203,12 +203,12 @@ func TestCreateRepository(t *testing.T) {
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Test with invalid fork format
 		remoteImpl.CreateRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false,
 			"forked-repo",
 			"A forked repository",
@@ -222,8 +222,8 @@ func TestCreateRepository(t *testing.T) {
 		)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "invalid fork format")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "invalid fork format")
 	})
 
 	t.Run("error path: fork API error", func(t *testing.T) {
@@ -237,12 +237,12 @@ func TestCreateRepository(t *testing.T) {
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Test forking a non-existent repository
 		remoteImpl.CreateRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false,
 			"forked-repo",
 			"A forked repository",
@@ -256,8 +256,8 @@ func TestCreateRepository(t *testing.T) {
 		)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to fork repository")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to fork repository")
 
 		// Verify the API call was attempted
 		assert.Equal(t, "/repos/original-org/non-existent-repo/forks", mockClient.lastEndpoint)
@@ -276,12 +276,12 @@ func TestCreateRepository(t *testing.T) {
 		ctx := context.TODO()
 		// initiate the cache
 		remoteImpl.Load(ctx, false)
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Test creating a regular repository
 		remoteImpl.CreateRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false,
 			"new-repo",
 			"A new repository",
@@ -300,7 +300,7 @@ func TestCreateRepository(t *testing.T) {
 		)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made correctly
 		assert.Equal(t, "/orgs/myorg/repos", mockClient.lastEndpoint)
@@ -346,12 +346,12 @@ func TestCreateRepository(t *testing.T) {
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Test creating a repository in dry run mode
 		remoteImpl.CreateRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			true, // dryrun
 			"dry-run-repo",
 			"A dry run repository",
@@ -365,7 +365,7 @@ func TestCreateRepository(t *testing.T) {
 		)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -423,7 +423,7 @@ func TestDeleteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add a repository to the cache first
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -441,13 +441,13 @@ func TestDeleteRepository(t *testing.T) {
 		// Delete the repository
 		remoteImpl.DeleteRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false, // dryrun
 			"test-repo",
 		)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made correctly
 		assert.Equal(t, "/repos/myorg/test-repo", mockClient.lastEndpoint)
@@ -467,20 +467,20 @@ func TestDeleteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Try to delete a non-existent repository
 		remoteImpl.DeleteRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false,
 			"non-existent-repo",
 		)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to delete repository")
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to delete repository")
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository not found")
 
 		// Verify the API call was attempted
 		assert.Equal(t, "/repos/myorg/non-existent-repo", mockClient.lastEndpoint)
@@ -496,7 +496,7 @@ func TestDeleteRepository(t *testing.T) {
 		remoteImpl.Load(ctx, false)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add a repository to the cache first
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -514,13 +514,13 @@ func TestDeleteRepository(t *testing.T) {
 		// Delete the repository in dry run mode
 		remoteImpl.DeleteRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			true, // dryrun
 			"test-repo",
 		)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -533,7 +533,7 @@ func TestDeleteRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add a repository to the cache with team references
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -565,13 +565,13 @@ func TestDeleteRepository(t *testing.T) {
 		// Delete the repository
 		remoteImpl.DeleteRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false,
 			"test-repo",
 		)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made correctly
 		assert.Equal(t, "/repos/myorg/test-repo", mockClient.lastEndpoint)
@@ -647,7 +647,7 @@ func TestRenameRepository(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
 		remoteImpl.Load(ctx, false)
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add a repository to the cache first
 		repo := &GithubRepository{
@@ -685,14 +685,14 @@ func TestRenameRepository(t *testing.T) {
 		// Rename the repository
 		remoteImpl.RenameRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false, // dryrun
 			"old-name",
 			"new-name",
 		)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the API call was made correctly
 		assert.Equal(t, "/repos/myorg/old-name", mockClient.lastEndpoint)
@@ -727,21 +727,21 @@ func TestRenameRepository(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Try to rename a non-existent repository
 		remoteImpl.RenameRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false,
 			"non-existent-repo",
 			"new-name",
 		)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to rename the repository")
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to rename the repository")
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository not found")
 
 		// Verify the API call was attempted
 		assert.Equal(t, "/repos/myorg/non-existent-repo", mockClient.lastEndpoint)
@@ -757,7 +757,7 @@ func TestRenameRepository(t *testing.T) {
 		remoteImpl.Load(ctx, false)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add a repository to the cache first
 		repo := &GithubRepository{
@@ -789,14 +789,14 @@ func TestRenameRepository(t *testing.T) {
 		// Rename the repository in dry run mode
 		remoteImpl.RenameRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			true, // dryrun
 			"old-name",
 			"new-name",
 		)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -823,7 +823,7 @@ func TestRenameRepository(t *testing.T) {
 		remoteImpl.Load(ctx, false)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add two repositories to the cache
 		repo1 := &GithubRepository{
@@ -850,16 +850,16 @@ func TestRenameRepository(t *testing.T) {
 		// Try to rename to an existing name
 		remoteImpl.RenameRepository(
 			ctx,
-			errorCollector,
+			logsCollector,
 			false,
 			"old-name",
 			"existing-name",
 		)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to rename the repository")
-		assert.Contains(t, errorCollector.Errors[0].Error(), "the new name is already used")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to rename the repository")
+		assert.Contains(t, logsCollector.Errors[0].Error(), "the new name is already used")
 
 	})
 }

@@ -859,8 +859,10 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 		for reponame, repo := range repositories {
 			repo.RepositoryVariables = NewRemoteLazyLoader[string](func() map[string]string {
 				ctx := context.Background()
-				g.feedback.Extend(1)
-				g.feedback.LoadingAsset("repo_variable", 1)
+				if g.feedback != nil {
+					g.feedback.Extend(1)
+					g.feedback.LoadingAsset("repo_variable", 1)
+				}
 				variables, err := g.loadVariablesPerRepository(ctx, repo)
 				if err != nil {
 					logrus.Errorf("error loading variables for repository %s: %v", reponame, err)
@@ -885,8 +887,10 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 		for reponame, repo := range repositories {
 			repo.Environments = NewRemoteLazyLoader[*GithubEnvironment](func() map[string]*GithubEnvironment {
 				ctx := context.Background()
-				g.feedback.Extend(1)
-				g.feedback.LoadingAsset("repo_environment", 1)
+				if g.feedback != nil {
+					g.feedback.Extend(1)
+					g.feedback.LoadingAsset("repo_environment", 1)
+				}
 
 				envs, err := g.loadEnvironmentsPerRepository(ctx, repo)
 				if err != nil {
@@ -920,8 +924,10 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 		for reponame, repo := range repositories {
 			repo.Autolinks = NewRemoteLazyLoader[*GithubAutolink](func() map[string]*GithubAutolink {
 				ctx := context.Background()
-				g.feedback.Extend(1)
-				g.feedback.LoadingAsset("repo_autolink", 1)
+				if g.feedback != nil {
+					g.feedback.Extend(1)
+					g.feedback.LoadingAsset("repo_autolink", 1)
+				}
 				autolinks, err := g.loadAutolinksPerRepository(ctx, repo)
 				if err != nil {
 					logrus.Errorf("error loading autolinks for repository %s: %v", reponame, err)
@@ -2178,7 +2184,7 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 	return payload
 }
 
-func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ruleset *GithubRuleSet) {
 	// add ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#create-an-organization-repository-ruleset
 
@@ -2192,7 +2198,7 @@ func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, errorCollector *obser
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to add ruleset to org: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add ruleset to org: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -2203,7 +2209,7 @@ func (g *GoliacRemoteImpl) AddRuleset(ctx context.Context, errorCollector *obser
 	g.rulesets[ruleset.Name] = ruleset
 }
 
-func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ruleset *GithubRuleSet) {
 	// update ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#update-an-organization-repository-ruleset
 
@@ -2217,7 +2223,7 @@ func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, errorCollector *ob
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to update ruleset %d to org: %v. %s", ruleset.Id, err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to update ruleset %d to org: %v. %s", ruleset.Id, err, string(body)))
 			return
 		}
 	}
@@ -2228,7 +2234,7 @@ func (g *GoliacRemoteImpl) UpdateRuleset(ctx context.Context, errorCollector *ob
 	g.rulesets[ruleset.Name] = ruleset
 }
 
-func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, rulesetid int) {
+func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, rulesetid int) {
 	// remove ruleset
 	// https://docs.github.com/en/enterprise-cloud@latest/rest/orgs/rules?apiVersion=2022-11-28#delete-an-organization-repository-ruleset
 
@@ -2242,7 +2248,7 @@ func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, errorCollector *ob
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to remove ruleset from org: %v", err))
+			logsCollector.AddError(fmt.Errorf("failed to remove ruleset from org: %v", err))
 			return
 		}
 	}
@@ -2258,14 +2264,14 @@ func (g *GoliacRemoteImpl) DeleteRuleset(ctx context.Context, errorCollector *ob
 	}
 }
 
-func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
 	// add repository ruleset
 	// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#create-a-repository-ruleset
 
 	g.actionMutex.Lock()
 	repo := g.repositories[reponame]
 	if repo == nil {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -2281,7 +2287,7 @@ func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, errorCollec
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to add ruleset to repository: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add ruleset to repository: %v. %s", err, string(body)))
 			return
 		}
 		type AddRepositoryRulesetResponse struct {
@@ -2304,13 +2310,13 @@ func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, errorCollec
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
 	// update repository ruleset
 	// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#update-a-repository-ruleset
 	g.actionMutex.Lock()
 	repo := g.repositories[reponame]
 	if repo == nil {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -2325,7 +2331,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, errorCol
 	}
 
 	if !found {
-		errorCollector.AddError(fmt.Errorf("ruleset %d not found", ruleset.Id))
+		logsCollector.AddError(fmt.Errorf("ruleset %d not found", ruleset.Id))
 		return
 	}
 
@@ -2339,7 +2345,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, errorCol
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to update ruleset %d to repository: %v. %s", ruleset.Id, err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to update ruleset %d to repository: %v. %s", ruleset.Id, err, string(body)))
 			return
 		}
 	}
@@ -2353,14 +2359,14 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, errorCol
 	}
 }
 
-func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, rulesetid int) {
+func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, rulesetid int) {
 	// remove repository ruleset
 	// https://docs.github.com/en/rest/repos/rules?apiVersion=2022-11-28#delete-a-repository-ruleset
 
 	g.actionMutex.Lock()
 	repo := g.repositories[reponame]
 	if repo == nil {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -2375,7 +2381,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, errorCol
 	}
 
 	if !found {
-		errorCollector.AddError(fmt.Errorf("ruleset %d not found", rulesetid))
+		logsCollector.AddError(fmt.Errorf("ruleset %d not found", rulesetid))
 		return
 	}
 
@@ -2389,7 +2395,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, errorCol
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to remove ruleset from repository: %v", err))
+			logsCollector.AddError(fmt.Errorf("failed to remove ruleset from repository: %v", err))
 			return
 		}
 	}
@@ -2466,14 +2472,14 @@ type GraphqlBranchProtectionRuleCreationResponse struct {
 	} `json:"errors"`
 }
 
-func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	// add repository branch protection
 	// https://docs.github.com/en/graphql/reference/mutations#createbranchprotectionrule
 
 	g.actionMutex.Lock()
 	repo := g.repositories[reponame]
 	if repo == nil {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -2502,18 +2508,18 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, er
 			},
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v. %s", reponame, err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v. %s", reponame, err, string(body)))
 			return
 		}
 
 		var res GraphqlBranchProtectionRuleCreationResponse
 		err = json.Unmarshal(body, &res)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v", reponame, err))
+			logsCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v", reponame, err))
 			return
 		}
 		if len(res.Errors) > 0 {
-			errorCollector.AddError(fmt.Errorf("graphql error on AddRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
+			logsCollector.AddError(fmt.Errorf("graphql error on AddRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
 			return
 		}
 
@@ -2569,14 +2575,14 @@ mutation updateBranchProtectionRule(
   }
 }`
 
-func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	// update repository branch protection
 	// https://docs.github.com/en/graphql/reference/mutations#updatebranchprotectionrule
 
 	g.actionMutex.Lock()
 	repo := g.repositories[reponame]
 	if repo == nil {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -2584,7 +2590,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 
 	bp := repo.BranchProtections[branchprotection.Pattern]
 	if bp == nil {
-		errorCollector.AddError(fmt.Errorf("branch protection for repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("branch protection for repository %s not found", reponame))
 		return
 	}
 
@@ -2611,18 +2617,18 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 			},
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v. %s", reponame, err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v. %s", reponame, err, string(body)))
 			return
 		}
 
 		var res GraphqlBranchProtectionRuleCreationResponse
 		err = json.Unmarshal(body, &res)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v", reponame, err))
+			logsCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v", reponame, err))
 			return
 		}
 		if len(res.Errors) > 0 {
-			errorCollector.AddError(fmt.Errorf("graphql error on UpdateRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
+			logsCollector.AddError(fmt.Errorf("graphql error on UpdateRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
 			return
 		}
 	}
@@ -2647,14 +2653,14 @@ mutation deleteBranchProtectionRule(
 }
 `
 
-func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	// remove repository branch protection
 	// https://docs.github.com/en/graphql/reference/mutations#deletebranchprotectionrule
 
 	g.actionMutex.Lock()
 	repo := g.repositories[reponame]
 	if repo == nil {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -2662,7 +2668,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 
 	bp := repo.BranchProtections[branchprotection.Pattern]
 	if bp == nil {
-		errorCollector.AddError(fmt.Errorf("branch protection for repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("branch protection for repository %s not found", reponame))
 		return
 	}
 
@@ -2675,18 +2681,18 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 			},
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v. %s", reponame, err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v. %s", reponame, err, string(body)))
 			return
 		}
 
 		var res GraphqlBranchProtectionRuleCreationResponse
 		err = json.Unmarshal(body, &res)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v", reponame, err))
+			logsCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v", reponame, err))
 			return
 		}
 		if len(res.Errors) > 0 {
-			errorCollector.AddError(fmt.Errorf("graphql error on DeleteRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
+			logsCollector.AddError(fmt.Errorf("graphql error on DeleteRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
 			return
 		}
 	}
@@ -2700,7 +2706,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 	}
 }
 
-func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ghuserid string) {
+func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ghuserid string) {
 	// add member
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
 	if !dryrun {
@@ -2713,7 +2719,7 @@ func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, errorCollector *obs
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to add user to org: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add user to org: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -2724,7 +2730,7 @@ func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, errorCollector *obs
 	g.users[ghuserid] = ghuserid
 }
 
-func (g *GoliacRemoteImpl) RemoveUserFromOrg(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ghuserid string) {
+func (g *GoliacRemoteImpl) RemoveUserFromOrg(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ghuserid string) {
 	// remove member
 	// https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28#remove-organization-membership-for-a-user
 	if !dryrun {
@@ -2737,7 +2743,7 @@ func (g *GoliacRemoteImpl) RemoveUserFromOrg(ctx context.Context, errorCollector
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to remove user from org: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to remove user from org: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -2754,13 +2760,13 @@ type CreateTeamResponse struct {
 	Slug string `json:"slug"`
 }
 
-func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
+func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
 	slugname := slug.Make(teamname)
 	teamid := 0
 
 	g.actionMutex.Lock()
 	if _, ok := g.teams[slugname]; ok {
-		errorCollector.AddError(fmt.Errorf("team %s already exists", teamname))
+		logsCollector.AddError(fmt.Errorf("team %s already exists", teamname))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -2786,13 +2792,13 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, errorCollector *obser
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to create team: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to create team: %v. %s", err, string(body)))
 			return
 		}
 		var res CreateTeamResponse
 		err = json.Unmarshal(body, &res)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to create team: %v", err))
+			logsCollector.AddError(fmt.Errorf("failed to create team: %v", err))
 			return
 		}
 
@@ -2808,7 +2814,7 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, errorCollector *obser
 				nil,
 			)
 			if err != nil {
-				errorCollector.AddError(fmt.Errorf("failed to add team member: %v. %s", err, string(body)))
+				logsCollector.AddError(fmt.Errorf("failed to add team member: %v. %s", err, string(body)))
 				return
 			}
 		}
@@ -2830,17 +2836,17 @@ func (g *GoliacRemoteImpl) CreateTeam(ctx context.Context, errorCollector *obser
 }
 
 // role = member or maintainer (usually we use member)
-func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string, role string) {
+func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamslug string, username string, role string) {
 	g.actionMutex.Lock()
 	if _, ok := g.teams[teamslug]; !ok {
-		errorCollector.AddError(fmt.Errorf("team %s not found", teamslug))
+		logsCollector.AddError(fmt.Errorf("team %s not found", teamslug))
 		g.actionMutex.Unlock()
 		return
 	}
 	g.actionMutex.Unlock()
 
 	if username == "" {
-		errorCollector.AddError(fmt.Errorf("invalid username"))
+		logsCollector.AddError(fmt.Errorf("invalid username"))
 		return
 	}
 
@@ -2855,7 +2861,7 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, errorCollect
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to add team member: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add team member: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -2895,17 +2901,17 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, errorCollect
 }
 
 // role = member or maintainer (usually we use member)
-func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string, role string) {
+func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamslug string, username string, role string) {
 	g.actionMutex.Lock()
 	if _, ok := g.teams[teamslug]; !ok {
-		errorCollector.AddError(fmt.Errorf("team %s not found", teamslug))
+		logsCollector.AddError(fmt.Errorf("team %s not found", teamslug))
 		g.actionMutex.Unlock()
 		return
 	}
 	g.actionMutex.Unlock()
 
 	if username == "" {
-		errorCollector.AddError(fmt.Errorf("invalid username"))
+		logsCollector.AddError(fmt.Errorf("invalid username"))
 		return
 	}
 
@@ -2920,7 +2926,7 @@ func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, errorColl
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to update team member: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to update team member: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -2973,17 +2979,17 @@ func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, errorColl
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string) {
+func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamslug string, username string) {
 	g.actionMutex.Lock()
 	if _, ok := g.teams[teamslug]; !ok {
-		errorCollector.AddError(fmt.Errorf("team %s not found", teamslug))
+		logsCollector.AddError(fmt.Errorf("team %s not found", teamslug))
 		g.actionMutex.Unlock()
 		return
 	}
 	g.actionMutex.Unlock()
 
 	if username == "" {
-		errorCollector.AddError(fmt.Errorf("invalid username"))
+		logsCollector.AddError(fmt.Errorf("invalid username"))
 		return
 	}
 	if !dryrun {
@@ -2996,7 +3002,7 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, errorColl
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to remove team member: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to remove team member: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -3028,7 +3034,7 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, errorColl
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, parentTeam *int) {
+func (g *GoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamslug string, parentTeam *int) {
 	// set parent's team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#update-a-team
 	if !dryrun {
@@ -3041,19 +3047,19 @@ func (g *GoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, errorCollect
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to set parent team: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to set parent team: %v. %s", err, string(body)))
 			return
 		}
 	}
 }
 
-func (g *GoliacRemoteImpl) DeleteTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string) {
+func (g *GoliacRemoteImpl) DeleteTeam(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamslug string) {
 	// delete team
 	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#delete-a-team
 
 	g.actionMutex.Lock()
 	if _, ok := g.teams[teamslug]; !ok {
-		errorCollector.AddError(fmt.Errorf("team %s not found", teamslug))
+		logsCollector.AddError(fmt.Errorf("team %s not found", teamslug))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -3069,7 +3075,7 @@ func (g *GoliacRemoteImpl) DeleteTeam(ctx context.Context, errorCollector *obser
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to delete a team: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to delete a team: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -3098,7 +3104,7 @@ boolProperties are:
 - allow_update_branch
 - ...
 */
-func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string, githubToken *string, forkFrom string) {
+func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, description string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string, githubToken *string, forkFrom string) {
 	repoId := 0
 	repoRefId := reponame
 	if !dryrun {
@@ -3119,14 +3125,14 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 				githubToken, // if nil, we use the default Goliac token
 			)
 			if err != nil {
-				errorCollector.AddError(fmt.Errorf("failed to fork repository: %v. %s", err, string(body)))
+				logsCollector.AddError(fmt.Errorf("failed to fork repository: %v. %s", err, string(body)))
 				return
 			}
 			// get the repo id
 			var resp CreateRepositoryResponse
 			err = json.Unmarshal(body, &resp)
 			if err != nil {
-				errorCollector.AddError(fmt.Errorf("failed to read the create repository action response: %v", err))
+				logsCollector.AddError(fmt.Errorf("failed to read the create repository action response: %v", err))
 				return
 			}
 			repoId = resp.Id
@@ -3153,7 +3159,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 				githubToken, // if nil, we use the default Goliac token
 			)
 			if err != nil {
-				errorCollector.AddError(fmt.Errorf("failed to create repository: %v. %s", err, string(body)))
+				logsCollector.AddError(fmt.Errorf("failed to create repository: %v. %s", err, string(body)))
 				return
 			}
 
@@ -3161,7 +3167,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 			var resp CreateRepositoryResponse
 			err = json.Unmarshal(body, &resp)
 			if err != nil {
-				errorCollector.AddError(fmt.Errorf("failed to read the create repository action response: %v", err))
+				logsCollector.AddError(fmt.Errorf("failed to read the create repository action response: %v", err))
 				return
 			}
 			repoId = resp.Id
@@ -3198,7 +3204,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 				nil, // we keep the default Goliac token
 			)
 			if err != nil {
-				errorCollector.AddError(fmt.Errorf("failed to create repository (and add members): %v. %s", err, string(body)))
+				logsCollector.AddError(fmt.Errorf("failed to create repository (and add members): %v. %s", err, string(body)))
 				return
 			}
 		}
@@ -3225,7 +3231,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 				nil, // we keep the default Goliac token
 			)
 			if err != nil {
-				errorCollector.AddError(fmt.Errorf("failed to create repository (and add members): %v. %s", err, string(body)))
+				logsCollector.AddError(fmt.Errorf("failed to create repository (and add members): %v. %s", err, string(body)))
 				return
 			}
 		}
@@ -3242,15 +3248,15 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, errorCollector 
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	g.actionMutex.Lock()
 	if _, ok := g.repositories[reponame]; !ok {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
 		g.actionMutex.Unlock()
 		return
 	}
 	if _, ok := g.teams[teamslug]; !ok {
-		errorCollector.AddError(fmt.Errorf("team %s not found", teamslug))
+		logsCollector.AddError(fmt.Errorf("team %s not found", teamslug))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -3268,7 +3274,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, er
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to add team access: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add team access: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -3291,15 +3297,15 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, er
 	g.teamRepos[teamslug] = teamsRepos
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	g.actionMutex.Lock()
 	if _, ok := g.repositories[reponame]; !ok {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
 		g.actionMutex.Unlock()
 		return
 	}
 	if _, ok := g.teams[teamslug]; !ok {
-		errorCollector.AddError(fmt.Errorf("team %s not found", teamslug))
+		logsCollector.AddError(fmt.Errorf("team %s not found", teamslug))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -3317,7 +3323,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context,
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to add team access: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add team access: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -3340,15 +3346,15 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context,
 	g.teamRepos[teamslug] = teamsRepos
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string) {
 	g.actionMutex.Lock()
 	if _, ok := g.repositories[reponame]; !ok {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
 		g.actionMutex.Unlock()
 		return
 	}
 	if _, ok := g.teams[teamslug]; !ok {
-		errorCollector.AddError(fmt.Errorf("team %s not found", teamslug))
+		logsCollector.AddError(fmt.Errorf("team %s not found", teamslug))
 		g.actionMutex.Unlock()
 		return
 	}
@@ -3366,7 +3372,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context,
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to remove team access: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to remove team access: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -3388,7 +3394,7 @@ Used for
 - allow_update_branch (bool)
 - archived (bool)
 */
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -3400,7 +3406,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, e
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to update repository %s setting: %v. %s", propertyName, err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to update repository %s setting: %v. %s", propertyName, err, string(body)))
 			return
 		}
 	}
@@ -3419,7 +3425,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, e
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string, permission string) {
+func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string, permission string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#add-a-repository-collaborator
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -3431,7 +3437,7 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, 
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to set repository collaborator: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to set repository collaborator: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -3448,7 +3454,7 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, 
 	}
 }
 
-func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string) {
+func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string) {
 	// https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#remove-a-repository-collaborator
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -3460,7 +3466,7 @@ func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, error
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to remove repository collaborator: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to remove repository collaborator: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -3473,15 +3479,15 @@ func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, error
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string) {
-	g.updateRepositoryRemoveUser(ctx, errorCollector, dryrun, reponame, githubid)
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string) {
+	g.updateRepositoryRemoveUser(ctx, logsCollector, dryrun, reponame, githubid)
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryRemoveInternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string) {
-	g.updateRepositoryRemoveUser(ctx, errorCollector, dryrun, reponame, githubid)
+func (g *GoliacRemoteImpl) UpdateRepositoryRemoveInternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string) {
+	g.updateRepositoryRemoveUser(ctx, logsCollector, dryrun, reponame, githubid)
 }
 
-func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string) {
+func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string) {
 	// delete repo
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#delete-a-repository
 	if !dryrun {
@@ -3494,7 +3500,7 @@ func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, errorCollector 
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to delete repository: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to delete repository: %v. %s", err, string(body)))
 			return
 		}
 	}
@@ -3518,10 +3524,10 @@ func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, errorCollector 
 	}
 
 }
-func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, newname string) {
+func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, newname string) {
 	// check if the new name is already used
 	if _, ok := g.repositories[newname]; ok {
-		errorCollector.AddError(fmt.Errorf("failed to rename the repository %s (to %s): the new name is already used", reponame, newname))
+		logsCollector.AddError(fmt.Errorf("failed to rename the repository %s (to %s): the new name is already used", reponame, newname))
 		return
 	}
 
@@ -3537,7 +3543,7 @@ func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, errorCollector 
 			nil,
 		)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to rename the repository %s (to %s): %v. %s", reponame, newname, err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to rename the repository %s (to %s): %v. %s", reponame, newname, err, string(body)))
 			return
 		}
 
@@ -3566,17 +3572,17 @@ func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, errorCollector 
 }
 
 // AddRepositoryEnvironment adds a new environment to a repository
-func (g *GoliacRemoteImpl) AddRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+func (g *GoliacRemoteImpl) AddRepositoryEnvironment(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
 
 	// Check if environment already exists
 	if _, exists := repo.Environments.GetEntity()[environmentName]; exists {
-		errorCollector.AddError(fmt.Errorf("environment %s already exists in repository %s", environmentName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("environment %s already exists in repository %s", environmentName, repositoryName))
 		return
 	}
 
@@ -3588,7 +3594,7 @@ func (g *GoliacRemoteImpl) AddRepositoryEnvironment(ctx context.Context, errorCo
 
 		_, err := g.client.CallRestAPI(ctx, endpoint, "", "PUT", nil, nil)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to create environment %s in repository %s: %v", environmentName, repositoryName, err))
+			logsCollector.AddError(fmt.Errorf("failed to create environment %s in repository %s: %v", environmentName, repositoryName, err))
 			return
 		}
 	}
@@ -3604,17 +3610,17 @@ func (g *GoliacRemoteImpl) AddRepositoryEnvironment(ctx context.Context, errorCo
 }
 
 // DeleteRepositoryEnvironment deletes an environment from a repository
-func (g *GoliacRemoteImpl) DeleteRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+func (g *GoliacRemoteImpl) DeleteRepositoryEnvironment(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
 
 	// Check if environment exists
 	if _, exists := repo.Environments.GetEntity()[environmentName]; !exists {
-		errorCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
 		return
 	}
 
@@ -3626,7 +3632,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryEnvironment(ctx context.Context, erro
 
 		_, err := g.client.CallRestAPI(ctx, endpoint, "", "DELETE", nil, nil)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to delete environment %s from repository %s: %v", environmentName, repositoryName, err))
+			logsCollector.AddError(fmt.Errorf("failed to delete environment %s from repository %s: %v", environmentName, repositoryName, err))
 			return
 		}
 	}
@@ -3639,17 +3645,17 @@ func (g *GoliacRemoteImpl) DeleteRepositoryEnvironment(ctx context.Context, erro
 }
 
 // AddRepositoryVariable adds a new variable to a repository
-func (g *GoliacRemoteImpl) AddRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+func (g *GoliacRemoteImpl) AddRepositoryVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
 
 	// Check if variable already exists
 	if _, exists := repo.RepositoryVariables.GetEntity()[variableName]; exists {
-		errorCollector.AddError(fmt.Errorf("variable %s already exists in repository %s", variableName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("variable %s already exists in repository %s", variableName, repositoryName))
 		return
 	}
 
@@ -3666,7 +3672,7 @@ func (g *GoliacRemoteImpl) AddRepositoryVariable(ctx context.Context, errorColle
 
 		_, err := g.client.CallRestAPI(ctx, endpoint, "", "POST", body, nil)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to create variable %s in repository %s: %v", variableName, repositoryName, err))
+			logsCollector.AddError(fmt.Errorf("failed to create variable %s in repository %s: %v", variableName, repositoryName, err))
 			return
 		}
 	}
@@ -3679,17 +3685,17 @@ func (g *GoliacRemoteImpl) AddRepositoryVariable(ctx context.Context, errorColle
 }
 
 // UpdateRepositoryVariable updates a variable's value in a repository
-func (g *GoliacRemoteImpl) UpdateRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
 
 	// Check if variable exists
 	if _, exists := repo.RepositoryVariables.GetEntity()[variableName]; !exists {
-		errorCollector.AddError(fmt.Errorf("variable %s not found in repository %s", variableName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("variable %s not found in repository %s", variableName, repositoryName))
 		return
 	}
 
@@ -3706,7 +3712,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryVariable(ctx context.Context, errorCo
 
 		_, err := g.client.CallRestAPI(ctx, endpoint, "", "PATCH", body, nil)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to update variable %s in repository %s: %v", variableName, repositoryName, err))
+			logsCollector.AddError(fmt.Errorf("failed to update variable %s in repository %s: %v", variableName, repositoryName, err))
 			return
 		}
 	}
@@ -3719,17 +3725,17 @@ func (g *GoliacRemoteImpl) UpdateRepositoryVariable(ctx context.Context, errorCo
 }
 
 // DeleteRepositoryVariable deletes a variable from a repository
-func (g *GoliacRemoteImpl) DeleteRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string) {
+func (g *GoliacRemoteImpl) DeleteRepositoryVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, variableName string) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
 
 	// Check if variable exists
 	if _, exists := repo.RepositoryVariables.GetEntity()[variableName]; !exists {
-		errorCollector.AddError(fmt.Errorf("variable %s not found in repository %s", variableName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("variable %s not found in repository %s", variableName, repositoryName))
 		return
 	}
 
@@ -3741,7 +3747,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryVariable(ctx context.Context, errorCo
 
 		_, err := g.client.CallRestAPI(ctx, endpoint, "", "DELETE", nil, nil)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to delete variable %s from repository %s: %v", variableName, repositoryName, err))
+			logsCollector.AddError(fmt.Errorf("failed to delete variable %s from repository %s: %v", variableName, repositoryName, err))
 			return
 		}
 	}
@@ -3754,23 +3760,23 @@ func (g *GoliacRemoteImpl) DeleteRepositoryVariable(ctx context.Context, errorCo
 }
 
 // AddRepositoryEnvironmentVariable adds a new variable to a repository environment
-func (g *GoliacRemoteImpl) AddRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+func (g *GoliacRemoteImpl) AddRepositoryEnvironmentVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
 
 	// Check if environment exists
 	if _, exists := repo.Environments.GetEntity()[environmentName]; !exists {
-		errorCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
 		return
 	}
 
 	// Check if variable already exists
 	if _, exists := repo.Environments.GetEntity()[environmentName].Variables[variableName]; exists {
-		errorCollector.AddError(fmt.Errorf("variable %s already exists in environment %s of repository %s", variableName, environmentName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("variable %s already exists in environment %s of repository %s", variableName, environmentName, repositoryName))
 		return
 	}
 
@@ -3787,7 +3793,7 @@ func (g *GoliacRemoteImpl) AddRepositoryEnvironmentVariable(ctx context.Context,
 
 		_, err := g.client.CallRestAPI(ctx, endpoint, "", "POST", body, nil)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to create variable %s in environment %s of repository %s: %v", variableName, environmentName, repositoryName, err))
+			logsCollector.AddError(fmt.Errorf("failed to create variable %s in environment %s of repository %s: %v", variableName, environmentName, repositoryName, err))
 			return
 		}
 	}
@@ -3807,23 +3813,23 @@ func (g *GoliacRemoteImpl) AddRepositoryEnvironmentVariable(ctx context.Context,
 }
 
 // UpdateRepositoryEnvironmentVariable updates a variable's value in a repository environment
-func (g *GoliacRemoteImpl) UpdateRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+func (g *GoliacRemoteImpl) UpdateRepositoryEnvironmentVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
 
 	// Check if environment exists
 	if _, exists := repo.Environments.GetEntity()[environmentName]; !exists {
-		errorCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
 		return
 	}
 
 	// Check if variable exists
 	if _, exists := repo.Environments.GetEntity()[environmentName].Variables[variableName]; !exists {
-		errorCollector.AddError(fmt.Errorf("variable %s not found in environment %s of repository %s", variableName, environmentName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("variable %s not found in environment %s of repository %s", variableName, environmentName, repositoryName))
 		return
 	}
 
@@ -3840,7 +3846,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryEnvironmentVariable(ctx context.Conte
 
 		_, err := g.client.CallRestAPI(ctx, endpoint, "", "PATCH", body, nil)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to update variable %s in environment %s of repository %s: %v", variableName, environmentName, repositoryName, err))
+			logsCollector.AddError(fmt.Errorf("failed to update variable %s in environment %s of repository %s: %v", variableName, environmentName, repositoryName, err))
 			return
 		}
 	}
@@ -3860,23 +3866,23 @@ func (g *GoliacRemoteImpl) UpdateRepositoryEnvironmentVariable(ctx context.Conte
 }
 
 // DeleteRepositoryEnvironmentVariable removes a variable from a repository environment
-func (g *GoliacRemoteImpl) DeleteRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
+func (g *GoliacRemoteImpl) DeleteRepositoryEnvironmentVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
 
 	// Check if environment exists
 	if _, exists := repo.Environments.GetEntity()[environmentName]; !exists {
-		errorCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("environment %s not found in repository %s", environmentName, repositoryName))
 		return
 	}
 
 	// Check if variable exists
 	if _, exists := repo.Environments.GetEntity()[environmentName].Variables[variableName]; !exists {
-		errorCollector.AddError(fmt.Errorf("variable %s not found in environment %s of repository %s", variableName, environmentName, repositoryName))
+		logsCollector.AddError(fmt.Errorf("variable %s not found in environment %s of repository %s", variableName, environmentName, repositoryName))
 		return
 	}
 
@@ -3888,7 +3894,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryEnvironmentVariable(ctx context.Conte
 
 		_, err := g.client.CallRestAPI(ctx, endpoint, "", "DELETE", nil, nil)
 		if err != nil {
-			errorCollector.AddError(fmt.Errorf("failed to remove variable %s from environment %s in repository %s: %v", variableName, environmentName, repositoryName, err))
+			logsCollector.AddError(fmt.Errorf("failed to remove variable %s from environment %s in repository %s: %v", variableName, environmentName, repositoryName, err))
 			return
 		}
 	}
@@ -3907,11 +3913,11 @@ func (g *GoliacRemoteImpl) DeleteRepositoryEnvironmentVariable(ctx context.Conte
 	delete(repo.Environments.GetEntity()[environmentName].Variables, variableName)
 }
 
-func (g *GoliacRemoteImpl) AddRepositoryAutolink(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
+func (g *GoliacRemoteImpl) AddRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
 
@@ -3927,14 +3933,14 @@ func (g *GoliacRemoteImpl) AddRepositoryAutolink(ctx context.Context, errorColle
 
 	response, err := g.client.CallRestAPI(ctx, endpoint, "", "POST", body, nil)
 	if err != nil {
-		errorCollector.AddError(fmt.Errorf("failed to create autolink %s in repository %s: %v", autolink.KeyPrefix, repositoryName, err))
+		logsCollector.AddError(fmt.Errorf("failed to create autolink %s in repository %s: %v", autolink.KeyPrefix, repositoryName, err))
 		return
 	}
 
 	var responseAutolink AutolinksResponse
 	err = json.Unmarshal(response, &responseAutolink)
 	if err != nil {
-		errorCollector.AddError(fmt.Errorf("failed to unmarshal autolink response for repository %s: %v", repositoryName, err))
+		logsCollector.AddError(fmt.Errorf("failed to unmarshal autolink response for repository %s: %v", repositoryName, err))
 		return
 	}
 
@@ -3947,11 +3953,11 @@ func (g *GoliacRemoteImpl) AddRepositoryAutolink(ctx context.Context, errorColle
 	}
 }
 
-func (g *GoliacRemoteImpl) DeleteRepositoryAutolink(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, autolinkId int) {
+func (g *GoliacRemoteImpl) DeleteRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolinkId int) {
 	// Check if repository exists
 	repo, exists := g.repositories[repositoryName]
 	if !exists {
-		errorCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
 
@@ -3961,7 +3967,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryAutolink(ctx context.Context, errorCo
 
 	_, err := g.client.CallRestAPI(ctx, endpoint, "", "DELETE", nil, nil)
 	if err != nil {
-		errorCollector.AddError(fmt.Errorf("failed to delete autolink %d in repository %s: %v", autolinkId, repositoryName, err))
+		logsCollector.AddError(fmt.Errorf("failed to delete autolink %d in repository %s: %v", autolinkId, repositoryName, err))
 		return
 	}
 
@@ -3974,18 +3980,18 @@ func (g *GoliacRemoteImpl) DeleteRepositoryAutolink(ctx context.Context, errorCo
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryAutolink(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
+func (g *GoliacRemoteImpl) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
 	// we need to delete and add the autolink
 	if autolink.Id != 0 {
-		g.DeleteRepositoryAutolink(ctx, errorCollector, dryrun, repositoryName, autolink.Id)
+		g.DeleteRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, autolink.Id)
 	}
-	g.AddRepositoryAutolink(ctx, errorCollector, dryrun, repositoryName, autolink)
+	g.AddRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, autolink)
 }
 
-func (g *GoliacRemoteImpl) Begin(dryrun bool) {
+func (g *GoliacRemoteImpl) Begin(logsCollector *observability.LogCollection, dryrun bool) {
 }
-func (g *GoliacRemoteImpl) Rollback(dryrun bool, err error) {
+func (g *GoliacRemoteImpl) Rollback(logsCollector *observability.LogCollection, dryrun bool, err error) {
 }
-func (g *GoliacRemoteImpl) Commit(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool) error {
+func (g *GoliacRemoteImpl) Commit(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool) error {
 	return nil
 }
