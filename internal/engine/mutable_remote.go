@@ -171,7 +171,7 @@ func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacReconciliatorD
 	}, nil
 }
 
-// githubuserid -> goliacuserid
+// githubuserid -> membership (ADMIN, MEMBER)
 func (m *MutableGoliacRemoteImpl) Users() map[string]string {
 	return m.users
 }
