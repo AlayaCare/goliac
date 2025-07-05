@@ -330,14 +330,29 @@ The adminteam is your current team that contains Github administrator`,
 				ctx, span = tracer.Start(ctx, "scaffold")
 			}
 
-			err = scaffold.Generate(ctx, directory, adminteam, usersOnly)
+			logsCollector := observability.NewLogCollection()
+			scaffold.Generate(ctx, directory, adminteam, usersOnly, logsCollector)
 			if span != nil {
 				span.End()
 				config.ShutdownTraceProvider()
 			}
-			if err != nil {
-				logrus.Fatalf("failed to create scaffold direcrory: %s", err)
-			} else {
+			if logsCollector.HasErrors() {
+				logrus.Fatalf("failed to create scaffold direcrory:")
+				for _, err := range logsCollector.Errors {
+					logrus.Errorf("- %s", err)
+				}
+			}
+			if logsCollector.HasWarns() {
+				logrus.Warnf("Warnings:")
+				for _, err := range logsCollector.Warns {
+					logrus.Warnf("- %s", err)
+				}
+			}
+			for _, info := range logsCollector.Logs {
+				logrus.WithFields(info.Fields).Logf(info.LogLevel, info.Format, info.Args...)
+			}
+
+			if !logsCollector.HasErrors() {
 				newRepoSuggestion := filepath.Dir(directory)
 				cwd, err := os.Getwd()
 				if err == nil {
