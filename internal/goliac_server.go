@@ -785,11 +785,11 @@ func (g *GoliacServerImpl) PostExternalCreateRepository(params external.PostExte
 		message := fmt.Sprintf("Invalid visibility: %s", params.Body.Visibility)
 		return external.NewPostExternalCreateRepositoryDefault(400).WithPayload(&models.Error{Message: &message})
 	}
-	errorCollector := observability.NewErrorCollection()
+	logsCollector := observability.NewLogCollection()
 
 	g.goliac.ExternalCreateRepository(
 		params.HTTPRequest.Context(),
-		errorCollector,
+		logsCollector,
 		osfs.New("/"),
 		params.Body.GithubToken,
 		params.Body.RepositoryName,
@@ -800,8 +800,8 @@ func (g *GoliacServerImpl) PostExternalCreateRepository(params external.PostExte
 		config.Config.ServerGitBranch,
 	)
 
-	if errorCollector.HasErrors() {
-		message := fmt.Sprintf("Error when creating repository: %s", errorCollector.Errors[0])
+	if logsCollector.HasErrors() {
+		message := fmt.Sprintf("Error when creating repository: %s", logsCollector.Errors[0])
 		return external.NewPostExternalCreateRepositoryDefault(500).WithPayload(&models.Error{Message: &message})
 	}
 
@@ -1141,9 +1141,13 @@ inside serverApply, it will check if the lobby is free
 - if the lobby is busy, it will do nothing
 */
 func (g *GoliacServerImpl) triggerApply(ctx context.Context) {
-	errorCollector := observability.NewErrorCollection()
-	applied := g.serveApply(ctx, errorCollector)
-	if !applied && !errorCollector.HasErrors() {
+	logsCollector := observability.NewLogCollection()
+	applied := g.serveApply(ctx, logsCollector)
+	for _, info := range logsCollector.Logs {
+		logrus.WithFields(info.Fields).Logf(info.LogLevel, info.Format, info.Args...)
+	}
+
+	if !applied && !logsCollector.HasErrors() {
 		// the run was skipped
 		g.syncInterval = config.Config.ServerApplyInterval
 	} else {
@@ -1151,15 +1155,15 @@ func (g *GoliacServerImpl) triggerApply(ctx context.Context) {
 		g.lastSyncTime = &now
 		previousError := g.lastSyncError
 		g.lastSyncError = nil
-		if errorCollector.HasErrors() {
-			g.lastSyncError = errorCollector.Errors[len(errorCollector.Errors)-1]
+		if logsCollector.HasErrors() {
+			g.lastSyncError = logsCollector.Errors[len(logsCollector.Errors)-1]
 		}
 
 		// we want to log the warnings only if they are new
 		previousSyncWarnings := g.lastSyncWarnings
 		g.lastSyncWarnings = ""
 		warns := []string{}
-		for _, w := range errorCollector.Warns {
+		for _, w := range logsCollector.Warns {
 			warns = append(warns, w.Error())
 		}
 		sort.Strings(warns)
@@ -1168,13 +1172,13 @@ func (g *GoliacServerImpl) triggerApply(ctx context.Context) {
 		}
 
 		if previousSyncWarnings != g.lastSyncWarnings {
-			for _, w := range errorCollector.Warns {
+			for _, w := range logsCollector.Warns {
 				logrus.Warn(w)
 			}
 		}
 
-		g.detailedErrors = errorCollector.Errors
-		g.detailedWarnings = errorCollector.Warns
+		g.detailedErrors = logsCollector.Errors
+		g.detailedWarnings = logsCollector.Warns
 		// log the error only if it's a new one
 		if g.lastSyncError != nil && (previousError == nil || g.lastSyncError.Error() != previousError.Error()) {
 			logrus.Error(g.lastSyncError)
@@ -1234,7 +1238,7 @@ func (g *GoliacServerImpl) StartRESTApi() (*restapi.Server, error) {
 	return server, nil
 }
 
-func (g *GoliacServerImpl) serveApply(ctx context.Context, errorCollector *observability.ErrorCollection) bool {
+func (g *GoliacServerImpl) serveApply(ctx context.Context, logsCollector *observability.LogCollection) bool {
 	// we want to run ApplyToGithub
 	// and queue one new run (the lobby) if a new run is asked
 	g.applyLobbyMutex.Lock()
@@ -1270,11 +1274,11 @@ func (g *GoliacServerImpl) serveApply(ctx context.Context, errorCollector *obser
 	branch := config.Config.ServerGitBranch
 
 	if repo == "" {
-		errorCollector.AddError(fmt.Errorf("GOLIAC_SERVER_GIT_REPOSITORY env variable not set"))
+		logsCollector.AddError(fmt.Errorf("GOLIAC_SERVER_GIT_REPOSITORY env variable not set"))
 		return false
 	}
 	if branch == "" {
-		errorCollector.AddError(fmt.Errorf("GOLIAC_SERVER_GIT_BRANCH env variable not set"))
+		logsCollector.AddError(fmt.Errorf("GOLIAC_SERVER_GIT_BRANCH env variable not set"))
 		return false
 	}
 
@@ -1286,8 +1290,8 @@ func (g *GoliacServerImpl) serveApply(ctx context.Context, errorCollector *obser
 	newctx := context.WithValue(ctx, config.ContextKeyStatistics, &stats)
 
 	fs := osfs.New("/")
-	unmanaged := g.goliac.Apply(newctx, errorCollector, fs, false, repo, branch)
-	if errorCollector.HasErrors() {
+	unmanaged := g.goliac.Apply(newctx, logsCollector, fs, false, repo, branch)
+	if logsCollector.HasErrors() {
 		return false
 	}
 	endTime := time.Now()

@@ -281,7 +281,7 @@ func TestAddRepositoryEnvironment(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository
 		repo := &GithubRepository{
@@ -296,10 +296,10 @@ func TestAddRepositoryEnvironment(t *testing.T) {
 		}
 
 		// Add environment
-		remoteImpl.AddRepositoryEnvironment(ctx, errorCollector, false, "test-repo", "production")
+		remoteImpl.AddRepositoryEnvironment(ctx, logsCollector, false, "test-repo", "production")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify API call was made correctly
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for adding environment
@@ -322,14 +322,14 @@ func TestAddRepositoryEnvironment(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Try to add environment to non-existent repository
-		remoteImpl.AddRepositoryEnvironment(ctx, errorCollector, false, "non-existent", "production")
+		remoteImpl.AddRepositoryEnvironment(ctx, logsCollector, false, "non-existent", "production")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -340,7 +340,7 @@ func TestAddRepositoryEnvironment(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with existing environment
 		repo := &GithubRepository{
@@ -360,11 +360,11 @@ func TestAddRepositoryEnvironment(t *testing.T) {
 		}
 
 		// Try to add existing environment
-		remoteImpl.AddRepositoryEnvironment(ctx, errorCollector, false, "test-repo", "production")
+		remoteImpl.AddRepositoryEnvironment(ctx, logsCollector, false, "test-repo", "production")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "environment production already exists")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "environment production already exists")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -375,7 +375,7 @@ func TestAddRepositoryEnvironment(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository
 		repo := &GithubRepository{
@@ -390,10 +390,10 @@ func TestAddRepositoryEnvironment(t *testing.T) {
 		}
 
 		// Add environment in dry run mode
-		remoteImpl.AddRepositoryEnvironment(ctx, errorCollector, true, "test-repo", "production")
+		remoteImpl.AddRepositoryEnvironment(ctx, logsCollector, true, "test-repo", "production")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -415,7 +415,7 @@ func TestAddRepositoryEnvironment(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository
 		repo := &GithubRepository{
@@ -430,11 +430,11 @@ func TestAddRepositoryEnvironment(t *testing.T) {
 		}
 
 		// Try to add environment
-		remoteImpl.AddRepositoryEnvironment(ctx, errorCollector, false, "test-repo", "production")
+		remoteImpl.AddRepositoryEnvironment(ctx, logsCollector, false, "test-repo", "production")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "API error")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "API error")
 
 		// Verify API call was made
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for adding environment
@@ -457,7 +457,7 @@ func TestDeleteRepositoryEnvironment(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment
 		repo := &GithubRepository{
@@ -477,10 +477,10 @@ func TestDeleteRepositoryEnvironment(t *testing.T) {
 		}
 
 		// Delete environment
-		remoteImpl.DeleteRepositoryEnvironment(ctx, errorCollector, false, "test-repo", "production")
+		remoteImpl.DeleteRepositoryEnvironment(ctx, logsCollector, false, "test-repo", "production")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify API call was made correctly
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for deleting environment
@@ -500,14 +500,14 @@ func TestDeleteRepositoryEnvironment(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Try to delete environment from non-existent repository
-		remoteImpl.DeleteRepositoryEnvironment(ctx, errorCollector, false, "non-existent", "production")
+		remoteImpl.DeleteRepositoryEnvironment(ctx, logsCollector, false, "non-existent", "production")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -518,7 +518,7 @@ func TestDeleteRepositoryEnvironment(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository without the environment
 		repo := &GithubRepository{
@@ -533,11 +533,11 @@ func TestDeleteRepositoryEnvironment(t *testing.T) {
 		}
 
 		// Try to delete non-existent environment
-		remoteImpl.DeleteRepositoryEnvironment(ctx, errorCollector, false, "test-repo", "production")
+		remoteImpl.DeleteRepositoryEnvironment(ctx, logsCollector, false, "test-repo", "production")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "environment production not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "environment production not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -548,7 +548,7 @@ func TestDeleteRepositoryEnvironment(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment
 		repo := &GithubRepository{
@@ -568,10 +568,10 @@ func TestDeleteRepositoryEnvironment(t *testing.T) {
 		}
 
 		// Delete environment in dry run mode
-		remoteImpl.DeleteRepositoryEnvironment(ctx, errorCollector, true, "test-repo", "production")
+		remoteImpl.DeleteRepositoryEnvironment(ctx, logsCollector, true, "test-repo", "production")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -590,7 +590,7 @@ func TestDeleteRepositoryEnvironment(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment
 		repo := &GithubRepository{
@@ -610,11 +610,11 @@ func TestDeleteRepositoryEnvironment(t *testing.T) {
 		}
 
 		// Try to delete environment
-		remoteImpl.DeleteRepositoryEnvironment(ctx, errorCollector, false, "test-repo", "production")
+		remoteImpl.DeleteRepositoryEnvironment(ctx, logsCollector, false, "test-repo", "production")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "API error")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "API error")
 
 		// Verify API call was made
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for deleting environment
@@ -638,7 +638,7 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment
 		repo := &GithubRepository{
@@ -658,10 +658,10 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Add variable
-		remoteImpl.AddRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR", "test-value")
+		remoteImpl.AddRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR", "test-value")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify API call was made correctly
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for adding variable
@@ -686,14 +686,14 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Try to add variable to non-existent repository
-		remoteImpl.AddRepositoryEnvironmentVariable(ctx, errorCollector, false, "non-existent", "production", "TEST_VAR", "test-value")
+		remoteImpl.AddRepositoryEnvironmentVariable(ctx, logsCollector, false, "non-existent", "production", "TEST_VAR", "test-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -704,7 +704,7 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository without the environment
 		repo := &GithubRepository{
@@ -719,11 +719,11 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Try to add variable to non-existent environment
-		remoteImpl.AddRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR", "test-value")
+		remoteImpl.AddRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR", "test-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "environment production not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "environment production not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -734,7 +734,7 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment and existing variable
 		repo := &GithubRepository{
@@ -756,11 +756,11 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Try to add existing variable
-		remoteImpl.AddRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR", "new-value")
+		remoteImpl.AddRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR", "new-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "variable TEST_VAR already exists")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "variable TEST_VAR already exists")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -771,7 +771,7 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment
 		repo := &GithubRepository{
@@ -791,10 +791,10 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Add variable in dry run mode
-		remoteImpl.AddRepositoryEnvironmentVariable(ctx, errorCollector, true, "test-repo", "production", "TEST_VAR", "test-value")
+		remoteImpl.AddRepositoryEnvironmentVariable(ctx, logsCollector, true, "test-repo", "production", "TEST_VAR", "test-value")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -815,7 +815,7 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment
 		repo := &GithubRepository{
@@ -835,11 +835,11 @@ func TestAddRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Try to add variable
-		remoteImpl.AddRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR", "test-value")
+		remoteImpl.AddRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR", "test-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "API error")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "API error")
 
 		// Verify API call was made
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for adding variable
@@ -867,7 +867,7 @@ func TestUpdateRepositoryVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an existing variable
 		repo := &GithubRepository{
@@ -884,10 +884,10 @@ func TestUpdateRepositoryVariable(t *testing.T) {
 		}
 
 		// Update variable
-		remoteImpl.UpdateRepositoryVariable(ctx, errorCollector, false, "test-repo", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryVariable(ctx, logsCollector, false, "test-repo", "TEST_VAR", "new-value")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify API call was made correctly
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for updating variable
@@ -910,14 +910,14 @@ func TestUpdateRepositoryVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Try to update variable in non-existent repository
-		remoteImpl.UpdateRepositoryVariable(ctx, errorCollector, false, "non-existent", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryVariable(ctx, logsCollector, false, "non-existent", "TEST_VAR", "new-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -928,7 +928,7 @@ func TestUpdateRepositoryVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository without the variable
 		repo := &GithubRepository{
@@ -943,11 +943,11 @@ func TestUpdateRepositoryVariable(t *testing.T) {
 		}
 
 		// Try to update non-existent variable
-		remoteImpl.UpdateRepositoryVariable(ctx, errorCollector, false, "test-repo", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryVariable(ctx, logsCollector, false, "test-repo", "TEST_VAR", "new-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "variable TEST_VAR not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "variable TEST_VAR not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -958,7 +958,7 @@ func TestUpdateRepositoryVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an existing variable
 		repo := &GithubRepository{
@@ -975,10 +975,10 @@ func TestUpdateRepositoryVariable(t *testing.T) {
 		}
 
 		// Update variable in dry run mode
-		remoteImpl.UpdateRepositoryVariable(ctx, errorCollector, true, "test-repo", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryVariable(ctx, logsCollector, true, "test-repo", "TEST_VAR", "new-value")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -997,7 +997,7 @@ func TestUpdateRepositoryVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an existing variable
 		repo := &GithubRepository{
@@ -1014,11 +1014,11 @@ func TestUpdateRepositoryVariable(t *testing.T) {
 		}
 
 		// Try to update variable
-		remoteImpl.UpdateRepositoryVariable(ctx, errorCollector, false, "test-repo", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryVariable(ctx, logsCollector, false, "test-repo", "TEST_VAR", "new-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "API error")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "API error")
 
 		// Verify API call was made
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for updating variable
@@ -1044,7 +1044,7 @@ func TestDeleteRepositoryVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an existing variable
 		repo := &GithubRepository{
@@ -1061,10 +1061,10 @@ func TestDeleteRepositoryVariable(t *testing.T) {
 		}
 
 		// Delete variable
-		remoteImpl.DeleteRepositoryVariable(ctx, errorCollector, false, "test-repo", "TEST_VAR")
+		remoteImpl.DeleteRepositoryVariable(ctx, logsCollector, false, "test-repo", "TEST_VAR")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify API call was made correctly
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for deleting variable
@@ -1084,14 +1084,14 @@ func TestDeleteRepositoryVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Try to delete variable from non-existent repository
-		remoteImpl.DeleteRepositoryVariable(ctx, errorCollector, false, "non-existent", "TEST_VAR")
+		remoteImpl.DeleteRepositoryVariable(ctx, logsCollector, false, "non-existent", "TEST_VAR")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1102,7 +1102,7 @@ func TestDeleteRepositoryVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository without the variable
 		repo := &GithubRepository{
@@ -1117,11 +1117,11 @@ func TestDeleteRepositoryVariable(t *testing.T) {
 		}
 
 		// Try to delete non-existent variable
-		remoteImpl.DeleteRepositoryVariable(ctx, errorCollector, false, "test-repo", "TEST_VAR")
+		remoteImpl.DeleteRepositoryVariable(ctx, logsCollector, false, "test-repo", "TEST_VAR")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "variable TEST_VAR not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "variable TEST_VAR not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1132,7 +1132,7 @@ func TestDeleteRepositoryVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an existing variable
 		repo := &GithubRepository{
@@ -1149,10 +1149,10 @@ func TestDeleteRepositoryVariable(t *testing.T) {
 		}
 
 		// Delete variable in dry run mode
-		remoteImpl.DeleteRepositoryVariable(ctx, errorCollector, true, "test-repo", "TEST_VAR")
+		remoteImpl.DeleteRepositoryVariable(ctx, logsCollector, true, "test-repo", "TEST_VAR")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1171,7 +1171,7 @@ func TestDeleteRepositoryVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an existing variable
 		repo := &GithubRepository{
@@ -1188,11 +1188,11 @@ func TestDeleteRepositoryVariable(t *testing.T) {
 		}
 
 		// Try to delete variable
-		remoteImpl.DeleteRepositoryVariable(ctx, errorCollector, false, "test-repo", "TEST_VAR")
+		remoteImpl.DeleteRepositoryVariable(ctx, logsCollector, false, "test-repo", "TEST_VAR")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "API error")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "API error")
 
 		// Verify API call was made
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for deleting variable
@@ -1215,7 +1215,7 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment and existing variable
 		repo := &GithubRepository{
@@ -1237,10 +1237,10 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Update variable
-		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR", "new-value")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify API call was made correctly
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for updating variable
@@ -1265,14 +1265,14 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Try to update variable in non-existent repository
-		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, false, "non-existent", "production", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, logsCollector, false, "non-existent", "production", "TEST_VAR", "new-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1283,7 +1283,7 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository without the environment
 		repo := &GithubRepository{
@@ -1298,11 +1298,11 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Try to update variable in non-existent environment
-		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR", "new-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "environment production not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "environment production not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1313,7 +1313,7 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment but without the variable
 		repo := &GithubRepository{
@@ -1333,11 +1333,11 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Try to update non-existent variable
-		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR", "new-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "variable TEST_VAR not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "variable TEST_VAR not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1348,7 +1348,7 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment and existing variable
 		repo := &GithubRepository{
@@ -1370,10 +1370,10 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Update variable in dry run mode
-		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, true, "test-repo", "production", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, logsCollector, true, "test-repo", "production", "TEST_VAR", "new-value")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1394,7 +1394,7 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment and existing variable
 		repo := &GithubRepository{
@@ -1416,11 +1416,11 @@ func TestUpdateRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Try to update variable
-		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR", "new-value")
+		remoteImpl.UpdateRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR", "new-value")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "API error")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "API error")
 
 		// Verify API call was made
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for updating variable
@@ -1448,7 +1448,7 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment and existing variable
 		repo := &GithubRepository{
@@ -1470,10 +1470,10 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Delete variable
-		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR")
+		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify API call was made correctly
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for deleting variable
@@ -1495,14 +1495,14 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Try to delete variable from non-existent repository
-		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, false, "non-existent", "production", "TEST_VAR")
+		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, logsCollector, false, "non-existent", "production", "TEST_VAR")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1513,7 +1513,7 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository without the environment
 		repo := &GithubRepository{
@@ -1528,11 +1528,11 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Try to delete variable from non-existent environment
-		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR")
+		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "environment production not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "environment production not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1543,7 +1543,7 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment but without the variable
 		repo := &GithubRepository{
@@ -1563,11 +1563,11 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Try to delete non-existent variable
-		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR")
+		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "variable TEST_VAR not found")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "variable TEST_VAR not found")
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1578,7 +1578,7 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment and existing variable
 		repo := &GithubRepository{
@@ -1600,10 +1600,10 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Delete variable in dry run mode
-		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, true, "test-repo", "production", "TEST_VAR")
+		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, logsCollector, true, "test-repo", "production", "TEST_VAR")
 
 		// Verify no errors occurred
-		assert.Empty(t, errorCollector.Errors)
+		assert.Empty(t, logsCollector.Errors)
 
 		// Verify no API calls were made
 		assert.Equal(t, 2, mockClient.callCount) // Only getGHESVersion
@@ -1624,7 +1624,7 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Create a repository with an environment and existing variable
 		repo := &GithubRepository{
@@ -1646,11 +1646,11 @@ func TestDeleteRepositoryEnvironmentVariable(t *testing.T) {
 		}
 
 		// Try to delete variable
-		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, errorCollector, false, "test-repo", "production", "TEST_VAR")
+		remoteImpl.DeleteRepositoryEnvironmentVariable(ctx, logsCollector, false, "test-repo", "production", "TEST_VAR")
 
 		// Verify error was collected
-		assert.NotEmpty(t, errorCollector.Errors)
-		assert.Contains(t, errorCollector.Errors[0].Error(), "API error")
+		assert.NotEmpty(t, logsCollector.Errors)
+		assert.Contains(t, logsCollector.Errors[0].Error(), "API error")
 
 		// Verify API call was made
 		assert.Equal(t, 3, mockClient.callCount) // 1 for getGHESVersion, 1 for deleting variable

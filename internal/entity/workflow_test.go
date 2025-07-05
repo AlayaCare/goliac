@@ -68,10 +68,10 @@ func TestWorkflow(t *testing.T) {
 		fs := memfs.New()
 		fixtureCreateWorkflow(t, fs)
 
-		errorCollector := observability.NewErrorCollection()
-		workflows := ReadWorkflowDirectory(fs, "workflows", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		workflows := ReadWorkflowDirectory(fs, "workflows", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, workflows)
 		assert.Equal(t, 2, len(workflows))
 	})
@@ -97,10 +97,10 @@ spec:
 
 		assert.Nil(t, err)
 
-		errorCollector := observability.NewErrorCollection()
-		workflows := ReadWorkflowDirectory(fs, "workflows", errorCollector)
-		assert.Equal(t, true, errorCollector.HasErrors()) // invalid jira_ticket_creation step
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		workflows := ReadWorkflowDirectory(fs, "workflows", logsCollector)
+		assert.Equal(t, true, logsCollector.HasErrors()) // invalid jira_ticket_creation step
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, workflows)
 		assert.Equal(t, 2, len(workflows))
 	})

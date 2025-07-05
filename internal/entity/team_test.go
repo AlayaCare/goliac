@@ -54,15 +54,15 @@ spec:
   - user2
 `), 0644)
 		assert.Nil(t, err)
-		errorCollector := observability.NewErrorCollection()
-		users := ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, teams)
 	})
 
@@ -81,15 +81,15 @@ spec:
   - user1
 `), 0644)
 		assert.Nil(t, err)
-		errorCollector := observability.NewErrorCollection()
-		users := ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, 1, len(errorCollector.Warns))
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, 1, len(logsCollector.Warns))
 		assert.NotNil(t, teams)
 	})
 
@@ -97,10 +97,10 @@ spec:
 		// create a new user
 		fs := memfs.New()
 
-		errorCollector := observability.NewErrorCollection()
-		ReadTeamDirectory(fs, "teams", map[string]*User{}, errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		ReadTeamDirectory(fs, "teams", map[string]*User{}, logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 	})
 
 	t.Run("not happy path: wrong username", func(t *testing.T) {
@@ -119,18 +119,18 @@ spec:
   - wronguser2
 `), 0644)
 		assert.Nil(t, err)
-		errorCollector := observability.NewErrorCollection()
-		users := ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
-		for _, err := range errorCollector.Errors {
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		for _, err := range logsCollector.Errors {
 			fmt.Println(err)
 		}
-		assert.Equal(t, 1, len(errorCollector.Errors))
-		assert.Equal(t, 0, len(errorCollector.Warns))
+		assert.Equal(t, 1, len(logsCollector.Errors))
+		assert.Equal(t, 0, len(logsCollector.Warns))
 		assert.NotNil(t, teams)
 	})
 
@@ -146,18 +146,18 @@ kind: Foo
 name: team2
 `), 0644)
 		assert.Nil(t, err)
-		errorCollector := observability.NewErrorCollection()
-		users := ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
-		for _, err := range errorCollector.Errors {
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		for _, err := range logsCollector.Errors {
 			fmt.Println(err)
 		}
-		assert.Equal(t, 1, len(errorCollector.Errors))
-		assert.Equal(t, 0, len(errorCollector.Warns))
+		assert.Equal(t, 1, len(logsCollector.Errors))
+		assert.Equal(t, 0, len(logsCollector.Warns))
 		assert.NotNil(t, teams)
 	})
 
@@ -178,15 +178,15 @@ spec:
 `), 0644)
 		assert.Nil(t, err)
 		assert.Nil(t, err)
-		errorCollector := observability.NewErrorCollection()
-		users := ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		ReadTeamDirectory(fs, "teams", users, errorCollector)
-		assert.Equal(t, true, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		ReadTeamDirectory(fs, "teams", users, logsCollector)
+		assert.Equal(t, true, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 	})
 
 	t.Run("not happy path: not able to create 2 times the same team", func(t *testing.T) {
@@ -235,15 +235,15 @@ spec:
   - user2
 `), 0644)
 		assert.Nil(t, err)
-		errorCollector := observability.NewErrorCollection()
-		users := ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		ReadTeamDirectory(fs, "teams", users, errorCollector)
-		assert.Equal(t, true, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		ReadTeamDirectory(fs, "teams", users, logsCollector)
+		assert.Equal(t, true, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 	})
 
 	t.Run("happy path: parent and child team", func(t *testing.T) {
@@ -272,15 +272,15 @@ spec:
   - user2
 `), 0644)
 		assert.Nil(t, err)
-		errorCollector := observability.NewErrorCollection()
-		users := ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, users)
 
-		teams := ReadTeamDirectory(fs, "teams", users, errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, teams)
 
 		assert.Equal(t, 2, len(teams))

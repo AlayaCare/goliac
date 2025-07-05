@@ -43,12 +43,12 @@ func NewUser(fs billy.Filesystem, filename string) (*User, error) {
  * - a slice of errors that must stop the vlidation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadUserDirectory(fs billy.Filesystem, dirname string, errorCollection *observability.ErrorCollection) map[string]*User {
+func ReadUserDirectory(fs billy.Filesystem, dirname string, LogCollection *observability.LogCollection) map[string]*User {
 	users := make(map[string]*User)
 
 	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
-		errorCollection.AddError(err)
+		LogCollection.AddError(err)
 	}
 	if !exist {
 		return users
@@ -57,7 +57,7 @@ func ReadUserDirectory(fs billy.Filesystem, dirname string, errorCollection *obs
 	// Parse all the users in the dirname directory
 	entries, err := fs.ReadDir(dirname)
 	if err != nil {
-		errorCollection.AddError(err)
+		LogCollection.AddError(err)
 		return users
 	}
 
@@ -74,11 +74,11 @@ func ReadUserDirectory(fs billy.Filesystem, dirname string, errorCollection *obs
 		}
 		user, err := NewUser(fs, filepath.Join(dirname, e.Name()))
 		if err != nil {
-			errorCollection.AddError(err)
+			LogCollection.AddError(err)
 		} else {
 			err = user.Validate(filepath.Join(dirname, e.Name()))
 			if err != nil {
-				errorCollection.AddError(err)
+				LogCollection.AddError(err)
 			} else {
 				users[user.Name] = user
 			}

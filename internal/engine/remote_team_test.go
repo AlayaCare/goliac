@@ -69,13 +69,13 @@ func TestCreateTeam(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call CreateTeam with all required arguments
-		remoteImpl.CreateTeam(ctx, errorCollector, false, "test-team", "Test team description", nil, []string{})
+		remoteImpl.CreateTeam(ctx, logsCollector, false, "test-team", "Test team description", nil, []string{})
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams", mockClient.lastEndpoint)
@@ -101,14 +101,14 @@ func TestCreateTeam(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 		parentTeamId := 456
 
 		// Call CreateTeam with all required arguments
-		remoteImpl.CreateTeam(ctx, errorCollector, false, "test-team", "Test team description", &parentTeamId, []string{"member1", "member2"})
+		remoteImpl.CreateTeam(ctx, logsCollector, false, "test-team", "Test team description", &parentTeamId, []string{"member1", "member2"})
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the last REST API call was made correctly
 		assert.Equal(t, "orgs/myorg/teams/test-team/memberships/member2", mockClient.lastEndpoint)
@@ -143,14 +143,14 @@ func TestCreateTeam(t *testing.T) {
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
 
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call CreateTeam with all required arguments
-		remoteImpl.CreateTeam(ctx, errorCollector, false, "test-team", "Test team description", nil, nil)
+		remoteImpl.CreateTeam(ctx, logsCollector, false, "test-team", "Test team description", nil, nil)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "team test-team already exists")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "team test-team already exists")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -165,14 +165,14 @@ func TestCreateTeam(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call CreateTeam with all required arguments
-		remoteImpl.CreateTeam(ctx, errorCollector, false, "test-team", "Test team description", nil, []string{"member1"})
+		remoteImpl.CreateTeam(ctx, logsCollector, false, "test-team", "Test team description", nil, []string{"member1"})
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to create team")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to create team")
 
 		// Verify the team was not added to the cache
 		assert.NotContains(t, remoteImpl.teams, "test-team")
@@ -186,14 +186,14 @@ func TestCreateTeam(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 		parentTeamId := 456
 
 		// Call CreateTeam in dry run mode with all required arguments
-		remoteImpl.CreateTeam(ctx, errorCollector, true, "test-team", "Test team description", &parentTeamId, []string{"member1"})
+		remoteImpl.CreateTeam(ctx, logsCollector, true, "test-team", "Test team description", &parentTeamId, []string{"member1"})
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -212,15 +212,15 @@ func TestCreateTeam(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 		invalidParentId := 999
 
 		// Call CreateTeam with non-existent parent team
-		remoteImpl.CreateTeam(ctx, errorCollector, false, "test-team", "Test team description", &invalidParentId, []string{"member1"})
+		remoteImpl.CreateTeam(ctx, logsCollector, false, "test-team", "Test team description", &invalidParentId, []string{"member1"})
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "Parent team does not exist")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "Parent team does not exist")
 
 		// Verify the team was not added to the cache
 		assert.NotContains(t, remoteImpl.teams, "test-team")
@@ -236,14 +236,14 @@ func TestCreateTeam(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call CreateTeam with invalid team name
-		remoteImpl.CreateTeam(ctx, errorCollector, false, "", "Test team description", nil, []string{"member1"})
+		remoteImpl.CreateTeam(ctx, logsCollector, false, "", "Test team description", nil, []string{"member1"})
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "Invalid team name")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "Invalid team name")
 
 		// Verify the team was not added to the cache
 		assert.NotContains(t, remoteImpl.teams, "")
@@ -311,13 +311,13 @@ func TestDeleteTeam(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteTeam
-		remoteImpl.DeleteTeam(ctx, errorCollector, false, "test-team")
+		remoteImpl.DeleteTeam(ctx, logsCollector, false, "test-team")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams/test-team", mockClient.lastEndpoint)
@@ -335,14 +335,14 @@ func TestDeleteTeam(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteTeam with non-existent team
-		remoteImpl.DeleteTeam(ctx, errorCollector, false, "non-existent-team")
+		remoteImpl.DeleteTeam(ctx, logsCollector, false, "non-existent-team")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "team non-existent-team not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "team non-existent-team not found")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -366,14 +366,14 @@ func TestDeleteTeam(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteTeam
-		remoteImpl.DeleteTeam(ctx, errorCollector, false, "test-team")
+		remoteImpl.DeleteTeam(ctx, logsCollector, false, "test-team")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to delete team")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to delete team")
 
 		// Verify the team remains in the cache
 		assert.Contains(t, remoteImpl.teams, "test-team")
@@ -396,13 +396,13 @@ func TestDeleteTeam(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteTeam in dry run mode
-		remoteImpl.DeleteTeam(ctx, errorCollector, true, "test-team")
+		remoteImpl.DeleteTeam(ctx, logsCollector, true, "test-team")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -430,14 +430,14 @@ func TestDeleteTeam(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteTeam
-		remoteImpl.DeleteTeam(ctx, errorCollector, false, "test-team")
+		remoteImpl.DeleteTeam(ctx, logsCollector, false, "test-team")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "Not Found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "Not Found")
 
 		// Verify the team remains in the cache since deletion failed
 		assert.Contains(t, remoteImpl.teams, "test-team")
@@ -462,14 +462,14 @@ func TestDeleteTeam(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteTeam
-		remoteImpl.DeleteTeam(ctx, errorCollector, false, "test-team")
+		remoteImpl.DeleteTeam(ctx, logsCollector, false, "test-team")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "Cannot delete team with repositories")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "Cannot delete team with repositories")
 
 		// Verify the team remains in the cache
 		assert.Contains(t, remoteImpl.teams, "test-team")
@@ -544,13 +544,13 @@ func TestUpdateTeamAddMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamAddMember
-		remoteImpl.UpdateTeamAddMember(ctx, errorCollector, false, "test-team", "testuser", "member")
+		remoteImpl.UpdateTeamAddMember(ctx, logsCollector, false, "test-team", "testuser", "member")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams/test-team/memberships/testuser", mockClient.lastEndpoint)
@@ -578,13 +578,13 @@ func TestUpdateTeamAddMember(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamAddMember with maintainer role
-		remoteImpl.UpdateTeamAddMember(ctx, errorCollector, false, "test-team", "testuser", "maintainer")
+		remoteImpl.UpdateTeamAddMember(ctx, logsCollector, false, "test-team", "testuser", "maintainer")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams/test-team/memberships/testuser", mockClient.lastEndpoint)
@@ -605,14 +605,14 @@ func TestUpdateTeamAddMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamAddMember with non-existent team
-		remoteImpl.UpdateTeamAddMember(ctx, errorCollector, false, "non-existent-team", "testuser", "member")
+		remoteImpl.UpdateTeamAddMember(ctx, logsCollector, false, "non-existent-team", "testuser", "member")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "team non-existent-team not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "team non-existent-team not found")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -633,14 +633,14 @@ func TestUpdateTeamAddMember(t *testing.T) {
 	// 	}
 
 	// 	ctx := context.TODO()
-	// 	errorCollector := observability.NewErrorCollection()
+	// 	logsCollector := observability.NewLogCollection()
 
 	// 	// Call UpdateTeamAddMember with invalid role
-	// 	remoteImpl.UpdateTeamAddMember(ctx, errorCollector, false, "test-team", "testuser", "invalid-role")
+	// 	remoteImpl.UpdateTeamAddMember(ctx, logsCollector, false, "test-team", "testuser", "invalid-role")
 
 	// 	// Verify error was collected
-	// 	assert.True(t, errorCollector.HasErrors())
-	// 	assert.Contains(t, errorCollector.Errors[0].Error(), "invalid role")
+	// 	assert.True(t, logsCollector.HasErrors())
+	// 	assert.Contains(t, logsCollector.Errors[0].Error(), "invalid role")
 
 	// 	// Verify no API call was made
 	// 	assert.Empty(t, mockClient.lastEndpoint)
@@ -666,14 +666,14 @@ func TestUpdateTeamAddMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamAddMember
-		remoteImpl.UpdateTeamAddMember(ctx, errorCollector, false, "test-team", "testuser", "member")
+		remoteImpl.UpdateTeamAddMember(ctx, logsCollector, false, "test-team", "testuser", "member")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to add member to team")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to add member to team")
 	})
 
 	t.Run("happy path: dry run", func(t *testing.T) {
@@ -693,13 +693,13 @@ func TestUpdateTeamAddMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamAddMember in dry run mode
-		remoteImpl.UpdateTeamAddMember(ctx, errorCollector, true, "test-team", "testuser", "member")
+		remoteImpl.UpdateTeamAddMember(ctx, logsCollector, true, "test-team", "testuser", "member")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -722,14 +722,14 @@ func TestUpdateTeamAddMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamAddMember with empty username
-		remoteImpl.UpdateTeamAddMember(ctx, errorCollector, false, "test-team", "", "member")
+		remoteImpl.UpdateTeamAddMember(ctx, logsCollector, false, "test-team", "", "member")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "invalid username")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "invalid username")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -797,13 +797,13 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamRemoveMember
-		remoteImpl.UpdateTeamRemoveMember(ctx, errorCollector, false, "test-team", "testuser")
+		remoteImpl.UpdateTeamRemoveMember(ctx, logsCollector, false, "test-team", "testuser")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "orgs/myorg/teams/test-team/memberships/testuser", mockClient.lastEndpoint)
@@ -818,14 +818,14 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamRemoveMember with non-existent team
-		remoteImpl.UpdateTeamRemoveMember(ctx, errorCollector, false, "non-existent-team", "testuser")
+		remoteImpl.UpdateTeamRemoveMember(ctx, logsCollector, false, "non-existent-team", "testuser")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "team non-existent-team not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "team non-existent-team not found")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -849,14 +849,14 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamRemoveMember
-		remoteImpl.UpdateTeamRemoveMember(ctx, errorCollector, false, "test-team", "testuser")
+		remoteImpl.UpdateTeamRemoveMember(ctx, logsCollector, false, "test-team", "testuser")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to remove member from team")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to remove member from team")
 	})
 
 	t.Run("happy path: dry run", func(t *testing.T) {
@@ -876,13 +876,13 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamRemoveMember in dry run mode
-		remoteImpl.UpdateTeamRemoveMember(ctx, errorCollector, true, "test-team", "testuser")
+		remoteImpl.UpdateTeamRemoveMember(ctx, logsCollector, true, "test-team", "testuser")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -905,14 +905,14 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamRemoveMember with empty username
-		remoteImpl.UpdateTeamRemoveMember(ctx, errorCollector, false, "test-team", "")
+		remoteImpl.UpdateTeamRemoveMember(ctx, logsCollector, false, "test-team", "")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "invalid username")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "invalid username")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -937,14 +937,14 @@ func TestUpdateTeamRemoveMember(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamRemoveMember with non-existent member
-		remoteImpl.UpdateTeamRemoveMember(ctx, errorCollector, false, "test-team", "non-existent-user")
+		remoteImpl.UpdateTeamRemoveMember(ctx, logsCollector, false, "test-team", "non-existent-user")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "Not Found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "Not Found")
 	})
 }
 
@@ -1014,13 +1014,13 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamUpdateMember
-		remoteImpl.UpdateTeamUpdateMember(ctx, errorCollector, false, "test-team", "testuser", "maintainer")
+		remoteImpl.UpdateTeamUpdateMember(ctx, logsCollector, false, "test-team", "testuser", "maintainer")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams/test-team/memberships/testuser", mockClient.lastEndpoint)
@@ -1048,13 +1048,13 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamUpdateMember
-		remoteImpl.UpdateTeamUpdateMember(ctx, errorCollector, false, "test-team", "testuser", "member")
+		remoteImpl.UpdateTeamUpdateMember(ctx, logsCollector, false, "test-team", "testuser", "member")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams/test-team/memberships/testuser", mockClient.lastEndpoint)
@@ -1075,14 +1075,14 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamUpdateMember with non-existent team
-		remoteImpl.UpdateTeamUpdateMember(ctx, errorCollector, false, "non-existent-team", "testuser", "member")
+		remoteImpl.UpdateTeamUpdateMember(ctx, logsCollector, false, "non-existent-team", "testuser", "member")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "team non-existent-team not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "team non-existent-team not found")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1103,14 +1103,14 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 	// 	}
 
 	// 	ctx := context.TODO()
-	// 	errorCollector := observability.NewErrorCollection()
+	// 	logsCollector := observability.NewLogCollection()
 
 	// 	// Call UpdateTeamUpdateMember with invalid role
-	// 	remoteImpl.UpdateTeamUpdateMember(ctx, errorCollector, false, "test-team", "testuser", "invalid-role")
+	// 	remoteImpl.UpdateTeamUpdateMember(ctx, logsCollector, false, "test-team", "testuser", "invalid-role")
 
 	// 	// Verify error was collected
-	// 	assert.True(t, errorCollector.HasErrors())
-	// 	assert.Contains(t, errorCollector.Errors[0].Error(), "invalid role")
+	// 	assert.True(t, logsCollector.HasErrors())
+	// 	assert.Contains(t, logsCollector.Errors[0].Error(), "invalid role")
 
 	// 	// Verify no API call was made
 	// 	assert.Empty(t, mockClient.lastEndpoint)
@@ -1134,14 +1134,14 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamUpdateMember
-		remoteImpl.UpdateTeamUpdateMember(ctx, errorCollector, false, "test-team", "testuser", "maintainer")
+		remoteImpl.UpdateTeamUpdateMember(ctx, logsCollector, false, "test-team", "testuser", "maintainer")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to update team member")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to update team member")
 	})
 
 	t.Run("happy path: dry run", func(t *testing.T) {
@@ -1161,13 +1161,13 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamUpdateMember in dry run mode
-		remoteImpl.UpdateTeamUpdateMember(ctx, errorCollector, true, "test-team", "testuser", "maintainer")
+		remoteImpl.UpdateTeamUpdateMember(ctx, logsCollector, true, "test-team", "testuser", "maintainer")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1190,14 +1190,14 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamUpdateMember with empty username
-		remoteImpl.UpdateTeamUpdateMember(ctx, errorCollector, false, "test-team", "", "maintainer")
+		remoteImpl.UpdateTeamUpdateMember(ctx, logsCollector, false, "test-team", "", "maintainer")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "invalid username")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "invalid username")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1222,14 +1222,14 @@ func TestUpdateTeamUpdateMember(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateTeamUpdateMember with non-existent member
-		remoteImpl.UpdateTeamUpdateMember(ctx, errorCollector, false, "test-team", "non-existent-user", "maintainer")
+		remoteImpl.UpdateTeamUpdateMember(ctx, logsCollector, false, "test-team", "non-existent-user", "maintainer")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "Not Found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "Not Found")
 	})
 }
 
@@ -1303,13 +1303,13 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 		remoteImpl.loadTeams(ctx)
 		remoteImpl.loadRepositories(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryAddTeamAccess
-		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, errorCollector, false, "test-repo", "test-team", "pull")
+		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, logsCollector, false, "test-repo", "test-team", "pull")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams/test-team/repos/myorg/test-repo", mockClient.lastEndpoint)
@@ -1343,13 +1343,13 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryAddTeamAccess
-		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, errorCollector, false, "test-repo", "test-team", "push")
+		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, logsCollector, false, "test-repo", "test-team", "push")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams/test-team/repos/myorg/test-repo", mockClient.lastEndpoint)
@@ -1380,14 +1380,14 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 		remoteImpl.loadTeams(ctx)
 		remoteImpl.loadRepositories(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryAddTeamAccess with non-existent repository
-		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, errorCollector, false, "non-existent-repo", "test-team", "pull")
+		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, logsCollector, false, "non-existent-repo", "test-team", "pull")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent-repo not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent-repo not found")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1410,14 +1410,14 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 		remoteImpl.loadTeams(ctx)
 		remoteImpl.loadRepositories(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryAddTeamAccess with non-existent team
-		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, errorCollector, false, "test-repo", "non-existent-team", "pull")
+		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, logsCollector, false, "test-repo", "non-existent-team", "pull")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "team non-existent-team not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "team non-existent-team not found")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1447,14 +1447,14 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 	// 	remoteImpl.loadTeams(ctx)
 	// 	remoteImpl.loadRepositories(ctx)
 	// 	mockClient.lastEndpoint = ""
-	// 	errorCollector := observability.NewErrorCollection()
+	// 	logsCollector := observability.NewLogCollection()
 
 	// 	// Call UpdateRepositoryAddTeamAccess with invalid permission
-	// 	remoteImpl.UpdateRepositoryAddTeamAccess(ctx, errorCollector, false, "test-repo", "test-team", "invalid")
+	// 	remoteImpl.UpdateRepositoryAddTeamAccess(ctx, logsCollector, false, "test-repo", "test-team", "invalid")
 
 	// 	// Verify error was collected
-	// 	assert.True(t, errorCollector.HasErrors())
-	// 	assert.Contains(t, errorCollector.Errors[0].Error(), "invalid permission")
+	// 	assert.True(t, logsCollector.HasErrors())
+	// 	assert.Contains(t, logsCollector.Errors[0].Error(), "invalid permission")
 
 	// 	// Verify no API call was made
 	// 	assert.Empty(t, mockClient.lastEndpoint)
@@ -1472,7 +1472,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 		remoteImpl.loadRepositories(ctx)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1490,11 +1490,11 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryAddTeamAccess
-		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, errorCollector, false, "test-repo", "test-team", "pull")
+		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, logsCollector, false, "test-repo", "test-team", "pull")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to add team access")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to add team access")
 	})
 
 	t.Run("happy path: dry run", func(t *testing.T) {
@@ -1506,7 +1506,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 		remoteImpl.loadRepositories(ctx)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1524,10 +1524,10 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryAddTeamAccess in dry run mode
-		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, errorCollector, true, "test-repo", "test-team", "pull")
+		remoteImpl.UpdateRepositoryAddTeamAccess(ctx, logsCollector, true, "test-repo", "test-team", "pull")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1589,7 +1589,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		remoteImpl.loadTeams(ctx)
 		remoteImpl.loadRepositories(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1607,10 +1607,10 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryUpdateTeamAccess
-		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, errorCollector, false, "test-repo", "test-team", "pull")
+		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, logsCollector, false, "test-repo", "test-team", "pull")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams/test-team/repos/myorg/test-repo", mockClient.lastEndpoint)
@@ -1644,13 +1644,13 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryUpdateTeamAccess
-		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, errorCollector, false, "test-repo", "test-team", "push")
+		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, logsCollector, false, "test-repo", "test-team", "push")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams/test-team/repos/myorg/test-repo", mockClient.lastEndpoint)
@@ -1684,13 +1684,13 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryUpdateTeamAccess
-		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, errorCollector, false, "test-repo", "test-team", "admin")
+		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, logsCollector, false, "test-repo", "test-team", "admin")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "/orgs/myorg/teams/test-team/repos/myorg/test-repo", mockClient.lastEndpoint)
@@ -1712,7 +1712,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		remoteImpl.loadTeams(ctx)
 		remoteImpl.loadRepositories(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add only team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -1724,11 +1724,11 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryUpdateTeamAccess with non-existent repository
-		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, errorCollector, false, "non-existent-repo", "test-team", "pull")
+		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, logsCollector, false, "non-existent-repo", "test-team", "pull")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent-repo not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent-repo not found")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1743,7 +1743,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		remoteImpl.loadRepositories(ctx)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add only repository to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1754,11 +1754,11 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryUpdateTeamAccess with non-existent team
-		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, errorCollector, false, "test-repo", "non-existent-team", "pull")
+		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, logsCollector, false, "test-repo", "non-existent-team", "pull")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "team non-existent-team not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "team non-existent-team not found")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1785,14 +1785,14 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 	// 	}
 
 	// 	ctx := context.TODO()
-	// 	errorCollector := observability.NewErrorCollection()
+	// 	logsCollector := observability.NewLogCollection()
 
 	// 	// Call UpdateRepositoryUpdateTeamAccess with invalid permission
-	// 	remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, errorCollector, false, "test-repo", "test-team", "invalid")
+	// 	remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, logsCollector, false, "test-repo", "test-team", "invalid")
 
 	// 	// Verify error was collected
-	// 	assert.True(t, errorCollector.HasErrors())
-	// 	assert.Contains(t, errorCollector.Errors[0].Error(), "invalid permission")
+	// 	assert.True(t, logsCollector.HasErrors())
+	// 	assert.Contains(t, logsCollector.Errors[0].Error(), "invalid permission")
 
 	// 	// Verify no API call was made
 	// 	assert.Empty(t, mockClient.lastEndpoint)
@@ -1810,7 +1810,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		remoteImpl.loadRepositories(ctx)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1828,11 +1828,11 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryUpdateTeamAccess
-		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, errorCollector, false, "test-repo", "test-team", "pull")
+		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, logsCollector, false, "test-repo", "test-team", "pull")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to update team access")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to update team access")
 	})
 
 	t.Run("happy path: dry run", func(t *testing.T) {
@@ -1844,7 +1844,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		remoteImpl.loadRepositories(ctx)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1862,10 +1862,10 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryUpdateTeamAccess in dry run mode
-		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, errorCollector, true, "test-repo", "test-team", "pull")
+		remoteImpl.UpdateRepositoryUpdateTeamAccess(ctx, logsCollector, true, "test-repo", "test-team", "pull")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1927,7 +1927,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		remoteImpl.loadRepositories(ctx)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -1945,10 +1945,10 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryRemoveTeamAccess
-		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, errorCollector, false, "test-repo", "test-team")
+		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, logsCollector, false, "test-repo", "test-team")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the REST API call was made correctly
 		assert.Equal(t, "orgs/myorg/teams/test-team/repos/myorg/test-repo", mockClient.lastEndpoint)
@@ -1963,7 +1963,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add only team to the cache
 		remoteImpl.teams = map[string]*GithubTeam{
@@ -1975,11 +1975,11 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryRemoveTeamAccess with non-existent repository
-		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, errorCollector, false, "non-existent-repo", "test-team")
+		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, logsCollector, false, "non-existent-repo", "test-team")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent-repo not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent-repo not found")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -1993,7 +1993,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		ctx := context.TODO()
 		remoteImpl.loadRepositories(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add only repository to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -2004,11 +2004,11 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryRemoveTeamAccess with non-existent team
-		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, errorCollector, false, "test-repo", "non-existent-team")
+		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, logsCollector, false, "test-repo", "non-existent-team")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "team non-existent-team not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "team non-existent-team not found")
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -2026,7 +2026,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		remoteImpl.loadRepositories(ctx)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -2044,11 +2044,11 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryRemoveTeamAccess
-		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, errorCollector, false, "test-repo", "test-team")
+		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, logsCollector, false, "test-repo", "test-team")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to remove team access")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to remove team access")
 	})
 
 	t.Run("happy path: dry run", func(t *testing.T) {
@@ -2060,7 +2060,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		remoteImpl.loadRepositories(ctx)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -2078,10 +2078,10 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryRemoveTeamAccess in dry run mode
-		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, errorCollector, true, "test-repo", "test-team")
+		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, logsCollector, true, "test-repo", "test-team")
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no API call was made
 		assert.Empty(t, mockClient.lastEndpoint)
@@ -2100,7 +2100,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		remoteImpl.loadRepositories(ctx)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Add repository and team to the cache
 		remoteImpl.repositories = map[string]*GithubRepository{
@@ -2118,10 +2118,10 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		}
 
 		// Call UpdateRepositoryRemoveTeamAccess
-		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, errorCollector, false, "test-repo", "test-team")
+		remoteImpl.UpdateRepositoryRemoveTeamAccess(ctx, logsCollector, false, "test-repo", "test-team")
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "Not Found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "Not Found")
 	})
 }

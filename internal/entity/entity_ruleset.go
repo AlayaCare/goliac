@@ -128,12 +128,12 @@ func NewRuleSet(fs billy.Filesystem, filename string) (*RuleSet, error) {
  * - a slice of errors that must stop the validation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadRuleSetDirectory(fs billy.Filesystem, dirname string, errorCollection *observability.ErrorCollection) map[string]*RuleSet {
+func ReadRuleSetDirectory(fs billy.Filesystem, dirname string, LogCollection *observability.LogCollection) map[string]*RuleSet {
 	rulesets := make(map[string]*RuleSet)
 
 	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
-		errorCollection.AddError(err)
+		LogCollection.AddError(err)
 		return rulesets
 	}
 	if !exist {
@@ -143,7 +143,7 @@ func ReadRuleSetDirectory(fs billy.Filesystem, dirname string, errorCollection *
 	// Parse all the rulesets in the dirname directory
 	entries, err := fs.ReadDir(dirname)
 	if err != nil {
-		errorCollection.AddError(err)
+		LogCollection.AddError(err)
 		return rulesets
 	}
 
@@ -157,11 +157,11 @@ func ReadRuleSetDirectory(fs billy.Filesystem, dirname string, errorCollection *
 		}
 		ruleset, err := NewRuleSet(fs, filepath.Join(dirname, e.Name()))
 		if err != nil {
-			errorCollection.AddError(err)
+			LogCollection.AddError(err)
 		} else {
 			err := ruleset.Validate(filepath.Join(dirname, e.Name()))
 			if err != nil {
-				errorCollection.AddError(err)
+				LogCollection.AddError(err)
 			} else {
 				rulesets[ruleset.Name] = ruleset
 			}

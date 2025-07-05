@@ -65,10 +65,10 @@ func TestRuleset(t *testing.T) {
 		fs := memfs.New()
 		fixtureCreateRuleSet(t, fs)
 
-		errorCollector := observability.NewErrorCollection()
-		rulesets := ReadRuleSetDirectory(fs, "rulesets", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		rulesets := ReadRuleSetDirectory(fs, "rulesets", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, rulesets)
 		assert.Equal(t, 2, len(rulesets))
 
@@ -83,10 +83,10 @@ func TestRulesetParametersComparison(t *testing.T) {
 		fs := memfs.New()
 		fixtureCreateRuleSet(t, fs)
 
-		errorCollector := observability.NewErrorCollection()
-		rulesets := ReadRuleSetDirectory(fs, "rulesets", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		rulesets := ReadRuleSetDirectory(fs, "rulesets", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, rulesets)
 
 		res := CompareRulesetParameters(rulesets["ruleset1"].Spec.Ruleset.Rules[0].Ruletype, rulesets["ruleset1"].Spec.Ruleset.Rules[0].Parameters, rulesets["ruleset2"].Spec.Ruleset.Rules[0].Parameters)

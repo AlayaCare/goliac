@@ -63,44 +63,47 @@ func (l *MutableRepositoryVariableLazyLoader) GetEntity() map[string]string {
 }
 
 /*
- * MutableGoliacRemoteImpl is used by GoliacReconciliatorImpl to update
- * the internal status of Github representation before appyling it for real
- * (or running in drymode)
- */
+MutableGoliacRemoteImpl is used by GoliacReconciliatorImpl to update
+the internal status of Github representation before appyling it for real
+(or running in drymode)
+It is by design
+- a GoliacReconciliatorDatasource (as a ReconciliatorExecutor reader)
+- and a kind of ReconciliatorExecutor (as a ReconciliatorExecutor writer)
+*/
 type MutableGoliacRemoteImpl struct {
-	users          map[string]string
-	repositories   map[string]*GithubRepository
-	teams          map[string]*GithubTeam
-	teamRepos      map[string]map[string]*GithubTeamRepo
-	teamSlugByName map[string]string
-	rulesets       map[string]*GithubRuleSet
-	appIds         map[string]int
-	remote         GoliacRemote
+	users        map[string]string
+	repositories map[string]*GithubRepoComparable
+	teams        map[string]*GithubTeamComparable
+	rulesets     map[string]*GithubRuleSet
 }
 
-func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacRemote) *MutableGoliacRemoteImpl {
+func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacReconciliatorDatasource) (*MutableGoliacRemoteImpl, error) {
 	rUsers := make(map[string]string)
-	for k, v := range remote.Users(ctx) {
+	for k, v := range remote.Users() {
 		rUsers[k] = v
 	}
-	rTeamSlugByName := make(map[string]string)
-	for k, v := range remote.TeamSlugByName(ctx) {
-		rTeamSlugByName[k] = v
+	rTeams := make(map[string]*GithubTeamComparable)
+	teams, _, err := remote.Teams()
+	if err != nil {
+		return nil, err
 	}
-	rTeams := make(map[string]*GithubTeam)
-	for k, v := range remote.Teams(ctx, false) {
+	for k, v := range teams {
 		ght := *v
 		rTeams[k] = &ght
 	}
 
-	rRepositories := make(map[string]*GithubRepository)
-	for k, v := range remote.Repositories(ctx) {
+	rRepositories := make(map[string]*GithubRepoComparable)
+	repositories, _, err := remote.Repositories()
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range repositories {
 		ghr := *v
 		ghrulesets := make(map[string]*GithubRuleSet)
-		for k, v := range ghr.RuleSets {
+		for k, v := range ghr.Rulesets {
 			ghrulesets[k] = v
 		}
-		ghr.RuleSets = ghrulesets
+		ghr.Rulesets = ghrulesets
 		ghbranchprotections := make(map[string]*GithubBranchProtection)
 		for k, v := range v.BranchProtections {
 			ghbranchprotections[k] = v
@@ -109,20 +112,22 @@ func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacRemote) *Mutab
 		ghr.Environments = NewMutableEnvironmentLazyLoader(
 			v.Environments,
 		)
-		ghr.RepositoryVariables = NewMutableRepositoryVariableLazyLoader(
-			v.RepositoryVariables,
+		ghr.ActionVariables = NewMutableRepositoryVariableLazyLoader(
+			v.ActionVariables,
 		)
 		rRepositories[k] = &ghr
-		ghExternalUsers := make(map[string]string)
-		for k, v := range v.ExternalUsers {
-			ghExternalUsers[k] = v
-		}
-		rRepositories[k].ExternalUsers = ghExternalUsers
-		ghInternalUsers := make(map[string]string)
-		for k, v := range v.InternalUsers {
-			ghInternalUsers[k] = v
-		}
+		ghExternalUsersReaders := make([]string, len(v.ExternalUserReaders))
+		copy(ghExternalUsersReaders, v.ExternalUserReaders)
+		rRepositories[k].ExternalUserReaders = ghExternalUsersReaders
+
+		ghExternalUsersWriters := make([]string, len(v.ExternalUserWriters))
+		copy(ghExternalUsersWriters, v.ExternalUserWriters)
+		rRepositories[k].ExternalUserWriters = ghExternalUsersWriters
+
+		ghInternalUsers := make([]string, len(v.InternalUsers))
+		copy(ghInternalUsers, v.InternalUsers)
 		rRepositories[k].InternalUsers = ghInternalUsers
+
 		ghProperties := make(map[string]bool)
 		for k, v := range v.BoolProperties {
 			ghProperties[k] = v
@@ -130,18 +135,12 @@ func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacRemote) *Mutab
 		rRepositories[k].BoolProperties = ghProperties
 	}
 
-	rTeamRepositories := make(map[string]map[string]*GithubTeamRepo)
-	for k1, v1 := range remote.TeamRepositories(ctx) {
-		repos := make(map[string]*GithubTeamRepo)
-		for k2, v2 := range v1 {
-			gtr := *v2
-			repos[k2] = &gtr
-		}
-		rTeamRepositories[k1] = repos
+	rrulesets := make(map[string]*GithubRuleSet)
+	rulesets, err := remote.RuleSets()
+	if err != nil {
+		return nil, err
 	}
-
-	rulesets := make(map[string]*GithubRuleSet)
-	for k, v := range remote.RuleSets(ctx) {
+	for k, v := range rulesets {
 		ghRuleset := *v
 		ghRuleset.Rules = make(map[string]entity.RuleSetParameters)
 		for k, v := range v.Rules {
@@ -161,48 +160,30 @@ func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacRemote) *Mutab
 		for k, v := range v.BypassTeams {
 			ghRuleset.BypassTeams[k] = v
 		}
-		rulesets[k] = &ghRuleset
-	}
-
-	appids := make(map[string]int)
-	for k, v := range remote.AppIds(ctx) {
-		appids[k] = v
+		rrulesets[k] = &ghRuleset
 	}
 
 	return &MutableGoliacRemoteImpl{
-		users:          rUsers,
-		repositories:   rRepositories,
-		teams:          rTeams,
-		teamRepos:      rTeamRepositories,
-		teamSlugByName: rTeamSlugByName,
-		rulesets:       rulesets,
-		appIds:         appids,
-		remote:         remote,
-	}
+		users:        rUsers,
+		repositories: rRepositories,
+		teams:        rTeams,
+		rulesets:     rrulesets,
+	}, nil
 }
 
+// githubuserid -> membership (ADMIN, MEMBER)
 func (m *MutableGoliacRemoteImpl) Users() map[string]string {
 	return m.users
 }
 
-func (m *MutableGoliacRemoteImpl) TeamSlugByName() map[string]string {
-	return m.teamSlugByName
-}
-
-func (m *MutableGoliacRemoteImpl) Teams() map[string]*GithubTeam {
+func (m *MutableGoliacRemoteImpl) Teams() map[string]*GithubTeamComparable {
 	return m.teams
 }
-func (m *MutableGoliacRemoteImpl) Repositories() map[string]*GithubRepository {
+func (m *MutableGoliacRemoteImpl) Repositories() map[string]*GithubRepoComparable {
 	return m.repositories
-}
-func (m *MutableGoliacRemoteImpl) TeamRepositories() map[string]map[string]*GithubTeamRepo {
-	return m.teamRepos
 }
 func (m *MutableGoliacRemoteImpl) RuleSets() map[string]*GithubRuleSet {
 	return m.rulesets
-}
-func (g *MutableGoliacRemoteImpl) AppIds() map[string]int {
-	return g.appIds
 }
 
 // LISTENER
@@ -215,16 +196,26 @@ func (m *MutableGoliacRemoteImpl) RemoveUserFromOrg(ghuserid string) {
 	delete(m.users, ghuserid)
 }
 
-func (m *MutableGoliacRemoteImpl) CreateTeam(teamname string, description string, members []string) {
+func (m *MutableGoliacRemoteImpl) CreateTeam(teamname string, description string, members []string, parentTeamId *int) {
 	teamslug := slug.Make(teamname)
-	t := GithubTeam{
+	var parentTeam *string
+	if parentTeamId != nil {
+		for k, v := range m.teams {
+			if v.Id == *parentTeamId {
+				parentTeam = &k
+				break
+			}
+		}
+	}
+
+	t := GithubTeamComparable{
 		Name:        teamname,
 		Slug:        teamslug,
 		Members:     members,
 		Maintainers: []string{},
+		ParentTeam:  parentTeam,
 	}
 	m.teams[teamslug] = &t
-	m.teamSlugByName[teamname] = teamslug
 }
 func (m *MutableGoliacRemoteImpl) UpdateTeamAddMember(teamslug string, username string, role string) {
 	if t, ok := m.teams[teamslug]; ok {
@@ -266,47 +257,85 @@ func (m *MutableGoliacRemoteImpl) UpdateTeamUpdateMember(teamslug string, userna
 }
 func (m *MutableGoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, dryrun bool, teamslug string, parentTeam *int) {
 	if t, ok := m.teams[teamslug]; ok {
-		t.ParentTeam = parentTeam
+		var parentTeamName *string
+		if parentTeam != nil {
+			for k, v := range m.teams {
+				if v.Id == *parentTeam {
+					parentTeamName = &k
+					break
+				}
+			}
+		}
+		t.ParentTeam = parentTeamName
 	}
 }
 func (m *MutableGoliacRemoteImpl) DeleteTeam(teamslug string) {
-	if t, ok := m.teams[teamslug]; ok {
-		teamname := t.Name
-		delete(m.teams, teamslug)
-		delete(m.teamSlugByName, teamname)
-		delete(m.teamRepos, teamslug)
-	}
+	delete(m.teams, teamslug)
 }
 func (m *MutableGoliacRemoteImpl) CreateRepository(reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string, forkFrom string) {
-	r := GithubRepository{
-		Name:              reponame,
-		Visibility:        visibility,
-		BoolProperties:    boolProperties,
-		ExternalUsers:     map[string]string{},
-		DefaultBranchName: defaultBranch,
-		IsFork:            forkFrom != "",
+	r := GithubRepoComparable{
+		Visibility:          visibility,
+		BoolProperties:      boolProperties,
+		Writers:             writers,
+		Readers:             readers,
+		ExternalUserReaders: []string{},
+		ExternalUserWriters: []string{},
+		InternalUsers:       []string{},
+		DefaultBranchName:   defaultBranch,
+		Rulesets:            make(map[string]*GithubRuleSet),
+		BranchProtections:   make(map[string]*GithubBranchProtection),
+		Environments:        NewMutableEnvironmentLazyLoader(nil),
+		ActionVariables:     NewMutableRepositoryVariableLazyLoader(nil),
 	}
 	m.repositories[reponame] = &r
 }
 func (m *MutableGoliacRemoteImpl) UpdateRepositoryAddTeamAccess(reponame string, teamslug string, permission string) {
-	if tr, ok := m.teamRepos[teamslug]; ok {
-		tr[reponame] = &GithubTeamRepo{
-			Name:       reponame,
-			Permission: permission,
+	if r, ok := m.repositories[reponame]; ok {
+		if permission == "pull" {
+			r.Readers = append(r.Readers, teamslug)
+		} else if permission == "push" {
+			r.Writers = append(r.Writers, teamslug)
 		}
 	}
 }
 
 func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(reponame string, teamslug string, permission string) {
-	if tr, ok := m.teamRepos[teamslug]; ok {
-		if r, ok := tr[reponame]; ok {
-			r.Permission = permission
+	if r, ok := m.repositories[reponame]; ok {
+		// remove the team from the readers and writers
+		for i, t := range r.Writers {
+			if t == teamslug {
+				r.Writers = append(r.Writers[:i], r.Writers[i+1:]...)
+				break
+			}
+		}
+		for i, t := range r.Readers {
+			if t == teamslug {
+				r.Readers = append(r.Readers[:i], r.Readers[i+1:]...)
+				break
+			}
+		}
+		// add the team to the readers and writers
+		if permission == "pull" {
+			r.Readers = append(r.Readers, teamslug)
+		} else if permission == "push" {
+			r.Writers = append(r.Writers, teamslug)
 		}
 	}
 }
 func (m *MutableGoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(reponame string, teamslug string) {
-	if tr, ok := m.teamRepos[teamslug]; ok {
-		delete(tr, reponame)
+	if r, ok := m.repositories[reponame]; ok {
+		for i, t := range r.Writers {
+			if t == teamslug {
+				r.Writers = append(r.Writers[:i], r.Writers[i+1:]...)
+				break
+			}
+		}
+		for i, t := range r.Readers {
+			if t == teamslug {
+				r.Readers = append(r.Readers[:i], r.Readers[i+1:]...)
+				break
+			}
+		}
 	}
 }
 func (m *MutableGoliacRemoteImpl) DeleteRepository(reponame string) {
@@ -321,18 +350,7 @@ func (m *MutableGoliacRemoteImpl) RenameRepository(reponame string, newname stri
 		return
 	}
 	delete(m.repositories, reponame)
-	r.Name = newname
 	m.repositories[newname] = r
-
-	for _, tr := range m.teamRepos {
-		for rname, r := range tr {
-			if rname == reponame {
-				delete(tr, rname)
-				r.Name = newname
-				tr[newname] = r
-			}
-		}
-	}
 }
 
 /*
@@ -356,34 +374,54 @@ func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateProperty(reponame string
 }
 func (m *MutableGoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, collaboatorGithubId string, permission string) {
 	if r, ok := m.repositories[reponame]; ok {
-		r.ExternalUsers[collaboatorGithubId] = permission
+		if permission == "pull" {
+			r.ExternalUserReaders = append(r.ExternalUserReaders, collaboatorGithubId)
+		} else if permission == "push" {
+			r.ExternalUserWriters = append(r.ExternalUserWriters, collaboatorGithubId)
+		}
 	}
 }
 func (m *MutableGoliacRemoteImpl) UpdateRepositoryRemoveExternalUser(reponame string, collaboatorGithubId string) {
 	if r, ok := m.repositories[reponame]; ok {
-		delete(r.ExternalUsers, collaboatorGithubId)
+		for i, t := range r.ExternalUserReaders {
+			if t == collaboatorGithubId {
+				r.ExternalUserReaders = append(r.ExternalUserReaders[:i], r.ExternalUserReaders[i+1:]...)
+				break
+			}
+		}
+		for i, t := range r.ExternalUserWriters {
+			if t == collaboatorGithubId {
+				r.ExternalUserWriters = append(r.ExternalUserWriters[:i], r.ExternalUserWriters[i+1:]...)
+				break
+			}
+		}
 	}
 }
 func (m *MutableGoliacRemoteImpl) UpdateRepositoryRemoveInternalUser(reponame string, collaboatorGithubId string) {
 	if r, ok := m.repositories[reponame]; ok {
-		delete(r.InternalUsers, collaboatorGithubId)
+		for i, t := range r.InternalUsers {
+			if t == collaboatorGithubId {
+				r.InternalUsers = append(r.InternalUsers[:i], r.InternalUsers[i+1:]...)
+				break
+			}
+		}
 	}
 }
 func (m *MutableGoliacRemoteImpl) AddRepositoryRuleset(reponame string, ruleset *GithubRuleSet) {
 	if r, ok := m.repositories[reponame]; ok {
-		r.RuleSets[ruleset.Name] = ruleset
+		r.Rulesets[ruleset.Name] = ruleset
 	}
 }
 func (m *MutableGoliacRemoteImpl) UpdateRepositoryRuleset(reponame string, ruleset *GithubRuleSet) {
 	if r, ok := m.repositories[reponame]; ok {
-		r.RuleSets[ruleset.Name] = ruleset
+		r.Rulesets[ruleset.Name] = ruleset
 	}
 }
 func (m *MutableGoliacRemoteImpl) DeleteRepositoryRuleset(reponame string, rulesetid int) {
 	if r, ok := m.repositories[reponame]; ok {
-		for _, rs := range r.RuleSets {
+		for _, rs := range r.Rulesets {
 			if rs.Id == rulesetid {
-				delete(r.RuleSets, rs.Name)
+				delete(r.Rulesets, rs.Name)
 				break
 			}
 		}
@@ -420,17 +458,17 @@ func (m *MutableGoliacRemoteImpl) DeleteRepositoryEnvironment(repositoryName str
 // Repository variables management
 func (m *MutableGoliacRemoteImpl) AddRepositoryVariable(repositoryName string, variableName string, variableValue string) {
 	if r, ok := m.repositories[repositoryName]; ok {
-		r.RepositoryVariables.GetEntity()[variableName] = variableValue
+		r.ActionVariables.GetEntity()[variableName] = variableValue
 	}
 }
 func (m *MutableGoliacRemoteImpl) UpdateRepositoryVariable(repositoryName string, variableName string, variableValue string) {
 	if r, ok := m.repositories[repositoryName]; ok {
-		r.RepositoryVariables.GetEntity()[variableName] = variableValue
+		r.ActionVariables.GetEntity()[variableName] = variableValue
 	}
 }
 
 func (m *MutableGoliacRemoteImpl) DeleteRepositoryVariable(repositoryName string, variableName string) {
-	delete(m.repositories[repositoryName].RepositoryVariables.GetEntity(), variableName)
+	delete(m.repositories[repositoryName].ActionVariables.GetEntity(), variableName)
 }
 
 // Environment variables management

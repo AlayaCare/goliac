@@ -223,7 +223,7 @@ type GoliacMock struct {
 	client *GithubClientMock
 }
 
-func (g *GoliacMock) Apply(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, dryrun bool, repo string, branch string) *engine.UnmanagedResources {
+func (g *GoliacMock) Apply(ctx context.Context, logsCollector *observability.LogCollection, fs billy.Filesystem, dryrun bool, repo string, branch string) *engine.UnmanagedResources {
 	unmanaged := &engine.UnmanagedResources{
 		Users:        make(map[string]bool),
 		Teams:        make(map[string]bool),
@@ -233,7 +233,7 @@ func (g *GoliacMock) Apply(ctx context.Context, errorCollector *observability.Er
 	unmanaged.Users["unmanaged"] = true
 	return unmanaged
 }
-func (g *GoliacMock) UsersUpdate(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) bool {
+func (g *GoliacMock) UsersUpdate(ctx context.Context, logsCollector *observability.LogCollection, fs billy.Filesystem, repositoryUrl, branch string, dryrun bool, force bool) bool {
 	return false
 }
 func (g *GoliacMock) FlushCache() {
@@ -248,7 +248,7 @@ func (g *GoliacMock) GetRemote() engine.GoliacRemoteResources {
 func (g *GoliacMock) GetRemoteClient() github.GitHubClient {
 	return g.client
 }
-func (g *GoliacMock) ExternalCreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, fs billy.Filesystem, githubToken, newRepositoryName, team, visibility, newRepositoryDefaultBranch string, repositoryUrl, branch string) {
+func (g *GoliacMock) ExternalCreateRepository(ctx context.Context, logsCollector *observability.LogCollection, fs billy.Filesystem, githubToken, newRepositoryName, team, visibility, newRepositoryDefaultBranch string, repositoryUrl, branch string) {
 }
 func (g *GoliacMock) SetRemoteObservability(feedback observability.RemoteObservability) error {
 	return nil

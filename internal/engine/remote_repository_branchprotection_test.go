@@ -97,13 +97,13 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call AddRepositoryBranchProtection
-		remoteImpl.AddRepositoryBranchProtection(ctx, errorCollector, false, "test-repo", branchProtection)
+		remoteImpl.AddRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", branchProtection)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the GraphQL query was made with correct variables
 		expectedVariables := map[string]interface{}{
@@ -141,14 +141,14 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call AddRepositoryBranchProtection with non-existent repository
-		remoteImpl.AddRepositoryBranchProtection(ctx, errorCollector, false, "non-existent-repo", branchProtection)
+		remoteImpl.AddRepositoryBranchProtection(ctx, logsCollector, false, "non-existent-repo", branchProtection)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent-repo not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent-repo not found")
 
 		// Verify no GraphQL query was made
 		assert.Empty(t, mockClient.lastGraphQLQuery)
@@ -179,14 +179,14 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call AddRepositoryBranchProtection
-		remoteImpl.AddRepositoryBranchProtection(ctx, errorCollector, false, "test-repo", branchProtection)
+		remoteImpl.AddRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", branchProtection)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to add branch protection to repository")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to add branch protection to repository")
 
 		// Verify the branch protection was not added to the cache
 		assert.NotContains(t, repo.BranchProtections, "main")
@@ -214,13 +214,13 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call AddRepositoryBranchProtection in dry run mode
-		remoteImpl.AddRepositoryBranchProtection(ctx, errorCollector, true, "test-repo", branchProtection)
+		remoteImpl.AddRepositoryBranchProtection(ctx, logsCollector, true, "test-repo", branchProtection)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no GraphQL query was made
 		assert.Empty(t, mockClient.lastGraphQLQuery)
@@ -260,14 +260,14 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call AddRepositoryBranchProtection
-		remoteImpl.AddRepositoryBranchProtection(ctx, errorCollector, false, "test-repo", branchProtection)
+		remoteImpl.AddRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", branchProtection)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "graphql error on AddRepositoryBranchProtection")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "graphql error on AddRepositoryBranchProtection")
 
 		// Verify the branch protection was not added to the cache
 		assert.NotContains(t, repo.BranchProtections, "main")
@@ -348,13 +348,13 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRepositoryBranchProtection
-		remoteImpl.DeleteRepositoryBranchProtection(ctx, errorCollector, false, "test-repo", branchProtection)
+		remoteImpl.DeleteRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", branchProtection)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the GraphQL query was made with correct variables
 		expectedVariables := map[string]interface{}{
@@ -379,14 +379,14 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRepositoryBranchProtection with non-existent repository
-		remoteImpl.DeleteRepositoryBranchProtection(ctx, errorCollector, false, "non-existent-repo", branchProtection)
+		remoteImpl.DeleteRepositoryBranchProtection(ctx, logsCollector, false, "non-existent-repo", branchProtection)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent-repo not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent-repo not found")
 
 		// Verify no GraphQL query was made
 		assert.Empty(t, mockClient.lastGraphQLQuery)
@@ -418,14 +418,14 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRepositoryBranchProtection
-		remoteImpl.DeleteRepositoryBranchProtection(ctx, errorCollector, false, "test-repo", branchProtection)
+		remoteImpl.DeleteRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", branchProtection)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to delete branch protection for repository")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to delete branch protection for repository")
 
 		// Verify the branch protection remains in the cache
 		assert.Contains(t, repo.BranchProtections, "main")
@@ -454,13 +454,13 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRepositoryBranchProtection in dry run mode
-		remoteImpl.DeleteRepositoryBranchProtection(ctx, errorCollector, true, "test-repo", branchProtection)
+		remoteImpl.DeleteRepositoryBranchProtection(ctx, logsCollector, true, "test-repo", branchProtection)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no GraphQL query was made
 		assert.Empty(t, mockClient.lastGraphQLQuery)
@@ -501,14 +501,14 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRepositoryBranchProtection
-		remoteImpl.DeleteRepositoryBranchProtection(ctx, errorCollector, false, "test-repo", branchProtection)
+		remoteImpl.DeleteRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", branchProtection)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "graphql error on DeleteRepositoryBranchProtection")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "graphql error on DeleteRepositoryBranchProtection")
 
 		// Verify the branch protection remains in the cache
 		assert.Contains(t, repo.BranchProtections, "main")
@@ -537,14 +537,14 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call DeleteRepositoryBranchProtection
-		remoteImpl.DeleteRepositoryBranchProtection(ctx, errorCollector, false, "test-repo", branchProtection)
+		remoteImpl.DeleteRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", branchProtection)
 
 		// Verify no errors occurred
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "branch protection for repository test-repo not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "branch protection for repository test-repo not found")
 
 		// Verify the cache remains empty
 		assert.Empty(t, repo.BranchProtections)
@@ -659,13 +659,13 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryBranchProtection
-		remoteImpl.UpdateRepositoryBranchProtection(ctx, errorCollector, false, "test-repo", updatedBranchProtection)
+		remoteImpl.UpdateRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", updatedBranchProtection)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify the GraphQL query was made with correct variables
 		expectedVariables := map[string]interface{}{
@@ -704,14 +704,14 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryBranchProtection with non-existent repository
-		remoteImpl.UpdateRepositoryBranchProtection(ctx, errorCollector, false, "non-existent-repo", branchProtection)
+		remoteImpl.UpdateRepositoryBranchProtection(ctx, logsCollector, false, "non-existent-repo", branchProtection)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "repository non-existent-repo not found")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "repository non-existent-repo not found")
 
 		// Verify no GraphQL query was made
 		assert.Empty(t, mockClient.lastGraphQLQuery)
@@ -750,14 +750,14 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryBranchProtection
-		remoteImpl.UpdateRepositoryBranchProtection(ctx, errorCollector, false, "test-repo", updatedBranchProtection)
+		remoteImpl.UpdateRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", updatedBranchProtection)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "failed to update branch protection for repository")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "failed to update branch protection for repository")
 
 		// Verify the branch protection remains unchanged in the cache
 		assert.Equal(t, originalBranchProtection, repo.BranchProtections["main"])
@@ -793,13 +793,13 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryBranchProtection in dry run mode
-		remoteImpl.UpdateRepositoryBranchProtection(ctx, errorCollector, true, "test-repo", updatedBranchProtection)
+		remoteImpl.UpdateRepositoryBranchProtection(ctx, logsCollector, true, "test-repo", updatedBranchProtection)
 
 		// Verify no errors occurred
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 
 		// Verify no GraphQL query was made
 		assert.Empty(t, mockClient.lastGraphQLQuery)
@@ -847,14 +847,14 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		// Call UpdateRepositoryBranchProtection
-		remoteImpl.UpdateRepositoryBranchProtection(ctx, errorCollector, false, "test-repo", updatedBranchProtection)
+		remoteImpl.UpdateRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", updatedBranchProtection)
 
 		// Verify error was collected
-		assert.True(t, errorCollector.HasErrors())
-		assert.Contains(t, errorCollector.Errors[0].Error(), "graphql error on UpdateRepositoryBranchProtection")
+		assert.True(t, logsCollector.HasErrors())
+		assert.Contains(t, logsCollector.Errors[0].Error(), "graphql error on UpdateRepositoryBranchProtection")
 
 		// Verify the branch protection remains unchanged in the cache
 		assert.Equal(t, originalBranchProtection, repo.BranchProtections["main"])
