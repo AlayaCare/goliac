@@ -1,6 +1,7 @@
 ## Goliac v1.2.0
 
 - internal refactor to make the code more modular (and introduce reconciliator "datasource")
+- refactor UX CLI, in particular the progressbar (and the lazy loading)
 
 ## Goliac v1.1.0
 

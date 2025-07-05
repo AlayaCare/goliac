@@ -55,6 +55,10 @@ func (p *ProgressBar) Init(nbTotalAssets int) {
 	p.bar = bar
 }
 
+func (p *ProgressBar) Extend(nbAssets int) {
+	p.bar.AddMax(nbAssets)
+}
+
 func (p *ProgressBar) LoadingAsset(entity string, nb int) {
 	p.bar.Add(nb)
 }
@@ -71,20 +75,23 @@ func main() {
 			if err != nil {
 				logrus.Fatalf("failed to create goliac: %s", err)
 			}
-			errorCollector := observability.NewErrorCollection()
-			goliac.Validate(path, errorCollector)
-			if errorCollector.HasErrors() {
+			logsCollector := observability.NewLogCollection()
+			goliac.Validate(path, logsCollector)
+			if logsCollector.HasErrors() {
 				logrus.Errorf("failed to verify:")
-				for _, err := range errorCollector.Errors {
+				for _, err := range logsCollector.Errors {
 					logrus.Errorf("- %s", err)
 				}
 				os.Exit(1)
 			}
-			if errorCollector.HasWarns() {
+			if logsCollector.HasWarns() {
 				logrus.Warnf("Warnings:")
-				for _, err := range errorCollector.Warns {
+				for _, err := range logsCollector.Warns {
 					logrus.Warnf("- %s", err)
 				}
+			}
+			for _, info := range logsCollector.Logs {
+				logrus.WithFields(info.Fields).Logf(info.LogLevel, info.Format, info.Args...)
 			}
 		},
 	}
@@ -134,23 +141,26 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 
 			fs := osfs.New("/")
 
-			errorCollector := observability.NewErrorCollection()
-			goliac.Apply(ctx, errorCollector, fs, true, repo, branch)
+			logsCollector := observability.NewLogCollection()
+			goliac.Apply(ctx, logsCollector, fs, true, repo, branch)
 			if span != nil {
 				span.End()
 				config.ShutdownTraceProvider()
 			}
-			if errorCollector.HasErrors() {
+			if logsCollector.HasErrors() {
 				logrus.Errorf("Failed to plan:")
-				for _, err := range errorCollector.Errors {
+				for _, err := range logsCollector.Errors {
 					logrus.Errorf("- %s", err)
 				}
 			}
-			if errorCollector.HasWarns() {
+			if logsCollector.HasWarns() {
 				logrus.Warnf("Warnings:")
-				for _, err := range errorCollector.Warns {
+				for _, err := range logsCollector.Warns {
 					logrus.Warnf("- %s", err)
 				}
+			}
+			for _, info := range logsCollector.Logs {
+				logrus.WithFields(info.Fields).Logf(info.LogLevel, info.Format, info.Args...)
 			}
 		},
 	}
@@ -201,23 +211,26 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			}
 
 			fs := osfs.New("/")
-			errorCollector := observability.NewErrorCollection()
-			goliac.Apply(ctx, errorCollector, fs, false, repo, branch)
+			logsCollector := observability.NewLogCollection()
+			goliac.Apply(ctx, logsCollector, fs, false, repo, branch)
 			if span != nil {
 				span.End()
 				config.ShutdownTraceProvider()
 			}
-			if errorCollector.HasErrors() {
+			if logsCollector.HasErrors() {
 				logrus.Errorf("Failed to apply:")
-				for _, err := range errorCollector.Errors {
+				for _, err := range logsCollector.Errors {
 					logrus.Errorf("- %s", err)
 				}
 			}
-			if errorCollector.HasWarns() {
+			if logsCollector.HasWarns() {
 				logrus.Warnf("Warnings:")
-				for _, err := range errorCollector.Warns {
+				for _, err := range logsCollector.Warns {
 					logrus.Warnf("- %s", err)
 				}
+			}
+			for _, info := range logsCollector.Logs {
+				logrus.WithFields(info.Fields).Logf(info.LogLevel, info.Format, info.Args...)
 			}
 		},
 	}
@@ -261,17 +274,20 @@ branch can be passed by parameter or by defining GOLIAC_SERVER_GIT_BRANCH env va
 			}
 
 			fs := osfs.New("/")
-			errorCollector := observability.NewErrorCollection()
-			goliac.UsersUpdate(ctx, errorCollector, fs, repo, branch, dryrunParameter, forceParameter)
+			logsCollector := observability.NewLogCollection()
+			goliac.UsersUpdate(ctx, logsCollector, fs, repo, branch, dryrunParameter, forceParameter)
 			if span != nil {
 				span.End()
 				config.ShutdownTraceProvider()
 			}
-			if errorCollector.HasErrors() {
+			if logsCollector.HasErrors() {
 				logrus.Fatalf("failed to update and commit teams:")
-				for _, err := range errorCollector.Errors {
+				for _, err := range logsCollector.Errors {
 					logrus.Errorf("- %s", err)
 				}
+			}
+			for _, info := range logsCollector.Logs {
+				logrus.WithFields(info.Fields).Logf(info.LogLevel, info.Format, info.Args...)
 			}
 		},
 	}

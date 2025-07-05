@@ -136,12 +136,12 @@ func (w *Workflow) Validate(filename string) error {
 	return nil
 }
 
-func ReadWorkflowDirectory(fs billy.Filesystem, dirname string, errorCollection *observability.ErrorCollection) map[string]*Workflow {
+func ReadWorkflowDirectory(fs billy.Filesystem, dirname string, LogCollection *observability.LogCollection) map[string]*Workflow {
 	Workflows := make(map[string]*Workflow)
 
 	exist, err := utils.Exists(fs, dirname)
 	if err != nil {
-		errorCollection.AddError(err)
+		LogCollection.AddError(err)
 		return Workflows
 	}
 	if !exist {
@@ -151,7 +151,7 @@ func ReadWorkflowDirectory(fs billy.Filesystem, dirname string, errorCollection 
 	// Parse all the Workflows in the dirname directory
 	entries, err := fs.ReadDir(dirname)
 	if err != nil {
-		errorCollection.AddError(err)
+		LogCollection.AddError(err)
 		return Workflows
 	}
 
@@ -165,11 +165,11 @@ func ReadWorkflowDirectory(fs billy.Filesystem, dirname string, errorCollection 
 		}
 		Workflow, err := NewWorkflow(fs, filepath.Join(dirname, e.Name()))
 		if err != nil {
-			errorCollection.AddError(err)
+			LogCollection.AddError(err)
 		} else {
 			err := Workflow.Validate(filepath.Join(dirname, e.Name()))
 			if err != nil {
-				errorCollection.AddError(err)
+				LogCollection.AddError(err)
 			} else {
 				Workflows[Workflow.Name] = Workflow
 			}

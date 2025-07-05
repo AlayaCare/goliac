@@ -97,11 +97,11 @@ func TestRepository(t *testing.T) {
 		fs := memfs.New()
 		createBasicStructure(fs)
 		g := NewGoliacLocalImpl()
-		errorCollector := observability.NewErrorCollection()
-		g.LoadAndValidateLocal(fs, errorCollector)
+		logsCollector := observability.NewLogCollection()
+		g.LoadAndValidateLocal(fs, logsCollector)
 
-		assert.False(t, errorCollector.HasErrors())
-		assert.False(t, errorCollector.HasWarns())
+		assert.False(t, logsCollector.HasErrors())
+		assert.False(t, logsCollector.HasWarns())
 	})
 
 	t.Run("happy path: local repository", func(t *testing.T) {
@@ -139,18 +139,18 @@ func TestRepository(t *testing.T) {
 			repo:          r,
 		}
 
-		errorCollector := observability.NewErrorCollection()
-		g.LoadAndValidate(errorCollector)
+		logsCollector := observability.NewLogCollection()
+		g.LoadAndValidate(logsCollector)
 
-		assert.False(t, errorCollector.HasErrors())
-		assert.False(t, errorCollector.HasWarns())
+		assert.False(t, logsCollector.HasErrors())
+		assert.False(t, logsCollector.HasWarns())
 	})
 }
 
 type ScrambleUserSync struct {
 }
 
-func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) map[string]*entity.User {
+func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, logsCollector *observability.LogCollection) map[string]*entity.User {
 	users := make(map[string]*entity.User)
 
 	// added
@@ -175,8 +175,8 @@ func (p *ScrambleUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs b
 type ErroreUserSync struct {
 }
 
-func (p *ErroreUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) map[string]*entity.User {
-	errorCollector.AddError(fmt.Errorf("unknown error"))
+func (p *ErroreUserSync) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, logsCollector *observability.LogCollection) map[string]*entity.User {
+	logsCollector.AddError(fmt.Errorf("unknown error"))
 	return nil
 }
 
@@ -186,8 +186,8 @@ func NewUserSyncPluginNoop() UserSyncPlugin {
 	return &UserSyncPluginNoop{}
 }
 
-func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) map[string]*entity.User {
-	users := entity.ReadUserDirectory(fs, orguserdirrectorypath, errorCollector)
+func (p *UserSyncPluginNoop) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, logsCollector *observability.LogCollection) map[string]*entity.User {
+	users := entity.ReadUserDirectory(fs, orguserdirrectorypath, logsCollector)
 	return users
 }
 
@@ -197,10 +197,10 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		fs := memfs.New()
 		createBasicStructure(fs)
 
-		errorCollector := observability.NewErrorCollection()
-		removed, added := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &UserSyncPluginNoop{}, nil, errorCollector)
+		logsCollector := observability.NewLogCollection()
+		removed, added := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &UserSyncPluginNoop{}, nil, logsCollector)
 
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(removed))
 		assert.Equal(t, 0, len(added))
 	})
@@ -209,10 +209,10 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		fs := memfs.New()
 		createBasicStructure(fs)
 
-		errorCollector := observability.NewErrorCollection()
-		removed, added := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ScrambleUserSync{}, nil, errorCollector)
+		logsCollector := observability.NewLogCollection()
+		removed, added := syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ScrambleUserSync{}, nil, logsCollector)
 
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 1, len(removed))
 		assert.Equal(t, 2, len(added))
 		assert.Equal(t, "users/org/user1.yaml", added[0])
@@ -222,10 +222,10 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		fs := memfs.New()
 		createBasicStructure(fs)
 
-		errorCollector := observability.NewErrorCollection()
-		syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ErroreUserSync{}, nil, errorCollector)
+		logsCollector := observability.NewLogCollection()
+		syncUsersViaUserPlugin(&config.RepositoryConfig{}, fs, &ErroreUserSync{}, nil, logsCollector)
 
-		assert.True(t, errorCollector.HasErrors())
+		assert.True(t, logsCollector.HasErrors())
 	})
 }
 
@@ -895,9 +895,9 @@ func TestGoliacLocalImpl(t *testing.T) {
 		mockUserPlugin := &UserSyncPluginMock{}
 
 		// sync users and teams
-		errorCollector := observability.NewErrorCollection()
-		change := g.SyncUsersAndTeams(context.TODO(), goliacConfig, mockUserPlugin, "none", false, false, nil, errorCollector)
-		assert.False(t, errorCollector.HasErrors())
+		logsCollector := observability.NewLogCollection()
+		change := g.SyncUsersAndTeams(context.TODO(), goliacConfig, mockUserPlugin, "none", false, false, nil, logsCollector)
+		assert.False(t, logsCollector.HasErrors())
 		assert.True(t, change)
 
 		// there should be a new user: foobar
@@ -911,7 +911,7 @@ func TestGoliacLocalImpl(t *testing.T) {
 type UserSyncPluginMock struct {
 }
 
-func (us *UserSyncPluginMock) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) map[string]*entity.User {
+func (us *UserSyncPluginMock) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, logsCollector *observability.LogCollection) map[string]*entity.User {
 	// let's return the current one (admin) + a new one
 	users := make(map[string]*entity.User)
 	users["admin"] = &entity.User{}

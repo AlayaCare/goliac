@@ -132,6 +132,10 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 		return fmt.Errorf("error creating the workflows/standard.yaml file: %v", err)
 	}
 
+	if s.feedback != nil {
+		s.feedback.LoadingAsset("finish", 1)
+	}
+
 	return nil
 }
 

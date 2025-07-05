@@ -9,7 +9,7 @@ import (
 
 type UserSyncPlugin interface {
 	// Get the current user list directory path, returns the new user list
-	UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) map[string]*entity.User
+	UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, logsCollector *observability.LogCollection) map[string]*entity.User
 }
 
 var plugins map[string]UserSyncPlugin

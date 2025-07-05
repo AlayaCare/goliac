@@ -99,19 +99,19 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
  * - a slice of errors that must stop the validation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname string, teams map[string]*Team, externalUsers map[string]*User, errorCollection *observability.ErrorCollection) map[string]*Repository {
+func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname string, teams map[string]*Team, externalUsers map[string]*User, LogCollection *observability.LogCollection) map[string]*Repository {
 	repos := make(map[string]*Repository)
 
 	// archived dir
 	exist, err := utils.Exists(fs, archivedDirname)
 	if err != nil {
-		errorCollection.AddError(err)
+		LogCollection.AddError(err)
 		return repos
 	}
 	if exist {
 		entries, err := fs.ReadDir(archivedDirname)
 		if err != nil {
-			errorCollection.AddError(err)
+			LogCollection.AddError(err)
 			return nil
 		}
 
@@ -124,15 +124,15 @@ func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname s
 				continue
 			}
 			if !strings.HasSuffix(entry.Name(), ".yaml") {
-				errorCollection.AddWarn(fmt.Errorf("file %s doesn't have a .yaml extension", entry.Name()))
+				LogCollection.AddWarn(fmt.Errorf("file %s doesn't have a .yaml extension", entry.Name()))
 				continue
 			}
 			repo, err := NewRepository(fs, filepath.Join(archivedDirname, entry.Name()))
 			if err != nil {
-				errorCollection.AddError(err)
+				LogCollection.AddError(err)
 			} else {
 				if err := repo.Validate(filepath.Join(archivedDirname, entry.Name()), teams, externalUsers); err != nil {
-					errorCollection.AddError(err)
+					LogCollection.AddError(err)
 				} else {
 					repo.Archived = true
 					repos[repo.Name] = repo
@@ -143,7 +143,7 @@ func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname s
 	// regular teams dir
 	exist, err = utils.Exists(fs, teamDirname)
 	if err != nil {
-		errorCollection.AddError(err)
+		LogCollection.AddError(err)
 		return repos
 	}
 	if !exist {
@@ -153,41 +153,41 @@ func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname s
 	// Parse all the repositories in the teamDirname directory
 	entries, err := fs.ReadDir(teamDirname)
 	if err != nil {
-		errorCollection.AddError(err)
+		LogCollection.AddError(err)
 		return nil
 	}
 
 	for _, team := range entries {
 		if team.IsDir() {
-			recursiveReadRepositories(fs, archivedDirname, filepath.Join(teamDirname, team.Name()), team.Name(), repos, teams, externalUsers, errorCollection)
+			recursiveReadRepositories(fs, archivedDirname, filepath.Join(teamDirname, team.Name()), team.Name(), repos, teams, externalUsers, LogCollection)
 		}
 	}
 
 	return repos
 }
 
-func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, teamDirPath string, teamName string, repos map[string]*Repository, teams map[string]*Team, externalUsers map[string]*User, errorCollection *observability.ErrorCollection) {
+func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, teamDirPath string, teamName string, repos map[string]*Repository, teams map[string]*Team, externalUsers map[string]*User, LogCollection *observability.LogCollection) {
 
 	subentries, err := fs.ReadDir(teamDirPath)
 	if err != nil {
-		errorCollection.AddError(err)
+		LogCollection.AddError(err)
 		return
 	}
 	for _, sube := range subentries {
 		if sube.IsDir() && sube.Name()[0] != '.' {
-			recursiveReadRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), sube.Name(), repos, teams, externalUsers, errorCollection)
+			recursiveReadRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), sube.Name(), repos, teams, externalUsers, LogCollection)
 		}
 		if !sube.IsDir() && sube.Name() != "team.yaml" {
 			if filepath.Ext(sube.Name()) != ".yaml" {
-				errorCollection.AddError(fmt.Errorf("file %s doesn't have a .yaml extension", sube.Name()))
+				LogCollection.AddError(fmt.Errorf("file %s doesn't have a .yaml extension", sube.Name()))
 				continue
 			}
 			repo, err := NewRepository(fs, filepath.Join(teamDirPath, sube.Name()))
 			if err != nil {
-				errorCollection.AddError(err)
+				LogCollection.AddError(err)
 			} else {
 				if err := repo.Validate(filepath.Join(teamDirPath, sube.Name()), teams, externalUsers); err != nil {
-					errorCollection.AddError(err)
+					LogCollection.AddError(err)
 				} else {
 					// check if the repository doesn't already exists
 					if _, exist := repos[repo.Name]; exist {
@@ -195,7 +195,7 @@ func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, team
 						if repos[repo.Name].Owner != nil {
 							existing = filepath.Join(*repos[repo.Name].Owner, repo.Name)
 						}
-						errorCollection.AddError(fmt.Errorf("Repository %s defined in 2 places (check %s and %s)", repo.Name, filepath.Join(teamDirPath, sube.Name()), existing))
+						LogCollection.AddError(fmt.Errorf("Repository %s defined in 2 places (check %s and %s)", repo.Name, filepath.Join(teamDirPath, sube.Name()), existing))
 					} else {
 						teamname := teamName
 						repo.Owner = &teamname

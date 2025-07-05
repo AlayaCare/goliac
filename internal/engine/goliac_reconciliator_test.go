@@ -43,9 +43,9 @@ func (m *GoliacLocalMock) PushTag(tagname string, hash plumbing.Hash, accesstoke
 func (m *GoliacLocalMock) RepoConfig() *config.RepositoryConfig {
 	return &config.RepositoryConfig{}
 }
-func (m *GoliacLocalMock) LoadAndValidate(errorCollector *observability.ErrorCollection) {
+func (m *GoliacLocalMock) LoadAndValidate(logsCollector *observability.LogCollection) {
 }
-func (m *GoliacLocalMock) LoadAndValidateLocal(fs billy.Filesystem, errorCollector *observability.ErrorCollection) {
+func (m *GoliacLocalMock) LoadAndValidateLocal(fs billy.Filesystem, logsCollector *observability.LogCollection) {
 }
 func (m *GoliacLocalMock) Teams() map[string]*entity.Team {
 	return m.teams
@@ -75,7 +75,7 @@ func (m *GoliacLocalMock) UpdateReposViaPullRequest(ctx context.Context, client 
 	return nil, nil
 }
 
-func (m *GoliacLocalMock) SyncUsersAndTeams(ctx context.Context, repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) bool {
+func (m *GoliacLocalMock) SyncUsersAndTeams(ctx context.Context, repoconfig *config.RepositoryConfig, plugin UserSyncPlugin, accesstoken string, dryrun bool, force bool, feedback observability.RemoteObservability, logsCollector *observability.LogCollection) bool {
 	return false
 }
 func (m *GoliacLocalMock) Close(fs billy.Filesystem) {
@@ -243,61 +243,61 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 	}
 	return &r
 }
-func (r *ReconciliatorListenerRecorder) AddUserToOrg(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ghuserid string) {
+func (r *ReconciliatorListenerRecorder) AddUserToOrg(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ghuserid string) {
 	r.UsersCreated[ghuserid] = ghuserid
 }
-func (r *ReconciliatorListenerRecorder) RemoveUserFromOrg(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ghuserid string) {
+func (r *ReconciliatorListenerRecorder) RemoveUserFromOrg(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ghuserid string) {
 	r.UsersRemoved[ghuserid] = ghuserid
 }
-func (r *ReconciliatorListenerRecorder) CreateTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
+func (r *ReconciliatorListenerRecorder) CreateTeam(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamname string, description string, parentTeam *int, members []string) {
 	r.TeamsCreated[teamname] = append(r.TeamsCreated[teamname], members...)
 }
-func (r *ReconciliatorListenerRecorder) UpdateTeamAddMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string, role string) {
+func (r *ReconciliatorListenerRecorder) UpdateTeamAddMember(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamslug string, username string, role string) {
 	r.TeamMemberAdded[teamslug] = append(r.TeamMemberAdded[teamslug], username)
 }
-func (r *ReconciliatorListenerRecorder) UpdateTeamRemoveMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string) {
+func (r *ReconciliatorListenerRecorder) UpdateTeamRemoveMember(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamslug string, username string) {
 	r.TeamMemberRemoved[teamslug] = append(r.TeamMemberRemoved[teamslug], username)
 }
-func (r *ReconciliatorListenerRecorder) UpdateTeamUpdateMember(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, username string, role string) {
+func (r *ReconciliatorListenerRecorder) UpdateTeamUpdateMember(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamslug string, username string, role string) {
 	r.TeamMemberUpdated[teamslug] = append(r.TeamMemberUpdated[teamslug], username)
 }
-func (r *ReconciliatorListenerRecorder) UpdateTeamSetParent(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string, parentTeam *int) {
+func (r *ReconciliatorListenerRecorder) UpdateTeamSetParent(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamslug string, parentTeam *int) {
 	r.TeamParentUpdated[teamslug] = parentTeam
 }
-func (r *ReconciliatorListenerRecorder) DeleteTeam(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, teamslug string) {
+func (r *ReconciliatorListenerRecorder) DeleteTeam(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, teamslug string) {
 	r.TeamDeleted[teamslug] = true
 }
-func (r *ReconciliatorListenerRecorder) CreateRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string, githubToken *string, forkFrom string) {
+func (r *ReconciliatorListenerRecorder) CreateRepository(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string, githubToken *string, forkFrom string) {
 	r.RepositoryCreated[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryAddTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	r.RepositoryTeamAdded[reponame] = append(r.RepositoryTeamAdded[reponame], teamslug)
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string, permission string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	r.RepositoryTeamUpdated[reponame] = append(r.RepositoryTeamUpdated[reponame], teamslug)
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveTeamAccess(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, teamslug string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string) {
 	r.RepositoryTeamRemoved[reponame] = append(r.RepositoryTeamRemoved[reponame], teamslug)
 }
-func (r *ReconciliatorListenerRecorder) DeleteRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string) {
+func (r *ReconciliatorListenerRecorder) DeleteRepository(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string) {
 	r.RepositoriesDeleted[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) RenameRepository(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, newname string) {
+func (r *ReconciliatorListenerRecorder) RenameRepository(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, newname string) {
 	r.RepositoriesRenamed[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateProperty(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
 	r.RepositoriesUpdateProperty[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string, permission string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string, permission string) {
 	r.RepositoriesSetExternalUser[githubid] = permission
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveExternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveExternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string) {
 	r.RepositoriesRemoveExternalUser[githubid] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveInternalUser(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, githubid string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRemoveInternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string) {
 	r.RepositoriesRemoveInternalUser[githubid] = true
 }
-func (r *ReconciliatorListenerRecorder) AddRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+func (r *ReconciliatorListenerRecorder) AddRepositoryRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
 	repo := r.RepositoryRuleSetCreated[reponame]
 	if repo == nil {
 		repo = make(map[string]*GithubRuleSet)
@@ -305,7 +305,7 @@ func (r *ReconciliatorListenerRecorder) AddRepositoryRuleset(ctx context.Context
 	}
 	repo[ruleset.Name] = ruleset
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, ruleset *GithubRuleSet) {
 	repo := r.RepositoryRuleSetUpdated[reponame]
 	if repo == nil {
 		repo = make(map[string]*GithubRuleSet)
@@ -313,7 +313,7 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositoryRuleset(ctx context.Cont
 	}
 	repo[ruleset.Name] = ruleset
 }
-func (r *ReconciliatorListenerRecorder) DeleteRepositoryRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, rulesetid int) {
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, rulesetid int) {
 	repo := r.RepositoryRuleSetDeleted[reponame]
 	if repo == nil {
 		repo = make([]int, 0)
@@ -321,7 +321,7 @@ func (r *ReconciliatorListenerRecorder) DeleteRepositoryRuleset(ctx context.Cont
 	repo = append(repo, rulesetid)
 	r.RepositoryRuleSetDeleted[reponame] = repo
 }
-func (r *ReconciliatorListenerRecorder) AddRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (r *ReconciliatorListenerRecorder) AddRepositoryBranchProtection(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	repo := r.RepositoryBranchProtectionCreated[reponame]
 	if repo == nil {
 		repo = make(map[string]*GithubBranchProtection)
@@ -329,7 +329,7 @@ func (r *ReconciliatorListenerRecorder) AddRepositoryBranchProtection(ctx contex
 	}
 	repo[branchprotection.Pattern] = branchprotection
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryBranchProtection(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	repo := r.RepositoryBranchProtectionUpdated[reponame]
 	if repo == nil {
 		repo = make(map[string]*GithubBranchProtection)
@@ -337,7 +337,7 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositoryBranchProtection(ctx con
 	}
 	repo[branchprotection.Pattern] = branchprotection
 }
-func (r *ReconciliatorListenerRecorder) DeleteRepositoryBranchProtection(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryBranchProtection(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
 	repo := r.RepositoryBranchProtectionDeleted[reponame]
 	if repo == nil {
 		repo = make(map[string]*GithubBranchProtection)
@@ -345,40 +345,40 @@ func (r *ReconciliatorListenerRecorder) DeleteRepositoryBranchProtection(ctx con
 	}
 	repo[branchprotection.Pattern] = branchprotection
 }
-func (r *ReconciliatorListenerRecorder) AddRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *GithubRuleSet) {
+func (r *ReconciliatorListenerRecorder) AddRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ruleset *GithubRuleSet) {
 	r.RuleSetCreated[ruleset.Name] = ruleset
 }
-func (r *ReconciliatorListenerRecorder) UpdateRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, ruleset *GithubRuleSet) {
+func (r *ReconciliatorListenerRecorder) UpdateRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ruleset *GithubRuleSet) {
 	r.RuleSetUpdated[ruleset.Name] = ruleset
 }
-func (r *ReconciliatorListenerRecorder) DeleteRuleset(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, rulesetid int) {
+func (r *ReconciliatorListenerRecorder) DeleteRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, rulesetid int) {
 	r.RuleSetDeleted = append(r.RuleSetDeleted, rulesetid)
 }
-func (r *ReconciliatorListenerRecorder) AddRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+func (r *ReconciliatorListenerRecorder) AddRepositoryEnvironment(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string) {
 	r.RepositoryEnvironmentCreated[repositoryName] = environmentName
 }
-func (r *ReconciliatorListenerRecorder) DeleteRepositoryEnvironment(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string) {
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryEnvironment(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string) {
 	r.RepositoryEnvironmentDeleted[repositoryName] = environmentName
 }
-func (r *ReconciliatorListenerRecorder) AddRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+func (r *ReconciliatorListenerRecorder) AddRepositoryVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
 	r.RepositoryVariableCreated[repositoryName] = variableName
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, variableName string, variableValue string) {
 	r.RepositoryVariableUpdated[repositoryName] = variableName
 }
-func (r *ReconciliatorListenerRecorder) DeleteRepositoryVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, variableName string) {
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, variableName string) {
 	r.RepositoryVariableDeleted[repositoryName] = variableName
 }
-func (r *ReconciliatorListenerRecorder) AddRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+func (r *ReconciliatorListenerRecorder) AddRepositoryEnvironmentVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
 	r.RepositoryEnvironmentVariableCreated[repositoryName] = environmentName
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryEnvironmentVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string, variableName string, variableValue string) {
 	r.RepositoryEnvironmentVariableUpdated[repositoryName] = environmentName
 }
-func (r *ReconciliatorListenerRecorder) DeleteRepositoryEnvironmentVariable(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryEnvironmentVariable(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string, variableName string) {
 	r.RepositoryEnvironmentVariableDeleted[repositoryName] = environmentName
 }
-func (r *ReconciliatorListenerRecorder) AddRepositoryAutolink(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
+func (r *ReconciliatorListenerRecorder) AddRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
 	repo := r.RepositoryAutolinkCreated[repositoryName]
 	if repo == nil {
 		autolinks := make(map[string]*GithubAutolink)
@@ -386,7 +386,7 @@ func (r *ReconciliatorListenerRecorder) AddRepositoryAutolink(ctx context.Contex
 	}
 	r.RepositoryAutolinkCreated[repositoryName][autolink.KeyPrefix] = autolink
 }
-func (r *ReconciliatorListenerRecorder) DeleteRepositoryAutolink(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, autolinkId int) {
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolinkId int) {
 	repo := r.RepositoryAutolinkDeleted[repositoryName]
 	if repo == nil {
 		autolinks := make([]int, 0)
@@ -394,7 +394,7 @@ func (r *ReconciliatorListenerRecorder) DeleteRepositoryAutolink(ctx context.Con
 	}
 	r.RepositoryAutolinkDeleted[repositoryName] = append(r.RepositoryAutolinkDeleted[repositoryName], autolinkId)
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryAutolink(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
 	repo := r.RepositoryAutolinkUpdated[repositoryName]
 	if repo == nil {
 		autolinks := make(map[string]*GithubAutolink)
@@ -402,11 +402,11 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositoryAutolink(ctx context.Con
 	}
 	r.RepositoryAutolinkUpdated[repositoryName][autolink.KeyPrefix] = autolink
 }
-func (r *ReconciliatorListenerRecorder) Begin(dryrun bool) {
+func (r *ReconciliatorListenerRecorder) Begin(logsCollector *observability.LogCollection, dryrun bool) {
 }
-func (r *ReconciliatorListenerRecorder) Rollback(dryrun bool, err error) {
+func (r *ReconciliatorListenerRecorder) Rollback(logsCollector *observability.LogCollection, dryrun bool, err error) {
 }
-func (r *ReconciliatorListenerRecorder) Commit(ctx context.Context, errorCollector *observability.ErrorCollection, dryrun bool) error {
+func (r *ReconciliatorListenerRecorder) Commit(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool) error {
 	return nil
 }
 
@@ -455,11 +455,11 @@ func TestReconciliationTeam(t *testing.T) {
 		assert.Equal(t, 2, len(lTeams))
 		assert.Equal(t, 0, len(rTeams))
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 2 members created
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 2, len(recorder.TeamsCreated["new"]))
 		assert.Equal(t, 1, len(recorder.TeamsCreated["new"+config.Config.GoliacTeamOwnerSuffix]))
 	})
@@ -503,11 +503,11 @@ func TestReconciliationTeam(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 2 members created
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 2, len(recorder.TeamsCreated["nouveauté"]))
 		assert.Equal(t, 1, len(recorder.TeamsCreated["nouveaute"+config.Config.GoliacTeamOwnerSuffix]))
 	})
@@ -569,11 +569,11 @@ func TestReconciliationTeam(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 members added
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.TeamsCreated))
 		assert.Equal(t, 1, len(recorder.TeamMemberAdded["existing"]))
 	})
@@ -636,12 +636,12 @@ func TestReconciliationTeam(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 members added
 		ctx := context.TODO()
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, "exist-ing", remote.TeamSlugByName(ctx)["exist ing"])
 		assert.Equal(t, 0, len(recorder.TeamsCreated))
 		assert.Equal(t, 1, len(recorder.TeamMemberAdded["exist-ing"]))
@@ -688,11 +688,11 @@ func TestReconciliationTeam(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 2 members created
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 2, len(recorder.TeamsCreated["new"]))
 		assert.Equal(t, 1, len(recorder.TeamsCreated["new"+config.Config.GoliacTeamOwnerSuffix]))
 		// and the everyone team
@@ -730,11 +730,11 @@ func TestReconciliationTeam(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team deleted
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.TeamDeleted))
 	})
 
@@ -808,11 +808,11 @@ func TestReconciliationTeam(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 0 parent updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.TeamParentUpdated))
 	})
 
@@ -890,11 +890,11 @@ func TestReconciliationTeam(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team parent updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 1, len(recorder.TeamParentUpdated))
 	})
 
@@ -1004,11 +1004,11 @@ func TestReconciliationTeam(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team parent updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 1, len(recorder.TeamParentUpdated))
 	})
 
@@ -1041,11 +1041,11 @@ func TestReconciliationTeam(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team deleted
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 1, len(recorder.TeamDeleted))
 	})
 }
@@ -1087,11 +1087,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 repo created
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 1, len(recorder.RepositoryCreated))
 	})
 
@@ -1146,11 +1146,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 repo created
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 1, len(recorder.RepositoryCreated))
 	})
 
@@ -1215,11 +1215,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 1, len(recorder.RepositoryTeamRemoved))
@@ -1290,11 +1290,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
@@ -1376,11 +1376,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team added
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 1, len(recorder.RepositoryTeamRemoved)) // ADMIN -> WRITE
@@ -1466,11 +1466,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team removed
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 1, len(recorder.RepositoryTeamRemoved))
@@ -1545,11 +1545,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 member removed
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
@@ -1626,11 +1626,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 member removed
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
@@ -1706,11 +1706,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 repo updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
@@ -1783,11 +1783,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 repo updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 2, len(recorder.TeamsCreated)) // the newerTeam-goliac-owners team
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
@@ -1863,11 +1863,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
@@ -1942,11 +1942,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoryTeamRemoved))
@@ -2027,11 +2027,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 team updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoriesRenamed))
@@ -2071,11 +2071,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 repo deleted
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 	})
 
@@ -2111,11 +2111,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		_, toArchive, _, _ := r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		_, toArchive, _, _ := r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 repo deleted
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 1, len(toArchive))
 	})
@@ -2152,11 +2152,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		_, toArchive, _, _ := r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		_, toArchive, _, _ := r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 repo deleted
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 1, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(toArchive))
 	})
@@ -2283,11 +2283,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "goliac-teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		_, _, toRename, _ := r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		_, _, toRename, _ := r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 repo renamed
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 1, len(toRename))
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
@@ -2424,11 +2424,11 @@ func TestReconciliationRepo(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "goliac-teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 repo renamed
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
 		assert.Equal(t, 0, len(recorder.RepositoriesRenamed))
@@ -2480,11 +2480,11 @@ func TestReconciliationRulesets(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 ruleset created
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RuleSetCreated))
 		assert.Equal(t, 0, len(recorder.RuleSetUpdated))
 		assert.Equal(t, 0, len(recorder.RuleSetDeleted))
@@ -2529,11 +2529,11 @@ func TestReconciliationRulesets(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 ruleset created
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 1, len(recorder.RuleSetCreated))
 		assert.Equal(t, 0, len(recorder.RuleSetUpdated))
 		assert.Equal(t, 0, len(recorder.RuleSetDeleted))
@@ -2586,11 +2586,11 @@ func TestReconciliationRulesets(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 ruleset created
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RuleSetCreated))
 		assert.Equal(t, 1, len(recorder.RuleSetUpdated))
 		assert.Equal(t, 0, len(recorder.RuleSetDeleted))
@@ -2633,11 +2633,11 @@ func TestReconciliationRulesets(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 1 ruleset created
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RuleSetCreated))
 		assert.Equal(t, 0, len(recorder.RuleSetUpdated))
 		assert.Equal(t, 1, len(recorder.RuleSetDeleted))
@@ -2702,14 +2702,14 @@ func TestReconciliationRulesets(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
+		logsCollector := observability.NewLogCollection()
 
 		repoconf.Rulesets = []string{"new"}
 
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// 0 ruleset changed
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RuleSetCreated))
 		assert.Equal(t, 0, len(recorder.RuleSetUpdated))
 		assert.Equal(t, 0, len(recorder.RuleSetDeleted))
@@ -2808,10 +2808,10 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoryRuleSetCreated["myrepo"]))
 		assert.Equal(t, 0, len(recorder.RepositoryRuleSetUpdated["myrepo"]))
@@ -2898,10 +2898,10 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 1, len(recorder.RepositoryRuleSetCreated["myrepo"]))
 		assert.Equal(t, 0, len(recorder.RepositoryRuleSetUpdated["myrepo"]))
@@ -2990,10 +2990,10 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 0, len(recorder.RepositoryBranchProtectionCreated["myrepo"]))
 		assert.Equal(t, 0, len(recorder.RepositoryBranchProtectionUpdated["myrepo"]))
@@ -3074,10 +3074,10 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
 		assert.Equal(t, 1, len(recorder.RepositoryBranchProtectionCreated["myrepo"]))
 		assert.Equal(t, 0, len(recorder.RepositoryBranchProtectionUpdated["myrepo"]))
@@ -3132,11 +3132,11 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// Verify environment was added
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, "production", recorder.RepositoryEnvironmentCreated["test-repo"])
 	})
 
@@ -3187,11 +3187,11 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// Verify environment was removed
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, "production", recorder.RepositoryEnvironmentDeleted["test-repo"])
 	})
 
@@ -3249,11 +3249,11 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// Verify environment variables were updated
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, "production", recorder.RepositoryEnvironmentVariableUpdated["test-repo"])
 	})
 }
@@ -3306,11 +3306,11 @@ func TestReconciliationAutolinks(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// Verify environment was added
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, "https://example.com/TICKET?query=<num>", recorder.RepositoryAutolinkCreated["test-repo"]["TICKET-"].UrlTemplate)
 	})
 
@@ -3361,11 +3361,11 @@ func TestReconciliationAutolinks(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// Verify environment was added
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 12345, recorder.RepositoryAutolinkDeleted["test-repo"][0])
 	})
 
@@ -3417,11 +3417,11 @@ func TestReconciliationAutolinks(t *testing.T) {
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
-		errorCollector := observability.NewErrorCollection()
-		r.Reconciliate(context.TODO(), errorCollector, localDatasource, remoteDatasource, true, false, true, true)
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
 
 		// Verify environment was added
-		assert.False(t, errorCollector.HasErrors())
+		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryAutolinkDeleted["test-repo"]))
 	})
 
