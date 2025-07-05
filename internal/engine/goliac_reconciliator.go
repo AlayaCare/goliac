@@ -90,21 +90,25 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, logsCollecto
  * This function sync teams and team's members
  */
 func (r *GoliacReconciliatorImpl) reconciliateUsers(ctx context.Context, logsCollector *observability.LogCollection, local GoliacReconciliatorDatasource, remote *MutableGoliacRemoteImpl, dryrun bool) error {
-	rUsers := remote.Users()
+	ghUsers := remote.Users()
+
+	rUsers := make(map[string]string)
+	for rUser, membership := range ghUsers {
+		rUsers[rUser] = membership
+	}
 
 	for _, lUser := range local.Users() {
-		user, ok := rUsers[lUser]
-
+		_, ok := rUsers[lUser]
 		if !ok {
 			// deal with non existing remote user
 			r.AddUserToOrg(ctx, logsCollector, dryrun, remote, lUser)
 		} else {
-			delete(rUsers, user)
+			delete(rUsers, lUser)
 		}
 	}
 
 	// remaining (GH) users (aka not found locally)
-	for _, rUser := range rUsers {
+	for rUser := range rUsers {
 		// DELETE User
 		r.RemoveUserFromOrg(ctx, logsCollector, dryrun, remote, rUser)
 	}
@@ -763,9 +767,6 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, logs
 
 	// prepare remote comparable
 	rgrs := remote.RuleSets()
-	if err != nil {
-		return err
-	}
 
 	// prepare the diff computation
 
