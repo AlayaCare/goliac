@@ -2,6 +2,7 @@
 
 - internal refactor to make the code more modular (and introduce reconciliator "datasource")
 - refactor UX CLI, in particular the progressbar (and the lazy loading)
+- vue/cli-service security update
 
 ## Goliac v1.1.0
 
