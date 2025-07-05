@@ -1,3 +1,7 @@
+## Goliac v1.2.0
+
+- internal refactor to make the code more modular (and introduce reconciliator "datasource")
+
 ## Goliac v1.1.0
 
 - add repository autolink management

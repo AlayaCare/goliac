@@ -573,7 +573,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, errorCollector *o
 
 	// if the repo was just archived in a previous commit and we "resume it"
 	// so we keep a track of all repos that we want to archive until the end of the process
-	reposToArchive := make(map[string]*engine.GithubRepoComparable)
+	var reposToArchive map[string]*engine.GithubRepoComparable
 	// map[oldreponame]*entity.Repository
 	reposToRename := make(map[string]*entity.Repository)
 	var unmanaged *engine.UnmanagedResources
@@ -588,7 +588,19 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, errorCollector *o
 
 	// the repo has already been cloned (to HEAD) and validated (see loadAndValidateGoliacOrganization)
 	// we can now apply the changes to the github team repository
-	unmanaged, err = reconciliator.Reconciliate(ctx, errorCollector, g.local, g.remote, teamreponame, branch, dryrun, g.repoconfig.AdminTeam, reposToArchive, reposToRename, config.Config.ManageGithubActionsVariables, config.Config.ManageGithubAutolinks)
+	isEnterprise := g.remote.IsEnterprise()
+	localDatasource := engine.NewGoliacReconciliatorDatasourceLocal(g.local, teamreponame, branch, isEnterprise, g.repoconfig)
+	remoteDataSource := engine.NewGoliacReconciliatorDatasourceRemote(g.remote)
+	unmanaged, reposToArchive, renameTo, err := reconciliator.Reconciliate(
+		ctx,
+		errorCollector,
+		localDatasource,
+		remoteDataSource,
+		isEnterprise,
+		dryrun,
+		config.Config.ManageGithubActionsVariables,
+		config.Config.ManageGithubAutolinks,
+	)
 	if err != nil {
 		return unmanaged, fmt.Errorf("error when reconciliating: %v", err)
 	}
@@ -604,6 +616,12 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, errorCollector *o
 	accessToken, err := g.localGithubClient.GetAccessToken(ctx)
 	if err != nil {
 		return unmanaged, err
+	}
+
+	for reponame := range renameTo {
+		if oldRepo, ok := g.local.Repositories()[reponame]; ok {
+			reposToRename[reponame] = oldRepo
+		}
 	}
 
 	// if we have repos to create as archived or to rename
