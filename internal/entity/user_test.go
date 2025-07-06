@@ -25,10 +25,10 @@ spec:
 `), 0644)
 		assert.Nil(t, err)
 
-		errorCollector := observability.NewErrorCollection()
-		users := ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, users)
 		assert.Equal(t, len(users), 1)
 		user1 := users["user1"]
@@ -48,10 +48,10 @@ spec:
   githubID: github1
 `), 0644)
 		assert.Nil(t, err)
-		errorCollector := observability.NewErrorCollection()
-		users := ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, users)
 		assert.Equal(t, len(users), 1)
 		user1 := users["user1"]
@@ -62,10 +62,10 @@ spec:
 	t.Run("not happy path: no users directory", func(t *testing.T) {
 		// create a new user starting with "---"
 		fs := memfs.New()
-		errorCollector := observability.NewErrorCollection()
-		ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, false, errorCollector.HasErrors())
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, false, logsCollector.HasErrors())
+		assert.Equal(t, false, logsCollector.HasWarns())
 	})
 
 	t.Run("not happy path: missing metadata", func(t *testing.T) {
@@ -79,10 +79,10 @@ spec:
   githubID: github1
 `), 0644)
 		assert.Nil(t, err)
-		errorCollector := observability.NewErrorCollection()
-		ReadUserDirectory(fs, "users", errorCollector)
-		assert.Equal(t, 1, len(errorCollector.Errors))
-		assert.Equal(t, false, errorCollector.HasWarns())
+		logsCollector := observability.NewLogCollection()
+		ReadUserDirectory(fs, "users", logsCollector)
+		assert.Equal(t, 1, len(logsCollector.Errors))
+		assert.Equal(t, false, logsCollector.HasWarns())
 	})
 }
 

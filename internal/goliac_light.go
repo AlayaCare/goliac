@@ -14,7 +14,7 @@ import (
  */
 type GoliacLight interface {
 	// Validate a local teams directory
-	Validate(path string, errorCollector *observability.ErrorCollection)
+	Validate(path string, logsCollector *observability.LogCollection)
 }
 
 type GoliacLightImpl struct {
@@ -29,7 +29,7 @@ func NewGoliacLightImpl() (GoliacLight, error) {
 	}, nil
 }
 
-func (g *GoliacLightImpl) Validate(path string, errorCollector *observability.ErrorCollection) {
+func (g *GoliacLightImpl) Validate(path string, logsCollector *observability.LogCollection) {
 	fs := osfs.New(path)
-	g.local.LoadAndValidateLocal(fs, errorCollector)
+	g.local.LoadAndValidateLocal(fs, logsCollector)
 }

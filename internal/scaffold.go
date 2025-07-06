@@ -73,24 +73,25 @@ func (s *Scaffold) SetRemoteObservability(feedback observability.RemoteObservabi
 /*
  * Generate will generate a full teams directory structure compatible with Goliac
  */
-func (s *Scaffold) Generate(ctx context.Context, rootpath string, adminteam string, usersOnly bool) error {
+func (s *Scaffold) Generate(ctx context.Context, rootpath string, adminteam string, usersOnly bool, logCollector *observability.LogCollection) {
 	if _, err := os.Stat(rootpath); os.IsNotExist(err) {
 		// Create the directory if it does not exist
 		err := os.MkdirAll(rootpath, 0755)
 		if err != nil {
-			return fmt.Errorf("error creating directory: %v", err)
+			logCollector.AddError(fmt.Errorf("error creating directory: %v", err))
+			return
 		}
 	}
 	fs := osfs.New(rootpath)
 
 	if err := s.remote.Load(ctx, true); err != nil {
-		logrus.Warnf("Not able to load all information from Github: %v, but I will try to continue", err)
+		logCollector.AddWarn(fmt.Errorf("not able to load all information from Github: %v, but I will try to continue", err))
 	}
 
-	return s.generate(ctx, fs, adminteam, usersOnly)
+	s.generate(ctx, fs, adminteam, usersOnly, logCollector)
 }
 
-func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam string, usersOnly bool) error {
+func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam string, usersOnly bool, logCollector *observability.LogCollection) {
 	utils.RemoveAll(fs, "users")
 	utils.RemoveAll(fs, "teams")
 	utils.RemoveAll(fs, "rulesets")
@@ -102,40 +103,47 @@ func (s *Scaffold) generate(ctx context.Context, fs billy.Filesystem, adminteam 
 	fs.MkdirAll("teams", 0755)
 	fs.MkdirAll("workflows", 0755)
 
-	usermap, err := s.generateUsers(ctx, fs, "users")
-	if err != nil {
-		return fmt.Errorf("error creaing the users directory: %v", err)
+	usermap := s.generateUsers(ctx, fs, "users", logCollector)
+	if logCollector.HasErrors() {
+		return
 	}
 
-	err = s.generateTeams(ctx, fs, "teams", "archived", usermap, adminteam, usersOnly)
-	if err != nil {
-		return fmt.Errorf("error creating the teams directory: %v", err)
+	s.generateTeams(ctx, fs, "teams", "archived", usermap, adminteam, usersOnly, logCollector)
+	if logCollector.HasErrors() {
+		return
 	}
 
-	if err := s.generateRuleset(fs, "rulesets"); err != nil {
-		return fmt.Errorf("error creating the rulesets directory: %v", err)
+	s.generateRuleset(fs, "rulesets", logCollector)
+	if logCollector.HasErrors() {
+		return
 	}
 
-	if err := s.generateGoliacConf(fs, ".", adminteam); err != nil {
-		return fmt.Errorf("error creating the goliac.yaml file: %v", err)
+	s.generateGoliacConf(fs, ".", adminteam, logCollector)
+	if logCollector.HasErrors() {
+		return
 	}
 
-	if err := s.generateGithubAction(fs, "."); err != nil {
-		return fmt.Errorf("error creating the .github/workflows/pr.yaml file: %v", err)
+	s.generateGithubAction(fs, ".", logCollector)
+	if logCollector.HasErrors() {
+		return
 	}
 
-	if err := s.generateReadme(fs, "."); err != nil {
-		return fmt.Errorf("error creating the README.md file: %v", err)
+	s.generateReadme(fs, ".", logCollector)
+	if logCollector.HasErrors() {
+		return
 	}
 
-	if err := s.generateWorkflowStandard(fs, ".", adminteam); err != nil {
-		return fmt.Errorf("error creating the workflows/standard.yaml file: %v", err)
+	s.generateWorkflowStandard(fs, ".", adminteam, logCollector)
+	if logCollector.HasErrors() {
+		return
 	}
 
-	return nil
+	if s.feedback != nil {
+		s.feedback.LoadingAsset("finish", 1)
+	}
 }
 
-func (s *Scaffold) generateWorkflowStandard(fs billy.Filesystem, rootpath string, adminTeam string) error {
+func (s *Scaffold) generateWorkflowStandard(fs billy.Filesystem, rootpath string, adminTeam string, logCollector *observability.LogCollection) {
 
 	workflow := fmt.Sprintf(`#apiVersion: v1
 #kind: Workflow
@@ -154,11 +162,12 @@ func (s *Scaffold) generateWorkflowStandard(fs billy.Filesystem, rootpath string
 #      properties:
 #        project_key: SRE
 `, adminTeam)
-	writeFile(filepath.Join(rootpath, "workflows", "standard.yaml"), []byte(workflow), fs)
-	return nil
+	if err := writeFile(filepath.Join(rootpath, "workflows", "standard.yaml"), []byte(workflow), fs); err != nil {
+		logCollector.AddError(fmt.Errorf("not able to write workflow file %s/workflows/standard.yaml: %v", rootpath, err))
+	}
 }
 
-func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teamspath string, archivepath string, usermap map[string]string, adminteam string, usersOnly bool) error {
+func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teamspath string, archivepath string, usermap map[string]string, adminteam string, usersOnly bool, logCollector *observability.LogCollection) {
 	teamsRepositories := s.remote.TeamRepositories(ctx)
 	teams := s.remote.Teams(ctx, false)
 	teamsSlugByName := s.remote.TeamSlugByName(ctx)
@@ -270,7 +279,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 			countOrphaned++
 		}
 	}
-	logrus.Infof("%d orphaned repositories have been added to the admin %s team", countOrphaned, adminteam)
+	logCollector.AddInfo(map[string]any{}, "%d orphaned repositories have been added to the admin %s team", countOrphaned, adminteam)
 
 	for team, repos := range teamsRepos {
 		// write the team dir
@@ -476,11 +485,11 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 				}
 				if lRepo.Archived {
 					if err := writeYamlFile(path.Join(archivepath, r+".yaml"), &lRepo, fs); err != nil {
-						logrus.Errorf("not able to write archived repo file %s/%s.yaml: %v", archivepath, r, err)
+						logCollector.AddError(fmt.Errorf("not able to write archived repo file %s/%s.yaml: %v", archivepath, r, err))
 					}
 				} else {
 					if err := writeYamlFile(path.Join(teamspath, teamPath, r+".yaml"), &lRepo, fs); err != nil {
-						logrus.Errorf("not able to write repo file %s/%s.yaml: %v", team, r, err)
+						logCollector.AddError(fmt.Errorf("not able to write repo file %s/%s.yaml: %v", team, r, err))
 					}
 				}
 			}
@@ -489,7 +498,7 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 
 	// if usersOnly
 	if usersOnly {
-		return nil
+		return
 	}
 
 	for teamName, slugName := range teamsSlugByName {
@@ -530,18 +539,16 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 
 			teamPath, err := buildTeamPath(teamIds, teams[slugName])
 			if err != nil {
-				logrus.Errorf("unable to compute team's path: %v (for team %s)", err, teamName)
+				logCollector.AddError(fmt.Errorf("unable to compute team's path: %v (for team %s)", err, teamName))
 				continue
 			}
 			fs.MkdirAll(filepath.Join(teamspath, teamPath), 0755)
 			if err := writeYamlFile(filepath.Join(teamspath, teamPath, "team.yaml"), &lTeam, fs); err != nil {
-				logrus.Errorf("not able to write team file %s/team.yaml: %v", teamPath, err)
+				logCollector.AddError(fmt.Errorf("not able to write team file %s/team.yaml: %v", teamPath, err))
 			}
 
 		}
 	}
-
-	return nil
 }
 
 func buildTeamPath(teamIds map[int]*engine.GithubTeam, team *engine.GithubTeam) (string, error) {
@@ -570,7 +577,7 @@ func buildTeamPath(teamIds map[int]*engine.GithubTeam, team *engine.GithubTeam) 
 /*
  * Returns a map[<githubid>]<username>
  */
-func (s *Scaffold) generateUsers(ctx context.Context, fs billy.Filesystem, userspath string) (map[string]string, error) {
+func (s *Scaffold) generateUsers(ctx context.Context, fs billy.Filesystem, userspath string, logCollector *observability.LogCollection) map[string]string {
 	fs.MkdirAll(path.Join(userspath, "protected"), 0755)
 	fs.MkdirAll(path.Join(userspath, "org"), 0755)
 	fs.MkdirAll(path.Join(userspath, "external"), 0755)
@@ -584,7 +591,7 @@ func (s *Scaffold) generateUsers(ctx context.Context, fs billy.Filesystem, users
 		for username, user := range users {
 			usermap[user.Spec.GithubID] = username
 			if err := writeYamlFile(path.Join(userspath, "org", username+".yaml"), &user, fs); err != nil {
-				logrus.Errorf("Not able to write user file org/%s.yaml: %v", username, err)
+				logCollector.AddError(fmt.Errorf("not able to write user file org/%s.yaml: %v", username, err))
 			}
 		}
 	} else {
@@ -599,15 +606,15 @@ func (s *Scaffold) generateUsers(ctx context.Context, fs billy.Filesystem, users
 			user.Spec.GithubID = githubid
 
 			if err := writeYamlFile(path.Join(userspath, "org", githubid+".yaml"), user, fs); err != nil {
-				logrus.Errorf("Not able to write user file org/%s.yaml: %v", githubid, err)
+				logCollector.AddError(fmt.Errorf("not able to write user file org/%s.yaml: %v", githubid, err))
 			}
 		}
 	}
 
-	return usermap, nil
+	return usermap
 }
 
-func (s *Scaffold) generateRuleset(fs billy.Filesystem, rulesetspath string) error {
+func (s *Scaffold) generateRuleset(fs billy.Filesystem, rulesetspath string, logCollector *observability.LogCollection) {
 	ruleset := fmt.Sprintf(`apiVersion: v1
 kind: Ruleset
 name: default
@@ -629,13 +636,11 @@ spec:
           requiredApprovingReviewCount: 1
 `, s.githubappname)
 	if err := writeFile(path.Join(rulesetspath, "default.yaml"), []byte(ruleset), fs); err != nil {
-		return err
+		logCollector.AddError(fmt.Errorf("not able to write ruleset file %s/default.yaml: %v", rulesetspath, err))
 	}
-	return nil
-
 }
 
-func (s *Scaffold) generateGoliacConf(fs billy.Filesystem, rootpath string, adminteam string) error {
+func (s *Scaffold) generateGoliacConf(fs billy.Filesystem, rootpath string, adminteam string, logCollector *observability.LogCollection) {
 	userplugin := "noop"
 	if s.remote.IsEnterprise() {
 		userplugin = "fromgithubsaml"
@@ -667,12 +672,11 @@ usersync:
 #   - standard
 `, adminteam, userplugin)
 	if err := writeFile(filepath.Join(rootpath, "goliac.yaml"), []byte(conf), fs); err != nil {
-		return err
+		logCollector.AddError(fmt.Errorf("not able to write goliac.yaml file %s/goliac.yaml: %v", rootpath, err))
 	}
-	return nil
 }
 
-func (s *Scaffold) generateGithubAction(fs billy.Filesystem, rootpath string) error {
+func (s *Scaffold) generateGithubAction(fs billy.Filesystem, rootpath string, logCollector *observability.LogCollection) {
 	fs.MkdirAll(filepath.Join(rootpath, ".github", "workflows"), 0755)
 
 	workflow := `
@@ -691,12 +695,11 @@ jobs:
         run: docker run -v ${{ github.workspace }}:/work --rm ghcr.io/goliac-project/goliac verify /work
 `
 	if err := writeFile(filepath.Join(rootpath, ".github", "workflows", "pr.yaml"), []byte(workflow), fs); err != nil {
-		return err
+		logCollector.AddError(fmt.Errorf("not able to write github action file %s/.github/workflows/pr.yaml: %v", rootpath, err))
 	}
-	return nil
 }
 
-func (s *Scaffold) generateReadme(fs billy.Filesystem, rootpath string) error {
+func (s *Scaffold) generateReadme(fs billy.Filesystem, rootpath string, logCollector *observability.LogCollection) {
 	readme := `
 # teams
 
@@ -780,9 +783,8 @@ You can still "attach" repositories to this team, but you will have to manage th
 
 `
 	if err := writeFile(filepath.Join(rootpath, "README.md"), []byte(readme), fs); err != nil {
-		return err
+		logCollector.AddError(fmt.Errorf("not able to write README.md file %s/README.md: %v", rootpath, err))
 	}
-	return nil
 }
 
 // helper function to write a yaml file (with 2 spaces indentation)

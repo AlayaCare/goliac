@@ -264,8 +264,9 @@ func TestScaffoldUnit(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		users, err := scaffold.generateUsers(ctx, fs, "/users")
-		assert.Nil(t, err)
+		logCollector := observability.NewLogCollection()
+		users := scaffold.generateUsers(ctx, fs, "/users", logCollector)
+		assert.False(t, logCollector.HasErrors())
 		assert.Equal(t, 4, len(users))
 
 		found, err := utils.Exists(fs, "/users/org/githubid1.yaml")
@@ -283,8 +284,9 @@ func TestScaffoldUnit(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		users, err := scaffold.generateUsers(ctx, fs, "/users")
-		assert.Nil(t, err)
+		logCollector := observability.NewLogCollection()
+		users := scaffold.generateUsers(ctx, fs, "/users", logCollector)
+		assert.False(t, logCollector.HasErrors())
 		assert.Equal(t, 3, len(users))
 
 		found, err := utils.Exists(fs, "/users/org/user1@company.com.yaml")
@@ -301,8 +303,9 @@ func TestScaffoldUnit(t *testing.T) {
 			loadUsersFromGithubOrgSaml: LoadGithubSamlUsersMock,
 		}
 
-		err := scaffold.generateRuleset(fs, "/rulesets")
-		assert.Nil(t, err)
+		logCollector := observability.NewLogCollection()
+		scaffold.generateRuleset(fs, "/rulesets", logCollector)
+		assert.False(t, logCollector.HasErrors())
 
 		found, err := utils.Exists(fs, "/rulesets/default.yaml")
 		assert.Nil(t, err)
@@ -318,8 +321,9 @@ func TestScaffoldUnit(t *testing.T) {
 			loadUsersFromGithubOrgSaml: LoadGithubSamlUsersMock,
 		}
 
-		err := scaffold.generateGoliacConf(fs, "/", "admin")
-		assert.Nil(t, err)
+		logCollector := observability.NewLogCollection()
+		scaffold.generateGoliacConf(fs, "/", "admin", logCollector)
+		assert.False(t, logCollector.HasErrors())
 
 		found, err := utils.Exists(fs, "/goliac.yaml")
 		assert.Nil(t, err)
@@ -335,8 +339,9 @@ func TestScaffoldUnit(t *testing.T) {
 			loadUsersFromGithubOrgSaml: LoadGithubSamlUsersMock,
 		}
 
-		err := scaffold.generateGithubAction(fs, "/")
-		assert.Nil(t, err)
+		logCollector := observability.NewLogCollection()
+		scaffold.generateGithubAction(fs, "/", logCollector)
+		assert.False(t, logCollector.HasErrors())
 
 		found, err := utils.Exists(fs, "/.github/workflows/pr.yaml")
 		assert.Nil(t, err)
@@ -448,8 +453,9 @@ func TestEnvironmentsAndVariables(t *testing.T) {
 			loadUsersFromGithubOrgSaml: NoLoadGithubSamlUsersMock,
 		}
 
-		err := scaffold.generateTeams(context.TODO(), fs, "/teams", "/archived", users, "admin", false)
-		assert.Nil(t, err)
+		logCollector := observability.NewLogCollection()
+		scaffold.generateTeams(context.TODO(), fs, "/teams", "/archived", users, "admin", false, logCollector)
+		assert.False(t, logCollector.HasErrors())
 
 		found, err := utils.Exists(fs, "/teams/admin/team.yaml")
 		assert.Nil(t, err)
@@ -491,12 +497,13 @@ func TestScaffoldFull(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		users, err := scaffold.generateUsers(ctx, fs, "/users")
-		assert.Nil(t, err)
+		logCollector := observability.NewLogCollection()
+		users := scaffold.generateUsers(ctx, fs, "/users", logCollector)
+		assert.False(t, logCollector.HasErrors())
 		assert.Equal(t, 4, len(users))
 
-		err = scaffold.generateTeams(ctx, fs, "/teams", "/archived", users, "admin", false)
-		assert.Nil(t, err)
+		scaffold.generateTeams(ctx, fs, "/teams", "/archived", users, "admin", false, logCollector)
+		assert.False(t, logCollector.HasErrors())
 
 		found, err := utils.Exists(fs, "/teams/admin/team.yaml")
 		assert.Nil(t, err)
@@ -517,12 +524,13 @@ func TestScaffoldFull(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		users, err := scaffold.generateUsers(ctx, fs, "/users")
-		assert.Nil(t, err)
+		logCollector := observability.NewLogCollection()
+		users := scaffold.generateUsers(ctx, fs, "/users", logCollector)
+		assert.False(t, logCollector.HasErrors())
 		assert.Equal(t, 3, len(users))
 
-		err = scaffold.generateTeams(ctx, fs, "/teams", "/archived", users, "admin", false)
-		assert.Nil(t, err)
+		scaffold.generateTeams(ctx, fs, "/teams", "/archived", users, "admin", false, logCollector)
+		assert.False(t, logCollector.HasErrors())
 
 		found, err := utils.Exists(fs, "/teams/admin/team.yaml")
 		assert.Nil(t, err)
@@ -571,12 +579,13 @@ func TestScaffoldFull(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		users, err := scaffold.generateUsers(ctx, fs, "/users")
-		assert.Nil(t, err)
+		logCollector := observability.NewLogCollection()
+		users := scaffold.generateUsers(ctx, fs, "/users", logCollector)
+		assert.False(t, logCollector.HasErrors())
 		assert.Equal(t, 4, len(users))
 
-		err = scaffold.generateTeams(ctx, fs, "/teams", "/archived", users, "admin", false)
-		assert.Nil(t, err)
+		scaffold.generateTeams(ctx, fs, "/teams", "/archived", users, "admin", false, logCollector)
+		assert.False(t, logCollector.HasErrors())
 
 		found, err := utils.Exists(fs, "/teams/regular/team.yaml")
 		assert.Nil(t, err)
@@ -601,12 +610,13 @@ func TestScaffoldFull(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		users, err := scaffold.generateUsers(ctx, fs, "/users")
-		assert.Nil(t, err)
+		logCollector := observability.NewLogCollection()
+		users := scaffold.generateUsers(ctx, fs, "/users", logCollector)
+		assert.False(t, logCollector.HasErrors())
 		assert.Equal(t, 4, len(users))
 
-		err = scaffold.generateTeams(ctx, fs, "/teams", "/archived", users, "admin", false)
-		assert.Nil(t, err)
+		scaffold.generateTeams(ctx, fs, "/teams", "/archived", users, "admin", false, logCollector)
+		assert.False(t, logCollector.HasErrors())
 
 		found, err := utils.Exists(fs, "/teams/admin/team.yaml")
 		assert.Nil(t, err)

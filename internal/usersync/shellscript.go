@@ -18,14 +18,14 @@ func NewUserSyncPluginShellScript() engine.UserSyncPlugin {
 	return &UserSyncPluginShellScript{}
 }
 
-func (p *UserSyncPluginShellScript) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, errorCollector *observability.ErrorCollection) map[string]*entity.User {
+func (p *UserSyncPluginShellScript) UpdateUsers(repoconfig *config.RepositoryConfig, fs billy.Filesystem, orguserdirrectorypath string, feedback observability.RemoteObservability, logsCollector *observability.LogCollection) map[string]*entity.User {
 	cmd := exec.Command(repoconfig.UserSync.Path, filepath.Join(fs.Root(), orguserdirrectorypath))
 	_, err := cmd.CombinedOutput()
 	if err != nil {
-		errorCollector.AddError(fmt.Errorf("not able to run the shell script: %w", err))
+		logsCollector.AddError(fmt.Errorf("not able to run the shell script: %w", err))
 		return nil
 	}
 
-	users := entity.ReadUserDirectory(fs, orguserdirrectorypath, errorCollector)
+	users := entity.ReadUserDirectory(fs, orguserdirrectorypath, logsCollector)
 	return users
 }
