@@ -1,3 +1,7 @@
+## Goliac v1.2.1
+
+- security update: nodejs form-data update to 4.0.4
+
 ## Goliac v1.2.0
 
 - internal refactor to make the code more modular (and introduce reconciliator "datasource")
