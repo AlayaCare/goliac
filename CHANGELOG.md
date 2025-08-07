@@ -1,3 +1,9 @@
+## Goliac v1.2.1
+
+- security update: nodejs form-data update to 4.0.4
+- enhance error message (especially naming explicitely the repository or team involved)
+- Github client bugfix: when PAT is provided, dont try to read the (nonprovided) private key
+
 ## Goliac v1.2.0
 
 - internal refactor to make the code more modular (and introduce reconciliator "datasource")

@@ -100,9 +100,13 @@ func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, erro
  * )
  */
 func NewGitHubClientImpl(githubServer, organizationName string, appID int64, privateKeyFile string, patToken string) (GitHubClient, error) {
-	privateKey, err := os.ReadFile(privateKeyFile)
-	if err != nil {
-		return nil, err
+	var privateKey []byte
+	var err error
+	if patToken == "" {
+		privateKey, err = os.ReadFile(privateKeyFile)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	client := &GitHubClientImpl{
