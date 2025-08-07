@@ -2287,7 +2287,7 @@ func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, logsCollect
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to add ruleset to repository: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add ruleset to repository %s: %v. %s", reponame, err, string(body)))
 			return
 		}
 		type AddRepositoryRulesetResponse struct {
@@ -2331,7 +2331,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, logsColl
 	}
 
 	if !found {
-		logsCollector.AddError(fmt.Errorf("ruleset %d not found", ruleset.Id))
+		logsCollector.AddError(fmt.Errorf("ruleset %d not found in repository %s", ruleset.Id, reponame))
 		return
 	}
 
@@ -2345,7 +2345,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, logsColl
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to update ruleset %d to repository: %v. %s", ruleset.Id, err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to update ruleset %d to repository %s: %v. %s", ruleset.Id, reponame, err, string(body)))
 			return
 		}
 	}
@@ -2381,7 +2381,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, logsColl
 	}
 
 	if !found {
-		logsCollector.AddError(fmt.Errorf("ruleset %d not found", rulesetid))
+		logsCollector.AddError(fmt.Errorf("ruleset %d not found in repository %s", rulesetid, reponame))
 		return
 	}
 
@@ -2395,7 +2395,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryRuleset(ctx context.Context, logsColl
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to remove ruleset from repository: %v", err))
+			logsCollector.AddError(fmt.Errorf("failed to remove ruleset %d from repository %s: %v", rulesetid, reponame, err))
 			return
 		}
 	}
@@ -2519,7 +2519,7 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, lo
 			return
 		}
 		if len(res.Errors) > 0 {
-			logsCollector.AddError(fmt.Errorf("graphql error on AddRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
+			logsCollector.AddError(fmt.Errorf("graphql error on AddRepositoryBranchProtection on repository %s: %v (%v)", reponame, res.Errors[0].Message, res.Errors[0].Path))
 			return
 		}
 
@@ -2628,7 +2628,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 			return
 		}
 		if len(res.Errors) > 0 {
-			logsCollector.AddError(fmt.Errorf("graphql error on UpdateRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
+			logsCollector.AddError(fmt.Errorf("graphql error on UpdateRepositoryBranchProtection on repository %s: %v (%v)", reponame, res.Errors[0].Message, res.Errors[0].Path))
 			return
 		}
 	}
@@ -2692,7 +2692,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 			return
 		}
 		if len(res.Errors) > 0 {
-			logsCollector.AddError(fmt.Errorf("graphql error on DeleteRepositoryBranchProtection: %v (%v)", res.Errors[0].Message, res.Errors[0].Path))
+			logsCollector.AddError(fmt.Errorf("graphql error on DeleteRepositoryBranchProtection on repository %s: %v (%v)", reponame, res.Errors[0].Message, res.Errors[0].Path))
 			return
 		}
 	}
@@ -2861,7 +2861,7 @@ func (g *GoliacRemoteImpl) UpdateTeamAddMember(ctx context.Context, logsCollecto
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to add team member: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add team member %s to team %s: %v. %s", username, teamslug, err, string(body)))
 			return
 		}
 	}
@@ -2926,7 +2926,7 @@ func (g *GoliacRemoteImpl) UpdateTeamUpdateMember(ctx context.Context, logsColle
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to update team member: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to update team member %s in team %s: %v. %s", username, teamslug, err, string(body)))
 			return
 		}
 	}
@@ -3002,7 +3002,7 @@ func (g *GoliacRemoteImpl) UpdateTeamRemoveMember(ctx context.Context, logsColle
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to remove team member: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to remove team member %s from team %s: %v. %s", username, teamslug, err, string(body)))
 			return
 		}
 	}
@@ -3047,7 +3047,7 @@ func (g *GoliacRemoteImpl) UpdateTeamSetParent(ctx context.Context, logsCollecto
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to set parent team: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to set parent team %s: %v. %s", teamslug, err, string(body)))
 			return
 		}
 	}
@@ -3075,7 +3075,7 @@ func (g *GoliacRemoteImpl) DeleteTeam(ctx context.Context, logsCollector *observ
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to delete a team: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to delete team %s: %v. %s", teamslug, err, string(body)))
 			return
 		}
 	}
@@ -3125,14 +3125,14 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, logsCollector *
 				githubToken, // if nil, we use the default Goliac token
 			)
 			if err != nil {
-				logsCollector.AddError(fmt.Errorf("failed to fork repository: %v. %s", err, string(body)))
+				logsCollector.AddError(fmt.Errorf("failed to fork repository %s: %v. %s", reponame, err, string(body)))
 				return
 			}
 			// get the repo id
 			var resp CreateRepositoryResponse
 			err = json.Unmarshal(body, &resp)
 			if err != nil {
-				logsCollector.AddError(fmt.Errorf("failed to read the create repository action response: %v", err))
+				logsCollector.AddError(fmt.Errorf("failed to read the create repository action response for repository %s: %v", reponame, err))
 				return
 			}
 			repoId = resp.Id
@@ -3159,7 +3159,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, logsCollector *
 				githubToken, // if nil, we use the default Goliac token
 			)
 			if err != nil {
-				logsCollector.AddError(fmt.Errorf("failed to create repository: %v. %s", err, string(body)))
+				logsCollector.AddError(fmt.Errorf("failed to create repository %s: %v. %s", reponame, err, string(body)))
 				return
 			}
 
@@ -3167,7 +3167,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, logsCollector *
 			var resp CreateRepositoryResponse
 			err = json.Unmarshal(body, &resp)
 			if err != nil {
-				logsCollector.AddError(fmt.Errorf("failed to read the create repository action response: %v", err))
+				logsCollector.AddError(fmt.Errorf("failed to read the create repository action response for repository %s: %v", reponame, err))
 				return
 			}
 			repoId = resp.Id
@@ -3204,7 +3204,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, logsCollector *
 				nil, // we keep the default Goliac token
 			)
 			if err != nil {
-				logsCollector.AddError(fmt.Errorf("failed to create repository (and add members): %v. %s", err, string(body)))
+				logsCollector.AddError(fmt.Errorf("failed to create repository %s (and add members): %v. %s", reponame, err, string(body)))
 				return
 			}
 		}
@@ -3231,7 +3231,7 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, logsCollector *
 				nil, // we keep the default Goliac token
 			)
 			if err != nil {
-				logsCollector.AddError(fmt.Errorf("failed to create repository (and add members): %v. %s", err, string(body)))
+				logsCollector.AddError(fmt.Errorf("failed to create repository %s (and add members): %v. %s", reponame, err, string(body)))
 				return
 			}
 		}
@@ -3274,7 +3274,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAddTeamAccess(ctx context.Context, lo
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to add team access: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add team access %s to repository %s: %v. %s", teamslug, reponame, err, string(body)))
 			return
 		}
 	}
@@ -3323,7 +3323,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateTeamAccess(ctx context.Context,
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to add team access: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add team access %s to repository %s: %v. %s", teamslug, reponame, err, string(body)))
 			return
 		}
 	}
@@ -3372,7 +3372,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRemoveTeamAccess(ctx context.Context,
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to remove team access: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to remove team access %s from repository %s: %v. %s", teamslug, reponame, err, string(body)))
 			return
 		}
 	}
@@ -3406,7 +3406,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, l
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to update repository %s setting: %v. %s", propertyName, err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to update repository %s, %s setting: %v. %s", reponame, propertyName, err, string(body)))
 			return
 		}
 	}
@@ -3437,7 +3437,7 @@ func (g *GoliacRemoteImpl) UpdateRepositorySetExternalUser(ctx context.Context, 
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to set repository collaborator: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to set repository %s collaborator: %v. %s", reponame, err, string(body)))
 			return
 		}
 	}
@@ -3466,7 +3466,7 @@ func (g *GoliacRemoteImpl) updateRepositoryRemoveUser(ctx context.Context, logsC
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to remove repository collaborator: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to remove repository %s collaborator: %v. %s", reponame, err, string(body)))
 			return
 		}
 	}
@@ -3500,7 +3500,7 @@ func (g *GoliacRemoteImpl) DeleteRepository(ctx context.Context, logsCollector *
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to delete repository: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to delete repository %s: %v. %s", reponame, err, string(body)))
 			return
 		}
 	}
