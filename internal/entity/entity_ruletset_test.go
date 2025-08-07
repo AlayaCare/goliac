@@ -39,7 +39,7 @@ kind: Ruleset
 name: ruleset2
 spec:
   ruleset:
-    enforcement: evaluate
+    enforcement: disabled
     bypassapps:
       - appname: goliac-project-app
         mode: always
@@ -97,5 +97,7 @@ func TestRulesetParametersComparison(t *testing.T) {
 
 		res = CompareRulesetParameters(rulesets["ruleset2"].Spec.Ruleset.Rules[0].Ruletype, rulesets["ruleset2"].Spec.Ruleset.Rules[0].Parameters, rulesets["ruleset2"].Spec.Ruleset.Rules[0].Parameters)
 		assert.True(t, res)
+		assert.Equal(t, "evaluate", rulesets["ruleset1"].Spec.Ruleset.Enforcement)
+		assert.Equal(t, "disabled", rulesets["ruleset2"].Spec.Ruleset.Enforcement)
 	})
 }
