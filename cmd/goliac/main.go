@@ -56,10 +56,16 @@ func (p *ProgressBar) Init(nbTotalAssets int) {
 }
 
 func (p *ProgressBar) Extend(nbAssets int) {
+	if p.bar == nil {
+		return
+	}
 	p.bar.AddMax(nbAssets)
 }
 
 func (p *ProgressBar) LoadingAsset(entity string, nb int) {
+	if p.bar == nil {
+		return
+	}
 	p.bar.Add(nb)
 }
 
