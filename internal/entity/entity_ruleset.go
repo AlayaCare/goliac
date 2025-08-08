@@ -185,7 +185,7 @@ func ValidateRulesetDefinition(r *RuleSetDefinition, filename string) error {
 		}
 	}
 
-	if r.Enforcement != "disable" && r.Enforcement != "active" && r.Enforcement != "evaluate" {
+	if r.Enforcement != "disabled" && r.Enforcement != "active" && r.Enforcement != "evaluate" {
 		return fmt.Errorf("invalid enforcement: %s for ruleset filename %s", r.Enforcement, filename)
 	}
 
