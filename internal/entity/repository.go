@@ -289,12 +289,5 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		}
 	}
 
-	for _, bp := range r.Spec.BranchProtections {
-		for _, t := range bp.BypassPullRequestTeams {
-			if _, ok := teams[t]; !ok {
-				return fmt.Errorf("team %s in branch protection %s does not exist (for repository %s)", t, bp.Pattern, r.Name)
-			}
-		}
-	}
 	return nil
 }

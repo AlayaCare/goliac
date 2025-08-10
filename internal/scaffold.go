@@ -425,6 +425,18 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 							lbranchprotection.RequiresLinearHistory = rBranchprotection.RequiresLinearHistory
 							lbranchprotection.AllowsForcePushes = rBranchprotection.AllowsForcePushes
 							lbranchprotection.AllowsDeletions = rBranchprotection.AllowsDeletions
+							for _, node := range rBranchprotection.BypassPullRequestAllowances.Nodes {
+								if node.Actor.TeamSlug != "" {
+									if teamname, ok := teamsNameBySlug[node.Actor.TeamSlug]; ok {
+										lbranchprotection.BypassPullRequestTeams = append(lbranchprotection.BypassPullRequestTeams, teamname)
+									}
+								}
+								if node.Actor.UserLogin != "" {
+									if username, ok := usermap[node.Actor.UserLogin]; ok {
+										lbranchprotection.BypassPullRequestUsers = append(lbranchprotection.BypassPullRequestUsers, username)
+									}
+								}
+							}
 
 							lRepo.Spec.BranchProtections = append(lRepo.Spec.BranchProtections, lbranchprotection)
 						}
