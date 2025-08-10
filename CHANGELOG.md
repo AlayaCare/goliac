@@ -1,3 +1,7 @@
+## Goliac v1.3.0
+
+- introducing branch protection bypass (users/teams)
+
 ## Goliac v1.2.2
 
 - bugfix: support disabled ruleset

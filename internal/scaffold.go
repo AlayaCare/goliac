@@ -191,8 +191,8 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 
 	// let's create the goliac admin team first
 	admins := []string{}
-	for githubid, role := range s.remote.Users(ctx) {
-		if role == "ADMIN" {
+	for githubid, v := range s.remote.Users(ctx) {
+		if v.Role == "ADMIN" {
 			admins = append(admins, githubid)
 		}
 	}

@@ -68,6 +68,8 @@ type RepositoryBranchProtection struct {
 	RequiresLinearHistory          bool     `yaml:"requires_linear_history,omitempty"`
 	AllowsForcePushes              bool     `yaml:"allows_force_pushes,omitempty"`
 	AllowsDeletions                bool     `yaml:"allows_deletions,omitempty"`
+	BypassPullRequestUsers         []string `yaml:"bypass_pullrequest_users,omitempty"`
+	BypassPullRequestTeams         []string `yaml:"bypass_pullrequest_teams,omitempty"`
 }
 
 /*
@@ -287,5 +289,12 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		}
 	}
 
+	for _, bp := range r.Spec.BranchProtections {
+		for _, t := range bp.BypassPullRequestTeams {
+			if _, ok := teams[t]; !ok {
+				return fmt.Errorf("team %s in branch protection %s does not exist (for repository %s)", t, bp.Pattern, r.Name)
+			}
+		}
+	}
 	return nil
 }

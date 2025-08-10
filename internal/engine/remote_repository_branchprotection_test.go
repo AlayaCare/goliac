@@ -122,6 +122,7 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 			"requiresLinearHistory":          true,
 			"allowsForcePushes":              false,
 			"allowsDeletions":                false,
+			"bypassPullRequestActorIds":      []string{},
 		}
 		assert.Equal(t, expectedVariables, mockClient.lastVariables)
 
@@ -684,6 +685,7 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 			"requiresLinearHistory":          true,
 			"allowsForcePushes":              false,
 			"allowsDeletions":                false,
+			"bypassPullRequestActorIds":      []string{},
 		}
 		assert.Equal(t, expectedVariables, mockClient.lastVariables)
 		assert.Contains(t, mockClient.lastGraphQLQuery, "updateBranchProtectionRule")
