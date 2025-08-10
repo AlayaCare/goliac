@@ -684,6 +684,33 @@ func compareBranchProtections(bpname string, lbp *GithubBranchProtection, rbp *G
 	if lbp.AllowsDeletions != rbp.AllowsDeletions {
 		return false
 	}
+	leftActorUsers := []string{}
+	leftActorTeams := []string{}
+	rightActorUsers := []string{}
+	rightActorTeams := []string{}
+	for _, n := range lbp.BypassPullRequestAllowances.Nodes {
+		if n.Actor.TeamSlug != "" {
+			leftActorTeams = append(leftActorTeams, n.Actor.TeamSlug)
+		}
+		if n.Actor.UserLogin != "" {
+			leftActorUsers = append(leftActorUsers, n.Actor.UserLogin)
+		}
+	}
+	for _, n := range rbp.BypassPullRequestAllowances.Nodes {
+		if n.Actor.TeamSlug != "" {
+			rightActorTeams = append(rightActorTeams, n.Actor.TeamSlug)
+		}
+		if n.Actor.UserLogin != "" {
+			rightActorUsers = append(rightActorUsers, n.Actor.UserLogin)
+		}
+	}
+	if res, _, _ := entity.StringArrayEquivalent(leftActorUsers, rightActorUsers); !res {
+		return false
+	}
+	if res, _, _ := entity.StringArrayEquivalent(leftActorTeams, rightActorTeams); !res {
+		return false
+	}
+
 	return true
 }
 

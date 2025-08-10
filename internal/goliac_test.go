@@ -395,12 +395,24 @@ func (e *GoliacRemoteExecutorMock) FlushCache() {
 }
 func (e *GoliacRemoteExecutorMock) FlushCacheUsersTeamsOnly() {
 }
-func (e *GoliacRemoteExecutorMock) Users(ctx context.Context) map[string]string {
-	return map[string]string{
-		"github1": "member",
-		"github2": "member",
-		"github3": "member",
-		"github4": "member",
+func (e *GoliacRemoteExecutorMock) Users(ctx context.Context) map[string]*engine.GithubUser {
+	return map[string]*engine.GithubUser{
+		"github1": &engine.GithubUser{
+			Login: "github1",
+			Role:  "MEMBER",
+		},
+		"github2": &engine.GithubUser{
+			Login: "github2",
+			Role:  "MEMBER",
+		},
+		"github3": &engine.GithubUser{
+			Login: "github3",
+			Role:  "MEMBER",
+		},
+		"github4": &engine.GithubUser{
+			Login: "github4",
+			Role:  "MEMBER",
+		},
 	}
 }
 func (e *GoliacRemoteExecutorMock) TeamSlugByName(ctx context.Context) map[string]string {
