@@ -24,7 +24,7 @@ func extractQueryName(query string) string {
 	return ""
 }
 
-func (c *GithubSamlGitHubClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (c *GithubSamlGitHubClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	// extract query name
 	queryName := extractQueryName(query)
 

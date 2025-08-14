@@ -16,7 +16,7 @@ import (
 )
 
 type ScaffoldGoliacRemoteMock struct {
-	users      map[string]string
+	users      map[string]*engine.GithubUser
 	teams      map[string]*engine.GithubTeam
 	repos      map[string]*engine.GithubRepository
 	teamsRepos map[string]map[string]*engine.GithubTeamRepo
@@ -29,7 +29,7 @@ func (s *ScaffoldGoliacRemoteMock) FlushCache() {
 }
 func (s *ScaffoldGoliacRemoteMock) FlushCacheUsersTeamsOnly() {
 }
-func (s *ScaffoldGoliacRemoteMock) Users(ctx context.Context) map[string]string {
+func (s *ScaffoldGoliacRemoteMock) Users(ctx context.Context) map[string]*engine.GithubUser {
 	return s.users
 }
 func (s *ScaffoldGoliacRemoteMock) TeamSlugByName(ctx context.Context) map[string]string {
@@ -72,15 +72,27 @@ func (s *ScaffoldGoliacRemoteMock) RepositoriesSecretsPerRepository(ctx context.
 }
 
 func NewScaffoldGoliacRemoteMock() engine.GoliacRemote {
-	users := make(map[string]string)
+	users := make(map[string]*engine.GithubUser)
 	teams := make(map[string]*engine.GithubTeam)
 	repos := make(map[string]*engine.GithubRepository)
 	teamsRepos := make(map[string]map[string]*engine.GithubTeamRepo)
 
-	users["githubid1"] = "githubid1"
-	users["githubid2"] = "githubid2"
-	users["githubid3"] = "githubid3"
-	users["githubid4"] = "githubid4"
+	users["githubid1"] = &engine.GithubUser{
+		Login: "githubid1",
+		Role:  "MEMBER",
+	}
+	users["githubid2"] = &engine.GithubUser{
+		Login: "githubid2",
+		Role:  "MEMBER",
+	}
+	users["githubid3"] = &engine.GithubUser{
+		Login: "githubid3",
+		Role:  "MEMBER",
+	}
+	users["githubid4"] = &engine.GithubUser{
+		Login: "githubid4",
+		Role:  "MEMBER",
+	}
 
 	admin := engine.GithubTeam{
 		Name:        "admin",
@@ -153,15 +165,27 @@ func NewScaffoldGoliacRemoteMock() engine.GoliacRemote {
 }
 
 func NewScaffoldGoliacRemoteMockWithMaintainers() engine.GoliacRemote {
-	users := make(map[string]string)
+	users := make(map[string]*engine.GithubUser)
 	teams := make(map[string]*engine.GithubTeam)
 	repos := make(map[string]*engine.GithubRepository)
 	teamsRepos := make(map[string]map[string]*engine.GithubTeamRepo)
 
-	users["githubid1"] = "githubid1"
-	users["githubid2"] = "githubid2"
-	users["githubid3"] = "githubid3"
-	users["githubid4"] = "githubid4"
+	users["githubid1"] = &engine.GithubUser{
+		Login: "githubid1",
+		Role:  "MEMBER",
+	}
+	users["githubid2"] = &engine.GithubUser{
+		Login: "githubid2",
+		Role:  "MEMBER",
+	}
+	users["githubid3"] = &engine.GithubUser{
+		Login: "githubid3",
+		Role:  "MEMBER",
+	}
+	users["githubid4"] = &engine.GithubUser{
+		Login: "githubid4",
+		Role:  "MEMBER",
+	}
 
 	admin := engine.GithubTeam{
 		Name:        "admin",
@@ -364,15 +388,27 @@ func NewMockMappedEntityLazyLoader[T any](entity map[string]T) *MockMappedEntity
 func TestEnvironmentsAndVariables(t *testing.T) {
 	t.Run("happy path: test environments and variables", func(t *testing.T) {
 
-		users := make(map[string]string)
+		users := make(map[string]*engine.GithubUser)
 		teams := make(map[string]*engine.GithubTeam)
 		repos := make(map[string]*engine.GithubRepository)
 		teamsRepos := make(map[string]map[string]*engine.GithubTeamRepo)
 
-		users["githubid1"] = "githubid1"
-		users["githubid2"] = "githubid2"
-		users["githubid3"] = "githubid3"
-		users["githubid4"] = "githubid4"
+		users["githubid1"] = &engine.GithubUser{
+			Login: "githubid1",
+			Role:  "MEMBER",
+		}
+		users["githubid2"] = &engine.GithubUser{
+			Login: "githubid2",
+			Role:  "MEMBER",
+		}
+		users["githubid3"] = &engine.GithubUser{
+			Login: "githubid3",
+			Role:  "MEMBER",
+		}
+		users["githubid4"] = &engine.GithubUser{
+			Login: "githubid4",
+			Role:  "MEMBER",
+		}
 
 		admin := engine.GithubTeam{
 			Name:        "admin",
@@ -454,7 +490,11 @@ func TestEnvironmentsAndVariables(t *testing.T) {
 		}
 
 		logCollector := observability.NewLogCollection()
-		scaffold.generateTeams(context.TODO(), fs, "/teams", "/archived", users, "admin", false, logCollector)
+		flatUsers := make(map[string]string)
+		for k := range users {
+			flatUsers[k] = k
+		}
+		scaffold.generateTeams(context.TODO(), fs, "/teams", "/archived", flatUsers, "admin", false, logCollector)
 		assert.False(t, logCollector.HasErrors())
 
 		found, err := utils.Exists(fs, "/teams/admin/team.yaml")

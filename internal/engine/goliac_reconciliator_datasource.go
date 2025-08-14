@@ -11,7 +11,7 @@ import (
 )
 
 type GoliacReconciliatorDatasource interface {
-	Users() map[string]string                                                   // githubuserid -> goliacuserid
+	Users() map[string]string                                                   // key is the login, value is the role (MEMBER, ADMIN)
 	Teams() (map[string]*GithubTeamComparable, map[string]bool, error)          // team, externallyManaged, error
 	Repositories() (map[string]*GithubRepoComparable, map[string]string, error) // repo, renameTo, error
 	RuleSets() (map[string]*GithubRuleSet, error)
@@ -117,6 +117,8 @@ func (d *GoliacReconciliatorDatasourceLocal) Teams() (map[string]*GithubTeamComp
 func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubRepoComparable, map[string]string, error) {
 	// let's start with the local cloned github-teams repo
 	lRepos := make(map[string]*GithubRepoComparable)
+	lTeams := d.local.Teams()
+	lUsers := d.local.Users()
 	renameTo := make(map[string]string)
 
 	localRepositories := make(map[string]*entity.Repository)
@@ -242,6 +244,25 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 				AllowsForcePushes:              bp.AllowsForcePushes,
 				AllowsDeletions:                bp.AllowsDeletions,
 			}
+			for _, u := range bp.BypassPullRequestUsers {
+				if githubId, ok := lUsers[u]; ok {
+					node := BypassPullRequestAllowanceNode{}
+					node.Actor.UserLogin = githubId.Spec.GithubID
+					branchprotection.BypassPullRequestAllowances.Nodes = append(branchprotection.BypassPullRequestAllowances.Nodes, node)
+				}
+			}
+			for _, t := range bp.BypassPullRequestTeams {
+				if _, ok := lTeams[t]; ok {
+					node := BypassPullRequestAllowanceNode{}
+					node.Actor.TeamSlug = slug.Make(t)
+					branchprotection.BypassPullRequestAllowances.Nodes = append(branchprotection.BypassPullRequestAllowances.Nodes, node)
+				}
+			}
+			for _, a := range bp.BypassPullRequestApps {
+				node := BypassPullRequestAllowanceNode{}
+				node.Actor.AppSlug = slug.Make(a)
+				branchprotection.BypassPullRequestAllowances.Nodes = append(branchprotection.BypassPullRequestAllowances.Nodes, node)
+			}
 			branchprotections[bp.Pattern] = &branchprotection
 		}
 
@@ -350,7 +371,13 @@ func NewGoliacReconciliatorDatasourceRemote(remote GoliacRemote) GoliacReconcili
 }
 
 func (d *GoliacReconciliatorDatasourceRemote) Users() map[string]string {
-	return d.remote.Users(context.Background())
+	ghUsers := d.remote.Users(context.Background())
+
+	rUsers := make(map[string]string)
+	for k, v := range ghUsers {
+		rUsers[k] = v.Role
+	}
+	return rUsers
 }
 
 func (d *GoliacReconciliatorDatasourceRemote) Teams() (map[string]*GithubTeamComparable, map[string]bool, error) {
@@ -370,8 +397,12 @@ func (d *GoliacReconciliatorDatasourceRemote) Teams() (map[string]*GithubTeamCom
 
 		// let's filter admin from the maintainers
 		for _, m := range v.Maintainers {
-			if rUsers[m] == "ADMIN" {
-				members = append(members, m)
+			if u, ok := rUsers[m]; ok {
+				if u.Role == "ADMIN" {
+					members = append(members, m)
+				} else {
+					maintainers = append(maintainers, m)
+				}
 			} else {
 				maintainers = append(maintainers, m)
 			}

@@ -366,7 +366,7 @@ func (m *MockGithubClient) GetAppSlug() string {
 	return "mock-github-client"
 }
 
-func (m *MockGithubClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *MockGithubClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 
 	doc, err := parser.ParseQuery(&ast.Source{Input: query})
 
@@ -457,7 +457,7 @@ func TestRemoteRepository(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(&client, "myorg", true, true)
 
 		ctx := context.TODO()
-		repositories, _, err := remoteImpl.loadRepositories(ctx)
+		repositories, _, err := remoteImpl.loadRepositories(ctx, nil)
 		assert.Nil(t, err)
 		assert.Equal(t, 133, len(repositories))
 		assert.Equal(t, false, repositories["repo_1"].BoolProperties["archived"])
@@ -515,7 +515,7 @@ type GitHubClientIsEnterpriseMock struct {
 	err     error
 }
 
-func (g *GitHubClientIsEnterpriseMock) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (g *GitHubClientIsEnterpriseMock) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte(""), nil
 }
 func (g *GitHubClientIsEnterpriseMock) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error) {

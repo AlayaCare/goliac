@@ -25,7 +25,7 @@ type LoadEnvironmentsPerRepositoryMockClient struct {
 	callCount       int
 }
 
-func (m *LoadEnvironmentsPerRepositoryMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *LoadEnvironmentsPerRepositoryMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return nil, nil
 }
 
@@ -208,7 +208,7 @@ type LoadVariablesPerRepositoryMockClient struct {
 	mutex           sync.Mutex
 }
 
-func (m *LoadVariablesPerRepositoryMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *LoadVariablesPerRepositoryMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return nil, nil
 }
 

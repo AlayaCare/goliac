@@ -42,7 +42,7 @@ type GoliacRemote interface {
 	// Flush only the users, and teams from the cache
 	FlushCacheUsersTeamsOnly()
 
-	Users(ctx context.Context) map[string]string // key is the login, value is the role (member, admin)
+	Users(ctx context.Context) map[string]*GithubUser // key is the login, value is the role (MEMBER, ADMIN) + graphqlID
 	TeamSlugByName(ctx context.Context) map[string]string
 	Teams(ctx context.Context, current bool) map[string]*GithubTeam             // the key is the team slug
 	Repositories(ctx context.Context) map[string]*GithubRepository              // the key is the repository name
@@ -82,9 +82,16 @@ type GithubRepository struct {
 	Autolinks MappedEntityLazyLoader[*GithubAutolink] // [keyPrefix]autolink
 }
 
+type GithubUser struct {
+	Login     string // login, ie github id
+	GraphqlId string // graphql id
+	Role      string // MEMBER, ADMIN
+}
+
 type GithubTeam struct {
 	Name        string
 	Id          int
+	GraphqlId   string
 	Slug        string
 	Members     []string // user login, aka githubid
 	Maintainers []string // user login (that are not in the Members array)
@@ -128,7 +135,7 @@ type GithubVariable struct {
 
 type GoliacRemoteImpl struct {
 	client                github.GitHubClient
-	users                 map[string]string
+	users                 map[string]*GithubUser
 	repositories          map[string]*GithubRepository
 	repositoriesByRefId   map[string]*GithubRepository
 	teams                 map[string]*GithubTeam
@@ -224,7 +231,7 @@ func (g *GoliacRemoteImpl) CountAssets(ctx context.Context, warmup bool) (int, e
 	variables := make(map[string]interface{})
 	variables["orgLogin"] = g.configGithubOrg
 
-	data, err := g.client.QueryGraphQLAPI(ctx, getAssets, variables)
+	data, err := g.client.QueryGraphQLAPI(ctx, getAssets, variables, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -308,7 +315,7 @@ func NewGoliacRemoteImpl(client github.GitHubClient,
 	ctx := context.Background()
 	return &GoliacRemoteImpl{
 		client:                client,
-		users:                 make(map[string]string),
+		users:                 make(map[string]*GithubUser),
 		repositories:          make(map[string]*GithubRepository),
 		repositoriesByRefId:   make(map[string]*GithubRepository),
 		teams:                 make(map[string]*GithubTeam),
@@ -350,7 +357,11 @@ func (g *GoliacRemoteImpl) FlushCache() {
 
 func (g *GoliacRemoteImpl) RuleSets(ctx context.Context) map[string]*GithubRuleSet {
 	if time.Now().After(g.ttlExpireRulesets) {
-		rulesets, err := g.loadRulesets(ctx)
+		var githubToken *string
+		if config.Config.GithubPersonalAccessToken != "" {
+			githubToken = &config.Config.GithubPersonalAccessToken
+		}
+		rulesets, err := g.loadRulesets(ctx, githubToken)
 		if err == nil {
 			g.rulesets = rulesets
 			g.ttlExpireRulesets = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
@@ -379,7 +390,7 @@ func (g *GoliacRemoteImpl) AppIds(ctx context.Context) map[string]int {
 	return rAppIds
 }
 
-func (g *GoliacRemoteImpl) Users(ctx context.Context) map[string]string {
+func (g *GoliacRemoteImpl) Users(ctx context.Context) map[string]*GithubUser {
 	if time.Now().After(g.ttlExpireUsers) {
 		users, err := g.loadOrgUsers(ctx)
 		if err == nil {
@@ -392,9 +403,13 @@ func (g *GoliacRemoteImpl) Users(ctx context.Context) map[string]string {
 	defer g.actionMutex.Unlock()
 
 	// copy the map to a safe one
-	var rUsers = make(map[string]string)
+	var rUsers = make(map[string]*GithubUser)
 	for k, v := range g.users {
-		rUsers[k] = v
+		rUsers[k] = &GithubUser{
+			Login:     v.Login,
+			GraphqlId: v.GraphqlId,
+			Role:      v.Role,
+		}
 	}
 	return rUsers
 }
@@ -451,7 +466,11 @@ func (g *GoliacRemoteImpl) Teams(ctx context.Context, current bool) map[string]*
 
 func (g *GoliacRemoteImpl) Repositories(ctx context.Context) map[string]*GithubRepository {
 	if time.Now().After(g.ttlExpireRepositories) {
-		repositories, repositoriesByRefIds, err := g.loadRepositories(ctx)
+		var githubToken *string
+		if config.Config.GithubPersonalAccessToken != "" {
+			githubToken = &config.Config.GithubPersonalAccessToken
+		}
+		repositories, repositoriesByRefIds, err := g.loadRepositories(ctx, githubToken)
 		if err == nil {
 			g.repositories = repositories
 			g.repositoriesByRefId = repositoriesByRefIds
@@ -494,12 +513,13 @@ func (g *GoliacRemoteImpl) TeamRepositories(ctx context.Context) map[string]map[
 }
 
 const listAllOrgMembers = `
-query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
+query listAllOrgMembers($orgLogin: String!, $endCursor: String) {
     organization(login: $orgLogin) {
 		membersWithRole(first: 100, after: $endCursor) {
 		  edges {
             node {
               login
+			  id
             }
             role
           }
@@ -520,6 +540,7 @@ type GraplQLUsers struct {
 				Edges []struct {
 					Node struct {
 						Login string
+						Id    string
 					} `json:"node"`
 					Role string `json:"role"`
 				} `json:"edges"`
@@ -546,9 +567,9 @@ loadOrgUsers returns
 map[githubid]permission (role)
 role can be 'ADMIN', 'MEMBER'
 */
-func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string, error) {
+func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]*GithubUser, error) {
 	logrus.Debug("loading orgUsers")
-	users := make(map[string]string)
+	users := make(map[string]*GithubUser)
 
 	variables := make(map[string]interface{})
 	variables["orgLogin"] = g.configGithubOrg
@@ -557,7 +578,7 @@ func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string,
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(ctx, listAllOrgMembers, variables)
+		data, err := g.client.QueryGraphQLAPI(ctx, listAllOrgMembers, variables, nil)
 		if err != nil {
 			return users, err
 		}
@@ -573,7 +594,11 @@ func (g *GoliacRemoteImpl) loadOrgUsers(ctx context.Context) (map[string]string,
 		}
 
 		for _, c := range gResult.Data.Organization.MembersWithRole.Edges {
-			users[c.Node.Login] = c.Role
+			users[c.Node.Login] = &GithubUser{
+				Login:     c.Node.Login,
+				GraphqlId: c.Node.Id,
+				Role:      c.Role,
+			}
 		}
 
 		if g.feedback != nil {
@@ -681,6 +706,21 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
               requiresLinearHistory
               allowsForcePushes
               allowsDeletions
+              bypassPullRequestAllowances(first:100) {
+                nodes {
+                  actor {
+                    ... on Team {
+                      teamSlug:slug
+                    }
+                    ... on User {
+                      userLogin:login
+                    }
+					... on App {
+						appSlug:slug
+					}
+                  }
+                }
+              }
             }
           }
         }
@@ -694,6 +734,13 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
   }
 `
 
+type BypassPullRequestAllowanceNode struct {
+	Actor struct {
+		TeamSlug  string
+		UserLogin string
+		AppSlug   string
+	}
+}
 type GithubBranchProtection struct {
 	Id                             string
 	Pattern                        string
@@ -710,6 +757,9 @@ type GithubBranchProtection struct {
 	RequiresLinearHistory          bool
 	AllowsForcePushes              bool
 	AllowsDeletions                bool
+	BypassPullRequestAllowances    struct {
+		Nodes []BypassPullRequestAllowanceNode
+	}
 }
 
 type GraplQLRepositories struct {
@@ -770,7 +820,7 @@ type GraplQLRepositories struct {
 	} `json:"errors"`
 }
 
-func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*GithubRepository, map[string]*GithubRepository, error) {
+func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *string) (map[string]*GithubRepository, map[string]*GithubRepository, error) {
 	logrus.Debug("loading repositories")
 	repositories := make(map[string]*GithubRepository)
 	repositoriesByRefId := make(map[string]*GithubRepository)
@@ -783,7 +833,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context) (map[string]*Gi
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(ctx, listAllReposInOrg, variables)
+		data, err := g.client.QueryGraphQLAPI(ctx, listAllReposInOrg, variables, githubToken)
 		if err != nil {
 			return repositories, repositoriesByRefId, err
 		}
@@ -946,6 +996,7 @@ query listAllTeamsInOrg($orgLogin: String!, $endCursor: String) {
       teams(first: 100, after: $endCursor) {
         nodes {
           name
+		  id
 		  databaseId
           slug
 		  parentTeam {
@@ -968,6 +1019,7 @@ type GraplQLTeams struct {
 			Teams struct {
 				Nodes []struct {
 					Name       string
+					Id         string
 					DatabaseId int `json:"databaseId"`
 					Slug       string
 					ParentTeam struct {
@@ -1111,7 +1163,11 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 	}
 
 	if time.Now().After(g.ttlExpireRepositories) {
-		repositories, repositoriesByRefId, err := g.loadRepositories(ctx)
+		var githubToken *string
+		if config.Config.GithubPersonalAccessToken != "" {
+			githubToken = &config.Config.GithubPersonalAccessToken
+		}
+		repositories, repositoriesByRefId, err := g.loadRepositories(ctx, githubToken)
 		if err != nil {
 			if !continueOnError {
 				return err
@@ -1126,7 +1182,11 @@ func (g *GoliacRemoteImpl) Load(ctx context.Context, continueOnError bool) error
 
 	// let's load the rulesets after the repositories because I need the repository refs
 	if time.Now().After(g.ttlExpireRulesets) {
-		rulesets, err := g.loadRulesets(ctx)
+		var githubToken *string
+		if config.Config.GithubPersonalAccessToken != "" {
+			githubToken = &config.Config.GithubPersonalAccessToken
+		}
+		rulesets, err := g.loadRulesets(ctx, githubToken)
 		if err != nil {
 			if !continueOnError {
 				return err
@@ -1631,7 +1691,7 @@ func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTea
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamsInOrg, variables)
+		data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamsInOrg, variables, nil)
 		if err != nil {
 			return teams, teamSlugByName, err
 		}
@@ -1648,9 +1708,10 @@ func (g *GoliacRemoteImpl) loadTeams(ctx context.Context) (map[string]*GithubTea
 
 		for _, c := range gResult.Data.Organization.Teams.Nodes {
 			team := GithubTeam{
-				Name: c.Name,
-				Id:   c.DatabaseId,
-				Slug: c.Slug,
+				Name:      c.Name,
+				GraphqlId: c.Id,
+				Id:        c.DatabaseId,
+				Slug:      c.Slug,
 			}
 			if c.ParentTeam.DatabaseId != 0 {
 				parentId := c.ParentTeam.DatabaseId
@@ -1744,7 +1805,7 @@ func (g *GoliacRemoteImpl) loadTeamsMembers(ctx context.Context, t *GithubTeam) 
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamMembersInOrg, variables)
+		data, err := g.client.QueryGraphQLAPI(ctx, listAllTeamMembersInOrg, variables, nil)
 		if err != nil {
 			return err
 		}
@@ -1794,15 +1855,15 @@ query listRulesets ($orgLogin: String!) {
 # It is working as a human, but not as a Github App
 # The  field 'actor' is restricted for GitHub Apps,
 # even with full administration permissions
-#			  actor {
-#				... on App {
-#					databaseId
-#					name
-#				}
-#				... on Team {
-#					teamslug:slug
-#				}
-#			  }
+			  actor {
+				... on App {
+					databaseId
+					name
+				}
+				... on Team {
+					teamslug:slug
+				}
+			  }
 			  bypassMode
 			}
 		  }
@@ -1979,7 +2040,8 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 		if b.Actor.TeamSlug != "" {
 			ruleset.BypassTeams[b.Actor.TeamSlug] = strings.ToLower(b.BypassMode)
 		} else {
-			ruleset.BypassApps[b.Actor.Name] = strings.ToLower(b.BypassMode)
+			appslug := slug.Make(b.Actor.Name)
+			ruleset.BypassApps[appslug] = strings.ToLower(b.BypassMode)
 		}
 	}
 
@@ -2007,7 +2069,7 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 	return &ruleset
 }
 
-func (g *GoliacRemoteImpl) loadRulesets(ctx context.Context) (map[string]*GithubRuleSet, error) {
+func (g *GoliacRemoteImpl) loadRulesets(ctx context.Context, githubToken *string) (map[string]*GithubRuleSet, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
 		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadRulesets")
@@ -2023,7 +2085,7 @@ func (g *GoliacRemoteImpl) loadRulesets(ctx context.Context) (map[string]*Github
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := g.client.QueryGraphQLAPI(ctx, listRulesets, variables)
+		data, err := g.client.QueryGraphQLAPI(ctx, listRulesets, variables, githubToken)
 		if err != nil {
 			return rulesets, fmt.Errorf("failed to load rulesets: %v", err)
 		}
@@ -2430,7 +2492,8 @@ mutation createBranchProtectionRule(
 	$requiresCommitSignatures: Boolean!,
 	$requiresLinearHistory: Boolean!,
 	$allowsForcePushes: Boolean!,
-	$allowsDeletions: Boolean!) {
+	$allowsDeletions: Boolean!,
+	$bypassPullRequestActorIds: [ID!]!) {
   createBranchProtectionRule(input: {
 		repositoryId: $repositoryId,
     	pattern: $pattern,
@@ -2446,7 +2509,8 @@ mutation createBranchProtectionRule(
 		requiresCommitSignatures: $requiresCommitSignatures,
 		requiresLinearHistory: $requiresLinearHistory,
 		allowsForcePushes: $allowsForcePushes,
-		allowsDeletions: $allowsDeletions
+		allowsDeletions: $allowsDeletions,
+		bypassPullRequestActorIds: $bypassPullRequestActorIds
   }) {
     branchProtectionRule {
 	  id
@@ -2485,6 +2549,29 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, lo
 	}
 	g.actionMutex.Unlock()
 
+	bypassPullRequestActorIds := []string{}
+	users := g.users
+	teams := g.teams
+	for _, actor := range branchprotection.BypassPullRequestAllowances.Nodes {
+		if actor.Actor.UserLogin != "" {
+			for login, u := range users {
+				if login == actor.Actor.UserLogin {
+					bypassPullRequestActorIds = append(bypassPullRequestActorIds, u.GraphqlId)
+				}
+			}
+		}
+		if actor.Actor.TeamSlug != "" {
+			for slug, t := range teams {
+				if slug == actor.Actor.TeamSlug {
+					bypassPullRequestActorIds = append(bypassPullRequestActorIds, t.GraphqlId)
+				}
+			}
+		}
+		if actor.Actor.AppSlug != "" {
+			bypassPullRequestActorIds = append(bypassPullRequestActorIds, actor.Actor.AppSlug)
+		}
+	}
+
 	if !dryrun {
 		body, err := g.client.QueryGraphQLAPI(
 			ctx,
@@ -2505,7 +2592,9 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, lo
 				"requiresLinearHistory":          branchprotection.RequiresLinearHistory,
 				"allowsForcePushes":              branchprotection.AllowsForcePushes,
 				"allowsDeletions":                branchprotection.AllowsDeletions,
+				"bypassPullRequestActorIds":      bypassPullRequestActorIds,
 			},
+			nil,
 		)
 		if err != nil {
 			logsCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v. %s", reponame, err, string(body)))
@@ -2551,7 +2640,8 @@ mutation updateBranchProtectionRule(
 	$requiresCommitSignatures: Boolean!,
 	$requiresLinearHistory: Boolean!,
 	$allowsForcePushes: Boolean!,
-	$allowsDeletions: Boolean!) {
+	$allowsDeletions: Boolean!,
+	$bypassPullRequestActorIds: [ID!]!) {
   updateBranchProtectionRule(input: {
 		branchProtectionRuleId: $branchProtectionRuleId,
     	pattern: $pattern,
@@ -2567,7 +2657,8 @@ mutation updateBranchProtectionRule(
 		requiresCommitSignatures: $requiresCommitSignatures,
 		requiresLinearHistory: $requiresLinearHistory,
 		allowsForcePushes: $allowsForcePushes,
-		allowsDeletions: $allowsDeletions
+		allowsDeletions: $allowsDeletions,
+		bypassPullRequestActorIds: $bypassPullRequestActorIds
   }) {
 	branchProtectionRule {
       id
@@ -2594,6 +2685,29 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 		return
 	}
 
+	bypassPullRequestActorIds := []string{}
+	users := g.users
+	teams := g.teams
+	for _, actor := range branchprotection.BypassPullRequestAllowances.Nodes {
+		if actor.Actor.UserLogin != "" {
+			for login, u := range users {
+				if login == actor.Actor.UserLogin {
+					bypassPullRequestActorIds = append(bypassPullRequestActorIds, u.GraphqlId)
+				}
+			}
+		}
+		if actor.Actor.TeamSlug != "" {
+			for slug, t := range teams {
+				if slug == actor.Actor.TeamSlug {
+					bypassPullRequestActorIds = append(bypassPullRequestActorIds, t.GraphqlId)
+				}
+			}
+		}
+		if actor.Actor.AppSlug != "" {
+			bypassPullRequestActorIds = append(bypassPullRequestActorIds, actor.Actor.AppSlug)
+		}
+	}
+
 	if !dryrun {
 		body, err := g.client.QueryGraphQLAPI(
 			ctx,
@@ -2614,7 +2728,9 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 				"requiresLinearHistory":          branchprotection.RequiresLinearHistory,
 				"allowsForcePushes":              branchprotection.AllowsForcePushes,
 				"allowsDeletions":                branchprotection.AllowsDeletions,
+				"bypassPullRequestActorIds":      bypassPullRequestActorIds,
 			},
+			nil,
 		)
 		if err != nil {
 			logsCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v. %s", reponame, err, string(body)))
@@ -2679,6 +2795,7 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 			map[string]interface{}{
 				"branchProtectionRuleId": branchprotection.Id,
 			},
+			nil,
 		)
 		if err != nil {
 			logsCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v. %s", reponame, err, string(body)))
@@ -2706,9 +2823,16 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 	}
 }
 
+type SetMembershipResponse struct {
+	User struct {
+		NodeID string `json:"node_id"`
+	} `json:"user"`
+}
+
 func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ghuserid string) {
 	// add member
-	// https://docs.github.com/en/rest/teams/teams?apiVersion=2022-11-28#create-a-team
+	// https://docs.github.com/en/rest/orgs/members?apiVersion=2022-11-28&versionId=free-pro-team%40latest&category=teams&subcategory=teams#set-organization-membership-for-a-user
+	graphqlId := ""
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
 			ctx,
@@ -2722,12 +2846,21 @@ func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, logsCollector *obse
 			logsCollector.AddError(fmt.Errorf("failed to add user to org: %v. %s", err, string(body)))
 			return
 		}
+
+		var membershipResponse SetMembershipResponse
+		if json.Unmarshal(body, &membershipResponse) == nil {
+			graphqlId = membershipResponse.User.NodeID
+		}
 	}
 
 	g.actionMutex.Lock()
 	defer g.actionMutex.Unlock()
 
-	g.users[ghuserid] = ghuserid
+	g.users[ghuserid] = &GithubUser{
+		Login:     ghuserid,
+		GraphqlId: graphqlId,
+		Role:      "MEMBER",
+	}
 }
 
 func (g *GoliacRemoteImpl) RemoveUserFromOrg(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ghuserid string) {

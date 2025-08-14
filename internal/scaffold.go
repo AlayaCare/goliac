@@ -191,8 +191,8 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 
 	// let's create the goliac admin team first
 	admins := []string{}
-	for githubid, role := range s.remote.Users(ctx) {
-		if role == "ADMIN" {
+	for githubid, v := range s.remote.Users(ctx) {
+		if v.Role == "ADMIN" {
 			admins = append(admins, githubid)
 		}
 	}
@@ -425,6 +425,21 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 							lbranchprotection.RequiresLinearHistory = rBranchprotection.RequiresLinearHistory
 							lbranchprotection.AllowsForcePushes = rBranchprotection.AllowsForcePushes
 							lbranchprotection.AllowsDeletions = rBranchprotection.AllowsDeletions
+							for _, node := range rBranchprotection.BypassPullRequestAllowances.Nodes {
+								if node.Actor.TeamSlug != "" {
+									if teamname, ok := teamsNameBySlug[node.Actor.TeamSlug]; ok {
+										lbranchprotection.BypassPullRequestTeams = append(lbranchprotection.BypassPullRequestTeams, teamname)
+									}
+								}
+								if node.Actor.UserLogin != "" {
+									if username, ok := usermap[node.Actor.UserLogin]; ok {
+										lbranchprotection.BypassPullRequestUsers = append(lbranchprotection.BypassPullRequestUsers, username)
+									}
+								}
+								if node.Actor.AppSlug != "" {
+									lbranchprotection.BypassPullRequestApps = append(lbranchprotection.BypassPullRequestApps, node.Actor.AppSlug)
+								}
+							}
 
 							lRepo.Spec.BranchProtections = append(lRepo.Spec.BranchProtections, lbranchprotection)
 						}

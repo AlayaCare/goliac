@@ -21,7 +21,7 @@ type AddBranchProtectionMockClient struct {
 	responseBody string
 }
 
-func (m *AddBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *AddBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.lastGraphQLQuery = query
 	m.lastVariables = variables
 
@@ -122,6 +122,7 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 			"requiresLinearHistory":          true,
 			"allowsForcePushes":              false,
 			"allowsDeletions":                false,
+			"bypassPullRequestActorIds":      []string{},
 		}
 		assert.Equal(t, expectedVariables, mockClient.lastVariables)
 
@@ -286,7 +287,7 @@ type DeleteBranchProtectionMockClient struct {
 	responseBody string
 }
 
-func (m *DeleteBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *DeleteBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.lastGraphQLQuery = query
 	m.lastVariables = variables
 
@@ -563,7 +564,7 @@ type UpdateBranchProtectionMockClient struct {
 	responseBody string
 }
 
-func (m *UpdateBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *UpdateBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.lastGraphQLQuery = query
 	m.lastVariables = variables
 
@@ -684,6 +685,7 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 			"requiresLinearHistory":          true,
 			"allowsForcePushes":              false,
 			"allowsDeletions":                false,
+			"bypassPullRequestActorIds":      []string{},
 		}
 		assert.Equal(t, expectedVariables, mockClient.lastVariables)
 		assert.Contains(t, mockClient.lastGraphQLQuery, "updateBranchProtectionRule")

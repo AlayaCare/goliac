@@ -25,7 +25,7 @@ import (
 )
 
 type GitHubClient interface {
-	QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error)
+	QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error)
 	CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error)
 	GetAccessToken(ctx context.Context) (string, error)
 	CreateJWT() (string, error)
@@ -102,7 +102,8 @@ func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, erro
 func NewGitHubClientImpl(githubServer, organizationName string, appID int64, privateKeyFile string, patToken string) (GitHubClient, error) {
 	var privateKey []byte
 	var err error
-	if patToken == "" {
+
+	if privateKeyFile != "" {
 		privateKey, err = os.ReadFile(privateKeyFile)
 		if err != nil {
 			return nil, err
@@ -117,7 +118,7 @@ func NewGitHubClientImpl(githubServer, organizationName string, appID int64, pri
 	}
 
 	// If a personal access token is not provided, we need to find the installation ID
-	if client.patToken == "" {
+	if privateKeyFile != "" {
 
 		// create JWT
 		token, err := client.CreateJWT()
@@ -209,7 +210,7 @@ type GraphQLRequest struct {
  * }
  * responseBody, err := client.QueryGraphQLAPI(query, variables)
  */
-func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
 		queryName := utils.FirstTwoWordsBeforeParenthesis(query, 100)
@@ -256,7 +257,14 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 		goliacStats.GithubApiCalls++
 	}
 
-	resp, err := client.httpClient.Do(req)
+	var resp *http.Response
+	if githubToken != nil {
+		req.Header.Set("Authorization", "Bearer "+*githubToken)
+		resp, err = http.DefaultClient.Do(req)
+	} else {
+		resp, err = client.httpClient.Do(req)
+	}
+
 	if err != nil {
 		if childSpan != nil {
 			childSpan.SetStatus(codes.Error, fmt.Sprintf("error sending the http request: %s", err.Error()))
@@ -300,7 +308,7 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 		}
 
 		// Retry the request.
-		return client.QueryGraphQLAPI(ctx, query, variables)
+		return client.QueryGraphQLAPI(ctx, query, variables, githubToken)
 	} else {
 		responseBody, err := io.ReadAll(resp.Body)
 		if err != nil {
