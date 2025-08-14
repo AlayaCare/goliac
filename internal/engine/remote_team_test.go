@@ -23,7 +23,7 @@ type CreateTeamMockClient struct {
 	responseBody string
 }
 
-func (m *CreateTeamMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *CreateTeamMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -263,7 +263,7 @@ type DeleteTeamMockClient struct {
 	responseBody string
 }
 
-func (m *DeleteTeamMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *DeleteTeamMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -489,7 +489,7 @@ type UpdateTeamAddMemberMockClient struct {
 	responseBody string
 }
 
-func (m *UpdateTeamAddMemberMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *UpdateTeamAddMemberMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -749,7 +749,7 @@ type UpdateTeamRemoveMemberMockClient struct {
 	responseBody string
 }
 
-func (m *UpdateTeamRemoveMemberMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *UpdateTeamRemoveMemberMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -961,7 +961,7 @@ type UpdateTeamUpdateMemberMockClient struct {
 	responseBody string
 }
 
-func (m *UpdateTeamUpdateMemberMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *UpdateTeamUpdateMemberMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -1246,7 +1246,7 @@ type UpdateRepositoryAddTeamAccessMockClient struct {
 	responseBody string
 }
 
-func (m *UpdateRepositoryAddTeamAccessMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *UpdateRepositoryAddTeamAccessMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -1301,7 +1301,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
 
@@ -1378,7 +1378,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
 
@@ -1408,7 +1408,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
 
@@ -1469,7 +1469,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
@@ -1503,7 +1503,7 @@ func TestUpdateRepositoryAddTeamAccess(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
@@ -1547,7 +1547,7 @@ type UpdateRepositoryUpdateTeamAccessMockClient struct {
 	responseBody string
 }
 
-func (m *UpdateRepositoryUpdateTeamAccessMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *UpdateRepositoryUpdateTeamAccessMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -1587,7 +1587,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
 
@@ -1710,7 +1710,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 
 		ctx := context.TODO()
 		remoteImpl.loadTeams(ctx)
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
 
@@ -1740,7 +1740,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
@@ -1807,7 +1807,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
@@ -1841,7 +1841,7 @@ func TestUpdateRepositoryUpdateTeamAccess(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
@@ -1885,7 +1885,7 @@ type UpdateRepositoryRemoveTeamAccessMockClient struct {
 	responseBody string
 }
 
-func (m *UpdateRepositoryRemoveTeamAccessMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *UpdateRepositoryRemoveTeamAccessMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -1924,7 +1924,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
@@ -1991,7 +1991,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
 
@@ -2023,7 +2023,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
@@ -2057,7 +2057,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()
@@ -2097,7 +2097,7 @@ func TestUpdateRepositoryRemoveTeamAccess(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		remoteImpl.loadTeams(ctx)
 		mockClient.lastEndpoint = ""
 		logsCollector := observability.NewLogCollection()

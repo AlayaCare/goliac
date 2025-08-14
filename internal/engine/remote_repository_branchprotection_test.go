@@ -21,7 +21,7 @@ type AddBranchProtectionMockClient struct {
 	responseBody string
 }
 
-func (m *AddBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *AddBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.lastGraphQLQuery = query
 	m.lastVariables = variables
 
@@ -287,7 +287,7 @@ type DeleteBranchProtectionMockClient struct {
 	responseBody string
 }
 
-func (m *DeleteBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *DeleteBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.lastGraphQLQuery = query
 	m.lastVariables = variables
 
@@ -564,7 +564,7 @@ type UpdateBranchProtectionMockClient struct {
 	responseBody string
 }
 
-func (m *UpdateBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *UpdateBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.lastGraphQLQuery = query
 	m.lastVariables = variables
 

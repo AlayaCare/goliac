@@ -24,7 +24,7 @@ type CreateRepositoryRulesetMockClient struct {
 	responseBody string
 }
 
-func (m *CreateRepositoryRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *CreateRepositoryRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -189,7 +189,7 @@ func TestCreateRepositoryRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 		mockClient.lastBody = nil
@@ -269,7 +269,7 @@ func TestCreateRepositoryRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 		mockClient.lastBody = nil
@@ -342,7 +342,7 @@ type DeleteRepositoryRulesetMockClient struct {
 	responseBody string
 }
 
-func (m *DeleteRepositoryRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *DeleteRepositoryRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -418,7 +418,7 @@ func TestDeleteRepositoryRuleset(t *testing.T) {
 		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 
@@ -452,7 +452,7 @@ func TestDeleteRepositoryRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 
@@ -531,7 +531,7 @@ func TestDeleteRepositoryRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 
@@ -604,7 +604,7 @@ type UpdateRepositoryRulesetMockClient struct {
 	responseBody string
 }
 
-func (m *UpdateRepositoryRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *UpdateRepositoryRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -776,7 +776,7 @@ func TestUpdateRepositoryRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 		logsCollector := observability.NewLogCollection()
@@ -816,7 +816,7 @@ func TestUpdateRepositoryRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 		logsCollector := observability.NewLogCollection()
@@ -908,7 +908,7 @@ func TestUpdateRepositoryRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		remoteImpl.loadRepositories(ctx)
+		remoteImpl.loadRepositories(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 		logsCollector := observability.NewLogCollection()

@@ -25,7 +25,7 @@ type CreateRepositoryMockClient struct {
 	responseName   string
 }
 
-func (m *CreateRepositoryMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *CreateRepositoryMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -388,7 +388,7 @@ type DeleteRepositoryMockClient struct {
 	errorMessage string
 }
 
-func (m *DeleteRepositoryMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *DeleteRepositoryMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -602,7 +602,7 @@ type RenameRepositoryMockClient struct {
 	responseName   string
 }
 
-func (m *RenameRepositoryMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *RenameRepositoryMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 

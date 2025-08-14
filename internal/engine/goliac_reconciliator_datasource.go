@@ -258,6 +258,11 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 					branchprotection.BypassPullRequestAllowances.Nodes = append(branchprotection.BypassPullRequestAllowances.Nodes, node)
 				}
 			}
+			for _, a := range bp.BypassPullRequestApps {
+				node := BypassPullRequestAllowanceNode{}
+				node.Actor.AppSlug = slug.Make(a)
+				branchprotection.BypassPullRequestAllowances.Nodes = append(branchprotection.BypassPullRequestAllowances.Nodes, node)
+			}
 			branchprotections[bp.Pattern] = &branchprotection
 		}
 

@@ -26,7 +26,7 @@ type LoadEnvironmentVariablesMockClient struct {
 	callCount       int
 }
 
-func (m *LoadEnvironmentVariablesMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *LoadEnvironmentVariablesMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return nil, nil
 }
 

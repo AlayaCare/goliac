@@ -89,7 +89,7 @@ func LoadUsersFromGithubOrgSaml(ctx context.Context, client github.GitHubClient,
 	hasNextPage := true
 	count := 0
 	for hasNextPage {
-		data, err := client.QueryGraphQLAPI(ctx, listUsersFromGithubOrgSaml, variables)
+		data, err := client.QueryGraphQLAPI(ctx, listUsersFromGithubOrgSaml, variables, nil)
 		if err != nil {
 			return users, err
 		}
