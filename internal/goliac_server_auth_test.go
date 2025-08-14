@@ -32,7 +32,7 @@ type GithubClientMock struct {
 	lastBody     map[string]interface{}
 }
 
-func (g *GithubClientMock) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (g *GithubClientMock) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return nil, nil
 }
 func (g *GithubClientMock) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error) {

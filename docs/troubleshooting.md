@@ -1,5 +1,15 @@
 # Troubleshooting guide
 
+## Getting a "Resource not accessible by integration" error
+
+This error is happening if you are trying to have apps defined in your bypass_pullrequest_apps list in a branch protection (or if you are scaffolding a repository with apps defined in the branch protection bypass_pullrequest_apps).
+
+This is due to a limitation of the Github API (cf https://github.com/orgs/community/discussions/164712).
+
+To fix it, Goliac needs some help, in particular it cannot list apps using Github App credentials via GraphQL, it needs an admin PAT (Personal App Token). So you need to create and set not only the Githup App credentials but also you need to set `GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN` environment variable to the PAT of a github admin.
+
+Github support is aware of this limitation and is supposed to fix it in the future.
+
 ## How to resolve the error "more than X changesets to apply (total of Y), this is suspicious. Aborting"
 
 This error is happening if a changeset (a goliac-team's PR) introduce more than X changesets. This is a safety mechanism to avoid applying a huge number of changesets at once.

@@ -165,7 +165,7 @@ spec:
 
 On top of repository ruleset, you can also you the older bbranch protection.
 
-Most but not all branch protection features are currently supported (but the software can be easily extended): `requires_approving_reviews`, `required_approving_review_count`, `dismisses_stale_reviews`, `requires_code_owner_reviews`, `require_last_push_approval`, `requires_status_checks`, `requires_strict_status_checks`, `required_status_check_contexts`, `requires_conversation_resolution`, `requires_commit_signatures`, `requires_linear_history`, `allows_force_pushes`, `allows_deletions`, `bypass_pullrequest_users`, `bypass_pullrequest_teams`
+Most but not all branch protection features are currently supported (but the software can be easily extended): `requires_approving_reviews`, `required_approving_review_count`, `dismisses_stale_reviews`, `requires_code_owner_reviews`, `require_last_push_approval`, `requires_status_checks`, `requires_strict_status_checks`, `required_status_check_contexts`, `requires_conversation_resolution`, `requires_commit_signatures`, `requires_linear_history`, `allows_force_pushes`, `allows_deletions`, `bypass_pullrequest_users`, `bypass_pullrequest_teams`, `bypass_pullrequest_apps`
 
 
 ```yaml

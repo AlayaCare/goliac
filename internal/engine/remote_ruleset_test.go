@@ -25,7 +25,7 @@ type RulesetMockClient struct {
 	errorMessage string
 }
 
-func (m *RulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *RulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.lastGraphQLQuery = query
 	m.lastVariables = variables
 
@@ -280,7 +280,7 @@ type AddRulesetMockClient struct {
 	responseBody string
 }
 
-func (m *AddRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *AddRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -477,7 +477,7 @@ func TestAddRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		remoteImpl.loadRulesets(ctx)
+		remoteImpl.loadRulesets(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 		logsCollector := observability.NewLogCollection()
@@ -540,7 +540,7 @@ type DeleteRulesetMockClient struct {
 	responseBody string
 }
 
-func (m *DeleteRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *DeleteRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -654,7 +654,7 @@ func TestDeleteRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		remoteImpl.loadRulesets(ctx)
+		remoteImpl.loadRulesets(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 		logsCollector := observability.NewLogCollection()
@@ -758,7 +758,7 @@ type UpdateRulesetMockClient struct {
 	responseBody string
 }
 
-func (m *UpdateRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}) ([]byte, error) {
+func (m *UpdateRulesetMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	return []byte("{}"), nil
 }
 
@@ -982,7 +982,7 @@ func TestUpdateRuleset(t *testing.T) {
 		}
 
 		ctx := context.TODO()
-		remoteImpl.loadRulesets(ctx)
+		remoteImpl.loadRulesets(ctx, nil)
 		mockClient.lastEndpoint = ""
 		mockClient.lastMethod = ""
 		logsCollector := observability.NewLogCollection()

@@ -70,6 +70,7 @@ type RepositoryBranchProtection struct {
 	AllowsDeletions                bool     `yaml:"allows_deletions,omitempty"`
 	BypassPullRequestUsers         []string `yaml:"bypass_pullrequest_users,omitempty"`
 	BypassPullRequestTeams         []string `yaml:"bypass_pullrequest_teams,omitempty"`
+	BypassPullRequestApps          []string `yaml:"bypass_pullrequest_apps,omitempty"`
 }
 
 /*

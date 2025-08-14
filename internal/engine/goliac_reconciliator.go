@@ -686,14 +686,19 @@ func compareBranchProtections(bpname string, lbp *GithubBranchProtection, rbp *G
 	}
 	leftActorUsers := []string{}
 	leftActorTeams := []string{}
+	leftActorApps := []string{}
 	rightActorUsers := []string{}
 	rightActorTeams := []string{}
+	rightActorApps := []string{}
 	for _, n := range lbp.BypassPullRequestAllowances.Nodes {
 		if n.Actor.TeamSlug != "" {
 			leftActorTeams = append(leftActorTeams, n.Actor.TeamSlug)
 		}
 		if n.Actor.UserLogin != "" {
 			leftActorUsers = append(leftActorUsers, n.Actor.UserLogin)
+		}
+		if n.Actor.AppSlug != "" {
+			leftActorApps = append(leftActorApps, n.Actor.AppSlug)
 		}
 	}
 	for _, n := range rbp.BypassPullRequestAllowances.Nodes {
@@ -703,11 +708,17 @@ func compareBranchProtections(bpname string, lbp *GithubBranchProtection, rbp *G
 		if n.Actor.UserLogin != "" {
 			rightActorUsers = append(rightActorUsers, n.Actor.UserLogin)
 		}
+		if n.Actor.AppSlug != "" {
+			rightActorApps = append(rightActorApps, n.Actor.AppSlug)
+		}
 	}
 	if res, _, _ := entity.StringArrayEquivalent(leftActorUsers, rightActorUsers); !res {
 		return false
 	}
 	if res, _, _ := entity.StringArrayEquivalent(leftActorTeams, rightActorTeams); !res {
+		return false
+	}
+	if res, _, _ := entity.StringArrayEquivalent(leftActorApps, rightActorApps); !res {
 		return false
 	}
 

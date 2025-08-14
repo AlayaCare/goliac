@@ -436,6 +436,9 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 										lbranchprotection.BypassPullRequestUsers = append(lbranchprotection.BypassPullRequestUsers, username)
 									}
 								}
+								if node.Actor.AppSlug != "" {
+									lbranchprotection.BypassPullRequestApps = append(lbranchprotection.BypassPullRequestApps, node.Actor.AppSlug)
+								}
 							}
 
 							lRepo.Spec.BranchProtections = append(lRepo.Spec.BranchProtections, lbranchprotection)

@@ -1,3 +1,7 @@
+## Goliac v1.3.1
+
+- support of apps in branch protection bypass and global ruleset
+
 ## Goliac v1.3.0
 
 - introducing branch protection bypass (users/teams)
