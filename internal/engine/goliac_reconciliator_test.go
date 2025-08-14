@@ -88,7 +88,7 @@ type GoliacRemoteMock struct {
 	repos      map[string]*GithubRepository
 	teamsrepos map[string]map[string]*GithubTeamRepo // key is the slug team
 	rulesets   map[string]*GithubRuleSet
-	appids     map[string]int
+	appids     map[string]*GithubApp
 }
 
 func (m *GoliacRemoteMock) Load(ctx context.Context, continueOnError bool) error {
@@ -127,7 +127,7 @@ func (m *GoliacRemoteMock) RepositoriesByRefId(ctx context.Context) map[string]*
 func (m *GoliacRemoteMock) TeamRepositories(ctx context.Context) map[string]map[string]*GithubTeamRepo {
 	return m.teamsrepos
 }
-func (m *GoliacRemoteMock) AppIds(ctx context.Context) map[string]int {
+func (m *GoliacRemoteMock) AppIds(ctx context.Context) map[string]*GithubApp {
 	return m.appids
 }
 func (m *GoliacRemoteMock) CountAssets(ctx context.Context, warmup bool) (int, error) {
@@ -444,7 +444,7 @@ func TestReconciliationTeam(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
@@ -497,7 +497,7 @@ func TestReconciliationTeam(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
@@ -551,7 +551,7 @@ func TestReconciliationTeam(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		existing := &GithubTeam{
 			Name:    "existing",
@@ -617,7 +617,7 @@ func TestReconciliationTeam(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		existing := &GithubTeam{
 			Name:    "exist ing",
@@ -682,7 +682,7 @@ func TestReconciliationTeam(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
@@ -718,7 +718,7 @@ func TestReconciliationTeam(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		removing := &GithubTeam{
 			Name:    "removing",
@@ -769,7 +769,7 @@ func TestReconciliationTeam(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		parentTeam := &GithubTeam{
@@ -851,7 +851,7 @@ func TestReconciliationTeam(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		parentTeam := &GithubTeam{
@@ -945,7 +945,7 @@ func TestReconciliationTeam(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		parentTeam := &GithubTeam{
@@ -1029,7 +1029,7 @@ func TestReconciliationTeam(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		removing := &GithubTeam{
 			Name:    "removing",
@@ -1074,7 +1074,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:                "teams",
@@ -1127,7 +1127,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:                "teams",
@@ -1186,7 +1186,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -1261,7 +1261,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -1341,7 +1341,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -1426,7 +1426,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -1516,7 +1516,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -1596,7 +1596,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -1677,7 +1677,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -1753,7 +1753,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -1834,7 +1834,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -1912,7 +1912,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -1997,7 +1997,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		existing := &GithubTeam{
 			Name:    "existing",
@@ -2061,7 +2061,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		removing := &GithubRepository{
 			Name: "removing",
@@ -2099,7 +2099,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		removing := &GithubRepository{
 			Name:           "removing",
@@ -2140,7 +2140,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		removing := &GithubRepository{
 			Name:           "removing",
@@ -2203,7 +2203,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		rAdminTeam := &GithubTeam{
 			Name:    "admin-team",
@@ -2342,7 +2342,7 @@ func TestReconciliationRepo(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		rAdminTeam := &GithubTeam{
 			Name:    "admin-team",
@@ -2474,7 +2474,7 @@ func TestReconciliationRulesets(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
@@ -2523,7 +2523,7 @@ func TestReconciliationRulesets(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
@@ -2572,7 +2572,7 @@ func TestReconciliationRulesets(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		rRuleset := &GithubRuleSet{
@@ -2619,7 +2619,7 @@ func TestReconciliationRulesets(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		rRuleset := &GithubRuleSet{
@@ -2685,7 +2685,7 @@ func TestReconciliationRulesets(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		rRuleset := &GithubRuleSet{
@@ -2764,7 +2764,7 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -2863,7 +2863,7 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -2949,7 +2949,7 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -3038,7 +3038,7 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 		remote.repos["teams"] = &GithubRepository{
 			Name:           "teams",
@@ -3117,7 +3117,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		// Add the repository to remote without any environments
@@ -3165,7 +3165,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		// Add the repository to remote with a production environment
@@ -3227,7 +3227,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		// Add the repository to remote with old environment variables
@@ -3290,7 +3290,7 @@ func TestReconciliationAutolinks(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		// Add the repository to remote without any environments
@@ -3339,7 +3339,7 @@ func TestReconciliationAutolinks(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		// Add the repository to remote without any environments
@@ -3395,7 +3395,7 @@ func TestReconciliationAutolinks(t *testing.T) {
 			repos:      make(map[string]*GithubRepository),
 			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
 			rulesets:   make(map[string]*GithubRuleSet),
-			appids:     make(map[string]int),
+			appids:     make(map[string]*GithubApp),
 		}
 
 		// Add the repository to remote without any environments

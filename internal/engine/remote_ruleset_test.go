@@ -347,8 +347,12 @@ func TestAddRuleset(t *testing.T) {
 		}
 
 		// Add app ID to the remote impl for bypass actor resolution
-		remoteImpl.appIds = map[string]int{
-			"test-app": 456,
+		remoteImpl.appIds = map[string]*GithubApp{
+			"test-app": {
+				Id:        456,
+				GraphqlId: "123",
+				Slug:      "test-app",
+			},
 		}
 
 		// Add team to the remote impl for bypass actor resolution
@@ -825,8 +829,12 @@ func TestUpdateRuleset(t *testing.T) {
 		}
 
 		// Add app ID to the remote impl for bypass actor resolution
-		remoteImpl.appIds = map[string]int{
-			"test-app": 456,
+		remoteImpl.appIds = map[string]*GithubApp{
+			"test-app": {
+				Id:        456,
+				GraphqlId: "123",
+				Slug:      "test-app",
+			},
 		}
 
 		// Add team to the remote impl for bypass actor resolution

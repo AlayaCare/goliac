@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/goliac-project/goliac/internal/entity"
@@ -73,8 +74,12 @@ func TestCreateRepositoryRuleset(t *testing.T) {
 		}
 
 		// Add app ID to the remote impl for bypass actor resolution
-		remoteImpl.appIds = map[string]int{
-			"test-app": 456,
+		remoteImpl.appIds = map[string]*GithubApp{
+			"test-app": {
+				Id:        456,
+				GraphqlId: "123",
+				Slug:      "test-app",
+			},
 		}
 
 		// Add team to the remote impl for bypass actor resolution
@@ -170,6 +175,10 @@ func TestCreateRepositoryRuleset(t *testing.T) {
 				},
 			},
 		}
+		fmt.Println("expectedBody", expectedBody)
+		fmt.Println("mockClient.lastBody", mockClient.lastBody)
+		fmt.Println("mockClient.lastMethod", mockClient.lastMethod)
+		fmt.Println("mockClient.lastEndpoint", mockClient.lastEndpoint)
 		assert.True(t, utils.DeepEqualUnordered(expectedBody, mockClient.lastBody))
 
 		// Verify the ruleset was added to the repository's cache
@@ -659,8 +668,12 @@ func TestUpdateRepositoryRuleset(t *testing.T) {
 		}
 
 		// Add app ID to the remote impl for bypass actor resolution
-		remoteImpl.appIds = map[string]int{
-			"test-app": 789,
+		remoteImpl.appIds = map[string]*GithubApp{
+			"test-app": {
+				Id:        789,
+				GraphqlId: "123",
+				Slug:      "test-app",
+			},
 		}
 
 		// Add team to the remote impl for bypass actor resolution
