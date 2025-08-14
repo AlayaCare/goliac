@@ -562,9 +562,13 @@ func (e *GoliacRemoteExecutorMock) RuleSets(ctx context.Context) map[string]*eng
 		},
 	}
 }
-func (e *GoliacRemoteExecutorMock) AppIds(ctx context.Context) map[string]int {
-	return map[string]int{
-		"goliac-project-app": 1,
+func (e *GoliacRemoteExecutorMock) AppIds(ctx context.Context) map[string]*engine.GithubApp {
+	return map[string]*engine.GithubApp{
+		"goliac-project-app": {
+			Id:        1,
+			GraphqlId: "123",
+			Slug:      "goliac-project-app",
+		},
 	}
 }
 func (e *GoliacRemoteExecutorMock) IsEnterprise() bool {
@@ -732,7 +736,7 @@ func (e *GoliacRemoteExecutorMock) DeleteRepositoryAutolink(ctx context.Context,
 	fmt.Println("*** DeleteRepositoryAutolink", repositoryName, autolinkId)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *engine.GithubAutolink) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, previousAutolinkId int, autolink *engine.GithubAutolink) {
 	fmt.Println("*** UpdateRepositoryAutolink", repositoryName, autolink.KeyPrefix, autolink.UrlTemplate, autolink.IsAlphanumeric)
 	e.nbChanges++
 }

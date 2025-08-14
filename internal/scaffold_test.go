@@ -51,7 +51,7 @@ func (s *ScaffoldGoliacRemoteMock) TeamRepositories(ctx context.Context) map[str
 func (s *ScaffoldGoliacRemoteMock) RuleSets(ctx context.Context) map[string]*engine.GithubRuleSet {
 	return nil
 }
-func (s *ScaffoldGoliacRemoteMock) AppIds(ctx context.Context) map[string]int {
+func (s *ScaffoldGoliacRemoteMock) AppIds(ctx context.Context) map[string]*engine.GithubApp {
 	return nil
 }
 func (s *ScaffoldGoliacRemoteMock) IsEnterprise() bool {

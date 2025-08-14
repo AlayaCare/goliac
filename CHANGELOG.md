@@ -1,3 +1,8 @@
+## Goliac v1.3.2
+
+- fix app id for graphql call
+- fix autolink updates
+
 ## Goliac v1.3.1
 
 - support of apps in branch protection bypass and global ruleset
