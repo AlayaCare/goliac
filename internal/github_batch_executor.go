@@ -391,12 +391,13 @@ func (g *GithubBatchExecutor) DeleteRepositoryAutolink(ctx context.Context, logs
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, autolink *engine.GithubAutolink) {
+func (g *GithubBatchExecutor) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, previousAutolinkId int, autolink *engine.GithubAutolink) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositoryAutolink{
-		client:   g.client,
-		dryrun:   dryrun,
-		reponame: reponame,
-		autolink: autolink,
+		client:             g.client,
+		dryrun:             dryrun,
+		reponame:           reponame,
+		previousAutolinkId: previousAutolinkId,
+		autolink:           autolink,
 	})
 }
 
@@ -840,12 +841,13 @@ func (g *GithubCommandDeleteRepositoryAutolink) Apply(ctx context.Context, logsC
 }
 
 type GithubCommandUpdateRepositoryAutolink struct {
-	client   engine.ReconciliatorExecutor
-	dryrun   bool
-	reponame string
-	autolink *engine.GithubAutolink
+	client             engine.ReconciliatorExecutor
+	dryrun             bool
+	reponame           string
+	previousAutolinkId int
+	autolink           *engine.GithubAutolink
 }
 
 func (g *GithubCommandUpdateRepositoryAutolink) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
-	g.client.UpdateRepositoryAutolink(ctx, logsCollector, g.dryrun, g.reponame, g.autolink)
+	g.client.UpdateRepositoryAutolink(ctx, logsCollector, g.dryrun, g.reponame, g.previousAutolinkId, g.autolink)
 }

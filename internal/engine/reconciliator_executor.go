@@ -55,7 +55,7 @@ type ReconciliatorExecutor interface {
 	// Repository autolinks management
 	AddRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink)
 	DeleteRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolinkId int)
-	UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink)
+	UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, previousAutolinkId int, autolink *GithubAutolink)
 
 	Begin(logsCollector *observability.LogCollection, dryrun bool)
 	Rollback(logsCollector *observability.LogCollection, dryrun bool, err error)

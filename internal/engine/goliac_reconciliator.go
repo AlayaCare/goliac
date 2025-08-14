@@ -418,7 +418,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 						r.DeleteRepositoryAutolink(ctx, logsCollector, dryrun, remote, reponame, ral.Id)
 					}
 					onAutolinkChange := func(autolinkname string, lal *GithubAutolink, ral *GithubAutolink) {
-						r.UpdateRepositoryAutolink(ctx, logsCollector, dryrun, remote, reponame, ral)
+						r.UpdateRepositoryAutolink(ctx, logsCollector, dryrun, remote, reponame, ral.Id, lal)
 					}
 					CompareEntities(lRepo.Autolinks.GetEntity(), rRepo.Autolinks.GetEntity(), compareAutolinks, onAutolinkAdded, onAutolinkRemoved, onAutolinkChange)
 				}
@@ -1112,11 +1112,11 @@ func (r *GoliacReconciliatorImpl) DeleteRepositoryAutolink(ctx context.Context, 
 		r.executor.DeleteRepositoryAutolink(ctx, logsCollector, dryrun, reponame, autolinkId)
 	}
 }
-func (r *GoliacReconciliatorImpl) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, autolink *GithubAutolink) {
+func (r *GoliacReconciliatorImpl) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, previousAutolinkId int, autolink *GithubAutolink) {
 	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_autolink"}, "repository: %s, autolink: %s", reponame, autolink.KeyPrefix)
-	remote.UpdateRepositoryAutolink(reponame, autolink)
+	remote.UpdateRepositoryAutolink(reponame, previousAutolinkId, autolink)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryAutolink(ctx, logsCollector, dryrun, reponame, autolink)
+		r.executor.UpdateRepositoryAutolink(ctx, logsCollector, dryrun, reponame, previousAutolinkId, autolink)
 	}
 }
 func (r *GoliacReconciliatorImpl) Begin(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool) {

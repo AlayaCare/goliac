@@ -736,7 +736,7 @@ func (e *GoliacRemoteExecutorMock) DeleteRepositoryAutolink(ctx context.Context,
 	fmt.Println("*** DeleteRepositoryAutolink", repositoryName, autolinkId)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *engine.GithubAutolink) {
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, previousAutolinkId int, autolink *engine.GithubAutolink) {
 	fmt.Println("*** UpdateRepositoryAutolink", repositoryName, autolink.KeyPrefix, autolink.UrlTemplate, autolink.IsAlphanumeric)
 	e.nbChanges++
 }

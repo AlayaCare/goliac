@@ -394,7 +394,7 @@ func (r *ReconciliatorListenerRecorder) DeleteRepositoryAutolink(ctx context.Con
 	}
 	r.RepositoryAutolinkDeleted[repositoryName] = append(r.RepositoryAutolinkDeleted[repositoryName], autolinkId)
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, previousAutolinkId int, autolink *GithubAutolink) {
 	repo := r.RepositoryAutolinkUpdated[repositoryName]
 	if repo == nil {
 		autolinks := make(map[string]*GithubAutolink)

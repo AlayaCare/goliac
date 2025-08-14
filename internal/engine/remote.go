@@ -4140,10 +4140,10 @@ func (g *GoliacRemoteImpl) DeleteRepositoryAutolink(ctx context.Context, logsCol
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
+func (g *GoliacRemoteImpl) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, previousAutolinkId int, autolink *GithubAutolink) {
 	// we need to delete and add the autolink
-	if autolink.Id != 0 {
-		g.DeleteRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, autolink.Id)
+	if previousAutolinkId != 0 {
+		g.DeleteRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, previousAutolinkId)
 	}
 	g.AddRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, autolink)
 }
