@@ -514,7 +514,7 @@ func (m *MutableGoliacRemoteImpl) DeleteRepositoryAutolink(repositoryName string
 		}
 	}
 }
-func (m *MutableGoliacRemoteImpl) UpdateRepositoryAutolink(repositoryName string, autolink *GithubAutolink) {
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryAutolink(repositoryName string, previousAutolinkId int, autolink *GithubAutolink) {
 	if r, ok := m.repositories[repositoryName]; ok {
 		r.Autolinks.GetEntity()[autolink.KeyPrefix] = autolink
 	}

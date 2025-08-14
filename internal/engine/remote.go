@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -48,7 +49,7 @@ type GoliacRemote interface {
 	Repositories(ctx context.Context) map[string]*GithubRepository              // the key is the repository name
 	TeamRepositories(ctx context.Context) map[string]map[string]*GithubTeamRepo // key is team slug, second key is repo name
 	RuleSets(ctx context.Context) map[string]*GithubRuleSet
-	AppIds(ctx context.Context) map[string]int
+	AppIds(ctx context.Context) map[string]*GithubApp
 
 	IsEnterprise() bool // check if we are on an Enterprise version, or if we are on GHES 3.11+
 
@@ -98,6 +99,12 @@ type GithubTeam struct {
 	ParentTeam  *int
 }
 
+type GithubApp struct {
+	Id        int
+	GraphqlId string
+	Slug      string
+}
+
 type GithubTeamRepo struct {
 	Name       string // repository name
 	Permission string // possible values: ADMIN, MAINTAIN, WRITE, TRIAGE, READ
@@ -142,7 +149,7 @@ type GoliacRemoteImpl struct {
 	teamRepos             map[string]map[string]*GithubTeamRepo
 	teamSlugByName        map[string]string
 	rulesets              map[string]*GithubRuleSet
-	appIds                map[string]int
+	appIds                map[string]*GithubApp
 	ttlExpireUsers        time.Time
 	ttlExpireRepositories time.Time
 	ttlExpireTeams        time.Time
@@ -322,7 +329,7 @@ func NewGoliacRemoteImpl(client github.GitHubClient,
 		teamRepos:             make(map[string]map[string]*GithubTeamRepo),
 		teamSlugByName:        make(map[string]string),
 		rulesets:              make(map[string]*GithubRuleSet),
-		appIds:                make(map[string]int),
+		appIds:                make(map[string]*GithubApp),
 		ttlExpireUsers:        time.Now(),
 		ttlExpireRepositories: time.Now(),
 		ttlExpireTeams:        time.Now(),
@@ -370,7 +377,7 @@ func (g *GoliacRemoteImpl) RuleSets(ctx context.Context) map[string]*GithubRuleS
 	return g.rulesets
 }
 
-func (g *GoliacRemoteImpl) AppIds(ctx context.Context) map[string]int {
+func (g *GoliacRemoteImpl) AppIds(ctx context.Context) map[string]*GithubApp {
 	if time.Now().After(g.ttlExpireAppIds) {
 		appIds, err := g.loadAppIds(ctx)
 		if err == nil {
@@ -383,9 +390,14 @@ func (g *GoliacRemoteImpl) AppIds(ctx context.Context) map[string]int {
 	defer g.actionMutex.Unlock()
 
 	// copy the map to a safe one
-	var rAppIds = make(map[string]int)
+	var rAppIds = make(map[string]*GithubApp)
 	for k, v := range g.appIds {
-		rAppIds[k] = v
+		rAppIds[k] = &GithubApp{
+			Id: v.Id,
+			// we can infer the node_id, or we can get it from https://api.github.com/apps/<app slug>
+			GraphqlId: v.GraphqlId,
+			Slug:      v.Slug,
+		}
 	}
 	return rAppIds
 }
@@ -1044,9 +1056,9 @@ type GraplQLTeams struct {
 	} `json:"errors"`
 }
 
-func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, error) {
+func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]*GithubApp, error) {
 	logrus.Debug("loading appIds")
-	appIds := map[string]int{}
+	appIds := map[string]*GithubApp{}
 	type Installation struct {
 		TotalCount    int `json:"total_count"`
 		Installations []struct {
@@ -1076,7 +1088,12 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 	}
 
 	for _, i := range installations.Installations {
-		appIds[i.AppSlug] = i.AppId
+		appIds[i.AppSlug] = &GithubApp{
+			Id: i.AppId,
+			// we can infer the node_id, or we can get it from https://api.github.com/apps/<app slug>
+			GraphqlId: base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("03:App%d", i.AppId))),
+			Slug:      i.AppSlug,
+		}
 	}
 
 	if installations.TotalCount > 30 {
@@ -1100,7 +1117,12 @@ func (g *GoliacRemoteImpl) loadAppIds(ctx context.Context) (map[string]int, erro
 			}
 
 			for _, i := range installations.Installations {
-				appIds[i.AppSlug] = i.AppId
+				appIds[i.AppSlug] = &GithubApp{
+					Id: i.AppId,
+					// we can infer the node_id, or we can get it from https://api.github.com/apps/<app slug>
+					GraphqlId: base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("03:App%d", i.AppId))),
+					Slug:      i.AppSlug,
+				}
 			}
 		}
 	}
@@ -2124,7 +2146,7 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 		// let's find the app id based on the app slug name
 		if appId, ok := g.appIds[appname]; ok {
 			bypassActor := map[string]interface{}{
-				"actor_id":    appId,
+				"actor_id":    appId.Id,
 				"actor_type":  "Integration",
 				"bypass_mode": mode,
 			}
@@ -2688,6 +2710,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 	bypassPullRequestActorIds := []string{}
 	users := g.users
 	teams := g.teams
+	apps := g.appIds
 	for _, actor := range branchprotection.BypassPullRequestAllowances.Nodes {
 		if actor.Actor.UserLogin != "" {
 			for login, u := range users {
@@ -2704,7 +2727,11 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 			}
 		}
 		if actor.Actor.AppSlug != "" {
-			bypassPullRequestActorIds = append(bypassPullRequestActorIds, actor.Actor.AppSlug)
+			for slug, a := range apps {
+				if slug == actor.Actor.AppSlug {
+					bypassPullRequestActorIds = append(bypassPullRequestActorIds, a.GraphqlId)
+				}
+			}
 		}
 	}
 
@@ -4113,10 +4140,10 @@ func (g *GoliacRemoteImpl) DeleteRepositoryAutolink(ctx context.Context, logsCol
 	}
 }
 
-func (g *GoliacRemoteImpl) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink) {
+func (g *GoliacRemoteImpl) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, previousAutolinkId int, autolink *GithubAutolink) {
 	// we need to delete and add the autolink
-	if autolink.Id != 0 {
-		g.DeleteRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, autolink.Id)
+	if previousAutolinkId != 0 {
+		g.DeleteRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, previousAutolinkId)
 	}
 	g.AddRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, autolink)
 }

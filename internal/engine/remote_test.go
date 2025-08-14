@@ -644,7 +644,11 @@ func TestPrepareRuleset(t *testing.T) {
 	t.Run("happy path", func(t *testing.T) {
 		ghClient := MockGithubClient{}
 		g := NewGoliacRemoteImpl(&ghClient, "myorg", true, true)
-		g.appIds["goliac-project-app"] = 1
+		g.appIds["goliac-project-app"] = &GithubApp{
+			Id:        1,
+			GraphqlId: "123",
+			Slug:      "goliac-project-app",
+		}
 		g.repositories["repo1"] = &GithubRepository{
 			Name: "repo1",
 			Id:   123,
@@ -688,7 +692,11 @@ repositories:
 	t.Run("happy path: non default branch name", func(t *testing.T) {
 		ghClient := MockGithubClient{}
 		g := NewGoliacRemoteImpl(&ghClient, "myorg", true, true)
-		g.appIds["goliac-project-app"] = 1
+		g.appIds["goliac-project-app"] = &GithubApp{
+			Id:        1,
+			GraphqlId: "123",
+			Slug:      "goliac-project-app",
+		}
 		g.repositories["repo1"] = &GithubRepository{
 			Name: "repo1",
 			Id:   123,
