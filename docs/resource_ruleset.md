@@ -33,6 +33,9 @@ spec:
     conditions:
         include: 
         - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
+        # - 1.*
+        # exclude:
+        # - another_branch
     rules:
         - ruletype: pull_request # currently supported: pull_request, required_signatures,required_status_checks, creation, update, deletion, non_fast_forward, required_linear_history
         parameters:
