@@ -694,7 +694,19 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
                       requiredStatusChecks {
                         context
                       }
-					}
+                    }
+                    ... on BranchNamePattern {
+                      name
+                      negate
+                      operator
+                      pattern
+                    }
+                    ... on TagNamePattern {
+                      name
+                      negate
+                      operator
+                      pattern
+                    }
                   }
                   type
                 }
@@ -1917,6 +1929,18 @@ query listRulesets ($orgLogin: String!) {
 							context
 						}
 					}
+					... on BranchNamePattern {
+						name
+						negate
+						operator
+						pattern
+					}
+					... on TagNamePattern {
+						name
+						negate
+						operator
+						pattern
+					}
 				}
 				type
 			}
@@ -1958,6 +1982,12 @@ type GithubRuleSetRule struct {
 		// RequiredStatusChecksParameters
 		RequiredStatusChecks             []GithubRuleSetRuleStatusCheck
 		StrictRequiredStatusChecksPolicy bool
+
+		// BranchNamePattern / TagNamePattern
+		Name     string
+		Negate   bool
+		Operator string
+		Pattern  string
 	}
 	ID   int
 	Type string // CREATION, UPDATE, DELETION, REQUIRED_LINEAR_HISTORY, REQUIRED_DEPLOYMENTS, REQUIRED_SIGNATURES, PULL_REQUEST, REQUIRED_STATUS_CHECKS, NON_FAST_FORWARD, COMMIT_MESSAGE_PATTERN, COMMIT_AUTHOR_EMAIL_PATTERN, COMMITTER_EMAIL_PATTERN, BRANCH_NAME_PATTERN, TAG_NAME_PATTERN
@@ -2253,6 +2283,26 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 		case "required_linear_history":
 			rules = append(rules, map[string]interface{}{
 				"type": "required_linear_history",
+			})
+		case "branch_name_pattern":
+			rules = append(rules, map[string]interface{}{
+				"type": "branch_name_pattern",
+				"parameters": map[string]interface{}{
+					"name":     rule.Name,
+					"negate":   rule.Negate,
+					"operator": rule.Operator,
+					"pattern":  rule.Pattern,
+				},
+			})
+		case "tag_name_pattern":
+			rules = append(rules, map[string]interface{}{
+				"type": "tag_name_pattern",
+				"parameters": map[string]interface{}{
+					"name":     rule.Name,
+					"negate":   rule.Negate,
+					"operator": rule.Operator,
+					"pattern":  rule.Pattern,
+				},
 			})
 		}
 	}
