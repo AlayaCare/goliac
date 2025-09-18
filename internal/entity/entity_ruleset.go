@@ -22,6 +22,12 @@ type RuleSetParameters struct {
 	// RequiredStatusChecksParameters
 	RequiredStatusChecks             []string `yaml:"requiredStatusChecks,omitempty"`
 	StrictRequiredStatusChecksPolicy bool     `yaml:"strictRequiredStatusChecksPolicy,omitempty"`
+
+	// BranchNamePattern / TaghNamePattern
+	Name     string `yaml:"name,omitempty"`
+	Negate   bool   `yaml:"negate,omitempty"`
+	Operator string `yaml:"operator,omitempty"`
+	Pattern  string `yaml:"pattern,omitempty"`
 }
 
 func CompareRulesetParameters(ruletype string, left RuleSetParameters, right RuleSetParameters) bool {
@@ -60,6 +66,34 @@ func CompareRulesetParameters(ruletype string, left RuleSetParameters, right Rul
 			return false
 		}
 		if left.StrictRequiredStatusChecksPolicy != right.StrictRequiredStatusChecksPolicy {
+			return false
+		}
+		return true
+	case "branch_name_pattern":
+		if left.Name != right.Name {
+			return false
+		}
+		if left.Negate != right.Negate {
+			return false
+		}
+		if left.Operator != right.Operator {
+			return false
+		}
+		if left.Pattern != right.Pattern {
+			return false
+		}
+		return true
+	case "tag_name_pattern":
+		if left.Name != right.Name {
+			return false
+		}
+		if left.Negate != right.Negate {
+			return false
+		}
+		if left.Operator != right.Operator {
+			return false
+		}
+		if left.Pattern != right.Pattern {
 			return false
 		}
 		return true
@@ -180,8 +214,23 @@ func ValidateRulesetDefinition(r *RuleSetDefinition, filename string) error {
 			rule.Ruletype != "update" &&
 			rule.Ruletype != "deletion" &&
 			rule.Ruletype != "non_fast_forward" &&
-			rule.Ruletype != "required_linear_history" {
+			rule.Ruletype != "required_linear_history" &&
+			rule.Ruletype != "branch_name_pattern" &&
+			rule.Ruletype != "tag_name_pattern" {
 			return fmt.Errorf("invalid ruletype: %s for ruleset filename %s", rule.Ruletype, filename)
+		}
+
+		if rule.Ruletype == "branch_name_pattern" ||
+			rule.Ruletype == "tag_name_pattern" {
+			if rule.Parameters.Operator != "starts_with" &&
+				rule.Parameters.Operator != "ends_with" &&
+				rule.Parameters.Operator != "contains" &&
+				rule.Parameters.Operator != "regex" {
+				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: operator must be 'starts_with','ends_with','contains' or 'regex' ", rule.Ruletype, filename)
+			}
+			if rule.Parameters.Pattern == "" {
+				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: pattern must not be empty ", rule.Ruletype, filename)
+			}
 		}
 	}
 
