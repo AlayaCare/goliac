@@ -143,6 +143,10 @@ func TestFromGraphQLToGithubRuleset(t *testing.T) {
 							RequireLastPushApproval          bool
 							RequiredStatusChecks             []GithubRuleSetRuleStatusCheck
 							StrictRequiredStatusChecksPolicy bool
+							Name                             string
+							Negate                           bool
+							Operator                         string
+							Pattern                          string
 						}{
 							DismissStaleReviewsOnPush:      true,
 							RequireCodeOwnerReview:         true,
@@ -161,6 +165,10 @@ func TestFromGraphQLToGithubRuleset(t *testing.T) {
 							RequireLastPushApproval          bool
 							RequiredStatusChecks             []GithubRuleSetRuleStatusCheck
 							StrictRequiredStatusChecksPolicy bool
+							Name                             string
+							Negate                           bool
+							Operator                         string
+							Pattern                          string
 						}{
 							RequiredStatusChecks: []GithubRuleSetRuleStatusCheck{
 								{Context: "test-check"},
