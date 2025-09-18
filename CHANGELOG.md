@@ -1,3 +1,8 @@
+## Goliac v1.3.3
+
+- security update (npm axios library)
+- support for branch_name_pattern/tag_name_pattern ruleset type
+
 ## Goliac v1.3.2
 
 - fix app id for graphql call
