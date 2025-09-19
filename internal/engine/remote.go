@@ -695,13 +695,13 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
                         context
                       }
                     }
-                    ... on BranchNamePattern {
+                    ... on BranchNamePatternParameters {
                       name
                       negate
                       operator
                       pattern
                     }
-                    ... on TagNamePattern {
+                    ... on TagNamePatternParameters {
                       name
                       negate
                       operator
