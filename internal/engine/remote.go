@@ -2105,6 +2105,10 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 			RequiredReviewThreadResolution:   r.Parameters.RequiredReviewThreadResolution,
 			RequireLastPushApproval:          r.Parameters.RequireLastPushApproval,
 			StrictRequiredStatusChecksPolicy: r.Parameters.StrictRequiredStatusChecksPolicy,
+			Name:                             r.Parameters.Name,
+			Negate:                           r.Parameters.Negate,
+			Operator:                         r.Parameters.Operator,
+			Pattern:                          r.Parameters.Pattern,
 		}
 		for _, s := range r.Parameters.RequiredStatusChecks {
 			rule.RequiredStatusChecks = append(rule.RequiredStatusChecks, s.Context)
