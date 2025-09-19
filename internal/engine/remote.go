@@ -1929,13 +1929,13 @@ query listRulesets ($orgLogin: String!) {
 							context
 						}
 					}
-					... on BranchNamePattern {
+					... on BranchNamePatternParameters {
 						name
 						negate
 						operator
 						pattern
 					}
-					... on TagNamePattern {
+					... on TagNamePatternParameters {
 						name
 						negate
 						operator
@@ -1983,7 +1983,7 @@ type GithubRuleSetRule struct {
 		RequiredStatusChecks             []GithubRuleSetRuleStatusCheck
 		StrictRequiredStatusChecksPolicy bool
 
-		// BranchNamePattern / TagNamePattern
+		// BranchNamePatternParameters / TagNamePatternParameters
 		Name     string
 		Negate   bool
 		Operator string
