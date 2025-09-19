@@ -6,7 +6,7 @@ This error is happening if you are trying to have apps defined in your bypass_pu
 
 This is due to a limitation of the Github API (cf https://github.com/orgs/community/discussions/164712).
 
-To fix it, Goliac needs some help, in particular it cannot list apps using Github App credentials via GraphQL, it needs an admin PAT (Personal App Token). So you need to create and set not only the Githup App credentials but also you need to set `GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN` environment variable to the PAT of a github admin.
+To fix it, Goliac needs some help, in particular it cannot list apps using Github App credentials via GraphQL, it needs an admin PAT (Personal App Token). So you need to create and set not only the Githup App credentials but also you need to set `GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN` environment variable to the PAT of a github admin (that has `repos` and `admin:org` )
 
 Github support is aware of this limitation and is supposed to fix it in the future.
 

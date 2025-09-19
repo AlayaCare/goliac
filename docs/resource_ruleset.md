@@ -33,6 +33,9 @@ spec:
     conditions:
         include: 
         - "~DEFAULT_BRANCH" # it can be ~ALL,~DEFAULT_BRANCH, or branch name
+        # - 1.*
+        # exclude:
+        # - another_branch
     rules:
         - ruletype: pull_request # currently supported: pull_request, required_signatures,required_status_checks, creation, update, deletion, non_fast_forward, required_linear_history
         parameters:
@@ -90,7 +93,7 @@ or you can define a team that can bypass, like a "golden reviewer" team:
 
 ## Rule section
 
-Few rules are currently supported (but the software can be easily extended): `pull_request`, `required_signatures`, `required_status_checks`, `creation`, `update`, `deletion`, `required_linear_history`
+Few rules are currently supported (but the software can be easily extended): `pull_request`, `required_signatures`, `required_status_checks`, `creation`, `update`, `deletion`, `required_linear_history`, `branch_name_pattern`, `tag_name_pattern`
 
 ### pull_request
 
@@ -170,4 +173,30 @@ Require linear history: Prevent merge commits from being pushed to matching refs
   ruleset:
     rules:
       - ruletype: required_linear_history
+```
+
+### branch_name_pattern
+
+```yaml
+  ruleset:
+    rules:
+      - ruletype: branch_name_pattern
+        parameters:
+          # name: human name 
+          # negate: true
+          operator: start_with # can be [starts_with, ends_with, contains, regex]
+          pattern: patch
+```
+
+### tag_name_pattern
+
+```yaml
+  ruleset:
+    rules:
+      - ruletype: tag_name_pattern
+        parameters:
+          # name: human name 
+          # negate: true
+          operator: start_with # can be [starts_with, ends_with, contains, regex]
+          pattern: patch
 ```
