@@ -1,3 +1,7 @@
+## Goliac v1.3.7
+
+- small improvement: deal correctly when a team is added as reader and a writer at the same time on a repository
+
 ## Goliac v1.3.6
 
 - bugfix for branch_name_pattern/tag_name_pattern ruleset

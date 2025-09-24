@@ -176,7 +176,18 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			if lRepo.Owner != nil && *lRepo.Owner == r {
 				continue
 			}
-			readers = append(readers, slug.Make(r))
+			// checking if the reader was already added as a writer
+			slugReader := slug.Make(r)
+			alreadyAdded := false
+			for _, w := range writers {
+				if w == slugReader {
+					alreadyAdded = true
+					break
+				}
+			}
+			if !alreadyAdded {
+				readers = append(readers, slugReader)
+			}
 		}
 
 		// special case for the Goliac "teams" repo
