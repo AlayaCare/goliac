@@ -1,3 +1,7 @@
+## Goliac v1.3.8
+
+- deal correctly when a team is added as reader and a writer at the same time as the repository's owner
+
 ## Goliac v1.3.7
 
 - small improvement: deal correctly when a team is added as reader and a writer at the same time on a repository

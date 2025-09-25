@@ -168,14 +168,21 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 		}
 		// add the team owner's name ;-)
 		if lRepo.Owner != nil {
-			writers = append(writers, slug.Make(*lRepo.Owner))
+			// dobt add it twice
+			slugOwner := slug.Make(*lRepo.Owner)
+			alreadyAdded := false
+			for _, w := range writers {
+				if w == slugOwner {
+					alreadyAdded = true
+					break
+				}
+			}
+			if !alreadyAdded {
+				writers = append(writers, slugOwner)
+			}
 		}
 		readers := make([]string, 0)
 		for _, r := range lRepo.Spec.Readers {
-			// dont add the owner to the readers (if listed)
-			if lRepo.Owner != nil && *lRepo.Owner == r {
-				continue
-			}
 			// checking if the reader was already added as a writer
 			slugReader := slug.Make(r)
 			alreadyAdded := false
