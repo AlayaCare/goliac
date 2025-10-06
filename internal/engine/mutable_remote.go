@@ -358,17 +358,54 @@ UpdateRepositoryUpdateBoolProperty is used for
 - visibility (string)
 - archived (bool)
 - allow_auto_merge (bool)
+- allow_merge_commit (bool)
+- allow_squash_merge (bool)
+- allow_rebase_merge (bool)
+- mergeCommitTitle (string)
+- mergeCommitMessage (string)
+- squashMergeCommitTitle (string)
+- squashMergeCommitMessage (string)
 - delete_branch_on_merge (bool)
 - allow_update_branch (bool)
 */
-func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateProperty(reponame string, propertyName string, propertyValue interface{}) {
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateProperties(reponame string, properties map[string]interface{}) {
 	if r, ok := m.repositories[reponame]; ok {
-		if propertyName == "visibility" {
-			r.Visibility = propertyValue.(string)
-		} else if propertyName == "default_branch" {
-			r.DefaultBranchName = propertyValue.(string)
-		} else {
-			r.BoolProperties[propertyName] = propertyValue.(bool)
+		for propertyName, propertyValue := range properties {
+			if propertyName == "visibility" {
+				r.Visibility = propertyValue.(string)
+			} else if propertyName == "default_branch" {
+				r.DefaultBranchName = propertyValue.(string)
+			} else if propertyName == "merge_commit_title" {
+				value := propertyValue.(string)
+				if value == "MERGE_MESSAGE" {
+					r.DefaultMergeCommitMessage = "Default message"
+				}
+			} else if propertyName == "merge_commit_message" {
+				value := propertyValue.(string)
+				switch value {
+				case "PR_BODY":
+					r.DefaultMergeCommitMessage = "Pull request and description"
+				case "BLANK":
+					r.DefaultMergeCommitMessage = "Pull request title"
+				}
+			} else if propertyName == "squash_merge_commit_title" {
+				value := propertyValue.(string)
+				if value == "COMMIT_OR_PR_TITLE" {
+					r.DefaultSquashCommitMessage = "Default message"
+				}
+			} else if propertyName == "squash_merge_commit_message" {
+				value := propertyValue.(string)
+				switch value {
+				case "PR_BODY":
+					r.DefaultSquashCommitMessage = "Pull request and description"
+				case "BLANK":
+					r.DefaultSquashCommitMessage = "Pull request title"
+				case "COMMIT_MESSAGES":
+					r.DefaultSquashCommitMessage = "Pull request title and commit details"
+				}
+			} else {
+				r.BoolProperties[propertyName] = propertyValue.(bool)
+			}
 		}
 	}
 }

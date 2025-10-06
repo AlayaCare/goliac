@@ -3,7 +3,6 @@ package engine
 import (
 	"context"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/goliac-project/goliac/internal/entity"
@@ -175,10 +174,10 @@ func TestCreateRepositoryRuleset(t *testing.T) {
 				},
 			},
 		}
-		fmt.Println("expectedBody", expectedBody)
-		fmt.Println("mockClient.lastBody", mockClient.lastBody)
-		fmt.Println("mockClient.lastMethod", mockClient.lastMethod)
-		fmt.Println("mockClient.lastEndpoint", mockClient.lastEndpoint)
+		// fmt.Println("expectedBody", expectedBody)
+		// fmt.Println("mockClient.lastBody", mockClient.lastBody)
+		// fmt.Println("mockClient.lastMethod", mockClient.lastMethod)
+		// fmt.Println("mockClient.lastEndpoint", mockClient.lastEndpoint)
 		assert.True(t, utils.DeepEqualUnordered(expectedBody, mockClient.lastBody))
 
 		// Verify the ruleset was added to the repository's cache

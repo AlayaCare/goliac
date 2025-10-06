@@ -348,6 +348,21 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 					// basic repository properties
 					lRepo.Spec.Visibility = rRepo.Visibility
 					lRepo.Spec.AllowAutoMerge = rRepo.BoolProperties["allow_auto_merge"]
+					if !rRepo.BoolProperties["allow_merge_commit"] {
+						lRepo.Spec.AllowMergeCommit = rRepo.BoolProperties["allow_merge_commit"]
+					}
+					if !rRepo.BoolProperties["allow_squash_merge"] {
+						lRepo.Spec.AllowSquashMerge = rRepo.BoolProperties["allow_squash_merge"]
+					}
+					if !rRepo.BoolProperties["allow_rebase_merge"] {
+						lRepo.Spec.AllowRebaseMerge = rRepo.BoolProperties["allow_rebase_merge"]
+					}
+					if rRepo.DefaultMergeCommitMessage != "Default message" {
+						lRepo.Spec.DefaultMergeCommitMessage = rRepo.DefaultMergeCommitMessage
+					}
+					if rRepo.DefaultSquashCommitMessage != "Default message" {
+						lRepo.Spec.DefaultSquashCommitMessage = rRepo.DefaultSquashCommitMessage
+					}
 					lRepo.Spec.DeleteBranchOnMerge = rRepo.BoolProperties["delete_branch_on_merge"]
 					lRepo.Spec.AllowUpdateBranch = rRepo.BoolProperties["allow_update_branch"]
 					if rRepo.DefaultBranchName != "main" {
