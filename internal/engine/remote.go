@@ -913,7 +913,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 				DefaultSquashCommitMessage: "Default message",
 			}
 			if c.MergeCommitTitle == "PR_TITLE" && c.MergeCommitMessage == "PR_BODY" {
-				repo.DefaultMergeCommitMessage = "Pull request and description"
+				repo.DefaultMergeCommitMessage = "Pull request title and description"
 			} else if c.MergeCommitTitle == "PR_TITLE" && c.MergeCommitMessage == "BLANK" {
 				repo.DefaultMergeCommitMessage = "Pull request title"
 			} else {
@@ -921,7 +921,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 			}
 
 			if c.SquashMergeCommitTitle == "PR_TITLE" && c.SquashMergeCommitMessage == "PR_BODY" {
-				repo.DefaultSquashCommitMessage = "Pull request and description"
+				repo.DefaultSquashCommitMessage = "Pull request title and description"
 			} else if c.SquashMergeCommitTitle == "PR_TITLE" && c.SquashMergeCommitMessage == "BLANK" {
 				repo.DefaultSquashCommitMessage = "Pull request title"
 			} else if c.SquashMergeCommitTitle == "PR_TITLE" && c.SquashMergeCommitMessage == "COMMIT_MESSAGES" {
@@ -3684,7 +3684,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperties(ctx context.Context,
 				value := propertyValue.(string)
 				switch value {
 				case "PR_BODY":
-					repo.DefaultMergeCommitMessage = "Pull request and description"
+					repo.DefaultMergeCommitMessage = "Pull request title and description"
 				case "BLANK":
 					repo.DefaultMergeCommitMessage = "Pull request title"
 				}
@@ -3699,7 +3699,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperties(ctx context.Context,
 				value := propertyValue.(string)
 				switch value {
 				case "PR_BODY":
-					repo.DefaultSquashCommitMessage = "Pull request and description"
+					repo.DefaultSquashCommitMessage = "Pull request title and description"
 				case "BLANK":
 					repo.DefaultSquashCommitMessage = "Pull request title"
 				case "COMMIT_MESSAGES":
