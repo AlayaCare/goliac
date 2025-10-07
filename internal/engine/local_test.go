@@ -205,7 +205,7 @@ func TestSyncUsersViaUserPlugin(t *testing.T) {
 		assert.Equal(t, 0, len(added))
 	})
 
-	t.Run("happy path: replcae with foobar", func(t *testing.T) {
+	t.Run("happy path: replace with foobar", func(t *testing.T) {
 		fs := memfs.New()
 		createBasicStructure(fs)
 

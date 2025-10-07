@@ -285,7 +285,7 @@ func (r *ReconciliatorListenerRecorder) DeleteRepository(ctx context.Context, lo
 func (r *ReconciliatorListenerRecorder) RenameRepository(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, newname string) {
 	r.RepositoriesRenamed[reponame] = true
 }
-func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, properties map[string]interface{}) {
 	r.RepositoriesUpdateProperty[reponame] = true
 }
 func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string, permission string) {
@@ -2181,6 +2181,9 @@ func TestReconciliationRepo(t *testing.T) {
 		lRepo.Spec.Readers = []string{}
 		lRepo.Spec.Writers = []string{}
 		lRepo.Spec.ExternalUserWriters = []string{}
+		lRepo.Spec.AllowMergeCommit = true
+		lRepo.Spec.AllowRebaseMerge = true
+		lRepo.Spec.AllowSquashMerge = true
 		lowner := "existing"
 		lRepo.Owner = &lowner
 		lRepo.RenameTo = "myrepo2" // HERE we rename the repo
@@ -2233,10 +2236,15 @@ func TestReconciliationRepo(t *testing.T) {
 			ExternalUsers:     map[string]string{},
 			BoolProperties: map[string]bool{
 				"allow_auto_merge":       false,
+				"allow_squash_merge":     true,
+				"allow_merge_commit":     false,
+				"allow_rebase_merge":     false,
 				"archived":               false,
 				"delete_branch_on_merge": true,
 				"allow_update_branch":    false,
 			},
+			DefaultMergeCommitMessage:  "Default message",
+			DefaultSquashCommitMessage: "Default message",
 		}
 
 		existingOwner := &GithubTeam{
@@ -2258,6 +2266,9 @@ func TestReconciliationRepo(t *testing.T) {
 				"allow_auto_merge":       false,
 				"delete_branch_on_merge": false,
 				"allow_update_branch":    false,
+				"allow_squash_merge":     true,
+				"allow_merge_commit":     true,
+				"allow_rebase_merge":     true,
 				"archived":               false,
 			},
 		}
@@ -2373,9 +2384,14 @@ func TestReconciliationRepo(t *testing.T) {
 			BoolProperties: map[string]bool{
 				"allow_auto_merge":       false,
 				"archived":               false,
+				"allow_squash_merge":     true,
+				"allow_merge_commit":     false,
+				"allow_rebase_merge":     false,
 				"delete_branch_on_merge": true,
 				"allow_update_branch":    false,
 			},
+			DefaultMergeCommitMessage:  "Default message",
+			DefaultSquashCommitMessage: "Default message",
 		}
 		remote.repos["goliac-teams"] = ghTeams
 
@@ -2398,6 +2414,9 @@ func TestReconciliationRepo(t *testing.T) {
 				"allow_auto_merge":       false,
 				"delete_branch_on_merge": false,
 				"allow_update_branch":    false,
+				"allow_squash_merge":     true,
+				"allow_merge_commit":     true,
+				"allow_rebase_merge":     true,
 				"archived":               false,
 			},
 			DefaultBranchName: "main",

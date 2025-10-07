@@ -163,13 +163,12 @@ func (g *GithubBatchExecutor) UpdateRepositoryRemoveTeamAccess(ctx context.Conte
 	})
 }
 
-func (g *GithubBatchExecutor) UpdateRepositoryUpdateProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
-	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdateProperty{
-		client:        g.client,
-		dryrun:        dryrun,
-		reponame:      reponame,
-		propertyName:  propertyName,
-		propertyValue: propertyValue,
+func (g *GithubBatchExecutor) UpdateRepositoryUpdateProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, properties map[string]interface{}) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositoryUpdateProperties{
+		client:     g.client,
+		dryrun:     dryrun,
+		reponame:   reponame,
+		properties: properties,
 	})
 }
 
@@ -569,16 +568,15 @@ func (g *GithubCommandUpdateRepositoryRemoveInternalUser) Apply(ctx context.Cont
 	g.client.UpdateRepositoryRemoveInternalUser(ctx, logsCollector, g.dryrun, g.reponame, g.githubid)
 }
 
-type GithubCommandUpdateRepositoryUpdateProperty struct {
-	client        engine.ReconciliatorExecutor
-	dryrun        bool
-	reponame      string
-	propertyName  string
-	propertyValue interface{}
+type GithubCommandUpdateRepositoryUpdateProperties struct {
+	client     engine.ReconciliatorExecutor
+	dryrun     bool
+	reponame   string
+	properties map[string]interface{}
 }
 
-func (g *GithubCommandUpdateRepositoryUpdateProperty) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
-	g.client.UpdateRepositoryUpdateProperty(ctx, logsCollector, g.dryrun, g.reponame, g.propertyName, g.propertyValue)
+func (g *GithubCommandUpdateRepositoryUpdateProperties) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
+	g.client.UpdateRepositoryUpdateProperties(ctx, logsCollector, g.dryrun, g.reponame, g.properties)
 }
 
 type GithubCommandUpdateTeamAddMember struct {

@@ -463,10 +463,15 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 			BoolProperties: map[string]bool{
 				"archived":               false,
 				"allow_auto_merge":       false,
+				"allow_squash_merge":     true,
+				"allow_merge_commit":     true,
+				"allow_rebase_merge":     true,
 				"delete_branch_on_merge": true,
 				"allow_update_branch":    false,
 			},
-			ExternalUsers: map[string]string{},
+			DefaultMergeCommitMessage:  "Default message",
+			DefaultSquashCommitMessage: "Default message",
+			ExternalUsers:              map[string]string{},
 			BranchProtections: map[string]*engine.GithubBranchProtection{
 				"master": {
 					Pattern:                      "master",
@@ -487,11 +492,16 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 			BoolProperties: map[string]bool{
 				"archived":               false,
 				"allow_auto_merge":       false,
+				"allow_squash_merge":     true,
+				"allow_merge_commit":     true,
+				"allow_rebase_merge":     true,
 				"delete_branch_on_merge": false,
 				"allow_update_branch":    false,
 			},
-			ExternalUsers:     map[string]string{},
-			DefaultBranchName: "main",
+			DefaultMergeCommitMessage:  "Default message",
+			DefaultSquashCommitMessage: "Default message",
+			ExternalUsers:              map[string]string{},
+			DefaultBranchName:          "main",
 		},
 		"repo2": {
 			Name:       "repo2",
@@ -501,11 +511,16 @@ func (e *GoliacRemoteExecutorMock) Repositories(ctx context.Context) map[string]
 			BoolProperties: map[string]bool{
 				"archived":               false,
 				"allow_auto_merge":       false,
+				"allow_squash_merge":     true,
+				"allow_merge_commit":     true,
+				"allow_rebase_merge":     true,
 				"delete_branch_on_merge": false,
 				"allow_update_branch":    false,
 			},
-			ExternalUsers:     map[string]string{},
-			DefaultBranchName: "main",
+			DefaultMergeCommitMessage:  "Default message",
+			DefaultSquashCommitMessage: "Default message",
+			ExternalUsers:              map[string]string{},
+			DefaultBranchName:          "main",
 		},
 	}
 }
@@ -618,8 +633,8 @@ func (e *GoliacRemoteExecutorMock) CreateRepository(ctx context.Context, logsCol
 	fmt.Println("*** CreateRepository", reponame, descrition, visibility, writers, readers, boolProperties, defaultBranch)
 	e.nbChanges++
 }
-func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
-	fmt.Println("*** UpdateRepositoryUpdateProperty", reponame, propertyName, propertyValue)
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, properties map[string]interface{}) {
+	fmt.Println("*** UpdateRepositoryUpdateProperties", reponame, properties)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryAddTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string) {
@@ -790,7 +805,7 @@ func TestGoliacApply(t *testing.T) {
 		assert.Equal(t, false, logsCollector.HasErrors())
 		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, unmanaged)
-		assert.Equal(t, 0, remote.nbChanges)
+		assert.Equal(t, 2, remote.nbChanges)
 	})
 
 	t.Run("happy path: rename a repo", func(t *testing.T) {
@@ -828,7 +843,7 @@ func TestGoliacApply(t *testing.T) {
 		assert.Equal(t, false, logsCollector.HasErrors())
 		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, unmanaged)
-		assert.Equal(t, 1, remote.nbChanges) // 1 team renamed
+		assert.Equal(t, 3, remote.nbChanges) // 1 team renamed
 	})
 
 	t.Run("happy path: user4 to sync", func(t *testing.T) {
@@ -867,7 +882,7 @@ func TestGoliacApply(t *testing.T) {
 		assert.Equal(t, false, logsCollector.HasErrors())
 		assert.Equal(t, 1, len(logsCollector.Warns))
 		assert.NotNil(t, unmanaged)
-		assert.Equal(t, 2, remote.nbChanges)
+		assert.Equal(t, 4, remote.nbChanges)
 
 	})
 }
