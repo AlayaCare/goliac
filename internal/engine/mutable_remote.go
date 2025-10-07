@@ -384,7 +384,7 @@ func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateProperties(reponame stri
 				value := propertyValue.(string)
 				switch value {
 				case "PR_BODY":
-					r.DefaultMergeCommitMessage = "Pull request and description"
+					r.DefaultMergeCommitMessage = "Pull request title and description"
 				case "BLANK":
 					r.DefaultMergeCommitMessage = "Pull request title"
 				}
@@ -397,7 +397,7 @@ func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateProperties(reponame stri
 				value := propertyValue.(string)
 				switch value {
 				case "PR_BODY":
-					r.DefaultSquashCommitMessage = "Pull request and description"
+					r.DefaultSquashCommitMessage = "Pull request title and description"
 				case "BLANK":
 					r.DefaultSquashCommitMessage = "Pull request title"
 				case "COMMIT_MESSAGES":

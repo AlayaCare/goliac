@@ -606,7 +606,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 			switch lRepo.DefaultMergeCommitMessage {
 			case "Pull request title":
 				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"merge_commit_title": "PR_TITLE", "merge_commit_message": "BLANK"})
-			case "Pull request and description":
+			case "Pull request title and description":
 				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"merge_commit_title": "PR_TITLE", "merge_commit_message": "PR_BODY"})
 			default: // Default message
 				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"merge_commit_title": "MERGE_MESSAGE", "merge_commit_message": "PR_TITLE"})

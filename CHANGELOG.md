@@ -1,4 +1,8 @@
-## Goliac v1.4.0
+## Goliac v1.4.2
+
+- bugfix: bad "Pull request and description" label
+
+## Goliac v1.4.1
 
 - bugfix: allow_squash_merge/allow_rebase_merge/allow_merge_commit validation enhancement and fix
 

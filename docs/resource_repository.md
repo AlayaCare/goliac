@@ -45,8 +45,8 @@ spec:
 In this last example:
 - the repository is now public
 - the repository allows auto merge, merge commit, squash merge, and rebase merge
-- the default merge commit message is the default (it can be 'Default message', 'Pull request title', or 'Pull request and description')
-- the default squash commit message is the default (it can be 'Default message', 'Pull request title', 'Pull request and description' or 'Pull request title and commit details')
+- the default merge commit message is the default (it can be 'Default message', 'Pull request title', or 'Pull request title and description')
+- the default squash commit message is the default (it can be 'Default message', 'Pull request title', 'Pull request title and description' or 'Pull request title and commit details')
 - the repository will delete the branch on merge
 - the repository allows to update the branch
 - other teams have write (`anotherteamA`, `anotherteamB`) or read (`anotherteamC`, `anotherteamD`) access
