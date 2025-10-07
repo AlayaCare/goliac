@@ -297,15 +297,15 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		var forkFromPattern = regexp.MustCompile(`^[^/]+/[^/]+$`)
 
 		if !forkFromPattern.MatchString(r.ForkFrom) {
-			return fmt.Errorf("invalid fork format: %s - must be in the format 'organization/repository'", r.ForkFrom)
+			return fmt.Errorf("%s: invalid fork format: %s - must be in the format 'organization/repository'", r.Name, r.ForkFrom)
 		}
 	}
 
 	if r.Spec.AllowMergeCommit {
 		if r.Spec.DefaultMergeCommitMessage != "Default message" &&
-			r.Spec.DefaultSquashCommitMessage != "Pull request title" &&
-			r.Spec.DefaultSquashCommitMessage != "Pull request title and description" {
-			return fmt.Errorf("invalid default merge commit message: %s (it must be 'Default message', 'Pull request title', or 'Pull request title and description')", r.Spec.DefaultMergeCommitMessage)
+			r.Spec.DefaultMergeCommitMessage != "Pull request title" &&
+			r.Spec.DefaultMergeCommitMessage != "Pull request title and description" {
+			return fmt.Errorf("%s: invalid default merge commit message: %s (it must be 'Default message', 'Pull request title', or 'Pull request title and description')", r.Name, r.Spec.DefaultMergeCommitMessage)
 		}
 	}
 
@@ -314,7 +314,7 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 			r.Spec.DefaultSquashCommitMessage != "Pull request title" &&
 			r.Spec.DefaultSquashCommitMessage != "Pull request title and commit details" &&
 			r.Spec.DefaultSquashCommitMessage != "Pull request title and description" {
-			return fmt.Errorf("invalid default squash commit message: %s (it must be 'Default message', 'Pull request title', 'Pull request title and commit details', or 'Pull request title and description')", r.Spec.DefaultSquashCommitMessage)
+			return fmt.Errorf("%s: invalid default squash commit message: %s (it must be 'Default message', 'Pull request title', 'Pull request title and commit details', or 'Pull request title and description')", r.Name, r.Spec.DefaultSquashCommitMessage)
 		}
 	}
 
