@@ -70,7 +70,7 @@ type GithubRepository struct {
 	Id                  int
 	RefId               string
 	Visibility          string                             // public, internal, private
-	BoolProperties      map[string]bool                    // archived, allow_auto_merge, delete_branch_on_merge, allow_update_branch
+	BoolProperties      map[string]bool                    // archived, allow_auto_merge, delete_branch_on_merge, allow_update_branch, allow_merge_commit, allow_squash_merge, allow_rebase_merge
 	ExternalUsers       map[string]string                  // [githubid]permission
 	InternalUsers       map[string]string                  // [githubid]permission
 	RuleSets            map[string]*GithubRuleSet          // [name]ruleset
@@ -80,7 +80,9 @@ type GithubRepository struct {
 	Environments        MappedEntityLazyLoader[*GithubEnvironment] // [name]environment
 	RepositoryVariables MappedEntityLazyLoader[string]             // [variableName]variableValue
 	// RepositorySecrets    map[string]string            // [variableName]variableValue
-	Autolinks MappedEntityLazyLoader[*GithubAutolink] // [keyPrefix]autolink
+	Autolinks                  MappedEntityLazyLoader[*GithubAutolink] // [keyPrefix]autolink
+	DefaultMergeCommitMessage  string
+	DefaultSquashCommitMessage string
 }
 
 type GithubUser struct {
@@ -642,6 +644,13 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
 		  isFork
           visibility
 		  autoMergeAllowed
+		  mergeCommitAllowed
+		  mergeCommitTitle # MERGE_MESSAGE, PR_TITLE
+		  mergeCommitMessage # PR_TITLE, PR_BODY, BLANK
+		  rebaseMergeAllowed
+		  squashMergeAllowed
+		  squashMergeCommitTitle # COMMIT_OR_PR_TITLE, PR_TITLE
+		  squashMergeCommitMessage # COMMIT_MESSAGES, PR_BODY, BLANK
           deleteBranchOnMerge
           allowUpdateBranch
 		  defaultBranchRef {
@@ -791,16 +800,23 @@ type GraplQLRepositories struct {
 		Organization struct {
 			Repositories struct {
 				Nodes []struct {
-					Name                string
-					Id                  string
-					DatabaseId          int
-					IsArchived          bool
-					IsFork              bool
-					Visibility          string
-					AutoMergeAllowed    bool
-					DeleteBranchOnMerge bool
-					AllowUpdateBranch   bool
-					DefaultBranchRef    struct {
+					Name                     string
+					Id                       string
+					DatabaseId               int
+					IsArchived               bool
+					IsFork                   bool
+					Visibility               string
+					AutoMergeAllowed         bool
+					MergeCommitAllowed       bool
+					MergeCommitTitle         string //MERGE_MESSAGE, PR_TITLE
+					MergeCommitMessage       string //PR_TITLE, PR_BODY, BLANK
+					RebaseMergeAllowed       bool
+					SquashMergeAllowed       bool
+					SquashMergeCommitTitle   string // COMMIT_OR_PR_TITLE, PR_TITLE
+					SquashMergeCommitMessage string // COMMIT_MESSAGES, PR_BODY, BLANK
+					DeleteBranchOnMerge      bool
+					AllowUpdateBranch        bool
+					DefaultBranchRef         struct {
 						Name string
 					}
 					DirectCollaborators struct {
@@ -883,14 +899,37 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 					"allow_auto_merge":       c.AutoMergeAllowed,
 					"delete_branch_on_merge": c.DeleteBranchOnMerge,
 					"allow_update_branch":    c.AllowUpdateBranch,
+					"allow_merge_commit":     c.MergeCommitAllowed,
+					"allow_squash_merge":     c.SquashMergeAllowed,
+					"allow_rebase_merge":     c.RebaseMergeAllowed,
 				},
-				ExternalUsers:     make(map[string]string),
-				InternalUsers:     make(map[string]string),
-				RuleSets:          make(map[string]*GithubRuleSet),
-				BranchProtections: make(map[string]*GithubBranchProtection),
-				DefaultBranchName: c.DefaultBranchRef.Name,
-				IsFork:            c.IsFork,
+				ExternalUsers:              make(map[string]string),
+				InternalUsers:              make(map[string]string),
+				RuleSets:                   make(map[string]*GithubRuleSet),
+				BranchProtections:          make(map[string]*GithubBranchProtection),
+				DefaultBranchName:          c.DefaultBranchRef.Name,
+				IsFork:                     c.IsFork,
+				DefaultMergeCommitMessage:  "Default message",
+				DefaultSquashCommitMessage: "Default message",
 			}
+			if c.MergeCommitTitle == "PR_TITLE" && c.MergeCommitMessage == "PR_BODY" {
+				repo.DefaultMergeCommitMessage = "Pull request title and description"
+			} else if c.MergeCommitTitle == "PR_TITLE" && c.MergeCommitMessage == "BLANK" {
+				repo.DefaultMergeCommitMessage = "Pull request title"
+			} else {
+				repo.DefaultMergeCommitMessage = "Default message"
+			}
+
+			if c.SquashMergeCommitTitle == "PR_TITLE" && c.SquashMergeCommitMessage == "PR_BODY" {
+				repo.DefaultSquashCommitMessage = "Pull request title and description"
+			} else if c.SquashMergeCommitTitle == "PR_TITLE" && c.SquashMergeCommitMessage == "BLANK" {
+				repo.DefaultSquashCommitMessage = "Pull request title"
+			} else if c.SquashMergeCommitTitle == "PR_TITLE" && c.SquashMergeCommitMessage == "COMMIT_MESSAGES" {
+				repo.DefaultSquashCommitMessage = "Pull request title and commit details"
+			} else {
+				repo.DefaultSquashCommitMessage = "Default message"
+			}
+
 			// if the repository has not been populated yet
 			if repo.DefaultBranchName == "" {
 				repo.DefaultBranchName = "main"
@@ -3608,7 +3647,7 @@ Used for
 - allow_update_branch (bool)
 - archived (bool)
 */
-func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, properties map[string]interface{}) {
 	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -3616,11 +3655,11 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, l
 			fmt.Sprintf("repos/%s/%s", g.configGithubOrg, reponame),
 			"",
 			"PATCH",
-			map[string]interface{}{propertyName: propertyValue},
+			properties,
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to update repository %s, %s setting: %v. %s", reponame, propertyName, err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to update repository %s, %v setting: %v. %s", reponame, properties, err, string(body)))
 			return
 		}
 	}
@@ -3629,12 +3668,47 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperty(ctx context.Context, l
 	defer g.actionMutex.Unlock()
 
 	if repo, ok := g.repositories[reponame]; ok {
-		if propertyName == "visibility" {
-			repo.Visibility = propertyValue.(string)
-		} else if propertyName == "default_branch" {
-			repo.DefaultBranchName = propertyValue.(string)
-		} else {
-			repo.BoolProperties[propertyName] = propertyValue.(bool)
+		for propertyName, propertyValue := range properties {
+
+			if propertyName == "visibility" {
+				repo.Visibility = propertyValue.(string)
+			} else if propertyName == "default_branch" {
+				repo.DefaultBranchName = propertyValue.(string)
+			} else if propertyName == "merge_commit_title" {
+				value := propertyValue.(string)
+				if value == "MERGE_MESSAGE" {
+					repo.DefaultMergeCommitMessage = "Default message"
+				}
+
+			} else if propertyName == "merge_commit_message" {
+				value := propertyValue.(string)
+				switch value {
+				case "PR_BODY":
+					repo.DefaultMergeCommitMessage = "Pull request title and description"
+				case "BLANK":
+					repo.DefaultMergeCommitMessage = "Pull request title"
+				}
+
+			} else if propertyName == "squash_merge_commit_title" {
+				value := propertyValue.(string)
+				if value == "COMMIT_OR_PR_TITLE" {
+					repo.DefaultSquashCommitMessage = "Default message"
+				}
+
+			} else if propertyName == "squash_merge_commit_message" {
+				value := propertyValue.(string)
+				switch value {
+				case "PR_BODY":
+					repo.DefaultSquashCommitMessage = "Pull request title and description"
+				case "BLANK":
+					repo.DefaultSquashCommitMessage = "Pull request title"
+				case "COMMIT_MESSAGES":
+					repo.DefaultSquashCommitMessage = "Pull request title and commit details"
+				}
+
+			} else {
+				repo.BoolProperties[propertyName] = propertyValue.(bool)
+			}
 		}
 	}
 }

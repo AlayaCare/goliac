@@ -134,6 +134,14 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 	teamsRepo.Spec.Visibility = "internal"
 	teamsRepo.Spec.DefaultBranchName = d.teamsDefaultBranch
 
+	// hardcode the goliac-admin repository squash and merge
+	teamsRepo.Spec.AllowMergeCommit = false
+	teamsRepo.Spec.AllowSquashMerge = true
+	teamsRepo.Spec.AllowRebaseMerge = false
+	teamsRepo.Spec.DeleteBranchOnMerge = true
+	teamsRepo.Spec.DefaultMergeCommitMessage = "Default message"
+	teamsRepo.Spec.DefaultSquashCommitMessage = "Default message"
+
 	teamsRepo.Spec.DeleteBranchOnMerge = true
 	// cf goliac.go:L231-252
 	bp := entity.RepositoryBranchProtection{
@@ -311,23 +319,28 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			BoolProperties: map[string]bool{
 				"archived":               lRepo.Archived,
 				"allow_auto_merge":       lRepo.Spec.AllowAutoMerge,
+				"allow_merge_commit":     lRepo.Spec.AllowMergeCommit,
+				"allow_squash_merge":     lRepo.Spec.AllowSquashMerge,
+				"allow_rebase_merge":     lRepo.Spec.AllowRebaseMerge,
 				"delete_branch_on_merge": lRepo.Spec.DeleteBranchOnMerge,
 				"allow_update_branch":    lRepo.Spec.AllowUpdateBranch,
 			},
-			Visibility:          lRepo.Spec.Visibility,
-			Readers:             readers,
-			Writers:             writers,
-			ExternalUserReaders: eReaders,
-			ExternalUserWriters: eWriters,
-			InternalUsers:       []string{},
-			Rulesets:            rulesets,
-			BranchProtections:   branchprotections,
-			DefaultBranchName:   lRepo.Spec.DefaultBranchName,
-			Environments:        NewLocalLazyLoader(environments),
-			ActionVariables:     NewLocalLazyLoader(lRepo.Spec.ActionsVariables),
-			Autolinks:           autolinks,
-			IsFork:              lRepo.ForkFrom != "",
-			ForkFrom:            lRepo.ForkFrom,
+			Visibility:                 lRepo.Spec.Visibility,
+			Readers:                    readers,
+			Writers:                    writers,
+			ExternalUserReaders:        eReaders,
+			ExternalUserWriters:        eWriters,
+			InternalUsers:              []string{},
+			Rulesets:                   rulesets,
+			BranchProtections:          branchprotections,
+			DefaultBranchName:          lRepo.Spec.DefaultBranchName,
+			Environments:               NewLocalLazyLoader(environments),
+			ActionVariables:            NewLocalLazyLoader(lRepo.Spec.ActionsVariables),
+			Autolinks:                  autolinks,
+			DefaultMergeCommitMessage:  lRepo.Spec.DefaultMergeCommitMessage,
+			DefaultSquashCommitMessage: lRepo.Spec.DefaultSquashCommitMessage,
+			IsFork:                     lRepo.ForkFrom != "",
+			ForkFrom:                   lRepo.ForkFrom,
 		})
 	}
 	return lRepos, renameTo, nil
@@ -455,20 +468,22 @@ func (d *GoliacReconciliatorDatasourceRemote) Repositories() (map[string]*Github
 	ghRepos := d.remote.Repositories(context.Background())
 	for k, v := range ghRepos {
 		repo := &GithubRepoComparable{
-			Visibility:          v.Visibility,
-			BoolProperties:      map[string]bool{},
-			Writers:             []string{},
-			Readers:             []string{},
-			ExternalUserReaders: []string{},
-			ExternalUserWriters: []string{},
-			InternalUsers:       []string{},
-			Rulesets:            v.RuleSets,
-			BranchProtections:   v.BranchProtections,
-			DefaultBranchName:   v.DefaultBranchName,
-			Environments:        v.Environments,
-			ActionVariables:     v.RepositoryVariables,
-			Autolinks:           v.Autolinks,
-			IsFork:              v.IsFork,
+			Visibility:                 v.Visibility,
+			BoolProperties:             map[string]bool{},
+			Writers:                    []string{},
+			Readers:                    []string{},
+			ExternalUserReaders:        []string{},
+			ExternalUserWriters:        []string{},
+			InternalUsers:              []string{},
+			Rulesets:                   v.RuleSets,
+			BranchProtections:          v.BranchProtections,
+			DefaultBranchName:          v.DefaultBranchName,
+			Environments:               v.Environments,
+			ActionVariables:            v.RepositoryVariables,
+			Autolinks:                  v.Autolinks,
+			DefaultMergeCommitMessage:  v.DefaultMergeCommitMessage,
+			DefaultSquashCommitMessage: v.DefaultSquashCommitMessage,
+			IsFork:                     v.IsFork,
 		}
 		for pk, pv := range v.BoolProperties {
 			repo.BoolProperties[pk] = pv

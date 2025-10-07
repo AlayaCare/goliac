@@ -27,6 +27,11 @@ name: awesome-repository
 spec:
   visibility: public
   allow_auto_merge: true
+  allow_squash_merge: true
+  allow_rebase_merge: true
+  allow_merge_commit: true
+  default_merge_commit_message: Default message
+  default_squash_commit_message: Default message
   delete_branch_on_merge: true
   allow_update_branch: true
   writers:
@@ -39,7 +44,9 @@ spec:
 
 In this last example:
 - the repository is now public
-- the repository allows auto merge
+- the repository allows auto merge, merge commit, squash merge, and rebase merge
+- the default merge commit message is the default (it can be 'Default message', 'Pull request title', or 'Pull request title and description')
+- the default squash commit message is the default (it can be 'Default message', 'Pull request title', 'Pull request title and description' or 'Pull request title and commit details')
 - the repository will delete the branch on merge
 - the repository allows to update the branch
 - other teams have write (`anotherteamA`, `anotherteamB`) or read (`anotherteamC`, `anotherteamD`) access

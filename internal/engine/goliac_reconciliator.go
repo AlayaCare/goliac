@@ -262,19 +262,21 @@ func (r *GoliacReconciliatorImpl) reconciliateTeams(ctx context.Context, logsCol
 }
 
 type GithubRepoComparable struct {
-	Visibility          string
-	BoolProperties      map[string]bool
-	Writers             []string
-	Readers             []string
-	ExternalUserReaders []string // githubids
-	ExternalUserWriters []string // githubids
-	InternalUsers       []string // githubids
-	Rulesets            map[string]*GithubRuleSet
-	BranchProtections   map[string]*GithubBranchProtection
-	DefaultBranchName   string
-	ActionVariables     MappedEntityLazyLoader[string]
-	Environments        MappedEntityLazyLoader[*GithubEnvironment]
-	Autolinks           MappedEntityLazyLoader[*GithubAutolink]
+	Visibility                 string
+	BoolProperties             map[string]bool
+	Writers                    []string
+	Readers                    []string
+	ExternalUserReaders        []string // githubids
+	ExternalUserWriters        []string // githubids
+	InternalUsers              []string // githubids
+	Rulesets                   map[string]*GithubRuleSet
+	BranchProtections          map[string]*GithubBranchProtection
+	DefaultBranchName          string
+	ActionVariables            MappedEntityLazyLoader[string]
+	Environments               MappedEntityLazyLoader[*GithubEnvironment]
+	Autolinks                  MappedEntityLazyLoader[*GithubAutolink]
+	DefaultMergeCommitMessage  string
+	DefaultSquashCommitMessage string
 	// not comparable
 	IsFork   bool
 	ForkFrom string
@@ -478,6 +480,14 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 			}
 		}
 
+		if lRepo.BoolProperties["allow_merge_commit"] && (lRepo.DefaultMergeCommitMessage != rRepo.DefaultMergeCommitMessage) {
+			return false
+		}
+
+		if lRepo.BoolProperties["allow_squash_merge"] && (lRepo.DefaultSquashCommitMessage != rRepo.DefaultSquashCommitMessage) {
+			return false
+		}
+
 		return true
 	}
 
@@ -485,7 +495,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 		// reconciliate repositories boolean properties
 		for lk, lv := range lRepo.BoolProperties {
 			if rv, ok := rRepo.BoolProperties[lk]; !ok || rv != lv {
-				r.UpdateRepositoryUpdateProperty(ctx, logsCollector, dryrun, remote, reponame, lk, lv)
+				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{lk: lv})
 			}
 		}
 		if lRepo.Visibility != rRepo.Visibility {
@@ -493,14 +503,14 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 			// in this case, we cannot change the visibility
 			if rr, ok := rRepos[reponame]; ok {
 				if !rr.IsFork {
-					r.UpdateRepositoryUpdateProperty(ctx, logsCollector, dryrun, remote, reponame, "visibility", lRepo.Visibility)
+					r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"visibility": lRepo.Visibility})
 				}
 			} else {
-				r.UpdateRepositoryUpdateProperty(ctx, logsCollector, dryrun, remote, reponame, "visibility", lRepo.Visibility)
+				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"visibility": lRepo.Visibility})
 			}
 		}
 		if lRepo.DefaultBranchName != "" && lRepo.DefaultBranchName != rRepo.DefaultBranchName {
-			r.UpdateRepositoryUpdateProperty(ctx, logsCollector, dryrun, remote, reponame, "default_branch", lRepo.DefaultBranchName)
+			r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"default_branch": lRepo.DefaultBranchName})
 		}
 
 		if res, readToRemove, readToAdd := entity.StringArrayEquivalent(lRepo.Readers, rRepo.Readers); !res {
@@ -591,6 +601,30 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 				}
 			}
 		}
+
+		if lRepo.BoolProperties["allow_merge_commit"] && (lRepo.DefaultMergeCommitMessage != rRepo.DefaultMergeCommitMessage) {
+			switch lRepo.DefaultMergeCommitMessage {
+			case "Pull request title":
+				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"merge_commit_title": "PR_TITLE", "merge_commit_message": "BLANK"})
+			case "Pull request title and description":
+				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"merge_commit_title": "PR_TITLE", "merge_commit_message": "PR_BODY"})
+			default: // Default message
+				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"merge_commit_title": "MERGE_MESSAGE", "merge_commit_message": "PR_TITLE"})
+			}
+		}
+
+		if lRepo.BoolProperties["allow_squash_merge"] && (lRepo.DefaultSquashCommitMessage != rRepo.DefaultSquashCommitMessage) {
+			switch lRepo.DefaultSquashCommitMessage {
+			case "Pull request title":
+				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"squash_merge_commit_title": "PR_TITLE", "squash_merge_commit_message": "BLANK"})
+			case "Pull request title and description":
+				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"squash_merge_commit_title": "PR_TITLE", "squash_merge_commit_message": "PR_BODY"})
+			case "Pull request title and commit details":
+				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"squash_merge_commit_title": "PR_TITLE", "squash_merge_commit_message": "COMMIT_MESSAGES"})
+			default: // Default message
+				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"squash_merge_commit_title": "COMMIT_OR_PR_TITLE", "squash_merge_commit_message": "COMMIT_MESSAGES"})
+			}
+		}
 	}
 
 	onAdded := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) {
@@ -599,7 +633,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 		// if the repo was just archived in a previous commit and we "resume it"
 		if aRepo, ok := reposToArchive[reponame]; ok {
 			delete(reposToArchive, reponame)
-			r.UpdateRepositoryUpdateProperty(ctx, logsCollector, dryrun, remote, reponame, "archived", false)
+			r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"archived": false})
 			// calling onChanged to update the repository permissions
 			onChanged(reponame, aRepo, rRepo)
 		} else {
@@ -622,7 +656,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 		// but if we have ArchiveOnDelete...
 		if r.repoconfig.ArchiveOnDelete {
 			if r.repoconfig.DestructiveOperations.AllowDestructiveRepositories {
-				r.UpdateRepositoryUpdateProperty(ctx, logsCollector, dryrun, remote, reponame, "archived", true)
+				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"archived": true})
 				reposToArchive[reponame] = rRepo
 			} else {
 				r.unmanaged.Repositories[reponame] = true
@@ -956,11 +990,11 @@ func (r *GoliacReconciliatorImpl) RenameRepository(ctx context.Context, logsColl
 	}
 }
 
-func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue interface{}) {
-	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_update_property"}, "repositoryname: %s %s:%v", reponame, propertyName, propertyValue)
-	remote.UpdateRepositoryUpdateProperty(reponame, propertyName, propertyValue)
+func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, properties map[string]interface{}) {
+	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_update_properties"}, "repositoryname: %s properties: %v", reponame, properties)
+	remote.UpdateRepositoryUpdateProperties(reponame, properties)
 	if r.executor != nil {
-		r.executor.UpdateRepositoryUpdateProperty(ctx, logsCollector, dryrun, reponame, propertyName, propertyValue)
+		r.executor.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, reponame, properties)
 	}
 }
 func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ruleset *GithubRuleSet) {

@@ -1,3 +1,15 @@
+## Goliac v1.4.2
+
+- bugfix: bad "Pull request and description" label
+
+## Goliac v1.4.1
+
+- bugfix: allow_squash_merge/allow_rebase_merge/allow_merge_commit validation enhancement and fix
+
+## Goliac v1.4.0
+
+- add support for allow_squash_merge/allow_rebase_merge/allow_merge_commit
+
 ## Goliac v1.3.8
 
 - deal correctly when a team is added as reader and a writer at the same time as the repository's owner
