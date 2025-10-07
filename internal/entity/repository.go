@@ -26,20 +26,25 @@ type RepositoryAutolink struct {
 type Repository struct {
 	Entity `yaml:",inline"`
 	Spec   struct {
-		Writers             []string                     `yaml:"writers,omitempty"`
-		Readers             []string                     `yaml:"readers,omitempty"`
-		ExternalUserReaders []string                     `yaml:"externalUserReaders,omitempty"`
-		ExternalUserWriters []string                     `yaml:"externalUserWriters,omitempty"`
-		Visibility          string                       `yaml:"visibility,omitempty"`
-		AllowAutoMerge      bool                         `yaml:"allow_auto_merge,omitempty"`
-		DeleteBranchOnMerge bool                         `yaml:"delete_branch_on_merge,omitempty"`
-		AllowUpdateBranch   bool                         `yaml:"allow_update_branch,omitempty"`
-		Rulesets            []RepositoryRuleSet          `yaml:"rulesets,omitempty"`
-		BranchProtections   []RepositoryBranchProtection `yaml:"branch_protections,omitempty"`
-		DefaultBranchName   string                       `yaml:"default_branch,omitempty"`
-		Environments        []RepositoryEnvironment      `yaml:"environments,omitempty"`
-		ActionsVariables    map[string]string            `yaml:"actions_variables,omitempty"`
-		Autolinks           *[]RepositoryAutolink        `yaml:"autolinks,omitempty"`
+		Writers                    []string                     `yaml:"writers,omitempty"`
+		Readers                    []string                     `yaml:"readers,omitempty"`
+		ExternalUserReaders        []string                     `yaml:"externalUserReaders,omitempty"`
+		ExternalUserWriters        []string                     `yaml:"externalUserWriters,omitempty"`
+		Visibility                 string                       `yaml:"visibility,omitempty"`
+		AllowAutoMerge             bool                         `yaml:"allow_auto_merge,omitempty"`
+		AllowSquashMerge           bool                         `yaml:"allow_squash_merge,omitempty"`
+		AllowRebaseMerge           bool                         `yaml:"allow_rebase_merge,omitempty"`
+		AllowMergeCommit           bool                         `yaml:"allow_merge_commit,omitempty"`
+		DefaultMergeCommitMessage  string                       `yaml:"default_merge_commit_message,omitempty"`
+		DefaultSquashCommitMessage string                       `yaml:"default_squash_commit_message,omitempty"`
+		DeleteBranchOnMerge        bool                         `yaml:"delete_branch_on_merge,omitempty"`
+		AllowUpdateBranch          bool                         `yaml:"allow_update_branch,omitempty"`
+		Rulesets                   []RepositoryRuleSet          `yaml:"rulesets,omitempty"`
+		BranchProtections          []RepositoryBranchProtection `yaml:"branch_protections,omitempty"`
+		DefaultBranchName          string                       `yaml:"default_branch,omitempty"`
+		Environments               []RepositoryEnvironment      `yaml:"environments,omitempty"`
+		ActionsVariables           map[string]string            `yaml:"actions_variables,omitempty"`
+		Autolinks                  *[]RepositoryAutolink        `yaml:"autolinks,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
@@ -84,8 +89,14 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
 	}
 
 	repository := &Repository{}
-	repository.Spec.Visibility = "private" // default visibility
-	repository.Spec.DefaultBranchName = "" // default branch name
+	repository.Spec.Visibility = "private"                         // default visibility
+	repository.Spec.DefaultBranchName = ""                         // default branch name
+	repository.Spec.AllowAutoMerge = false                         // default allow auto merge
+	repository.Spec.AllowSquashMerge = true                        // default allow squash merge
+	repository.Spec.AllowRebaseMerge = true                        // default allow rebase merge
+	repository.Spec.AllowMergeCommit = true                        // default allow merge commit
+	repository.Spec.DefaultMergeCommitMessage = "Default message"  // default merge commit message template
+	repository.Spec.DefaultSquashCommitMessage = "Default message" // default squash commit message template
 	err = yaml.Unmarshal(filecontent, repository)
 	if err != nil {
 		return nil, err
@@ -287,6 +298,23 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 
 		if !forkFromPattern.MatchString(r.ForkFrom) {
 			return fmt.Errorf("invalid fork format: %s - must be in the format 'organization/repository'", r.ForkFrom)
+		}
+	}
+
+	if r.Spec.AllowMergeCommit {
+		if r.Spec.DefaultMergeCommitMessage != "Default message" &&
+			r.Spec.DefaultSquashCommitMessage != "Pull request title" &&
+			r.Spec.DefaultSquashCommitMessage != "Pull request title and description" {
+			return fmt.Errorf("invalid default merge commit message: %s (it must be 'Default message', 'Pull request title', or 'Pull request title and description')", r.Spec.DefaultMergeCommitMessage)
+		}
+	}
+
+	if r.Spec.AllowSquashMerge {
+		if r.Spec.DefaultSquashCommitMessage != "Default message" &&
+			r.Spec.DefaultSquashCommitMessage != "Pull request title" &&
+			r.Spec.DefaultSquashCommitMessage != "Pull request title and commit details" &&
+			r.Spec.DefaultSquashCommitMessage != "Pull request title and description" {
+			return fmt.Errorf("invalid default squash commit message: %s (it must be 'Default message', 'Pull request title', 'Pull request title and commit details', or 'Pull request title and description')", r.Spec.DefaultSquashCommitMessage)
 		}
 	}
 
