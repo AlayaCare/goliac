@@ -578,12 +578,6 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 							"old_value":  remoteStr,
 							"new_value":  localStr,
 						}, "Updating custom property %s for repository %s: %s -> %s", propName, reponame, remoteStr, localStr)
-					} else {
-						logsCollector.AddInfo(map[string]any{
-							"repository": reponame,
-							"property":   propName,
-							"new_value":  localStr,
-						}, "Setting custom property %s for repository %s: %s", propName, reponame, localStr)
 					}
 					r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, localValue)
 				}
