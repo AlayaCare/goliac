@@ -83,6 +83,7 @@ type GithubRepository struct {
 	Autolinks                  MappedEntityLazyLoader[*GithubAutolink] // [keyPrefix]autolink
 	DefaultMergeCommitMessage  string
 	DefaultSquashCommitMessage string
+	CustomProperties           map[string]interface{} // [propertyName]propertyValue (string or []string)
 }
 
 type GithubUser struct {
@@ -725,7 +726,7 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
           branchProtectionRules(first:50) {
             nodes{
 			  id
-              pattern 
+              pattern
               requiresApprovingReviews
               requiredApprovingReviewCount
               dismissesStaleReviews
@@ -733,7 +734,7 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
               requireLastPushApproval
               requiresStatusChecks
               requiresStrictStatusChecks
-              requiredStatusCheckContexts 
+              requiredStatusCheckContexts
               requiresConversationResolution
               requiresCommitSignatures
               requiresLinearHistory
@@ -911,6 +912,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 				IsFork:                     c.IsFork,
 				DefaultMergeCommitMessage:  "Default message",
 				DefaultSquashCommitMessage: "Default message",
+				CustomProperties:           make(map[string]interface{}),
 			}
 			if c.MergeCommitTitle == "PR_TITLE" && c.MergeCommitMessage == "PR_BODY" {
 				repo.DefaultMergeCommitMessage = "Pull request title and description"
@@ -1050,6 +1052,19 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 			})
 		}
 	}
+
+	// Load custom properties for all repositories
+	customPropsPerRepo, err := g.loadCustomPropertiesConcurrently(ctx, config.Config.GithubConcurrentThreads, repositories)
+	if err != nil {
+		logrus.Warnf("error loading custom properties: %v", err)
+	} else {
+		for reponame, customProps := range customPropsPerRepo {
+			if repo, ok := repositories[reponame]; ok {
+				repo.CustomProperties = customProps
+			}
+		}
+	}
+
 	return repositories, repositoriesByRefId, retErr
 }
 
@@ -1477,6 +1492,115 @@ func (g *GoliacRemoteImpl) loadVariablesPerRepository(ctx context.Context, repos
 	}
 
 	return variables, nil
+}
+
+func (g *GoliacRemoteImpl) loadCustomPropertiesConcurrently(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]interface{}, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadCustomProperties")
+		defer childSpan.End()
+	}
+	logrus.Debug("loading custom properties")
+
+	loadCustomPropertiesPerRepo := func(ctx context.Context, repository *GithubRepository) (map[string]interface{}, error) {
+		return g.loadCustomPropertiesPerRepository(ctx, repository)
+	}
+
+	// Use a simple map[string]interface{} as the resource type
+	customPropsPerRepo := make(map[string]map[string]interface{})
+
+	var wg sync.WaitGroup
+	var wg2 sync.WaitGroup
+
+	reposChan := make(chan *GithubRepository, len(repositories))
+	errChan := make(chan error, 1)
+	propsChan := make(chan struct {
+		repoName string
+		props    map[string]interface{}
+	}, len(repositories))
+
+	if maxGoroutines < 1 {
+		maxGoroutines = 1
+	}
+
+	for i := int64(0); i < maxGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for repo := range reposChan {
+				props, err := loadCustomPropertiesPerRepo(ctx, repo)
+				if err != nil {
+					select {
+					case errChan <- err:
+					default:
+					}
+					return
+				}
+				propsChan <- struct {
+					repoName string
+					props    map[string]interface{}
+				}{repo.Name, props}
+			}
+		}()
+	}
+
+	for _, repo := range repositories {
+		reposChan <- repo
+	}
+	close(reposChan)
+
+	wg2.Add(1)
+	go func() {
+		defer wg2.Done()
+		for r := range propsChan {
+			if g.feedback != nil {
+				g.feedback.LoadingAsset("custom_properties", 1)
+			}
+			customPropsPerRepo[r.repoName] = r.props
+		}
+	}()
+
+	wg.Wait()
+	close(propsChan)
+	wg2.Wait()
+
+	select {
+	case err := <-errChan:
+		return customPropsPerRepo, err
+	default:
+		return customPropsPerRepo, nil
+	}
+}
+
+func (g *GoliacRemoteImpl) loadCustomPropertiesPerRepository(ctx context.Context, repository *GithubRepository) (map[string]interface{}, error) {
+	// https://docs.github.com/en/rest/repos/custom-properties?apiVersion=2022-11-28#get-all-custom-property-values-for-a-repository
+	customProps := make(map[string]interface{})
+
+	data, err := g.client.CallRestAPI(ctx, fmt.Sprintf("/repos/%s/%s/properties/values", g.configGithubOrg, repository.Name), "", "GET", nil, nil)
+	if err != nil {
+		// If the endpoint returns 404, it might mean custom properties are not enabled or the repo has none
+		// We'll return an empty map in that case
+		if strings.Contains(err.Error(), "404") {
+			return customProps, nil
+		}
+		return nil, fmt.Errorf("not able to list custom properties for repo %s: %v", repository.Name, err)
+	}
+
+	var properties []struct {
+		PropertyName string      `json:"property_name"`
+		Value         interface{} `json:"value"`
+	}
+
+	err = json.Unmarshal(data, &properties)
+	if err != nil {
+		return nil, fmt.Errorf("not able to unmarshal custom properties for repo %s: %v", repository.Name, err)
+	}
+
+	for _, prop := range properties {
+		customProps[prop.PropertyName] = prop.Value
+	}
+
+	return customProps, nil
 }
 
 // func (g *GoliacRemoteImpl) loadEnvironmentVariables(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]map[string]*GithubVariable, error) {
@@ -1914,9 +2038,9 @@ func (g *GoliacRemoteImpl) loadTeamsMembers(ctx context.Context, t *GithubTeam) 
 }
 
 const listRulesets = `
-query listRulesets ($orgLogin: String!) { 
+query listRulesets ($orgLogin: String!) {
 	organization(login: $orgLogin) {
-	  rulesets(first: 100) { 
+	  rulesets(first: 100) {
 		nodes {
 		  databaseId
 		  name
@@ -3710,6 +3834,74 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperties(ctx context.Context,
 				repo.BoolProperties[propertyName] = propertyValue.(bool)
 			}
 		}
+	}
+}
+
+func (g *GoliacRemoteImpl) UpdateRepositoryCustomProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+	// https://docs.github.com/en/rest/repos/custom-properties?apiVersion=2022-11-28#create-or-update-custom-property-values-for-a-repository
+	g.actionMutex.Lock()
+	repo := g.repositories[reponame]
+	if repo == nil {
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		g.actionMutex.Unlock()
+		return
+	}
+	g.actionMutex.Unlock()
+
+	// Get current custom properties
+	currentProps := make(map[string]interface{})
+	if repo.CustomProperties != nil {
+		for k, v := range repo.CustomProperties {
+			currentProps[k] = v
+		}
+	}
+
+	// Update the property value
+	currentProps[propertyName] = propertyValue
+
+	// Prepare the request body according to GitHub API format
+	// Values are already normalized from YAML (string, []string, or null)
+	properties := make([]map[string]interface{}, 0, len(currentProps))
+	for propName, propValue := range currentProps {
+		// Values are already normalized: string, []string, []interface{}, or nil
+		properties = append(properties, map[string]interface{}{
+			"property_name": propName,
+			"value":         propValue,
+		})
+	}
+
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/repos/%s/%s/properties/values", g.configGithubOrg, reponame),
+			"",
+			"PATCH",
+			map[string]interface{}{
+				"properties": properties,
+			},
+			nil,
+		)
+		if err != nil {
+			// Check for 422 validation errors and report them clearly
+			if strings.Contains(err.Error(), "422") {
+				logsCollector.AddError(fmt.Errorf("validation error (422) when updating custom property %s for repository %s: %v. Response: %s. This usually means the property value is not allowed by the organization's custom property definition.", propertyName, reponame, err, string(body)))
+			} else {
+				logsCollector.AddError(fmt.Errorf("failed to update custom property %s for repository %s: %v. %s", propertyName, reponame, err, string(body)))
+			}
+			return
+		}
+	}
+
+	// Update local cache
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	repo = g.repositories[reponame]
+	if repo != nil {
+		if repo.CustomProperties == nil {
+			repo.CustomProperties = make(map[string]interface{})
+		}
+		repo.CustomProperties[propertyName] = propertyValue
 	}
 }
 

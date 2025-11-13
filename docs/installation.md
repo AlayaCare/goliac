@@ -33,6 +33,7 @@ In GitHub:
 - Under Repository permissions
   - Give Read/Write access to `Administration`
   - Give Read/Write access to `Content` (it is needed to access the default branch of repositories)
+  - Give Read/Write access to `Custom properties` (it is needed to manage custom properties of repositories)
 - Under Subscribe to events
   - (optional)Select `Push` (if you want to be notified immedately of changes on the goliac teams repository. else it will be polled every 10 minutes)
   - Select `Issue comments` (needed for the Breaking glass workflow)

@@ -513,6 +513,17 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 						break
 					}
 				}
+
+				// scaffold custom properties (inside the if block where rRepo is in scope)
+				if rRepo, ok := rRepos[r]; ok {
+					if len(rRepo.CustomProperties) > 0 {
+						lRepo.Spec.CustomProperties = make(map[string]interface{})
+						for propName, propValue := range rRepo.CustomProperties {
+							lRepo.Spec.CustomProperties[propName] = propValue
+						}
+					}
+				}
+
 				if lRepo.Archived {
 					if err := writeYamlFile(path.Join(archivepath, r+".yaml"), &lRepo, fs); err != nil {
 						logCollector.AddError(fmt.Errorf("not able to write archived repo file %s/%s.yaml: %v", archivepath, r, err))
@@ -658,7 +669,7 @@ spec:
       - appname: %s
         mode: always
     conditions:
-      include: 
+      include:
       - "~DEFAULT_BRANCH"
     rules:
       - ruletype: pull_request
@@ -745,7 +756,7 @@ kind: Repository
 name: awesome-repository
 ` + "```" + `
 
-This will create a ` + "`" + `awesome-repository` + "`" + ` repository under your organization, that will be 
+This will create a ` + "`" + `awesome-repository` + "`" + ` repository under your organization, that will be
 - private by default
 - writable by all owners/members of this team (in our example ` + "`" + `foobar` + "`" + `)
 

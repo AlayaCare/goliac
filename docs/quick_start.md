@@ -42,6 +42,7 @@ As a Github org admin, in GitHub:
 - Under Repository permissions
   - Give Read/Write access to `Administration`
   - Give Read/Write access to `Content`
+  - Give Read/Write access to `Custom properties`
 - Where can this GitHub App be installed: `Only on this account`
 - And Create
 - then you must
@@ -192,7 +193,7 @@ where:
 
 ### 4. Verify
 
-Eventually you can check the structure of your configuration, by running 
+Eventually you can check the structure of your configuration, by running
 
 ```shell
 goliac verify <goliac-team directory>

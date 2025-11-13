@@ -130,7 +130,7 @@ spec:
       - appname: goliac-project-app
         mode: always
     conditions:
-      include: 
+      include:
         - "~DEFAULT_BRANCH"
 
     rules:
@@ -635,6 +635,10 @@ func (e *GoliacRemoteExecutorMock) CreateRepository(ctx context.Context, logsCol
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, properties map[string]interface{}) {
 	fmt.Println("*** UpdateRepositoryUpdateProperties", reponame, properties)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryCustomProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+	fmt.Println("*** UpdateRepositoryCustomProperties", reponame, propertyName, propertyValue)
 	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryAddTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string) {

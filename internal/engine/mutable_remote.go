@@ -409,6 +409,16 @@ func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateProperties(reponame stri
 		}
 	}
 }
+
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryCustomProperties(reponame string, propertyName string, propertyValue interface{}) {
+	if r, ok := m.repositories[reponame]; ok {
+		if r.CustomProperties == nil {
+			r.CustomProperties = make(map[string]interface{})
+		}
+		r.CustomProperties[propertyName] = propertyValue
+	}
+}
+
 func (m *MutableGoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, collaboatorGithubId string, permission string) {
 	if r, ok := m.repositories[reponame]; ok {
 		if permission == "pull" {

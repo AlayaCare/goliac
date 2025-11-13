@@ -315,6 +315,14 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			autolinks = NewLocalLazyLoader(autolinksMap)
 		}
 
+		// Convert custom properties from local entity to comparable
+		customProps := make(map[string]interface{})
+		if lRepo.Spec.CustomProperties != nil {
+			for k, v := range lRepo.Spec.CustomProperties {
+				customProps[k] = v
+			}
+		}
+
 		lRepos[utils.GithubAnsiString(reponame)] = d.reconciliatorFilter.RepositoryFilter(reponame, &GithubRepoComparable{
 			BoolProperties: map[string]bool{
 				"archived":               lRepo.Archived,
@@ -339,6 +347,7 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			Autolinks:                  autolinks,
 			DefaultMergeCommitMessage:  lRepo.Spec.DefaultMergeCommitMessage,
 			DefaultSquashCommitMessage: lRepo.Spec.DefaultSquashCommitMessage,
+			CustomProperties:           customProps,
 			IsFork:                     lRepo.ForkFrom != "",
 			ForkFrom:                   lRepo.ForkFrom,
 		})
@@ -483,10 +492,18 @@ func (d *GoliacReconciliatorDatasourceRemote) Repositories() (map[string]*Github
 			Autolinks:                  v.Autolinks,
 			DefaultMergeCommitMessage:  v.DefaultMergeCommitMessage,
 			DefaultSquashCommitMessage: v.DefaultSquashCommitMessage,
+			CustomProperties:           make(map[string]interface{}),
 			IsFork:                     v.IsFork,
 		}
 		for pk, pv := range v.BoolProperties {
 			repo.BoolProperties[pk] = pv
+		}
+
+		// Copy custom properties from remote repository
+		if v.CustomProperties != nil {
+			for k, v := range v.CustomProperties {
+				repo.CustomProperties[k] = v
+			}
 		}
 
 		for cGithubid, cPermission := range v.ExternalUsers {

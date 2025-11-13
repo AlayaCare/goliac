@@ -288,6 +288,9 @@ func (r *ReconciliatorListenerRecorder) RenameRepository(ctx context.Context, lo
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryUpdateProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, properties map[string]interface{}) {
 	r.RepositoriesUpdateProperty[reponame] = true
 }
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryCustomProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+	// Track custom property updates if needed for testing
+}
 func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string, permission string) {
 	r.RepositoriesSetExternalUser[githubid] = permission
 }

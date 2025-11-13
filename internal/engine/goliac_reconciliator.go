@@ -42,6 +42,41 @@ func NewGoliacReconciliatorImpl(isEntreprise bool, executor ReconciliatorExecuto
 	}
 }
 
+// normalizePropertyValue converts a property value to a normalized string for comparison
+// Handles strings, numbers, and arrays
+func normalizePropertyValue(value interface{}) string {
+	if value == nil {
+		return ""
+	}
+
+	switch v := value.(type) {
+	case string:
+		return v
+	case int:
+		return fmt.Sprintf("%d", v)
+	case []interface{}:
+		// For arrays, convert each element to string and join
+		strs := make([]string, len(v))
+		for i, elem := range v {
+			strs[i] = normalizePropertyValue(elem)
+		}
+		return strings.Join(strs, ",")
+	case []string:
+		return strings.Join(v, ",")
+	default:
+		// For other types (including float64 from YAML unmarshaling), convert to string
+		// YAML may unmarshal numbers as float64, so handle that case
+		if f, ok := v.(float64); ok {
+			// Convert float64 to int string if it's a whole number
+			if f == float64(int(f)) {
+				return fmt.Sprintf("%d", int(f))
+			}
+			return fmt.Sprintf("%g", f)
+		}
+		return fmt.Sprintf("%v", v)
+	}
+}
+
 func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, logsCollector *observability.LogCollection, local GoliacReconciliatorDatasource, remote GoliacReconciliatorDatasource, isEnterprise bool, dryrun bool, manageGithubVariables bool, manageGithubAutolinks bool) (*UnmanagedResources, map[string]*GithubRepoComparable, map[string]string, error) {
 	rremote, err := NewMutableGoliacRemoteImpl(ctx, remote)
 	if err != nil {
@@ -277,6 +312,7 @@ type GithubRepoComparable struct {
 	Autolinks                  MappedEntityLazyLoader[*GithubAutolink]
 	DefaultMergeCommitMessage  string
 	DefaultSquashCommitMessage string
+	CustomProperties           map[string]interface{} // [propertyName]propertyValue (string or []string)
 	// not comparable
 	IsFork   bool
 	ForkFrom string
@@ -488,6 +524,19 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 			return false
 		}
 
+		// Compare custom properties - only check properties specified in the local spec
+		if lRepo.CustomProperties != nil {
+			for propName, localValue := range lRepo.CustomProperties {
+				remoteValue, exists := rRepo.CustomProperties[propName]
+				// Normalize values for comparison (convert to string if needed)
+				localStr := normalizePropertyValue(localValue)
+				remoteStr := normalizePropertyValue(remoteValue)
+				if !exists || localStr != remoteStr {
+					return false
+				}
+			}
+		}
+
 		return true
 	}
 
@@ -511,6 +560,34 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 		}
 		if lRepo.DefaultBranchName != "" && lRepo.DefaultBranchName != rRepo.DefaultBranchName {
 			r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"default_branch": lRepo.DefaultBranchName})
+		}
+
+		// Reconcile custom properties - only properties specified in the local spec
+		if lRepo.CustomProperties != nil {
+			for propName, localValue := range lRepo.CustomProperties {
+				remoteValue, exists := rRepo.CustomProperties[propName]
+				localStr := normalizePropertyValue(localValue)
+				remoteStr := normalizePropertyValue(remoteValue)
+
+				if !exists || localStr != remoteStr {
+					// Log the change with old and new values
+					if exists {
+						logsCollector.AddInfo(map[string]any{
+							"repository": reponame,
+							"property":   propName,
+							"old_value":  remoteStr,
+							"new_value":  localStr,
+						}, "Updating custom property %s for repository %s: %s -> %s", propName, reponame, remoteStr, localStr)
+					} else {
+						logsCollector.AddInfo(map[string]any{
+							"repository": reponame,
+							"property":   propName,
+							"new_value":  localStr,
+						}, "Setting custom property %s for repository %s: %s", propName, reponame, localStr)
+					}
+					r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, localValue)
+				}
+			}
 		}
 
 		if res, readToRemove, readToAdd := entity.StringArrayEquivalent(lRepo.Readers, rRepo.Readers); !res {
@@ -995,6 +1072,14 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateProperties(ctx context.C
 	remote.UpdateRepositoryUpdateProperties(reponame, properties)
 	if r.executor != nil {
 		r.executor.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, reponame, properties)
+	}
+}
+
+func (r *GoliacReconciliatorImpl) UpdateRepositoryCustomProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue interface{}) {
+	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_custom_properties"}, "repositoryname: %s, property: %s, value: %v", reponame, propertyName, propertyValue)
+	remote.UpdateRepositoryCustomProperties(reponame, propertyName, propertyValue)
+	if r.executor != nil {
+		r.executor.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, reponame, propertyName, propertyValue)
 	}
 }
 func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ruleset *GithubRuleSet) {

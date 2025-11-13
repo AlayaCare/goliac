@@ -172,6 +172,16 @@ func (g *GithubBatchExecutor) UpdateRepositoryUpdateProperties(ctx context.Conte
 	})
 }
 
+func (g *GithubBatchExecutor) UpdateRepositoryCustomProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositoryCustomProperties{
+		client:        g.client,
+		dryrun:        dryrun,
+		reponame:      reponame,
+		propertyName:  propertyName,
+		propertyValue: propertyValue,
+	})
+}
+
 func (g *GithubBatchExecutor) UpdateRepositorySetExternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string, permission string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositorySetExternalUser{
 		client:     g.client,
@@ -577,6 +587,18 @@ type GithubCommandUpdateRepositoryUpdateProperties struct {
 
 func (g *GithubCommandUpdateRepositoryUpdateProperties) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
 	g.client.UpdateRepositoryUpdateProperties(ctx, logsCollector, g.dryrun, g.reponame, g.properties)
+}
+
+type GithubCommandUpdateRepositoryCustomProperties struct {
+	client        engine.ReconciliatorExecutor
+	dryrun        bool
+	reponame      string
+	propertyName  string
+	propertyValue interface{}
+}
+
+func (g *GithubCommandUpdateRepositoryCustomProperties) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
+	g.client.UpdateRepositoryCustomProperties(ctx, logsCollector, g.dryrun, g.reponame, g.propertyName, g.propertyValue)
 }
 
 type GithubCommandUpdateTeamAddMember struct {
