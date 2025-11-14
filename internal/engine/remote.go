@@ -1588,7 +1588,7 @@ func (g *GoliacRemoteImpl) loadCustomPropertiesPerRepository(ctx context.Context
 
 	var properties []struct {
 		PropertyName string      `json:"property_name"`
-		Value         interface{} `json:"value"`
+		Value        interface{} `json:"value"`
 	}
 
 	err = json.Unmarshal(data, &properties)
@@ -3848,26 +3848,13 @@ func (g *GoliacRemoteImpl) UpdateRepositoryCustomProperties(ctx context.Context,
 	}
 	g.actionMutex.Unlock()
 
-	// Get current custom properties
-	currentProps := make(map[string]interface{})
-	if repo.CustomProperties != nil {
-		for k, v := range repo.CustomProperties {
-			currentProps[k] = v
-		}
-	}
-
-	// Update the property value
-	currentProps[propertyName] = propertyValue
-
 	// Prepare the request body according to GitHub API format
 	// Values are already normalized from YAML (string, []string, or null)
-	properties := make([]map[string]interface{}, 0, len(currentProps))
-	for propName, propValue := range currentProps {
-		// Values are already normalized: string, []string, []interface{}, or nil
-		properties = append(properties, map[string]interface{}{
-			"property_name": propName,
-			"value":         propValue,
-		})
+	properties := []map[string]interface{}{
+		{
+			"property_name": propertyName,
+			"value":         propertyValue,
+		},
 	}
 
 	if !dryrun {
@@ -3884,7 +3871,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryCustomProperties(ctx context.Context,
 		if err != nil {
 			// Check for 422 validation errors and report them clearly
 			if strings.Contains(err.Error(), "422") {
-				logsCollector.AddError(fmt.Errorf("validation error (422) when updating custom property %s for repository %s: %v. Response: %s. This usually means the property value is not allowed by the organization's custom property definition.", propertyName, reponame, err, string(body)))
+				logsCollector.AddError(fmt.Errorf("validation error (422) when updating custom property %s for repository %s: %v. Response: %s. This usually means the property value is not allowed by the organization's custom property definition", propertyName, reponame, err, string(body)))
 			} else {
 				logsCollector.AddError(fmt.Errorf("failed to update custom property %s for repository %s: %v. %s", propertyName, reponame, err, string(body)))
 			}
@@ -3901,7 +3888,11 @@ func (g *GoliacRemoteImpl) UpdateRepositoryCustomProperties(ctx context.Context,
 		if repo.CustomProperties == nil {
 			repo.CustomProperties = make(map[string]interface{})
 		}
-		repo.CustomProperties[propertyName] = propertyValue
+		if propertyValue == nil {
+			delete(repo.CustomProperties, propertyName)
+		} else {
+			repo.CustomProperties[propertyName] = propertyValue
+		}
 	}
 }
 

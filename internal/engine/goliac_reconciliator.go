@@ -43,10 +43,10 @@ func NewGoliacReconciliatorImpl(isEntreprise bool, executor ReconciliatorExecuto
 }
 
 // normalizePropertyValue converts a property value to a normalized string for comparison
-// Handles strings, numbers, and arrays
-func normalizePropertyValue(value interface{}) string {
+// Handles strings, numbers, arrays, and nil
+func normalizePropertyValue(value interface{}) interface{} {
 	if value == nil {
-		return ""
+		return nil
 	}
 
 	switch v := value.(type) {
@@ -58,7 +58,15 @@ func normalizePropertyValue(value interface{}) string {
 		// For arrays, convert each element to string and join
 		strs := make([]string, len(v))
 		for i, elem := range v {
-			strs[i] = normalizePropertyValue(elem)
+			n := normalizePropertyValue(elem)
+			switch n := n.(type) {
+			case string:
+				strs[i] = n
+			case int:
+				strs[i] = fmt.Sprintf("%d", n)
+			case []string:
+				strs[i] = strings.Join(n, ",")
+			}
 		}
 		return strings.Join(strs, ",")
 	case []string:
@@ -446,6 +454,37 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 				CompareEntities(lRepo.Environments.GetEntity(), rRepo.Environments.GetEntity(), compareEnvironments, onEnvironmentAdded, onEnvironmentRemoved, onEnvironmentChange)
 			}
 
+			// Reconcile custom properties
+			if lRepo.CustomProperties != nil || rRepo.CustomProperties != nil {
+				// if the custom properties are different, we need to update the remote repository
+				if !utils.DeepEqualUnordered(lRepo.CustomProperties, rRepo.CustomProperties) {
+					remoteProperties := make(map[string]interface{})
+					if rRepo.CustomProperties != nil {
+						for propName, remoteValue := range rRepo.CustomProperties {
+							remoteProperties[propName] = normalizePropertyValue(remoteValue)
+						}
+					}
+					localProperties := make(map[string]interface{})
+					if lRepo.CustomProperties != nil {
+						for propName, localValue := range lRepo.CustomProperties {
+							localProperties[propName] = normalizePropertyValue(localValue)
+						}
+					}
+					// check first for added or updated properties
+					for propName, localValue := range localProperties {
+						remoteValue, exists := remoteProperties[propName]
+						if !exists || !utils.DeepEqualUnordered(localValue, remoteValue) {
+							r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, localValue)
+						}
+						delete(remoteProperties, propName)
+					}
+					// check for removed properties
+					for propName := range remoteProperties {
+						r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, nil)
+					}
+				}
+			}
+
 			if manageGithubAutolinks {
 				// nested autolinks comparison IF it is defined locally
 				if lRepo.Autolinks != nil {
@@ -524,19 +563,6 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 			return false
 		}
 
-		// Compare custom properties - only check properties specified in the local spec
-		if lRepo.CustomProperties != nil {
-			for propName, localValue := range lRepo.CustomProperties {
-				remoteValue, exists := rRepo.CustomProperties[propName]
-				// Normalize values for comparison (convert to string if needed)
-				localStr := normalizePropertyValue(localValue)
-				remoteStr := normalizePropertyValue(remoteValue)
-				if !exists || localStr != remoteStr {
-					return false
-				}
-			}
-		}
-
 		return true
 	}
 
@@ -560,28 +586,6 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 		}
 		if lRepo.DefaultBranchName != "" && lRepo.DefaultBranchName != rRepo.DefaultBranchName {
 			r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"default_branch": lRepo.DefaultBranchName})
-		}
-
-		// Reconcile custom properties - only properties specified in the local spec
-		if lRepo.CustomProperties != nil {
-			for propName, localValue := range lRepo.CustomProperties {
-				remoteValue, exists := rRepo.CustomProperties[propName]
-				localStr := normalizePropertyValue(localValue)
-				remoteStr := normalizePropertyValue(remoteValue)
-
-				if !exists || localStr != remoteStr {
-					// Log the change with old and new values
-					if exists {
-						logsCollector.AddInfo(map[string]any{
-							"repository": reponame,
-							"property":   propName,
-							"old_value":  remoteStr,
-							"new_value":  localStr,
-						}, "Updating custom property %s for repository %s: %s -> %s", propName, reponame, remoteStr, localStr)
-					}
-					r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, localValue)
-				}
-			}
 		}
 
 		if res, readToRemove, readToAdd := entity.StringArrayEquivalent(lRepo.Readers, rRepo.Readers); !res {
