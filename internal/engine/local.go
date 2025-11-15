@@ -971,7 +971,7 @@ func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem, LogCollectio
 	g.teams = teams
 
 	// Parse all repositories in the <orgDirectory>/teams/<teamname> directories
-	repos := entity.ReadRepositories(fs, "archived", "teams", g.teams, g.externalUsers, LogCollection)
+	repos := entity.ReadRepositories(fs, "archived", "teams", g.teams, g.externalUsers, g.repoconfig.OrgCustomProperties, LogCollection)
 	g.repositories = repos
 
 	rulesets := entity.ReadRuleSetDirectory(fs, "rulesets", LogCollection)
