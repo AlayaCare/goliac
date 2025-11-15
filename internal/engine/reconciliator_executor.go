@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/observability"
 )
 
@@ -20,6 +21,7 @@ type ReconciliatorExecutor interface {
 	// CreateRepository can have a githubToken parameter (if null it use Goliac token)
 	CreateRepository(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, descrition string, visibility string, writers []string, readers []string, boolProperties map[string]bool, defaultBranch string, githubToken *string, forkFrom string)
 	UpdateRepositoryUpdateProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, properties map[string]interface{})
+	UpdateRepositoryCustomProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{})
 	UpdateRepositoryAddTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string)    // permission can be "pull", "push", or "admin" which correspond to read, write, and admin access.
 	UpdateRepositoryUpdateTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string) // permission can be "pull", "push", or "admin" which correspond to read, write, and admin access.
 	UpdateRepositoryRemoveTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string)
@@ -56,6 +58,10 @@ type ReconciliatorExecutor interface {
 	AddRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink)
 	DeleteRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolinkId int)
 	UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, previousAutolinkId int, autolink *GithubAutolink)
+
+	// Organization custom properties management
+	CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, property *config.GithubCustomProperty)
+	DeleteOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, propertyName string)
 
 	Begin(logsCollector *observability.LogCollection, dryrun bool)
 	Rollback(logsCollector *observability.LogCollection, dryrun bool, err error)

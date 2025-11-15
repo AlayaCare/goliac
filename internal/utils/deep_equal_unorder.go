@@ -2,6 +2,9 @@ package utils
 
 import "reflect"
 
+/*
+ * DeepEqualUnordered compares two interfaces by their values, ignoring the order of the keys in the map
+ */
 func DeepEqualUnordered(a, b interface{}) bool {
 	return deepEqual(reflect.ValueOf(a), reflect.ValueOf(b))
 }

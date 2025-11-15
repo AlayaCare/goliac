@@ -15,6 +15,7 @@ type GoliacReconciliatorDatasource interface {
 	Teams() (map[string]*GithubTeamComparable, map[string]bool, error)          // team, externallyManaged, error
 	Repositories() (map[string]*GithubRepoComparable, map[string]string, error) // repo, renameTo, error
 	RuleSets() (map[string]*GithubRuleSet, error)
+	OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty
 }
 
 type GoliacReconciliatorDatasourceLocal struct {
@@ -315,6 +316,14 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			autolinks = NewLocalLazyLoader(autolinksMap)
 		}
 
+		// Convert custom properties from local entity to comparable
+		customProps := make(map[string]interface{})
+		if lRepo.Spec.CustomProperties != nil {
+			for k, v := range lRepo.Spec.CustomProperties {
+				customProps[k] = v
+			}
+		}
+
 		lRepos[utils.GithubAnsiString(reponame)] = d.reconciliatorFilter.RepositoryFilter(reponame, &GithubRepoComparable{
 			BoolProperties: map[string]bool{
 				"archived":               lRepo.Archived,
@@ -339,6 +348,7 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			Autolinks:                  autolinks,
 			DefaultMergeCommitMessage:  lRepo.Spec.DefaultMergeCommitMessage,
 			DefaultSquashCommitMessage: lRepo.Spec.DefaultSquashCommitMessage,
+			CustomProperties:           customProps,
 			IsFork:                     lRepo.ForkFrom != "",
 			ForkFrom:                   lRepo.ForkFrom,
 		})
@@ -391,6 +401,15 @@ func (d *GoliacReconciliatorDatasourceLocal) RuleSets() (map[string]*GithubRuleS
 		lgrs[rs.Name] = &grs
 	}
 	return lgrs, nil
+}
+
+func (d *GoliacReconciliatorDatasourceLocal) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
+	localProps := make(map[string]*config.GithubCustomProperty)
+	for _, prop := range d.conf.OrgCustomProperties {
+		propCopy := prop
+		localProps[prop.PropertyName] = propCopy
+	}
+	return localProps
 }
 
 type GoliacReconciliatorDatasourceRemote struct {
@@ -483,10 +502,18 @@ func (d *GoliacReconciliatorDatasourceRemote) Repositories() (map[string]*Github
 			Autolinks:                  v.Autolinks,
 			DefaultMergeCommitMessage:  v.DefaultMergeCommitMessage,
 			DefaultSquashCommitMessage: v.DefaultSquashCommitMessage,
+			CustomProperties:           make(map[string]interface{}),
 			IsFork:                     v.IsFork,
 		}
 		for pk, pv := range v.BoolProperties {
 			repo.BoolProperties[pk] = pv
+		}
+
+		// Copy custom properties from remote repository
+		if v.CustomProperties != nil {
+			for k, v := range v.CustomProperties {
+				repo.CustomProperties[k] = v
+			}
 		}
 
 		for cGithubid, cPermission := range v.ExternalUsers {
@@ -522,4 +549,8 @@ func (d *GoliacReconciliatorDatasourceRemote) Repositories() (map[string]*Github
 
 func (d *GoliacReconciliatorDatasourceRemote) RuleSets() (map[string]*GithubRuleSet, error) {
 	return d.remote.RuleSets(context.Background()), nil
+}
+
+func (d *GoliacReconciliatorDatasourceRemote) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
+	return d.remote.OrgCustomProperties(ctx)
 }

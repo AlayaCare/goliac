@@ -58,6 +58,8 @@ type GoliacRemote interface {
 
 	RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*GithubVariable, error)
 	EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*GithubVariable, error)
+
+	OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty
 }
 
 type GoliacRemoteExecutor interface {
@@ -83,6 +85,7 @@ type GithubRepository struct {
 	Autolinks                  MappedEntityLazyLoader[*GithubAutolink] // [keyPrefix]autolink
 	DefaultMergeCommitMessage  string
 	DefaultSquashCommitMessage string
+	CustomProperties           map[string]interface{} // [propertyName]propertyValue (string or []string)
 }
 
 type GithubUser struct {
@@ -143,28 +146,30 @@ type GithubVariable struct {
 }
 
 type GoliacRemoteImpl struct {
-	client                github.GitHubClient
-	users                 map[string]*GithubUser
-	repositories          map[string]*GithubRepository
-	repositoriesByRefId   map[string]*GithubRepository
-	teams                 map[string]*GithubTeam
-	teamRepos             map[string]map[string]*GithubTeamRepo
-	teamSlugByName        map[string]string
-	rulesets              map[string]*GithubRuleSet
-	appIds                map[string]*GithubApp
-	ttlExpireUsers        time.Time
-	ttlExpireRepositories time.Time
-	ttlExpireTeams        time.Time
-	ttlExpireTeamsRepos   time.Time
-	ttlExpireRulesets     time.Time
-	ttlExpireAppIds       time.Time
-	isEnterprise          bool
-	feedback              observability.RemoteObservability
-	loadTeamsMutex        sync.Mutex
-	actionMutex           sync.Mutex // used when an action (like a REST CALL to create a repository) is launched while a load is in progress
-	configGithubOrg       string
-	manageGithubVariables bool
-	manageGithubAutolinks bool
+	client                    github.GitHubClient
+	users                     map[string]*GithubUser
+	repositories              map[string]*GithubRepository
+	repositoriesByRefId       map[string]*GithubRepository
+	teams                     map[string]*GithubTeam
+	teamRepos                 map[string]map[string]*GithubTeamRepo
+	teamSlugByName            map[string]string
+	rulesets                  map[string]*GithubRuleSet
+	appIds                    map[string]*GithubApp
+	orgCustomProperties       map[string]*config.GithubCustomProperty
+	ttlExpireUsers            time.Time
+	ttlExpireRepositories     time.Time
+	ttlExpireTeams            time.Time
+	ttlExpireTeamsRepos       time.Time
+	ttlExpireRulesets         time.Time
+	ttlExpireAppIds           time.Time
+	ttlExpireCustomProperties time.Time
+	isEnterprise              bool
+	feedback                  observability.RemoteObservability
+	loadTeamsMutex            sync.Mutex
+	actionMutex               sync.Mutex // used when an action (like a REST CALL to create a repository) is launched while a load is in progress
+	configGithubOrg           string
+	manageGithubVariables     bool
+	manageGithubAutolinks     bool
 }
 
 type GHESInfo struct {
@@ -323,26 +328,28 @@ func NewGoliacRemoteImpl(client github.GitHubClient,
 ) *GoliacRemoteImpl {
 	ctx := context.Background()
 	return &GoliacRemoteImpl{
-		client:                client,
-		users:                 make(map[string]*GithubUser),
-		repositories:          make(map[string]*GithubRepository),
-		repositoriesByRefId:   make(map[string]*GithubRepository),
-		teams:                 make(map[string]*GithubTeam),
-		teamRepos:             make(map[string]map[string]*GithubTeamRepo),
-		teamSlugByName:        make(map[string]string),
-		rulesets:              make(map[string]*GithubRuleSet),
-		appIds:                make(map[string]*GithubApp),
-		ttlExpireUsers:        time.Now(),
-		ttlExpireRepositories: time.Now(),
-		ttlExpireTeams:        time.Now(),
-		ttlExpireTeamsRepos:   time.Now(),
-		ttlExpireRulesets:     time.Now(),
-		ttlExpireAppIds:       time.Now(),
-		isEnterprise:          isEnterprise(ctx, configGithubOrg, client),
-		feedback:              nil,
-		configGithubOrg:       configGithubOrg,
-		manageGithubVariables: manageGithubVariables,
-		manageGithubAutolinks: manageGithubAutolinks,
+		client:                    client,
+		users:                     make(map[string]*GithubUser),
+		repositories:              make(map[string]*GithubRepository),
+		repositoriesByRefId:       make(map[string]*GithubRepository),
+		teams:                     make(map[string]*GithubTeam),
+		teamRepos:                 make(map[string]map[string]*GithubTeamRepo),
+		teamSlugByName:            make(map[string]string),
+		rulesets:                  make(map[string]*GithubRuleSet),
+		appIds:                    make(map[string]*GithubApp),
+		orgCustomProperties:       make(map[string]*config.GithubCustomProperty),
+		ttlExpireUsers:            time.Now(),
+		ttlExpireRepositories:     time.Now(),
+		ttlExpireTeams:            time.Now(),
+		ttlExpireTeamsRepos:       time.Now(),
+		ttlExpireRulesets:         time.Now(),
+		ttlExpireAppIds:           time.Now(),
+		ttlExpireCustomProperties: time.Now(),
+		isEnterprise:              isEnterprise(ctx, configGithubOrg, client),
+		feedback:                  nil,
+		configGithubOrg:           configGithubOrg,
+		manageGithubVariables:     manageGithubVariables,
+		manageGithubAutolinks:     manageGithubAutolinks,
 	}
 }
 
@@ -362,6 +369,7 @@ func (g *GoliacRemoteImpl) FlushCache() {
 	g.ttlExpireTeamsRepos = time.Now()
 	g.ttlExpireRulesets = time.Now()
 	g.ttlExpireAppIds = time.Now()
+	g.ttlExpireCustomProperties = time.Now()
 }
 
 func (g *GoliacRemoteImpl) RuleSets(ctx context.Context) map[string]*GithubRuleSet {
@@ -725,7 +733,7 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
           branchProtectionRules(first:50) {
             nodes{
 			  id
-              pattern 
+              pattern
               requiresApprovingReviews
               requiredApprovingReviewCount
               dismissesStaleReviews
@@ -733,7 +741,7 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
               requireLastPushApproval
               requiresStatusChecks
               requiresStrictStatusChecks
-              requiredStatusCheckContexts 
+              requiredStatusCheckContexts
               requiresConversationResolution
               requiresCommitSignatures
               requiresLinearHistory
@@ -911,6 +919,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 				IsFork:                     c.IsFork,
 				DefaultMergeCommitMessage:  "Default message",
 				DefaultSquashCommitMessage: "Default message",
+				CustomProperties:           make(map[string]interface{}),
 			}
 			if c.MergeCommitTitle == "PR_TITLE" && c.MergeCommitMessage == "PR_BODY" {
 				repo.DefaultMergeCommitMessage = "Pull request title and description"
@@ -1050,6 +1059,19 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 			})
 		}
 	}
+
+	// Load custom properties for all repositories
+	customPropsPerRepo, err := g.loadCustomPropertiesConcurrently(ctx, config.Config.GithubConcurrentThreads, repositories)
+	if err != nil {
+		logrus.Warnf("error loading custom properties: %v", err)
+	} else {
+		for reponame, customProps := range customPropsPerRepo {
+			if repo, ok := repositories[reponame]; ok {
+				repo.CustomProperties = customProps
+			}
+		}
+	}
+
 	return repositories, repositoriesByRefId, retErr
 }
 
@@ -1477,6 +1499,223 @@ func (g *GoliacRemoteImpl) loadVariablesPerRepository(ctx context.Context, repos
 	}
 
 	return variables, nil
+}
+
+func (g *GoliacRemoteImpl) loadCustomPropertiesConcurrently(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]interface{}, error) {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadCustomProperties")
+		defer childSpan.End()
+	}
+	logrus.Debug("loading custom properties")
+
+	loadCustomPropertiesPerRepo := func(ctx context.Context, repository *GithubRepository) (map[string]interface{}, error) {
+		return g.loadCustomPropertiesPerRepository(ctx, repository)
+	}
+
+	// Use a simple map[string]interface{} as the resource type
+	customPropsPerRepo := make(map[string]map[string]interface{})
+
+	var wg sync.WaitGroup
+	var wg2 sync.WaitGroup
+
+	reposChan := make(chan *GithubRepository, len(repositories))
+	errChan := make(chan error, 1)
+	propsChan := make(chan struct {
+		repoName string
+		props    map[string]interface{}
+	}, len(repositories))
+
+	if maxGoroutines < 1 {
+		maxGoroutines = 1
+	}
+
+	for i := int64(0); i < maxGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for repo := range reposChan {
+				props, err := loadCustomPropertiesPerRepo(ctx, repo)
+				if err != nil {
+					select {
+					case errChan <- err:
+					default:
+					}
+					return
+				}
+				propsChan <- struct {
+					repoName string
+					props    map[string]interface{}
+				}{repo.Name, props}
+			}
+		}()
+	}
+
+	for _, repo := range repositories {
+		reposChan <- repo
+	}
+	close(reposChan)
+
+	wg2.Add(1)
+	go func() {
+		defer wg2.Done()
+		for r := range propsChan {
+			if g.feedback != nil {
+				g.feedback.LoadingAsset("custom_properties", 1)
+			}
+			customPropsPerRepo[r.repoName] = r.props
+		}
+	}()
+
+	wg.Wait()
+	close(propsChan)
+	wg2.Wait()
+
+	select {
+	case err := <-errChan:
+		return customPropsPerRepo, err
+	default:
+		return customPropsPerRepo, nil
+	}
+}
+
+func (g *GoliacRemoteImpl) loadCustomPropertiesPerRepository(ctx context.Context, repository *GithubRepository) (map[string]interface{}, error) {
+	// https://docs.github.com/en/rest/repos/custom-properties?apiVersion=2022-11-28#get-all-custom-property-values-for-a-repository
+	customProps := make(map[string]interface{})
+
+	data, err := g.client.CallRestAPI(ctx, fmt.Sprintf("/repos/%s/%s/properties/values", g.configGithubOrg, repository.Name), "", "GET", nil, nil)
+	if err != nil {
+		// If the endpoint returns 404, it might mean custom properties are not enabled or the repo has none
+		// We'll return an empty map in that case
+		if strings.Contains(err.Error(), "404") {
+			return customProps, nil
+		}
+		return nil, fmt.Errorf("not able to list custom properties for repo %s: %v", repository.Name, err)
+	}
+
+	var properties []struct {
+		PropertyName string      `json:"property_name"`
+		Value        interface{} `json:"value"`
+	}
+
+	err = json.Unmarshal(data, &properties)
+	if err != nil {
+		return nil, fmt.Errorf("not able to unmarshal custom properties for repo %s: %v", repository.Name, err)
+	}
+
+	for _, prop := range properties {
+		customProps[prop.PropertyName] = prop.Value
+	}
+
+	return customProps, nil
+}
+
+func (g *GoliacRemoteImpl) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
+	if time.Now().After(g.ttlExpireCustomProperties) {
+		customProperties, err := g.loadOrgCustomProperties(ctx)
+		if err == nil {
+			g.orgCustomProperties = customProperties
+			g.ttlExpireCustomProperties = time.Now().Add(time.Duration(config.Config.GithubCacheTTL) * time.Second)
+		}
+	}
+	return g.orgCustomProperties
+}
+
+func (g *GoliacRemoteImpl) loadOrgCustomProperties(ctx context.Context) (map[string]*config.GithubCustomProperty, error) {
+	// https://docs.github.com/en/rest/orgs/custom-properties?apiVersion=2022-11-28#get-all-custom-properties-for-an-organization
+	logrus.Debug("loading org custom properties")
+	customProperties := make(map[string]*config.GithubCustomProperty)
+
+	data, err := g.client.CallRestAPI(ctx, fmt.Sprintf("/orgs/%s/properties/schema", g.configGithubOrg), "", "GET", nil, nil)
+	if err != nil {
+		// If the endpoint returns 404, it might mean custom properties are not enabled
+		// We'll return an empty map in that case
+		if strings.Contains(err.Error(), "404") {
+			return customProperties, nil
+		}
+		return nil, fmt.Errorf("not able to list custom properties for org %s: %v", g.configGithubOrg, err)
+	}
+
+	var properties []config.GithubCustomProperty
+	err = json.Unmarshal(data, &properties)
+	if err != nil {
+		return nil, fmt.Errorf("not able to unmarshal custom properties for org %s: %v", g.configGithubOrg, err)
+	}
+
+	for _, prop := range properties {
+		propCopy := prop // create a copy to avoid taking address of loop variable
+		customProperties[prop.PropertyName] = &propCopy
+	}
+
+	return customProperties, nil
+}
+
+func (g *GoliacRemoteImpl) CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, property *config.GithubCustomProperty) {
+	// https://docs.github.com/en/rest/orgs/custom-properties?apiVersion=2022-11-28#create-or-update-a-custom-property-for-an-organization
+	if !dryrun {
+		body := map[string]interface{}{
+			"value_type": property.ValueType,
+		}
+		if property.Required {
+			body["required"] = property.Required
+		}
+		if property.DefaultValue != "" {
+			body["default_value"] = property.DefaultValue
+		}
+		if property.Description != "" {
+			body["description"] = property.Description
+		}
+		if len(property.AllowedValues) > 0 {
+			body["allowed_values"] = property.AllowedValues
+		}
+		if property.ValuesEditableBy != "" {
+			body["values_editable_by"] = property.ValuesEditableBy
+		}
+
+		responseBody, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/orgs/%s/properties/schema/%s", g.configGithubOrg, property.PropertyName),
+			"",
+			"PUT",
+			body,
+			nil,
+		)
+		if err != nil {
+			logsCollector.AddError(fmt.Errorf("failed to create or update custom property %s for org: %v. %s", property.PropertyName, err, string(responseBody)))
+			return
+		}
+	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	propCopy := *property
+	g.orgCustomProperties[property.PropertyName] = &propCopy
+}
+
+func (g *GoliacRemoteImpl) DeleteOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, propertyName string) {
+	// https://docs.github.com/en/rest/orgs/custom-properties?apiVersion=2022-11-28#remove-a-custom-property-for-an-organization
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/orgs/%s/properties/schema/%s", g.configGithubOrg, propertyName),
+			"",
+			"DELETE",
+			nil,
+			nil,
+		)
+		if err != nil {
+			logsCollector.AddError(fmt.Errorf("failed to delete custom property %s from org: %v. %s", propertyName, err, string(body)))
+			return
+		}
+	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	delete(g.orgCustomProperties, propertyName)
 }
 
 // func (g *GoliacRemoteImpl) loadEnvironmentVariables(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]map[string]*GithubVariable, error) {
@@ -1914,9 +2153,9 @@ func (g *GoliacRemoteImpl) loadTeamsMembers(ctx context.Context, t *GithubTeam) 
 }
 
 const listRulesets = `
-query listRulesets ($orgLogin: String!) { 
+query listRulesets ($orgLogin: String!) {
 	organization(login: $orgLogin) {
-	  rulesets(first: 100) { 
+	  rulesets(first: 100) {
 		nodes {
 		  databaseId
 		  name
@@ -3709,6 +3948,65 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperties(ctx context.Context,
 			} else {
 				repo.BoolProperties[propertyName] = propertyValue.(bool)
 			}
+		}
+	}
+}
+
+func (g *GoliacRemoteImpl) UpdateRepositoryCustomProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+	// https://docs.github.com/en/rest/repos/custom-properties?apiVersion=2022-11-28#create-or-update-custom-property-values-for-a-repository
+	g.actionMutex.Lock()
+	repo := g.repositories[reponame]
+	if repo == nil {
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		g.actionMutex.Unlock()
+		return
+	}
+	g.actionMutex.Unlock()
+
+	// Prepare the request body according to GitHub API format
+	// Values are already normalized from YAML (string, []string, or null)
+	properties := []map[string]interface{}{
+		{
+			"property_name": propertyName,
+			"value":         propertyValue,
+		},
+	}
+
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/repos/%s/%s/properties/values", g.configGithubOrg, reponame),
+			"",
+			"PATCH",
+			map[string]interface{}{
+				"properties": properties,
+			},
+			nil,
+		)
+		if err != nil {
+			// Check for 422 validation errors and report them clearly
+			if strings.Contains(err.Error(), "422") {
+				logsCollector.AddError(fmt.Errorf("validation error (422) when updating custom property %s for repository %s: %v. Response: %s. This usually means the property value is not allowed by the organization's custom property definition", propertyName, reponame, err, string(body)))
+			} else {
+				logsCollector.AddError(fmt.Errorf("failed to update custom property %s for repository %s: %v. %s", propertyName, reponame, err, string(body)))
+			}
+			return
+		}
+	}
+
+	// Update local cache
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	repo = g.repositories[reponame]
+	if repo != nil {
+		if repo.CustomProperties == nil {
+			repo.CustomProperties = make(map[string]interface{})
+		}
+		if propertyValue == nil {
+			delete(repo.CustomProperties, propertyName)
+		} else {
+			repo.CustomProperties[propertyName] = propertyValue
 		}
 	}
 }

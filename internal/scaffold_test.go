@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/engine"
 	"github.com/goliac-project/goliac/internal/entity"
 	"github.com/goliac-project/goliac/internal/observability"
@@ -69,6 +70,10 @@ func (s *ScaffoldGoliacRemoteMock) EnvironmentSecretsPerRepository(ctx context.C
 
 func (s *ScaffoldGoliacRemoteMock) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*engine.GithubVariable, error) {
 	return nil, nil
+}
+
+func (s *ScaffoldGoliacRemoteMock) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
+	return make(map[string]*config.GithubCustomProperty)
 }
 
 func NewScaffoldGoliacRemoteMock() engine.GoliacRemote {
