@@ -278,6 +278,7 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_WORKFLOW_JIRA_EMAIL   |               | PR Breaking glass workflow - Jira plugin: email |
 | GOLIAC_WORKFLOW_JIRA_API_TOKEN |             | PR Breaking glass workflow - Jira plugin: token |
 | GOLIAC_MANAGE_GITHUB_ACTIONS_VARIABLES | true | if Goliac manage repositories environments, variables. For secrets it only scans them for display purposes |
+| GOLIAC_MANAGE_ORG_CUSTOM_PROPERTIES | true | if Goliac manage custom properties |
 
 then you just need to start it with
 
