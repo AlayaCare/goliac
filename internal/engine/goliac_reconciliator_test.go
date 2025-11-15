@@ -141,6 +141,9 @@ func (m *GoliacRemoteMock) RepositoriesSecretsPerRepository(ctx context.Context,
 func (m *GoliacRemoteMock) EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*GithubVariable, error) {
 	return nil, nil
 }
+func (m *GoliacRemoteMock) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
+	return make(map[string]*config.GithubCustomProperty)
+}
 
 type MockMappedEntityLazyLoader[T any] struct {
 	entity map[string]T

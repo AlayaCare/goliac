@@ -687,6 +687,32 @@ func (s *Scaffold) generateGoliacConf(fs billy.Filesystem, rootpath string, admi
 		userplugin = "fromgithubsaml"
 	}
 
+	ctx := context.Background()
+	orgCustomProperties := s.remote.OrgCustomProperties(ctx)
+
+	orgCustomPropertiesYAML := ""
+	if len(orgCustomProperties) > 0 {
+		// Convert map to slice for YAML serialization
+		propertiesSlice := make([]config.GithubCustomProperty, 0, len(orgCustomProperties))
+		for _, prop := range orgCustomProperties {
+			propertiesSlice = append(propertiesSlice, *prop)
+		}
+		propertiesYAML, err := yaml.Marshal(propertiesSlice)
+		if err != nil {
+			logCollector.AddWarn(fmt.Errorf("not able to marshal organization custom properties: %v", err))
+		} else {
+			// Indent each line by 2 spaces to match the config structure
+			lines := strings.Split(strings.TrimSpace(string(propertiesYAML)), "\n")
+			indentedLines := make([]string, 0, len(lines))
+			for _, line := range lines {
+				if line != "" {
+					indentedLines = append(indentedLines, "  "+line)
+				}
+			}
+			orgCustomPropertiesYAML = fmt.Sprintf("\norg_custom_properties:\n%s", strings.Join(indentedLines, "\n"))
+		}
+	}
+
 	conf := fmt.Sprintf(`
 admin_team: %s
 
@@ -704,6 +730,7 @@ destructive_operations:
 
 usersync:
   plugin: %s
+%s
 
 # visibility_rules:
 #   forbid_public_repositories: false
@@ -711,7 +738,7 @@ usersync:
 
 # workflows:
 #   - standard
-`, adminteam, userplugin)
+`, adminteam, userplugin, orgCustomPropertiesYAML)
 	if err := writeFile(filepath.Join(rootpath, "goliac.yaml"), []byte(conf), fs); err != nil {
 		logCollector.AddError(fmt.Errorf("not able to write goliac.yaml file %s/goliac.yaml: %v", rootpath, err))
 	}

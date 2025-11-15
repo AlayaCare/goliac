@@ -154,6 +154,22 @@ usersync:
 #  forbid_public_repositories_exclusions: # if you want to allow some public repositories
 #    - goliac-teams
 #    - repo_public.*
+
+#org_custom_properties: # organization-level custom properties schema definitions
+#  - property_name: environment
+#    value_type: single_select # can be "string", "single_select", or "multi_select"
+#    required: true
+#    default_value: production
+#    description: Production or development environment
+#    allowed_values: # required for single_select and multi_select
+#      - production
+#      - development
+#      - staging
+#    values_editable_by: org_actors # can be "org_actors" or "org_and_repo_actors"
+#  - property_name: tier
+#    value_type: string
+#    required: false
+#    description: Service tier classification
 ```
 
 and you can configure different ruleset in the `/rulesets` directory like

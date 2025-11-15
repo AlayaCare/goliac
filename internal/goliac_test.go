@@ -715,6 +715,9 @@ func (e *GoliacRemoteExecutorMock) EnvironmentSecretsPerRepository(ctx context.C
 func (e *GoliacRemoteExecutorMock) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*engine.GithubVariable, error) {
 	return nil, nil
 }
+func (e *GoliacRemoteExecutorMock) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
+	return make(map[string]*config.GithubCustomProperty)
+}
 func (e *GoliacRemoteExecutorMock) AddRepositoryEnvironment(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string) {
 	fmt.Println("*** AddRepositoryEnvironment", repositoryName, environmentName)
 	e.nbChanges++
