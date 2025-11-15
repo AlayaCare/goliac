@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/observability"
 )
 
@@ -57,6 +58,10 @@ type ReconciliatorExecutor interface {
 	AddRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolink *GithubAutolink)
 	DeleteRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, autolinkId int)
 	UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, previousAutolinkId int, autolink *GithubAutolink)
+
+	// Organization custom properties management
+	CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, property *config.GithubCustomProperty)
+	DeleteOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, propertyName string)
 
 	Begin(logsCollector *observability.LogCollection, dryrun bool)
 	Rollback(logsCollector *observability.LogCollection, dryrun bool, err error)

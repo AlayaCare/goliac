@@ -38,8 +38,8 @@ type RepositoryConfig struct {
 		ForbidPublicRepositoriesExclusions []string `yaml:"forbid_public_repositories_exclusions"`
 	} `yaml:"visibility_rules"`
 
-	Workflows           []string               `yaml:"workflows"`
-	OrgCustomProperties []GithubCustomProperty `yaml:"org_custom_properties"`
+	Workflows           []string                `yaml:"workflows"`
+	OrgCustomProperties []*GithubCustomProperty `yaml:"org_custom_properties"`
 }
 
 // set default values
@@ -56,6 +56,14 @@ func (rc *RepositoryConfig) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
+	// add org_actors systematically to the org_custom_properties
+	for _, orgProperty := range x.OrgCustomProperties {
+		if orgProperty.ValuesEditableBy == "" {
+			orgProperty.ValuesEditableBy = "org_actors"
+		}
+	}
+
 	*rc = RepositoryConfig(*x)
+
 	return nil
 }

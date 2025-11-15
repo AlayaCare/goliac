@@ -15,6 +15,7 @@ type GoliacReconciliatorDatasource interface {
 	Teams() (map[string]*GithubTeamComparable, map[string]bool, error)          // team, externallyManaged, error
 	Repositories() (map[string]*GithubRepoComparable, map[string]string, error) // repo, renameTo, error
 	RuleSets() (map[string]*GithubRuleSet, error)
+	OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty
 }
 
 type GoliacReconciliatorDatasourceLocal struct {
@@ -402,6 +403,15 @@ func (d *GoliacReconciliatorDatasourceLocal) RuleSets() (map[string]*GithubRuleS
 	return lgrs, nil
 }
 
+func (d *GoliacReconciliatorDatasourceLocal) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
+	localProps := make(map[string]*config.GithubCustomProperty)
+	for _, prop := range d.conf.OrgCustomProperties {
+		propCopy := prop
+		localProps[prop.PropertyName] = propCopy
+	}
+	return localProps
+}
+
 type GoliacReconciliatorDatasourceRemote struct {
 	remote GoliacRemote
 }
@@ -539,4 +549,8 @@ func (d *GoliacReconciliatorDatasourceRemote) Repositories() (map[string]*Github
 
 func (d *GoliacReconciliatorDatasourceRemote) RuleSets() (map[string]*GithubRuleSet, error) {
 	return d.remote.RuleSets(context.Background()), nil
+}
+
+func (d *GoliacReconciliatorDatasourceRemote) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
+	return d.remote.OrgCustomProperties(ctx)
 }

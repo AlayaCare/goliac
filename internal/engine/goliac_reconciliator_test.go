@@ -83,12 +83,13 @@ func (m *GoliacLocalMock) Close(fs billy.Filesystem) {
 }
 
 type GoliacRemoteMock struct {
-	users      map[string]*GithubUser
-	teams      map[string]*GithubTeam // key is the slug team
-	repos      map[string]*GithubRepository
-	teamsrepos map[string]map[string]*GithubTeamRepo // key is the slug team
-	rulesets   map[string]*GithubRuleSet
-	appids     map[string]*GithubApp
+	users               map[string]*GithubUser
+	teams               map[string]*GithubTeam // key is the slug team
+	repos               map[string]*GithubRepository
+	teamsrepos          map[string]map[string]*GithubTeamRepo // key is the slug team
+	rulesets            map[string]*GithubRuleSet
+	appids              map[string]*GithubApp
+	orgCustomProperties map[string]*config.GithubCustomProperty
 }
 
 func (m *GoliacRemoteMock) Load(ctx context.Context, continueOnError bool) error {
@@ -142,7 +143,10 @@ func (m *GoliacRemoteMock) EnvironmentSecretsPerRepository(ctx context.Context, 
 	return nil, nil
 }
 func (m *GoliacRemoteMock) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
-	return make(map[string]*config.GithubCustomProperty)
+	if m.orgCustomProperties == nil {
+		return make(map[string]*config.GithubCustomProperty)
+	}
+	return m.orgCustomProperties
 }
 
 type MockMappedEntityLazyLoader[T any] struct {
@@ -200,6 +204,10 @@ type ReconciliatorListenerRecorder struct {
 	RuleSetCreated map[string]*GithubRuleSet
 	RuleSetUpdated map[string]*GithubRuleSet
 	RuleSetDeleted []int
+
+	OrgCustomPropertyCreated map[string]*config.GithubCustomProperty
+	OrgCustomPropertyUpdated map[string]*config.GithubCustomProperty
+	OrgCustomPropertyDeleted map[string]bool
 }
 
 func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
@@ -232,6 +240,9 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 		RuleSetCreated:                       make(map[string]*GithubRuleSet),
 		RuleSetUpdated:                       make(map[string]*GithubRuleSet),
 		RuleSetDeleted:                       make([]int, 0),
+		OrgCustomPropertyCreated:             make(map[string]*config.GithubCustomProperty),
+		OrgCustomPropertyUpdated:             make(map[string]*config.GithubCustomProperty),
+		OrgCustomPropertyDeleted:             make(map[string]bool),
 		RepositoryEnvironmentCreated:         make(map[string]string),
 		RepositoryEnvironmentDeleted:         make(map[string]string),
 		RepositoryVariableCreated:            make(map[string]string),
@@ -407,6 +418,18 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositoryAutolink(ctx context.Con
 		r.RepositoryAutolinkUpdated[repositoryName] = autolinks
 	}
 	r.RepositoryAutolinkUpdated[repositoryName][autolink.KeyPrefix] = autolink
+}
+func (r *ReconciliatorListenerRecorder) CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, property *config.GithubCustomProperty) {
+	// Track in Created if not already there (first time we see this property)
+	if _, exists := r.OrgCustomPropertyCreated[property.PropertyName]; !exists {
+		r.OrgCustomPropertyCreated[property.PropertyName] = property
+	} else {
+		// If already in Created, this is an update
+		r.OrgCustomPropertyUpdated[property.PropertyName] = property
+	}
+}
+func (r *ReconciliatorListenerRecorder) DeleteOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, propertyName string) {
+	r.OrgCustomPropertyDeleted[propertyName] = true
 }
 func (r *ReconciliatorListenerRecorder) Begin(logsCollector *observability.LogCollection, dryrun bool) {
 }
@@ -3450,4 +3473,262 @@ func TestReconciliationAutolinks(t *testing.T) {
 		assert.Equal(t, 0, len(recorder.RepositoryAutolinkDeleted["test-repo"]))
 	})
 
+}
+
+func TestReconciliationCustomProperties(t *testing.T) {
+	t.Run("happy path: create new org custom property", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{
+			OrgCustomProperties: []*config.GithubCustomProperty{
+				{
+					PropertyName:  "environment",
+					ValueType:     "single_select",
+					Required:      true,
+					DefaultValue:  "production",
+					Description:   "Production or development environment",
+					AllowedValues: []string{"production", "development", "staging"},
+				},
+			},
+		}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]*GithubUser),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]*GithubApp),
+		}
+
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
+
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+
+		// Verify custom property was created
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 1, len(recorder.OrgCustomPropertyCreated))
+		assert.NotNil(t, recorder.OrgCustomPropertyCreated["environment"])
+		assert.Equal(t, "single_select", recorder.OrgCustomPropertyCreated["environment"].ValueType)
+		assert.Equal(t, 0, len(recorder.OrgCustomPropertyUpdated))
+		assert.Equal(t, 0, len(recorder.OrgCustomPropertyDeleted))
+	})
+
+	t.Run("happy path: update existing org custom property", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{
+			OrgCustomProperties: []*config.GithubCustomProperty{
+				{
+					PropertyName:  "environment",
+					ValueType:     "single_select",
+					Required:      true,
+					DefaultValue:  "staging", // Changed from production
+					Description:   "Production or development environment",
+					AllowedValues: []string{"production", "development", "staging"},
+				},
+			},
+		}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		// Set up remote to have the existing property with old value
+		existingProperty := &config.GithubCustomProperty{
+			PropertyName:  "environment",
+			ValueType:     "single_select",
+			Required:      true,
+			DefaultValue:  "production",
+			Description:   "Production or development environment",
+			AllowedValues: []string{"production", "development", "staging"},
+		}
+
+		// Pre-populate Created to simulate that the property was created in a previous reconciliation
+		// This allows the tracking logic to correctly identify this as an update
+		recorder.OrgCustomPropertyCreated["environment"] = existingProperty
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]*GithubUser),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]*GithubApp),
+			orgCustomProperties: map[string]*config.GithubCustomProperty{
+				"environment": existingProperty,
+			},
+		}
+
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
+
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+
+		// Verify custom property was updated
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 1, len(recorder.OrgCustomPropertyUpdated))
+		assert.NotNil(t, recorder.OrgCustomPropertyUpdated["environment"])
+		assert.Equal(t, "staging", recorder.OrgCustomPropertyUpdated["environment"].DefaultValue)
+	})
+
+	t.Run("happy path: delete org custom property", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{
+			OrgCustomProperties: []*config.GithubCustomProperty{},
+		}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		existingProperty := &config.GithubCustomProperty{
+			PropertyName: "old-property",
+			ValueType:    "string",
+		}
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]*GithubUser),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]*GithubApp),
+			orgCustomProperties: map[string]*config.GithubCustomProperty{
+				"old-property": existingProperty,
+			},
+		}
+
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
+
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+
+		// Verify custom property was deleted
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 1, len(recorder.OrgCustomPropertyDeleted))
+		assert.True(t, recorder.OrgCustomPropertyDeleted["old-property"])
+	})
+
+	t.Run("happy path: no changes when properties match", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		property := &config.GithubCustomProperty{
+			PropertyName:  "environment",
+			ValueType:     "single_select",
+			Required:      true,
+			DefaultValue:  "production",
+			Description:   "Production or development environment",
+			AllowedValues: []string{"production", "development", "staging"},
+		}
+
+		repoconf := config.RepositoryConfig{
+			OrgCustomProperties: []*config.GithubCustomProperty{property},
+		}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]*GithubUser),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]*GithubApp),
+			orgCustomProperties: map[string]*config.GithubCustomProperty{
+				"environment": property,
+			},
+		}
+
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
+
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+
+		// Verify no changes were made
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 0, len(recorder.OrgCustomPropertyCreated))
+		assert.Equal(t, 0, len(recorder.OrgCustomPropertyUpdated))
+		assert.Equal(t, 0, len(recorder.OrgCustomPropertyDeleted))
+	})
+
+	t.Run("happy path: multiple custom properties", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+
+		repoconf := config.RepositoryConfig{
+			OrgCustomProperties: []*config.GithubCustomProperty{
+				{
+					PropertyName:  "environment",
+					ValueType:     "single_select",
+					Required:      true,
+					AllowedValues: []string{"production", "development"},
+				},
+				{
+					PropertyName: "tier",
+					ValueType:    "string",
+					Required:     false,
+					Description:  "Service tier classification",
+				},
+			},
+		}
+
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]*GithubUser),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]*GithubApp),
+		}
+
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
+
+		logsCollector := observability.NewLogCollection()
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+
+		// Verify both custom properties were created
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 2, len(recorder.OrgCustomPropertyCreated))
+		assert.NotNil(t, recorder.OrgCustomPropertyCreated["environment"])
+		assert.NotNil(t, recorder.OrgCustomPropertyCreated["tier"])
+		assert.Equal(t, 0, len(recorder.OrgCustomPropertyUpdated))
+		assert.Equal(t, 0, len(recorder.OrgCustomPropertyDeleted))
+	})
 }

@@ -410,6 +410,22 @@ func (g *GithubBatchExecutor) UpdateRepositoryAutolink(ctx context.Context, logs
 	})
 }
 
+func (g *GithubBatchExecutor) CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, property *config.GithubCustomProperty) {
+	g.commands = append(g.commands, &GithubCommandCreateOrUpdateOrgCustomProperty{
+		client:   g.client,
+		dryrun:   dryrun,
+		property: property,
+	})
+}
+
+func (g *GithubBatchExecutor) DeleteOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, propertyName string) {
+	g.commands = append(g.commands, &GithubCommandDeleteOrgCustomProperty{
+		client:       g.client,
+		dryrun:       dryrun,
+		propertyName: propertyName,
+	})
+}
+
 func (g *GithubBatchExecutor) Begin(logsCollector *observability.LogCollection, dryrun bool) {
 	g.commands = make([]GithubCommand, 0)
 }
@@ -870,4 +886,24 @@ type GithubCommandUpdateRepositoryAutolink struct {
 
 func (g *GithubCommandUpdateRepositoryAutolink) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
 	g.client.UpdateRepositoryAutolink(ctx, logsCollector, g.dryrun, g.reponame, g.previousAutolinkId, g.autolink)
+}
+
+type GithubCommandCreateOrUpdateOrgCustomProperty struct {
+	client   engine.ReconciliatorExecutor
+	dryrun   bool
+	property *config.GithubCustomProperty
+}
+
+func (g *GithubCommandCreateOrUpdateOrgCustomProperty) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
+	g.client.CreateOrUpdateOrgCustomProperty(ctx, logsCollector, g.dryrun, g.property)
+}
+
+type GithubCommandDeleteOrgCustomProperty struct {
+	client       engine.ReconciliatorExecutor
+	dryrun       bool
+	propertyName string
+}
+
+func (g *GithubCommandDeleteOrgCustomProperty) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
+	g.client.DeleteOrgCustomProperty(ctx, logsCollector, g.dryrun, g.propertyName)
 }

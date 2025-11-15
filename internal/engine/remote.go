@@ -1685,6 +1685,13 @@ func (g *GoliacRemoteImpl) CreateOrUpdateOrgCustomProperty(ctx context.Context, 
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	propCopy := *property
+	g.orgCustomProperties[property.PropertyName] = &propCopy
 }
 
 func (g *GoliacRemoteImpl) DeleteOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, propertyName string) {
@@ -1703,6 +1710,12 @@ func (g *GoliacRemoteImpl) DeleteOrgCustomProperty(ctx context.Context, logsColl
 			return
 		}
 	}
+
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	// Update local cache
+	delete(g.orgCustomProperties, propertyName)
 }
 
 // func (g *GoliacRemoteImpl) loadEnvironmentVariables(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]map[string]*GithubVariable, error) {

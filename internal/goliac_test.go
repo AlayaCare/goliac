@@ -718,6 +718,14 @@ func (e *GoliacRemoteExecutorMock) RepositoriesSecretsPerRepository(ctx context.
 func (e *GoliacRemoteExecutorMock) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
 	return make(map[string]*config.GithubCustomProperty)
 }
+func (e *GoliacRemoteExecutorMock) CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, property *config.GithubCustomProperty) {
+	fmt.Println("*** CreateOrUpdateOrgCustomProperty", property.PropertyName)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) DeleteOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, propertyName string) {
+	fmt.Println("*** DeleteOrgCustomProperty", propertyName)
+	e.nbChanges++
+}
 func (e *GoliacRemoteExecutorMock) AddRepositoryEnvironment(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string) {
 	fmt.Println("*** AddRepositoryEnvironment", repositoryName, environmentName)
 	e.nbChanges++
