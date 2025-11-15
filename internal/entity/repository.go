@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"gopkg.in/yaml.v3"
@@ -129,7 +130,7 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
  * - a slice of errors that must stop the validation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname string, teams map[string]*Team, externalUsers map[string]*User, LogCollection *observability.LogCollection) map[string]*Repository {
+func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname string, teams map[string]*Team, externalUsers map[string]*User, customProperties []*config.GithubCustomProperty, LogCollection *observability.LogCollection) map[string]*Repository {
 	repos := make(map[string]*Repository)
 
 	// archived dir
@@ -161,7 +162,7 @@ func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname s
 			if err != nil {
 				LogCollection.AddError(err)
 			} else {
-				if err := repo.Validate(filepath.Join(archivedDirname, entry.Name()), teams, externalUsers); err != nil {
+				if err := repo.Validate(filepath.Join(archivedDirname, entry.Name()), teams, externalUsers, customProperties); err != nil {
 					LogCollection.AddError(err)
 				} else {
 					repo.Archived = true
@@ -189,14 +190,14 @@ func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname s
 
 	for _, team := range entries {
 		if team.IsDir() {
-			recursiveReadRepositories(fs, archivedDirname, filepath.Join(teamDirname, team.Name()), team.Name(), repos, teams, externalUsers, LogCollection)
+			recursiveReadRepositories(fs, archivedDirname, filepath.Join(teamDirname, team.Name()), team.Name(), repos, teams, externalUsers, customProperties, LogCollection)
 		}
 	}
 
 	return repos
 }
 
-func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, teamDirPath string, teamName string, repos map[string]*Repository, teams map[string]*Team, externalUsers map[string]*User, LogCollection *observability.LogCollection) {
+func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, teamDirPath string, teamName string, repos map[string]*Repository, teams map[string]*Team, externalUsers map[string]*User, customProperties []*config.GithubCustomProperty, LogCollection *observability.LogCollection) {
 
 	subentries, err := fs.ReadDir(teamDirPath)
 	if err != nil {
@@ -205,7 +206,7 @@ func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, team
 	}
 	for _, sube := range subentries {
 		if sube.IsDir() && sube.Name()[0] != '.' {
-			recursiveReadRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), sube.Name(), repos, teams, externalUsers, LogCollection)
+			recursiveReadRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), sube.Name(), repos, teams, externalUsers, customProperties, LogCollection)
 		}
 		if !sube.IsDir() && sube.Name() != "team.yaml" {
 			if filepath.Ext(sube.Name()) != ".yaml" {
@@ -216,7 +217,7 @@ func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, team
 			if err != nil {
 				LogCollection.AddError(err)
 			} else {
-				if err := repo.Validate(filepath.Join(teamDirPath, sube.Name()), teams, externalUsers); err != nil {
+				if err := repo.Validate(filepath.Join(teamDirPath, sube.Name()), teams, externalUsers, customProperties); err != nil {
 					LogCollection.AddError(err)
 				} else {
 					// check if the repository doesn't already exists
@@ -238,7 +239,7 @@ func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, team
 	}
 }
 
-func (r *Repository) Validate(filename string, teams map[string]*Team, externalUsers map[string]*User) error {
+func (r *Repository) Validate(filename string, teams map[string]*Team, externalUsers map[string]*User, customProperties []*config.GithubCustomProperty) error {
 
 	if r.ApiVersion != "v1" {
 		return fmt.Errorf("invalid apiVersion: %s (check repository filename %s)", r.ApiVersion, filename)
@@ -331,6 +332,21 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 			r.Spec.DefaultSquashCommitMessage != "Pull request title and commit details" &&
 			r.Spec.DefaultSquashCommitMessage != "Pull request title and description" {
 			return fmt.Errorf("%s: invalid default squash commit message: %s (it must be 'Default message', 'Pull request title', 'Pull request title and commit details', or 'Pull request title and description')", r.Name, r.Spec.DefaultSquashCommitMessage)
+		}
+	}
+
+	if r.Spec.CustomProperties != nil {
+		for propName := range r.Spec.CustomProperties {
+			found := false
+			for _, customProperty := range customProperties {
+				if customProperty.PropertyName == propName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("invalid custom property: %s is not defined in the organization custom properties", propName)
+			}
 		}
 	}
 

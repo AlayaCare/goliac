@@ -478,7 +478,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 							}
 						}
 						if found {
-							localCustomProperties[propName] = normalizePropertyValue(localValue)
+							normalizedValue := normalizePropertyValue(localValue)
+							// bug (or feature?) an empty string is not saved in Github
+							if normalizedValue != "" {
+								localCustomProperties[propName] = normalizedValue
+							}
 						} else {
 							logsCollector.AddWarn(fmt.Errorf("custom property %s is defined in the repository %s but not in the organization custom properties", propName, reponame))
 						}
