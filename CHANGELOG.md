@@ -1,4 +1,8 @@
-## Goliac v1.5.0
+## Goliac v1.5.2
+
+- custom properties scan can be disabled
+
+## Goliac v1.5.1
 
 - bugfix with Custom Properties, when the value is ''
 

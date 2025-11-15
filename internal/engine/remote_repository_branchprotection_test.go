@@ -65,7 +65,7 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 	t.Run("happy path: add branch protection", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &AddBranchProtectionMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository to the remote impl
 		repo := &GithubRepository{
@@ -134,7 +134,7 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 	t.Run("error path: repository not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &AddBranchProtectionMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Setup test data
 		branchProtection := &GithubBranchProtection{
@@ -161,7 +161,7 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to create branch protection",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository to the remote impl
 		repo := &GithubRepository{
@@ -196,7 +196,7 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &AddBranchProtectionMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository to the remote impl
 		repo := &GithubRepository{
@@ -242,7 +242,7 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 				]
 			}`,
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository to the remote impl
 		repo := &GithubRepository{
@@ -329,7 +329,7 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 	t.Run("happy path: delete branch protection", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &DeleteBranchProtectionMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository with branch protection to the remote impl
 		branchProtection := &GithubBranchProtection{
@@ -371,7 +371,7 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 	t.Run("error path: repository not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &DeleteBranchProtectionMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Setup test data
 		branchProtection := &GithubBranchProtection{
@@ -399,7 +399,7 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to delete branch protection",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository with branch protection to the remote impl
 		branchProtection := &GithubBranchProtection{
@@ -435,7 +435,7 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &DeleteBranchProtectionMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository with branch protection to the remote impl
 		branchProtection := &GithubBranchProtection{
@@ -482,7 +482,7 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 				]
 			}`,
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository with branch protection to the remote impl
 		branchProtection := &GithubBranchProtection{
@@ -518,7 +518,7 @@ func TestDeleteRepositoryBranchProtection(t *testing.T) {
 	t.Run("happy path: delete non-existent branch protection", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &DeleteBranchProtectionMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository without branch protection to the remote impl
 		repo := &GithubRepository{
@@ -608,7 +608,7 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 	t.Run("happy path: update branch protection", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateBranchProtectionMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository with existing branch protection to the remote impl
 		existingBranchProtection := &GithubBranchProtection{
@@ -697,7 +697,7 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 	t.Run("error path: repository not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateBranchProtectionMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Setup test data
 		branchProtection := &GithubBranchProtection{
@@ -725,7 +725,7 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 			shouldError:  true,
 			errorMessage: "failed to update branch protection",
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository with branch protection to the remote impl
 		originalBranchProtection := &GithubBranchProtection{
@@ -768,7 +768,7 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 	t.Run("happy path: dry run", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &UpdateBranchProtectionMockClient{}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository with branch protection to the remote impl
 		originalBranchProtection := &GithubBranchProtection{
@@ -822,7 +822,7 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 				]
 			}`,
 		}
-		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true)
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
 
 		// Add repository with branch protection to the remote impl
 		originalBranchProtection := &GithubBranchProtection{

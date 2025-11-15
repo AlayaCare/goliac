@@ -26,6 +26,8 @@ var Config = struct {
 	ManageGithubActionsVariables bool `env:"GOLIAC_MANAGE_GITHUB_ACTIONS_VARIABLES" envDefault:"true"`
 	// ManageGithubAutolinks - to manage Github repositoryAutolinks
 	ManageGithubAutolinks bool `env:"GOLIAC_MANAGE_GITHUB_AUTOLINKS" envDefault:"true"`
+	// ManageOrgCustomProperties - to manage Github organization custom properties
+	ManageOrgCustomProperties bool `env:"GOLIAC_MANAGE_ORG_CUSTOM_PROPERTIES" envDefault:"true"`
 
 	ServerApplyInterval int64  `env:"GOLIAC_SERVER_APPLY_INTERVAL" envDefault:"600"`
 	ServerGitRepository string `env:"GOLIAC_SERVER_GIT_REPOSITORY" envDefault:""`
