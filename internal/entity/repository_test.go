@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/stretchr/testify/assert"
@@ -70,7 +71,7 @@ name: repo1
 		assert.False(t, logsCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, logsCollector)
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, []*config.GithubCustomProperty{}, logsCollector)
 		assert.False(t, logsCollector.HasErrors())
 		assert.False(t, logsCollector.HasWarns())
 		assert.NotNil(t, repos)
@@ -98,7 +99,7 @@ name: repo2
 		assert.False(t, logsCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, logsCollector)
+		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, []*config.GithubCustomProperty{}, logsCollector)
 		assert.True(t, logsCollector.HasErrors())
 		assert.False(t, logsCollector.HasWarns())
 	})
@@ -128,7 +129,7 @@ spec:
 		assert.False(t, logsCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, logsCollector)
+		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, []*config.GithubCustomProperty{}, logsCollector)
 		assert.True(t, logsCollector.HasErrors())
 		assert.False(t, logsCollector.HasWarns())
 	})
@@ -158,7 +159,7 @@ spec:
 		assert.False(t, logsCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, logsCollector)
+		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, []*config.GithubCustomProperty{}, logsCollector)
 		assert.True(t, logsCollector.HasErrors())
 		assert.False(t, logsCollector.HasWarns())
 	})
@@ -187,7 +188,7 @@ spec:
 		assert.False(t, logsCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, logsCollector)
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, []*config.GithubCustomProperty{}, logsCollector)
 		assert.False(t, logsCollector.HasErrors())
 		assert.False(t, logsCollector.HasWarns())
 		assert.NotNil(t, repos)
@@ -216,7 +217,7 @@ name: repo1
 		assert.False(t, logsCollector.HasWarns())
 		assert.NotNil(t, teams)
 
-		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, logsCollector)
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, []*config.GithubCustomProperty{}, logsCollector)
 		assert.False(t, logsCollector.HasErrors())
 		assert.False(t, logsCollector.HasWarns())
 		assert.NotNil(t, repos)

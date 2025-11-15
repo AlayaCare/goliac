@@ -1,5 +1,9 @@
 ## Goliac v1.5.0
 
+- bugfix with Custom Properties, when the value is ''
+
+## Goliac v1.5.0
+
 - introducing repository Custom Properties
 
 ## Goliac v1.4.2
