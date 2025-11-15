@@ -40,6 +40,11 @@ spec:
   readers:
   - anotherteamC
   - anotherteamD
+  custom_properties:
+    Foo: 'bar'
+    Baz:
+      - qux
+      - quux
 ```
 
 In this last example:
@@ -117,7 +122,7 @@ spec:
     - name: myruleset
       enforcement: active # disabled, active, evaluate
       conditions:
-        include: 
+        include:
           - "~DEFAULT_BRANCH" # ~DEFAULT_BRANCH, ~ALL, branch_name, ...
       rules:
         - ruletype: required_signatures
@@ -136,7 +141,7 @@ spec:
     - name: myruleset
       enforcement: active # disabled, active, evaluate
       conditions:
-        include: 
+        include:
           - develop
       rules:
         - ruletype: pull_request
@@ -159,7 +164,7 @@ spec:
     - name: myruleset
       enforcement: active # disabled, active, evaluate
       conditions:
-        include: 
+        include:
           - "~ALL"
       rules:
         - ruletype: required_status_checks
@@ -265,7 +270,7 @@ gh secret set SECRET1 --env staging --repo <my organization>/<repository> --body
 ## Add external users to a repository
 
 If you want to give access (read or write) to users external to your organization, you need to
-- add a definition of the user in the `/users/external` directory 
+- add a definition of the user in the `/users/external` directory
 - add them to the repository
 
 To add them to the repository you can use the `externalUserReaders` and `externalUserWriters` properties, like
@@ -319,3 +324,18 @@ name: awesome-repository
 spec:
   autolinks: []
 ```
+
+## Custom properties
+
+You can set custom properties in the repository definition. Custom properties can be strings or arrays of strings.
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  custom_properties:
+    Foo: 'bar'
+    Baz:
+      - qux
+      - quux

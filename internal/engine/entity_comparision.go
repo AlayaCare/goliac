@@ -1,7 +1,9 @@
 package engine
 
+import "github.com/goliac-project/goliac/internal/config"
+
 type Comparable interface {
-	*GithubTeamComparable | *GithubRepoComparable | *GithubRuleSet | *GithubBranchProtection | *GithubEnvironment | *GithubAutolink
+	*GithubTeamComparable | *GithubRepoComparable | *GithubRuleSet | *GithubBranchProtection | *GithubEnvironment | *GithubAutolink | *config.GithubCustomProperty
 }
 
 type CompareEqualAB[A Comparable, B Comparable] func(key string, value1 A, value2 B) bool

@@ -45,6 +45,7 @@ type Repository struct {
 		Environments               []RepositoryEnvironment      `yaml:"environments,omitempty"`
 		ActionsVariables           map[string]string            `yaml:"actions_variables,omitempty"`
 		Autolinks                  *[]RepositoryAutolink        `yaml:"autolinks,omitempty"`
+		CustomProperties           map[string]interface{}       `yaml:"custom_properties,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
@@ -102,6 +103,21 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
 		return nil, err
 	}
 	repository.DirectoryPath = filepath.Dir(filename)
+
+	// Normalize custom properties: convert int values to strings (especially for Tier)
+	if repository.Spec.CustomProperties != nil {
+		normalized := make(map[string]interface{})
+		for k, v := range repository.Spec.CustomProperties {
+			// Convert int to string, especially for Tier
+			switch val := v.(type) {
+			case int:
+				normalized[k] = fmt.Sprintf("%d", val)
+			default:
+				normalized[k] = v
+			}
+		}
+		repository.Spec.CustomProperties = normalized
+	}
 
 	return repository, nil
 }

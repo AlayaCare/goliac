@@ -42,6 +42,49 @@ func NewGoliacReconciliatorImpl(isEntreprise bool, executor ReconciliatorExecuto
 	}
 }
 
+// normalizePropertyValue converts a property value to a normalized string for comparison
+// Handles strings, numbers, arrays, and nil
+func normalizePropertyValue(value interface{}) interface{} {
+	if value == nil {
+		return nil
+	}
+
+	switch v := value.(type) {
+	case string:
+		return v
+	case int:
+		return fmt.Sprintf("%d", v)
+	case []interface{}:
+		// For arrays, convert each element to string and join
+		strs := make([]string, len(v))
+		for i, elem := range v {
+			n := normalizePropertyValue(elem)
+			switch n := n.(type) {
+			case string:
+				strs[i] = n
+			case int:
+				strs[i] = fmt.Sprintf("%d", n)
+			case []string:
+				strs[i] = strings.Join(n, ",")
+			}
+		}
+		return strings.Join(strs, ",")
+	case []string:
+		return strings.Join(v, ",")
+	default:
+		// For other types (including float64 from YAML unmarshaling), convert to string
+		// YAML may unmarshal numbers as float64, so handle that case
+		if f, ok := v.(float64); ok {
+			// Convert float64 to int string if it's a whole number
+			if f == float64(int(f)) {
+				return fmt.Sprintf("%d", int(f))
+			}
+			return fmt.Sprintf("%g", f)
+		}
+		return fmt.Sprintf("%v", v)
+	}
+}
+
 func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, logsCollector *observability.LogCollection, local GoliacReconciliatorDatasource, remote GoliacReconciliatorDatasource, isEnterprise bool, dryrun bool, manageGithubVariables bool, manageGithubAutolinks bool) (*UnmanagedResources, map[string]*GithubRepoComparable, map[string]string, error) {
 	rremote, err := NewMutableGoliacRemoteImpl(ctx, remote)
 	if err != nil {
@@ -81,6 +124,12 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, logsCollecto
 			r.Rollback(ctx, logsCollector, dryrun, err)
 			return nil, nil, nil, err
 		}
+	}
+
+	err = r.reconciliateOrgCustomProperties(ctx, logsCollector, rremote, r.repoconfig, dryrun)
+	if err != nil {
+		r.Rollback(ctx, logsCollector, dryrun, err)
+		return nil, nil, nil, err
 	}
 
 	return r.unmanaged, reposToArchive, reposToRename, r.Commit(ctx, logsCollector, dryrun)
@@ -277,6 +326,7 @@ type GithubRepoComparable struct {
 	Autolinks                  MappedEntityLazyLoader[*GithubAutolink]
 	DefaultMergeCommitMessage  string
 	DefaultSquashCommitMessage string
+	CustomProperties           map[string]interface{} // [propertyName]propertyValue (string or []string)
 	// not comparable
 	IsFork   bool
 	ForkFrom string
@@ -408,6 +458,66 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 					r.DeleteRepositoryEnvironment(ctx, logsCollector, dryrun, remote, reponame, environment)
 				}
 				CompareEntities(lRepo.Environments.GetEntity(), rRepo.Environments.GetEntity(), compareEnvironments, onEnvironmentAdded, onEnvironmentRemoved, onEnvironmentChange)
+			}
+
+			//
+			// Reconcile custom properties
+			//
+			if lRepo.CustomProperties != nil || rRepo.CustomProperties != nil {
+				// first let's remove the custom properties that are not defined in the organization custom properties
+				var localCustomProperties map[string]interface{}
+				if lRepo.CustomProperties != nil {
+					localCustomProperties = make(map[string]interface{})
+					for propName, localValue := range lRepo.CustomProperties {
+						// check if the property is defined in the organization custom properties
+						found := false
+						for _, orgProp := range r.repoconfig.OrgCustomProperties {
+							if orgProp.PropertyName == propName {
+								found = true
+								break
+							}
+						}
+						if found {
+							localCustomProperties[propName] = normalizePropertyValue(localValue)
+						} else {
+							logsCollector.AddWarn(fmt.Errorf("custom property %s is defined in the repository %s but not in the organization custom properties", propName, reponame))
+						}
+					}
+					// we add the default values for the custom properties that are not defined in the repository custom properties
+					for _, orgProperty := range r.repoconfig.OrgCustomProperties {
+						if _, ok := localCustomProperties[orgProperty.PropertyName]; !ok {
+							if orgProperty.DefaultValue != "" {
+								localCustomProperties[orgProperty.PropertyName] = normalizePropertyValue(orgProperty.DefaultValue)
+							}
+						}
+					}
+				}
+
+				// if the custom properties are different, we need to update the remote repository
+				if !utils.DeepEqualUnordered(localCustomProperties, rRepo.CustomProperties) {
+					remoteProperties := make(map[string]interface{})
+					if rRepo.CustomProperties != nil {
+						for propName, remoteValue := range rRepo.CustomProperties {
+							remoteProperties[propName] = normalizePropertyValue(remoteValue)
+						}
+					}
+					localProperties := make(map[string]interface{})
+					for propName, localValue := range localCustomProperties {
+						localProperties[propName] = normalizePropertyValue(localValue)
+					}
+					// check first for added or updated properties
+					for propName, localValue := range localProperties {
+						remoteValue, exists := remoteProperties[propName]
+						if !exists || !utils.DeepEqualUnordered(localValue, remoteValue) {
+							r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, localValue)
+						}
+						delete(remoteProperties, propName)
+					}
+					// check for removed properties
+					for propName := range remoteProperties {
+						r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, nil)
+					}
+				}
 			}
 
 			if manageGithubAutolinks {
@@ -864,6 +974,62 @@ func (r *GoliacReconciliatorImpl) reconciliateRulesets(ctx context.Context, logs
 	return nil
 }
 
+func compareOrgCustomProperties(propertyName string, lProperty *config.GithubCustomProperty, rProperty *config.GithubCustomProperty) bool {
+	if lProperty.PropertyName != rProperty.PropertyName {
+		return false
+	}
+	if lProperty.ValueType != rProperty.ValueType {
+		return false
+	}
+	if lProperty.Required != rProperty.Required {
+		return false
+	}
+	if lProperty.DefaultValue != rProperty.DefaultValue {
+		return false
+	}
+	if lProperty.Description != rProperty.Description {
+		return false
+	}
+	if res, _, _ := entity.StringArrayEquivalent(lProperty.AllowedValues, rProperty.AllowedValues); !res {
+		return false
+	}
+	if lProperty.ValuesEditableBy != rProperty.ValuesEditableBy {
+		return false
+	}
+	return true
+}
+
+func (r *GoliacReconciliatorImpl) reconciliateOrgCustomProperties(ctx context.Context, logsCollector *observability.LogCollection, remote *MutableGoliacRemoteImpl, conf *config.RepositoryConfig, dryrun bool) error {
+	// prepare local comparable
+	localProps := make(map[string]*config.GithubCustomProperty)
+	for _, prop := range conf.OrgCustomProperties {
+		localProps[prop.PropertyName] = prop
+	}
+
+	// prepare remote comparable
+	remoteProps := remote.OrgCustomProperties()
+
+	// prepare the diff computation
+	onAdded := func(propertyName string, lProperty *config.GithubCustomProperty, rProperty *config.GithubCustomProperty) {
+		// CREATE org custom property
+		r.CreateOrUpdateOrgCustomProperty(ctx, logsCollector, dryrun, remote, lProperty)
+	}
+
+	onRemoved := func(propertyName string, lProperty *config.GithubCustomProperty, rProperty *config.GithubCustomProperty) {
+		// DELETE org custom property
+		r.DeleteOrgCustomProperty(ctx, logsCollector, dryrun, remote, propertyName)
+	}
+
+	onChanged := func(propertyName string, lProperty *config.GithubCustomProperty, rProperty *config.GithubCustomProperty) {
+		// UPDATE org custom property
+		r.CreateOrUpdateOrgCustomProperty(ctx, logsCollector, dryrun, remote, lProperty)
+	}
+
+	CompareEntities(localProps, remoteProps, compareOrgCustomProperties, onAdded, onRemoved, onChanged)
+
+	return nil
+}
+
 func (r *GoliacReconciliatorImpl) AddUserToOrg(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, ghuserid string) {
 	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "add_user_to_org"}, "ghuserid: %s", ghuserid)
 	remote.AddUserToOrg(ghuserid)
@@ -995,6 +1161,14 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryUpdateProperties(ctx context.C
 	remote.UpdateRepositoryUpdateProperties(reponame, properties)
 	if r.executor != nil {
 		r.executor.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, reponame, properties)
+	}
+}
+
+func (r *GoliacReconciliatorImpl) UpdateRepositoryCustomProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, propertyName string, propertyValue interface{}) {
+	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_custom_properties"}, "repositoryname: %s, property: %s, value: %v", reponame, propertyName, propertyValue)
+	remote.UpdateRepositoryCustomProperties(reponame, propertyName, propertyValue)
+	if r.executor != nil {
+		r.executor.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, reponame, propertyName, propertyValue)
 	}
 }
 func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ruleset *GithubRuleSet) {
@@ -1151,6 +1325,20 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryAutolink(ctx context.Context, 
 	remote.UpdateRepositoryAutolink(reponame, previousAutolinkId, autolink)
 	if r.executor != nil {
 		r.executor.UpdateRepositoryAutolink(ctx, logsCollector, dryrun, reponame, previousAutolinkId, autolink)
+	}
+}
+func (r *GoliacReconciliatorImpl) CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, property *config.GithubCustomProperty) {
+	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "create_or_update_org_custom_property"}, "property: %s, value_type: %s", property.PropertyName, property.ValueType)
+	remote.CreateOrUpdateOrgCustomProperty(property)
+	if r.executor != nil {
+		r.executor.CreateOrUpdateOrgCustomProperty(ctx, logsCollector, dryrun, property)
+	}
+}
+func (r *GoliacReconciliatorImpl) DeleteOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, propertyName string) {
+	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "delete_org_custom_property"}, "property: %s", propertyName)
+	remote.DeleteOrgCustomProperty(propertyName)
+	if r.executor != nil {
+		r.executor.DeleteOrgCustomProperty(ctx, logsCollector, dryrun, propertyName)
 	}
 }
 func (r *GoliacReconciliatorImpl) Begin(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool) {

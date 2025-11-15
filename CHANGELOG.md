@@ -1,3 +1,7 @@
+## Goliac v1.5.0
+
+- introducing repository Custom Properties
+
 ## Goliac v1.4.2
 
 - bugfix: bad "Pull request and description" label

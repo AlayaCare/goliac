@@ -513,6 +513,17 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 						break
 					}
 				}
+
+				// scaffold custom properties (inside the if block where rRepo is in scope)
+				if rRepo, ok := rRepos[r]; ok {
+					if len(rRepo.CustomProperties) > 0 {
+						lRepo.Spec.CustomProperties = make(map[string]interface{})
+						for propName, propValue := range rRepo.CustomProperties {
+							lRepo.Spec.CustomProperties[propName] = propValue
+						}
+					}
+				}
+
 				if lRepo.Archived {
 					if err := writeYamlFile(path.Join(archivepath, r+".yaml"), &lRepo, fs); err != nil {
 						logCollector.AddError(fmt.Errorf("not able to write archived repo file %s/%s.yaml: %v", archivepath, r, err))
@@ -658,7 +669,7 @@ spec:
       - appname: %s
         mode: always
     conditions:
-      include: 
+      include:
       - "~DEFAULT_BRANCH"
     rules:
       - ruletype: pull_request
@@ -674,6 +685,32 @@ func (s *Scaffold) generateGoliacConf(fs billy.Filesystem, rootpath string, admi
 	userplugin := "noop"
 	if s.remote.IsEnterprise() {
 		userplugin = "fromgithubsaml"
+	}
+
+	ctx := context.Background()
+	orgCustomProperties := s.remote.OrgCustomProperties(ctx)
+
+	orgCustomPropertiesYAML := ""
+	if len(orgCustomProperties) > 0 {
+		// Convert map to slice for YAML serialization
+		propertiesSlice := make([]config.GithubCustomProperty, 0, len(orgCustomProperties))
+		for _, prop := range orgCustomProperties {
+			propertiesSlice = append(propertiesSlice, *prop)
+		}
+		propertiesYAML, err := yaml.Marshal(propertiesSlice)
+		if err != nil {
+			logCollector.AddWarn(fmt.Errorf("not able to marshal organization custom properties: %v", err))
+		} else {
+			// Indent each line by 2 spaces to match the config structure
+			lines := strings.Split(strings.TrimSpace(string(propertiesYAML)), "\n")
+			indentedLines := make([]string, 0, len(lines))
+			for _, line := range lines {
+				if line != "" {
+					indentedLines = append(indentedLines, "  "+line)
+				}
+			}
+			orgCustomPropertiesYAML = fmt.Sprintf("\norg_custom_properties:\n%s", strings.Join(indentedLines, "\n"))
+		}
 	}
 
 	conf := fmt.Sprintf(`
@@ -693,6 +730,7 @@ destructive_operations:
 
 usersync:
   plugin: %s
+%s
 
 # visibility_rules:
 #   forbid_public_repositories: false
@@ -700,7 +738,7 @@ usersync:
 
 # workflows:
 #   - standard
-`, adminteam, userplugin)
+`, adminteam, userplugin, orgCustomPropertiesYAML)
 	if err := writeFile(filepath.Join(rootpath, "goliac.yaml"), []byte(conf), fs); err != nil {
 		logCollector.AddError(fmt.Errorf("not able to write goliac.yaml file %s/goliac.yaml: %v", rootpath, err))
 	}
@@ -745,7 +783,7 @@ kind: Repository
 name: awesome-repository
 ` + "```" + `
 
-This will create a ` + "`" + `awesome-repository` + "`" + ` repository under your organization, that will be 
+This will create a ` + "`" + `awesome-repository` + "`" + ` repository under your organization, that will be
 - private by default
 - writable by all owners/members of this team (in our example ` + "`" + `foobar` + "`" + `)
 

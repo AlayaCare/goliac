@@ -130,7 +130,7 @@ spec:
       - appname: goliac-project-app
         mode: always
     conditions:
-      include: 
+      include:
         - "~DEFAULT_BRANCH"
 
     rules:
@@ -637,6 +637,10 @@ func (e *GoliacRemoteExecutorMock) UpdateRepositoryUpdateProperties(ctx context.
 	fmt.Println("*** UpdateRepositoryUpdateProperties", reponame, properties)
 	e.nbChanges++
 }
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryCustomProperties(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, propertyName string, propertyValue interface{}) {
+	fmt.Println("*** UpdateRepositoryCustomProperties", reponame, propertyName, propertyValue)
+	e.nbChanges++
+}
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryAddTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	fmt.Println("*** UpdateRepositoryAddTeamAccess", reponame, teamslug, permission)
 	e.nbChanges++
@@ -710,6 +714,17 @@ func (e *GoliacRemoteExecutorMock) EnvironmentSecretsPerRepository(ctx context.C
 }
 func (e *GoliacRemoteExecutorMock) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*engine.GithubVariable, error) {
 	return nil, nil
+}
+func (e *GoliacRemoteExecutorMock) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
+	return make(map[string]*config.GithubCustomProperty)
+}
+func (e *GoliacRemoteExecutorMock) CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, property *config.GithubCustomProperty) {
+	fmt.Println("*** CreateOrUpdateOrgCustomProperty", property.PropertyName)
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) DeleteOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, propertyName string) {
+	fmt.Println("*** DeleteOrgCustomProperty", propertyName)
+	e.nbChanges++
 }
 func (e *GoliacRemoteExecutorMock) AddRepositoryEnvironment(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, environmentName string) {
 	fmt.Println("*** AddRepositoryEnvironment", repositoryName, environmentName)

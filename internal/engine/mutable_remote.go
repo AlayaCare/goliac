@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/entity"
 	"github.com/gosimple/slug"
 )
@@ -71,10 +72,11 @@ It is by design
 - and a kind of ReconciliatorExecutor (as a ReconciliatorExecutor writer)
 */
 type MutableGoliacRemoteImpl struct {
-	users        map[string]string
-	repositories map[string]*GithubRepoComparable
-	teams        map[string]*GithubTeamComparable
-	rulesets     map[string]*GithubRuleSet
+	users               map[string]string
+	repositories        map[string]*GithubRepoComparable
+	teams               map[string]*GithubTeamComparable
+	rulesets            map[string]*GithubRuleSet
+	orgCustomProperties map[string]*config.GithubCustomProperty
 }
 
 func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacReconciliatorDatasource) (*MutableGoliacRemoteImpl, error) {
@@ -163,11 +165,22 @@ func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacReconciliatorD
 		rrulesets[k] = &ghRuleset
 	}
 
+	// Get org custom properties from remote if it implements GoliacRemote
+	rorgCustomProperties := make(map[string]*config.GithubCustomProperty)
+	orgProps := remote.OrgCustomProperties(ctx)
+	for k, v := range orgProps {
+		if v != nil {
+			propCopy := *v
+			rorgCustomProperties[k] = &propCopy
+		}
+	}
+
 	return &MutableGoliacRemoteImpl{
-		users:        rUsers,
-		repositories: rRepositories,
-		teams:        rTeams,
-		rulesets:     rrulesets,
+		users:               rUsers,
+		repositories:        rRepositories,
+		teams:               rTeams,
+		rulesets:            rrulesets,
+		orgCustomProperties: rorgCustomProperties,
 	}, nil
 }
 
@@ -184,6 +197,10 @@ func (m *MutableGoliacRemoteImpl) Repositories() map[string]*GithubRepoComparabl
 }
 func (m *MutableGoliacRemoteImpl) RuleSets() map[string]*GithubRuleSet {
 	return m.rulesets
+}
+
+func (m *MutableGoliacRemoteImpl) OrgCustomProperties() map[string]*config.GithubCustomProperty {
+	return m.orgCustomProperties
 }
 
 // LISTENER
@@ -409,6 +426,16 @@ func (m *MutableGoliacRemoteImpl) UpdateRepositoryUpdateProperties(reponame stri
 		}
 	}
 }
+
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryCustomProperties(reponame string, propertyName string, propertyValue interface{}) {
+	if r, ok := m.repositories[reponame]; ok {
+		if r.CustomProperties == nil {
+			r.CustomProperties = make(map[string]interface{})
+		}
+		r.CustomProperties[propertyName] = propertyValue
+	}
+}
+
 func (m *MutableGoliacRemoteImpl) UpdateRepositorySetExternalUser(reponame string, collaboatorGithubId string, permission string) {
 	if r, ok := m.repositories[reponame]; ok {
 		if permission == "pull" {
@@ -477,6 +504,20 @@ func (m *MutableGoliacRemoteImpl) DeleteRuleset(rulesetid int) {
 			delete(m.rulesets, rs.Name)
 			break
 		}
+	}
+}
+
+func (m *MutableGoliacRemoteImpl) CreateOrUpdateOrgCustomProperty(property *config.GithubCustomProperty) {
+	if m.orgCustomProperties == nil {
+		m.orgCustomProperties = make(map[string]*config.GithubCustomProperty)
+	}
+	propCopy := *property
+	m.orgCustomProperties[property.PropertyName] = &propCopy
+}
+
+func (m *MutableGoliacRemoteImpl) DeleteOrgCustomProperty(propertyName string) {
+	if m.orgCustomProperties != nil {
+		delete(m.orgCustomProperties, propertyName)
 	}
 }
 

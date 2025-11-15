@@ -4,6 +4,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type GithubCustomProperty struct {
+	PropertyName     string   `yaml:"property_name" json:"property_name"`
+	ValueType        string   `yaml:"value_type" json:"value_type"` // "string", "single_select", "multi_select"
+	Required         bool     `yaml:"required,omitempty" json:"required,omitempty"`
+	DefaultValue     string   `yaml:"default_value,omitempty" json:"default_value,omitempty"`
+	Description      string   `yaml:"description,omitempty" json:"description,omitempty"`
+	AllowedValues    []string `yaml:"allowed_values,omitempty" json:"allowed_values,omitempty"`
+	ValuesEditableBy string   `yaml:"values_editable_by,omitempty" json:"values_editable_by,omitempty"` // "org_actors", "org_and_repo_actors"
+}
+
 type RepositoryConfig struct {
 	AdminTeam           string `yaml:"admin_team"`
 	EveryoneTeamEnabled bool   `yaml:"everyone_team_enabled"`
@@ -28,7 +38,8 @@ type RepositoryConfig struct {
 		ForbidPublicRepositoriesExclusions []string `yaml:"forbid_public_repositories_exclusions"`
 	} `yaml:"visibility_rules"`
 
-	Workflows []string `yaml:"workflows"`
+	Workflows           []string                `yaml:"workflows"`
+	OrgCustomProperties []*GithubCustomProperty `yaml:"org_custom_properties"`
 }
 
 // set default values
@@ -45,6 +56,14 @@ func (rc *RepositoryConfig) UnmarshalYAML(value *yaml.Node) error {
 		return err
 	}
 
+	// add org_actors systematically to the org_custom_properties
+	for _, orgProperty := range x.OrgCustomProperties {
+		if orgProperty.ValuesEditableBy == "" {
+			orgProperty.ValuesEditableBy = "org_actors"
+		}
+	}
+
 	*rc = RepositoryConfig(*x)
+
 	return nil
 }
