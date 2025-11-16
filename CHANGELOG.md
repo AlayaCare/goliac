@@ -1,6 +1,7 @@
 ## Goliac v1.5.2
 
 - custom properties scan can be disabled
+- fix branch protection bugs: when requiredStatusCheckContexts is not defined and ignore dismissesStaleReviews/requiresCodeOwnerReviews/requireLastPushApproval when requiresApprovingReviews is false
 
 ## Goliac v1.5.1
 

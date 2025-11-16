@@ -3073,6 +3073,10 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 	}
 
 	if !dryrun {
+		statusCheckContexts := branchprotection.RequiredStatusCheckContexts
+		if statusCheckContexts == nil {
+			statusCheckContexts = []string{}
+		}
 		body, err := g.client.QueryGraphQLAPI(
 			ctx,
 			updateBranchProtectionRule,
@@ -3086,7 +3090,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 				"requireLastPushApproval":        branchprotection.RequireLastPushApproval,
 				"requiresStatusChecks":           branchprotection.RequiresStatusChecks,
 				"requiresStrictStatusChecks":     branchprotection.RequiresStrictStatusChecks,
-				"requiredStatusCheckContexts":    branchprotection.RequiredStatusCheckContexts,
+				"requiredStatusCheckContexts":    statusCheckContexts,
 				"requiresConversationResolution": branchprotection.RequiresConversationResolution,
 				"requiresCommitSignatures":       branchprotection.RequiresCommitSignatures,
 				"requiresLinearHistory":          branchprotection.RequiresLinearHistory,
