@@ -797,14 +797,20 @@ func compareBranchProtections(bpname string, lbp *GithubBranchProtection, rbp *G
 			return false
 		}
 	}
-	if lbp.DismissesStaleReviews != rbp.DismissesStaleReviews {
-		return false
+	if lbp.RequiresApprovingReviews {
+		if lbp.DismissesStaleReviews != rbp.DismissesStaleReviews {
+			return false
+		}
 	}
-	if lbp.RequiresCodeOwnerReviews != rbp.RequiresCodeOwnerReviews {
-		return false
+	if lbp.RequiresApprovingReviews {
+		if lbp.RequiresCodeOwnerReviews != rbp.RequiresCodeOwnerReviews {
+			return false
+		}
 	}
-	if lbp.RequireLastPushApproval != rbp.RequireLastPushApproval {
-		return false
+	if lbp.RequiresApprovingReviews {
+		if lbp.RequireLastPushApproval != rbp.RequireLastPushApproval {
+			return false
+		}
 	}
 	if lbp.RequiresStatusChecks != rbp.RequiresStatusChecks {
 		return false
