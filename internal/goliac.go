@@ -98,6 +98,7 @@ func NewGoliacImpl() (Goliac, error) {
 		config.Config.GithubAppOrganization,
 		config.Config.ManageGithubActionsVariables,
 		config.Config.ManageGithubAutolinks,
+		config.Config.ManageOrgCustomProperties,
 	)
 
 	usersync.InitPlugins(remoteGithubClient)

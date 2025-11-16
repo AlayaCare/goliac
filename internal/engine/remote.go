@@ -170,6 +170,7 @@ type GoliacRemoteImpl struct {
 	configGithubOrg           string
 	manageGithubVariables     bool
 	manageGithubAutolinks     bool
+	manageOrgCustomProperties bool
 }
 
 type GHESInfo struct {
@@ -325,6 +326,7 @@ func NewGoliacRemoteImpl(client github.GitHubClient,
 	configGithubOrg string,
 	manageGithubVariables bool,
 	manageGithubAutolinks bool,
+	manageOrgCustomProperties bool,
 ) *GoliacRemoteImpl {
 	ctx := context.Background()
 	return &GoliacRemoteImpl{
@@ -350,6 +352,7 @@ func NewGoliacRemoteImpl(client github.GitHubClient,
 		configGithubOrg:           configGithubOrg,
 		manageGithubVariables:     manageGithubVariables,
 		manageGithubAutolinks:     manageGithubAutolinks,
+		manageOrgCustomProperties: manageOrgCustomProperties,
 	}
 }
 
@@ -1060,14 +1063,16 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 		}
 	}
 
-	// Load custom properties for all repositories
-	customPropsPerRepo, err := g.loadCustomPropertiesConcurrently(ctx, config.Config.GithubConcurrentThreads, repositories)
-	if err != nil {
-		logrus.Warnf("error loading custom properties: %v", err)
-	} else {
-		for reponame, customProps := range customPropsPerRepo {
-			if repo, ok := repositories[reponame]; ok {
-				repo.CustomProperties = customProps
+	if g.manageOrgCustomProperties {
+		// Load custom properties for all repositories
+		customPropsPerRepo, err := g.loadCustomPropertiesConcurrently(ctx, config.Config.GithubConcurrentThreads, repositories)
+		if err != nil {
+			logrus.Warnf("error loading custom properties: %v", err)
+		} else {
+			for reponame, customProps := range customPropsPerRepo {
+				if repo, ok := repositories[reponame]; ok {
+					repo.CustomProperties = customProps
+				}
 			}
 		}
 	}
@@ -3068,6 +3073,10 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 	}
 
 	if !dryrun {
+		statusCheckContexts := branchprotection.RequiredStatusCheckContexts
+		if statusCheckContexts == nil {
+			statusCheckContexts = []string{}
+		}
 		body, err := g.client.QueryGraphQLAPI(
 			ctx,
 			updateBranchProtectionRule,
@@ -3081,7 +3090,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 				"requireLastPushApproval":        branchprotection.RequireLastPushApproval,
 				"requiresStatusChecks":           branchprotection.RequiresStatusChecks,
 				"requiresStrictStatusChecks":     branchprotection.RequiresStrictStatusChecks,
-				"requiredStatusCheckContexts":    branchprotection.RequiredStatusCheckContexts,
+				"requiredStatusCheckContexts":    statusCheckContexts,
 				"requiresConversationResolution": branchprotection.RequiresConversationResolution,
 				"requiresCommitSignatures":       branchprotection.RequiresCommitSignatures,
 				"requiresLinearHistory":          branchprotection.RequiresLinearHistory,
