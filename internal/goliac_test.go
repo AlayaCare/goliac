@@ -641,6 +641,10 @@ func (e *GoliacRemoteExecutorMock) UpdateRepositoryCustomProperties(ctx context.
 	fmt.Println("*** UpdateRepositoryCustomProperties", reponame, propertyName, propertyValue)
 	e.nbChanges++
 }
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryTopics(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, topics []string) {
+	fmt.Println("*** UpdateRepositoryTopics", reponame, topics)
+	e.nbChanges++
+}
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryAddTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	fmt.Println("*** UpdateRepositoryAddTeamAccess", reponame, teamslug, permission)
 	e.nbChanges++

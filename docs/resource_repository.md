@@ -325,6 +325,23 @@ spec:
   autolinks: []
 ```
 
+## Repository topics
+
+You can set topics (tags) on a repository to help categorize and discover repositories:
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  topics:
+    - golang
+    - microservices
+    - api
+```
+
+Topics are displayed on the repository page on GitHub and can be used for searching and filtering repositories.
+
 ## Custom properties
 
 You can set custom properties in the repository definition. Custom properties can be strings or arrays of strings.

@@ -522,6 +522,10 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 							lRepo.Spec.CustomProperties[propName] = propValue
 						}
 					}
+					// scaffold topics
+					if len(rRepo.Topics) > 0 {
+						lRepo.Spec.Topics = rRepo.Topics
+					}
 				}
 
 				if lRepo.Archived {

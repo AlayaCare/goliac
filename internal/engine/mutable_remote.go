@@ -303,6 +303,7 @@ func (m *MutableGoliacRemoteImpl) CreateRepository(reponame string, descrition s
 		BranchProtections:   make(map[string]*GithubBranchProtection),
 		Environments:        NewMutableEnvironmentLazyLoader(nil),
 		ActionVariables:     NewMutableRepositoryVariableLazyLoader(nil),
+		Topics:              []string{},
 	}
 	m.repositories[reponame] = &r
 }
@@ -433,6 +434,12 @@ func (m *MutableGoliacRemoteImpl) UpdateRepositoryCustomProperties(reponame stri
 			r.CustomProperties = make(map[string]interface{})
 		}
 		r.CustomProperties[propertyName] = propertyValue
+	}
+}
+
+func (m *MutableGoliacRemoteImpl) UpdateRepositoryTopics(reponame string, topics []string) {
+	if r, ok := m.repositories[reponame]; ok {
+		r.Topics = topics
 	}
 }
 

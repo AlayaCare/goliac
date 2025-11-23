@@ -327,6 +327,7 @@ type GithubRepoComparable struct {
 	DefaultMergeCommitMessage  string
 	DefaultSquashCommitMessage string
 	CustomProperties           map[string]interface{} // [propertyName]propertyValue (string or []string)
+	Topics                     []string               // repository topics
 	// not comparable
 	IsFork   bool
 	ForkFrom string
@@ -602,6 +603,10 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 			return false
 		}
 
+		if res, _, _ := entity.StringArrayEquivalent(lRepo.Topics, rRepo.Topics); !res {
+			return false
+		}
+
 		return true
 	}
 
@@ -738,6 +743,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 			default: // Default message
 				r.UpdateRepositoryUpdateProperties(ctx, logsCollector, dryrun, remote, reponame, map[string]interface{}{"squash_merge_commit_title": "COMMIT_OR_PR_TITLE", "squash_merge_commit_message": "COMMIT_MESSAGES"})
 			}
+		}
+
+		// reconcile topics
+		if res, _, _ := entity.StringArrayEquivalent(lRepo.Topics, rRepo.Topics); !res {
+			r.UpdateRepositoryTopics(ctx, logsCollector, dryrun, remote, reponame, lRepo.Topics)
 		}
 	}
 
@@ -1179,6 +1189,13 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryCustomProperties(ctx context.C
 	remote.UpdateRepositoryCustomProperties(reponame, propertyName, propertyValue)
 	if r.executor != nil {
 		r.executor.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, reponame, propertyName, propertyValue)
+	}
+}
+func (r *GoliacReconciliatorImpl) UpdateRepositoryTopics(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, topics []string) {
+	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_topics"}, "repositoryname: %s, topics: %v", reponame, topics)
+	remote.UpdateRepositoryTopics(reponame, topics)
+	if r.executor != nil {
+		r.executor.UpdateRepositoryTopics(ctx, logsCollector, dryrun, reponame, topics)
 	}
 }
 func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ruleset *GithubRuleSet) {
