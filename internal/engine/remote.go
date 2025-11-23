@@ -86,6 +86,7 @@ type GithubRepository struct {
 	DefaultMergeCommitMessage  string
 	DefaultSquashCommitMessage string
 	CustomProperties           map[string]interface{} // [propertyName]propertyValue (string or []string)
+	Topics                     []string               // repository topics
 }
 
 type GithubUser struct {
@@ -667,6 +668,13 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
 		  defaultBranchRef {
 		    name
 		  }
+		  repositoryTopics(first: 50) {
+		    nodes {
+		      topic {
+		        name
+		      }
+		    }
+		  }
           directCollaborators: collaborators(affiliation: DIRECT, first: 100) {
             edges {
               node {
@@ -830,6 +838,13 @@ type GraplQLRepositories struct {
 					DefaultBranchRef         struct {
 						Name string
 					}
+					RepositoryTopics struct {
+						Nodes []struct {
+							Topic struct {
+								Name string
+							}
+						}
+					} `json:"repositoryTopics"`
 					DirectCollaborators struct {
 						Edges []struct {
 							Node struct {
@@ -871,6 +886,12 @@ type GraplQLRepositories struct {
 	} `json:"errors"`
 }
 
+/*
+ * Loads all repositories from the organization
+ * Returns a map of repository name to repository object
+ * Returns a map of repository id to repository object
+ * Returns an error if the repositories cannot be loaded
+ */
 func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *string) (map[string]*GithubRepository, map[string]*GithubRepository, error) {
 	logrus.Debug("loading repositories")
 	repositories := make(map[string]*GithubRepository)
@@ -923,6 +944,7 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 				DefaultMergeCommitMessage:  "Default message",
 				DefaultSquashCommitMessage: "Default message",
 				CustomProperties:           make(map[string]interface{}),
+				Topics:                     []string{},
 			}
 			if c.MergeCommitTitle == "PR_TITLE" && c.MergeCommitMessage == "PR_BODY" {
 				repo.DefaultMergeCommitMessage = "Pull request title and description"
@@ -962,6 +984,11 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 			for _, branchProtection := range c.BranchProtectionRules.Nodes {
 				repo.BranchProtections[branchProtection.Pattern] = &branchProtection
 			}
+			topics := []string{}
+			for _, rt := range c.RepositoryTopics.Nodes {
+				topics = append(topics, rt.Topic.Name)
+			}
+			repo.Topics = topics
 			repositories[c.Name] = repo
 			repositoriesByRefId[c.Id] = repo
 		}
@@ -3958,6 +3985,44 @@ func (g *GoliacRemoteImpl) UpdateRepositoryUpdateProperties(ctx context.Context,
 				repo.BoolProperties[propertyName] = propertyValue.(bool)
 			}
 		}
+	}
+}
+
+func (g *GoliacRemoteImpl) UpdateRepositoryTopics(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, topics []string) {
+	// https://docs.github.com/en/rest/repos/repos?apiVersion=2022-11-28#replace-all-repository-topics
+	g.actionMutex.Lock()
+	repo := g.repositories[reponame]
+	if repo == nil {
+		logsCollector.AddError(fmt.Errorf("repository %s not found", reponame))
+		g.actionMutex.Unlock()
+		return
+	}
+	g.actionMutex.Unlock()
+
+	if !dryrun {
+		body, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/repos/%s/%s/topics", g.configGithubOrg, reponame),
+			"",
+			"PUT",
+			map[string]interface{}{
+				"names": topics,
+			},
+			nil,
+		)
+		if err != nil {
+			logsCollector.AddError(fmt.Errorf("failed to update topics for repository %s: %v. %s", reponame, err, string(body)))
+			return
+		}
+	}
+
+	// Update local cache
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	repo = g.repositories[reponame]
+	if repo != nil {
+		repo.Topics = topics
 	}
 }
 

@@ -349,6 +349,7 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			DefaultMergeCommitMessage:  lRepo.Spec.DefaultMergeCommitMessage,
 			DefaultSquashCommitMessage: lRepo.Spec.DefaultSquashCommitMessage,
 			CustomProperties:           customProps,
+			Topics:                     lRepo.Spec.Topics,
 			IsFork:                     lRepo.ForkFrom != "",
 			ForkFrom:                   lRepo.ForkFrom,
 		})
@@ -503,6 +504,7 @@ func (d *GoliacReconciliatorDatasourceRemote) Repositories() (map[string]*Github
 			DefaultMergeCommitMessage:  v.DefaultMergeCommitMessage,
 			DefaultSquashCommitMessage: v.DefaultSquashCommitMessage,
 			CustomProperties:           make(map[string]interface{}),
+			Topics:                     v.Topics,
 			IsFork:                     v.IsFork,
 		}
 		for pk, pv := range v.BoolProperties {

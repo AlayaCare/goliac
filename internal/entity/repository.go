@@ -47,6 +47,7 @@ type Repository struct {
 		ActionsVariables           map[string]string            `yaml:"actions_variables,omitempty"`
 		Autolinks                  *[]RepositoryAutolink        `yaml:"autolinks,omitempty"`
 		CustomProperties           map[string]interface{}       `yaml:"custom_properties,omitempty"`
+		Topics                     []string                     `yaml:"topics,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
