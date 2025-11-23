@@ -1,3 +1,8 @@
+## Goliac v1.6.0
+
+- add support for topics
+- better Github rate limiting support
+
 ## Goliac v1.5.2
 
 - custom properties scan can be disabled

@@ -273,7 +273,7 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusForbidden {
+	if resp.StatusCode == http.StatusTooManyRequests || (resp.StatusCode == http.StatusForbidden && resp.Header.Get("X-Ratelimit-Remaining") == "0") {
 		if stats != nil {
 			goliacStats := stats.(*config.GoliacStatistics)
 			goliacStats.GithubThrottled++
@@ -418,7 +418,7 @@ func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, param
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusTooManyRequests {
+	if resp.StatusCode == http.StatusTooManyRequests || (resp.StatusCode == http.StatusForbidden && resp.Header.Get("X-Ratelimit-Remaining") == "0") {
 		if stats != nil {
 			goliacStats := stats.(*config.GoliacStatistics)
 			goliacStats.GithubThrottled++

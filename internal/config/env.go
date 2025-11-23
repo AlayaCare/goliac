@@ -12,7 +12,7 @@ var Config = struct {
 	GithubServer              string `env:"GOLIAC_GITHUB_SERVER" envDefault:"https://api.github.com"`
 	GithubAppOrganization     string `env:"GOLIAC_GITHUB_APP_ORGANIZATION" envDefault:""`
 	GithubAppID               int64  `env:"GOLIAC_GITHUB_APP_ID"`
-	GithubAppPrivateKeyFile   string `env:"GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE" envDefault:"github-app-private-key.pem"`
+	GithubAppPrivateKeyFile   string `env:"GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE" envDefault:""`
 	GithubAppClientSecret     string `env:"GOLIAC_GITHUB_APP_CLIENT_SECRET"`
 	GithubAppCallbackURL      string `env:"GOLIAC_GITHUB_APP_CALLBACK_URL"`
 	GithubPersonalAccessToken string `env:"GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN"`
