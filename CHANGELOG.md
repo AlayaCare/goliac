@@ -1,3 +1,8 @@
+## Goliac v1.6.1
+
+- bugfix: fix Github rate limiting headers case
+- add branch protection bypass user validation
+
 ## Goliac v1.6.0
 
 - add support for topics

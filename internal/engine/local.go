@@ -823,18 +823,27 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(ctx context.Context, repoconfig *con
 		return false
 	}
 
+	//
+	// let's update repositories
+	//
+	reposchanged, err := entity.ReadAndAdjustRepositories(w.Filesystem, "archived", "teams", g.users, g.externalUsers)
+	if err != nil {
+		logsCollector.AddError(err)
+		return false
+	}
+
 	// check if we have too many changesets
-	if !force && len(teamschanged)+len(deletedusers)+len(addedusers) > repoconfig.MaxChangesets {
-		logsCollector.AddError(fmt.Errorf("too many changesets (%d) to commit. Please increase max_changesets in goliac.yaml", len(teamschanged)+len(deletedusers)+len(addedusers)))
+	if !force && len(teamschanged)+len(reposchanged)+len(deletedusers)+len(addedusers) > repoconfig.MaxChangesets {
+		logsCollector.AddError(fmt.Errorf("too many changesets (%d) to commit. Please increase max_changesets in goliac.yaml", len(teamschanged)+len(reposchanged)+len(deletedusers)+len(addedusers)))
 		return false
 	}
 
 	//
 	// let's commit
 	//
-	if len(teamschanged) > 0 || len(deletedusers) > 0 || len(addedusers) > 0 {
+	if len(teamschanged) > 0 || len(reposchanged) > 0 || len(deletedusers) > 0 || len(addedusers) > 0 {
 
-		logrus.Info("some users and/or teams must be commited")
+		logrus.Info("some users and/or teams and/or repositories must be commited")
 
 		for _, u := range deletedusers {
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "remove_user_from_repository"}).Infof("user: %s", u)
@@ -857,6 +866,15 @@ func (g *GoliacLocalImpl) SyncUsersAndTeams(ctx context.Context, repoconfig *con
 		for _, t := range teamschanged {
 			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_team_to_repository"}).Infof("team: %s", t)
 			_, err = w.Add(t)
+			if err != nil {
+				logsCollector.AddError(err)
+				return false
+			}
+		}
+
+		for _, r := range reposchanged {
+			logrus.WithFields(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_to_repository"}).Infof("repository: %s", r)
+			_, err = w.Add(r)
 			if err != nil {
 				logsCollector.AddError(err)
 				return false
@@ -971,7 +989,7 @@ func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem, LogCollectio
 	g.teams = teams
 
 	// Parse all repositories in the <orgDirectory>/teams/<teamname> directories
-	repos := entity.ReadRepositories(fs, "archived", "teams", g.teams, g.externalUsers, g.repoconfig.OrgCustomProperties, LogCollection)
+	repos := entity.ReadRepositories(fs, "archived", "teams", g.teams, g.externalUsers, g.users, g.repoconfig.OrgCustomProperties, LogCollection)
 	g.repositories = repos
 
 	rulesets := entity.ReadRuleSetDirectory(fs, "rulesets", LogCollection)
