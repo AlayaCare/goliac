@@ -116,3 +116,23 @@ func TestCallRestAPI(t *testing.T) {
 		}
 	})
 }
+
+func TestGetHeaderCaseInsensitive(t *testing.T) {
+	headers := http.Header{
+		"X-Ratelimit-Reset":     {"1763908461"},
+		"Retry-After":           {"30"},
+		"X-Ratelimit-Remaining": {"0"},
+	}
+	header := getHeaderCaseInsensitive(headers, "X-RateLimit-Reset")
+	if header != "1763908461" {
+		t.Errorf("expected '1763908461', got %s", header)
+	}
+	header = getHeaderCaseInsensitive(headers, "Retry-After")
+	if header != "30" {
+		t.Errorf("expected '30', got %s", header)
+	}
+	header = getHeaderCaseInsensitive(headers, "X-RateLimit-Remaining")
+	if header != "0" {
+		t.Errorf("expected '0', got %s", header)
+	}
+}
