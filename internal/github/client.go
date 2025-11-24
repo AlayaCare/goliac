@@ -295,7 +295,7 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 				return nil, err
 			}
 		} else if getHeaderCaseInsensitive(resp.Header, "Retry-After") != "" {
-			retryAfter, err := strconv.Atoi(resp.Header.Get("Retry-After"))
+			retryAfter, err := strconv.Atoi(getHeaderCaseInsensitive(resp.Header, "Retry-After"))
 			if err != nil {
 				if childSpan != nil {
 					childSpan.SetStatus(codes.Error, fmt.Sprintf("error parsing Retry-After header: %s", err.Error()))
@@ -432,7 +432,7 @@ func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, param
 		}
 
 		// We're being rate limited. Get the reset time from the headers.
-		if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
+		if err := waitRateLimit(getHeaderCaseInsensitive(resp.Header, "X-RateLimit-Reset")); err != nil {
 			if childSpan != nil {
 				childSpan.SetStatus(codes.Error, fmt.Sprintf("waitRateLimit: %s", err.Error()))
 			}
