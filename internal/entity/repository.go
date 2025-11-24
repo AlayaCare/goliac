@@ -131,7 +131,7 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
  * - a slice of errors that must stop the validation process
  * - a slice of warning that must not stop the validation process
  */
-func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname string, teams map[string]*Team, externalUsers map[string]*User, customProperties []*config.GithubCustomProperty, LogCollection *observability.LogCollection) map[string]*Repository {
+func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname string, teams map[string]*Team, externalUsers map[string]*User, users map[string]*User, customProperties []*config.GithubCustomProperty, LogCollection *observability.LogCollection) map[string]*Repository {
 	repos := make(map[string]*Repository)
 
 	// archived dir
@@ -163,7 +163,7 @@ func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname s
 			if err != nil {
 				LogCollection.AddError(err)
 			} else {
-				if err := repo.Validate(filepath.Join(archivedDirname, entry.Name()), teams, externalUsers, customProperties); err != nil {
+				if err := repo.Validate(filepath.Join(archivedDirname, entry.Name()), teams, externalUsers, users, customProperties); err != nil {
 					LogCollection.AddError(err)
 				} else {
 					repo.Archived = true
@@ -191,14 +191,14 @@ func ReadRepositories(fs billy.Filesystem, archivedDirname string, teamDirname s
 
 	for _, team := range entries {
 		if team.IsDir() {
-			recursiveReadRepositories(fs, archivedDirname, filepath.Join(teamDirname, team.Name()), team.Name(), repos, teams, externalUsers, customProperties, LogCollection)
+			recursiveReadRepositories(fs, archivedDirname, filepath.Join(teamDirname, team.Name()), team.Name(), repos, teams, externalUsers, users, customProperties, LogCollection)
 		}
 	}
 
 	return repos
 }
 
-func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, teamDirPath string, teamName string, repos map[string]*Repository, teams map[string]*Team, externalUsers map[string]*User, customProperties []*config.GithubCustomProperty, LogCollection *observability.LogCollection) {
+func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, teamDirPath string, teamName string, repos map[string]*Repository, teams map[string]*Team, externalUsers map[string]*User, users map[string]*User, customProperties []*config.GithubCustomProperty, LogCollection *observability.LogCollection) {
 
 	subentries, err := fs.ReadDir(teamDirPath)
 	if err != nil {
@@ -207,7 +207,7 @@ func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, team
 	}
 	for _, sube := range subentries {
 		if sube.IsDir() && sube.Name()[0] != '.' {
-			recursiveReadRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), sube.Name(), repos, teams, externalUsers, customProperties, LogCollection)
+			recursiveReadRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), sube.Name(), repos, teams, externalUsers, users, customProperties, LogCollection)
 		}
 		if !sube.IsDir() && sube.Name() != "team.yaml" {
 			if filepath.Ext(sube.Name()) != ".yaml" {
@@ -218,7 +218,7 @@ func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, team
 			if err != nil {
 				LogCollection.AddError(err)
 			} else {
-				if err := repo.Validate(filepath.Join(teamDirPath, sube.Name()), teams, externalUsers, customProperties); err != nil {
+				if err := repo.Validate(filepath.Join(teamDirPath, sube.Name()), teams, externalUsers, users, customProperties); err != nil {
 					LogCollection.AddError(err)
 				} else {
 					// check if the repository doesn't already exists
@@ -240,7 +240,7 @@ func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, team
 	}
 }
 
-func (r *Repository) Validate(filename string, teams map[string]*Team, externalUsers map[string]*User, customProperties []*config.GithubCustomProperty) error {
+func (r *Repository) Validate(filename string, teams map[string]*Team, externalUsers map[string]*User, users map[string]*User, customProperties []*config.GithubCustomProperty) error {
 
 	if r.ApiVersion != "v1" {
 		return fmt.Errorf("invalid apiVersion: %s (check repository filename %s)", r.ApiVersion, filename)
@@ -284,6 +284,25 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 	for _, externalUserWriter := range r.Spec.ExternalUserWriters {
 		if _, ok := externalUsers[externalUserWriter]; !ok {
 			return fmt.Errorf("invalid externalUserWriter: %s doesn't exist in repository filename %s", externalUserWriter, filename)
+		}
+	}
+
+	// Validate branch protection bypass_pullrequest_users
+	for _, bp := range r.Spec.BranchProtections {
+		for _, bypassUser := range bp.BypassPullRequestUsers {
+			// Check if user exists in regular users or external users
+			if users != nil {
+				if _, ok := users[bypassUser]; !ok {
+					if _, ok := externalUsers[bypassUser]; !ok {
+						return fmt.Errorf("invalid bypass_pullrequest_user: %s doesn't exist in repository filename %s (branch protection pattern: %s)", bypassUser, filename, bp.Pattern)
+					}
+				}
+			} else {
+				// Fallback: check external users only if users map is not provided
+				if _, ok := externalUsers[bypassUser]; !ok {
+					return fmt.Errorf("invalid bypass_pullrequest_user: %s doesn't exist in repository filename %s (branch protection pattern: %s)", bypassUser, filename, bp.Pattern)
+				}
+			}
 		}
 	}
 
@@ -352,4 +371,157 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 	}
 
 	return nil
+}
+
+/**
+ * ReadAndAdjustRepositories adjusts repository definitions depending on user availability.
+ * The goal is that if a user has been removed, we must update the repository definition
+ * by removing them from branch_protections bypass_pullrequest_users.
+ * Returns:
+ * - a list of (repository's) file changes (to commit to Github)
+ */
+func ReadAndAdjustRepositories(fs billy.Filesystem, archivedDirname string, teamDirname string, users map[string]*User, externalUsers map[string]*User) ([]string, error) {
+	reposChanged := []string{}
+
+	// Combine regular users and external users for checking
+	allUsers := make(map[string]*User)
+	for k, v := range users {
+		allUsers[k] = v
+	}
+	for k, v := range externalUsers {
+		allUsers[k] = v
+	}
+
+	// archived dir
+	exist, err := utils.Exists(fs, archivedDirname)
+	if err != nil {
+		return reposChanged, err
+	}
+	if exist {
+		entries, err := fs.ReadDir(archivedDirname)
+		if err != nil {
+			return reposChanged, err
+		}
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			// skipping files starting with '.'
+			if entry.Name()[0] == '.' {
+				continue
+			}
+			if !strings.HasSuffix(entry.Name(), ".yaml") {
+				continue
+			}
+			repo, err := NewRepository(fs, filepath.Join(archivedDirname, entry.Name()))
+			if err != nil {
+				continue
+			}
+			changed, err := repo.Update(fs, filepath.Join(archivedDirname, entry.Name()), allUsers)
+			if err != nil {
+				return reposChanged, err
+			}
+			if changed {
+				reposChanged = append(reposChanged, filepath.Join(archivedDirname, entry.Name()))
+			}
+		}
+	}
+
+	// regular teams dir
+	exist, err = utils.Exists(fs, teamDirname)
+	if err != nil {
+		return reposChanged, err
+	}
+	if !exist {
+		return reposChanged, nil
+	}
+
+	// Parse all the repositories in the teamDirname directory
+	entries, err := fs.ReadDir(teamDirname)
+	if err != nil {
+		return reposChanged, err
+	}
+
+	for _, team := range entries {
+		if team.IsDir() {
+			err := recursiveReadAndAdjustRepositories(fs, archivedDirname, filepath.Join(teamDirname, team.Name()), allUsers, &reposChanged)
+			if err != nil {
+				return reposChanged, err
+			}
+		}
+	}
+
+	return reposChanged, nil
+}
+
+func recursiveReadAndAdjustRepositories(fs billy.Filesystem, archivedDirPath string, teamDirPath string, allUsers map[string]*User, reposChanged *[]string) error {
+	subentries, err := fs.ReadDir(teamDirPath)
+	if err != nil {
+		return err
+	}
+	for _, sube := range subentries {
+		if sube.IsDir() && sube.Name()[0] != '.' {
+			err := recursiveReadAndAdjustRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), allUsers, reposChanged)
+			if err != nil {
+				return err
+			}
+		}
+		if !sube.IsDir() && sube.Name() != "team.yaml" {
+			if filepath.Ext(sube.Name()) != ".yaml" {
+				continue
+			}
+			repo, err := NewRepository(fs, filepath.Join(teamDirPath, sube.Name()))
+			if err != nil {
+				continue
+			}
+			changed, err := repo.Update(fs, filepath.Join(teamDirPath, sube.Name()), allUsers)
+			if err != nil {
+				return err
+			}
+			if changed {
+				*reposChanged = append(*reposChanged, filepath.Join(teamDirPath, sube.Name()))
+			}
+		}
+	}
+	return nil
+}
+
+// Update is telling if the repository needs to be adjusted (and the repository's definition was changed on disk),
+// based on the list of (still) existing users. It removes users from branch_protections bypass_pullrequest_users
+// if they don't exist in the users map.
+func (r *Repository) Update(fs billy.Filesystem, filename string, allUsers map[string]*User) (bool, error) {
+	changed := false
+
+	// Update branch protections bypass_pullrequest_users
+	for i := range r.Spec.BranchProtections {
+		bp := &r.Spec.BranchProtections[i]
+		validUsers := make([]string, 0)
+		for _, bypassUser := range bp.BypassPullRequestUsers {
+			if _, ok := allUsers[bypassUser]; ok {
+				validUsers = append(validUsers, bypassUser)
+			} else {
+				changed = true
+			}
+		}
+		bp.BypassPullRequestUsers = validUsers
+	}
+
+	if !changed {
+		return false, nil
+	}
+
+	file, err := fs.Create(filename)
+	if err != nil {
+		return changed, fmt.Errorf("not able to create file %s: %v", filename, err)
+	}
+	defer file.Close()
+
+	encoder := yaml.NewEncoder(file)
+	encoder.SetIndent(2)
+	err = encoder.Encode(r)
+	if err != nil {
+		return changed, fmt.Errorf("not able to write file %s: %v", filename, err)
+	}
+	return changed, err
 }

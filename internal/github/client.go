@@ -158,6 +158,13 @@ func NewGitHubClientImpl(githubServer, organizationName string, appID int64, pri
 	return client, nil
 }
 
+// getHeaderCaseInsensitive retrieves a header value case-insensitively
+func getHeaderCaseInsensitive(headers http.Header, key string) string {
+	// http.Header.Get() is case-insensitive, but we normalize the key for consistency
+	canonicalKey := http.CanonicalHeaderKey(key)
+	return headers.Get(canonicalKey)
+}
+
 // waitRateLimit helps dealing with rate limits
 // cf https://docs.github.com/en/rest/guides/best-practices-for-integrators?apiVersion=2022-11-28#dealing-with-rate-limits
 func waitRateLimit(resetTimeStr string) error {
@@ -273,22 +280,22 @@ func (client *GitHubClientImpl) QueryGraphQLAPI(ctx context.Context, query strin
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusTooManyRequests || (resp.StatusCode == http.StatusForbidden && resp.Header.Get("X-Ratelimit-Remaining") == "0") {
+	if resp.StatusCode == http.StatusTooManyRequests || (resp.StatusCode == http.StatusForbidden && getHeaderCaseInsensitive(resp.Header, "X-Ratelimit-Remaining") == "0") {
 		if stats != nil {
 			goliacStats := stats.(*config.GoliacStatistics)
 			goliacStats.GithubThrottled++
 		}
 
-		if resp.Header.Get("X-RateLimit-Reset") != "" {
+		if getHeaderCaseInsensitive(resp.Header, "X-RateLimit-Reset") != "" {
 			// We're being rate limited. Get the reset time from the headers.
-			if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
+			if err := waitRateLimit(getHeaderCaseInsensitive(resp.Header, "X-RateLimit-Reset")); err != nil {
 				if childSpan != nil {
 					childSpan.SetStatus(codes.Error, fmt.Sprintf("waitRateLimit: %s", err.Error()))
 				}
 				return nil, err
 			}
-		} else if resp.Header.Get("Retry-After") != "" {
-			retryAfter, err := strconv.Atoi(resp.Header.Get("Retry-After"))
+		} else if getHeaderCaseInsensitive(resp.Header, "Retry-After") != "" {
+			retryAfter, err := strconv.Atoi(getHeaderCaseInsensitive(resp.Header, "Retry-After"))
 			if err != nil {
 				if childSpan != nil {
 					childSpan.SetStatus(codes.Error, fmt.Sprintf("error parsing Retry-After header: %s", err.Error()))
@@ -418,14 +425,14 @@ func (client *GitHubClientImpl) CallRestAPI(ctx context.Context, endpoint, param
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusTooManyRequests || (resp.StatusCode == http.StatusForbidden && resp.Header.Get("X-Ratelimit-Remaining") == "0") {
+	if resp.StatusCode == http.StatusTooManyRequests || (resp.StatusCode == http.StatusForbidden && getHeaderCaseInsensitive(resp.Header, "X-Ratelimit-Remaining") == "0") {
 		if stats != nil {
 			goliacStats := stats.(*config.GoliacStatistics)
 			goliacStats.GithubThrottled++
 		}
 
 		// We're being rate limited. Get the reset time from the headers.
-		if err := waitRateLimit(resp.Header.Get("X-RateLimit-Reset")); err != nil {
+		if err := waitRateLimit(getHeaderCaseInsensitive(resp.Header, "X-RateLimit-Reset")); err != nil {
 			if childSpan != nil {
 				childSpan.SetStatus(codes.Error, fmt.Sprintf("waitRateLimit: %s", err.Error()))
 			}
