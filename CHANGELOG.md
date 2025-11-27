@@ -1,3 +1,7 @@
+## Goliac v1.6.3
+
+- bugfix: set default values for ruleset rules
+
 ## Goliac v1.6.2
 
 - add support for merge queue in branch protections ruleset
