@@ -571,6 +571,7 @@ func (e *GoliacRemoteExecutorMock) RuleSets(ctx context.Context) map[string]*eng
 			Rules: map[string]entity.RuleSetParameters{
 				"pull_request": {
 					RequiredApprovingReviewCount: 1,
+					AllowedMergeMethods:          []string{"MERGE", "SQUASH", "REBASE"},
 				},
 			},
 			Repositories: []string{"repo1", "repo2", "src"},
