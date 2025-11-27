@@ -1,3 +1,8 @@
+## Goliac v1.6.2
+
+- add support for merge queue in branch protections ruleset
+- add also support for allowed_merge_methods in pull request ruleset
+
 ## Goliac v1.6.1
 
 - bugfix: fix Github rate limiting headers case

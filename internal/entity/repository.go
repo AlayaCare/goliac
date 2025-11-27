@@ -121,6 +121,26 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
 		repository.Spec.CustomProperties = normalized
 	}
 
+	// set default values for ruleset rules
+	for i, ruleset := range repository.Spec.Rulesets {
+		for j, rule := range ruleset.RuleSetDefinition.Rules {
+			if rule.Ruletype == "pull_request" {
+				if len(rule.Parameters.AllowedMergeMethods) == 0 {
+					// default to MERGE, SQUASH, REBASE
+					rule.Parameters.AllowedMergeMethods = []string{"MERGE", "SQUASH", "REBASE"}
+					ruleset.RuleSetDefinition.Rules[j] = rule
+				}
+			}
+			if rule.Ruletype == "merge_queue" {
+				if rule.Parameters.CheckResponseTimeoutMinutes == 0 {
+					// default to 10 minutes
+					rule.Parameters.CheckResponseTimeoutMinutes = 10
+					ruleset.RuleSetDefinition.Rules[j] = rule
+				}
+			}
+		}
+		repository.Spec.Rulesets[i] = ruleset
+	}
 	return repository, nil
 }
 

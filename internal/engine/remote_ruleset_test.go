@@ -141,18 +141,27 @@ func TestFromGraphQLToGithubRuleset(t *testing.T) {
 							RequiredApprovingReviewCount     int
 							RequiredReviewThreadResolution   bool
 							RequireLastPushApproval          bool
+							AllowedMergeMethods              []string
 							RequiredStatusChecks             []GithubRuleSetRuleStatusCheck
 							StrictRequiredStatusChecksPolicy bool
 							Name                             string
 							Negate                           bool
 							Operator                         string
 							Pattern                          string
+							CheckResponseTimeoutMinutes      int
+							GroupingStrategy                 string
+							MaxEntriesToBuild                int
+							MaxEntriesToMerge                int
+							MergeMethod                      string
+							MinEntriesToMerge                int
+							MinEntriesToMergeWaitMinutes     int
 						}{
 							DismissStaleReviewsOnPush:      true,
 							RequireCodeOwnerReview:         true,
 							RequiredApprovingReviewCount:   2,
 							RequiredReviewThreadResolution: true,
 							RequireLastPushApproval:        true,
+							AllowedMergeMethods:            []string{"MERGE", "SQUASH"},
 						},
 						Type: "PULL_REQUEST",
 					},
@@ -163,12 +172,20 @@ func TestFromGraphQLToGithubRuleset(t *testing.T) {
 							RequiredApprovingReviewCount     int
 							RequiredReviewThreadResolution   bool
 							RequireLastPushApproval          bool
+							AllowedMergeMethods              []string
 							RequiredStatusChecks             []GithubRuleSetRuleStatusCheck
 							StrictRequiredStatusChecksPolicy bool
 							Name                             string
 							Negate                           bool
 							Operator                         string
 							Pattern                          string
+							CheckResponseTimeoutMinutes      int
+							GroupingStrategy                 string
+							MaxEntriesToBuild                int
+							MaxEntriesToMerge                int
+							MergeMethod                      string
+							MinEntriesToMerge                int
+							MinEntriesToMergeWaitMinutes     int
 						}{
 							RequiredStatusChecks: []GithubRuleSetRuleStatusCheck{
 								{Context: "test-check"},
@@ -216,6 +233,7 @@ func TestFromGraphQLToGithubRuleset(t *testing.T) {
 		assert.Equal(t, 2, pullRequestRule.RequiredApprovingReviewCount)
 		assert.True(t, pullRequestRule.RequiredReviewThreadResolution)
 		assert.True(t, pullRequestRule.RequireLastPushApproval)
+		assert.Equal(t, []string{"MERGE", "SQUASH"}, pullRequestRule.AllowedMergeMethods)
 
 		statusChecksRule := result.Rules["required_status_checks"]
 		assert.Equal(t, []string{"test-check"}, statusChecksRule.RequiredStatusChecks)
@@ -827,6 +845,7 @@ func TestUpdateRuleset(t *testing.T) {
 					RequiredApprovingReviewCount:   2,
 					RequiredReviewThreadResolution: true,
 					RequireLastPushApproval:        true,
+					AllowedMergeMethods:            []string{"MERGE", "SQUASH"},
 				},
 				"required_status_checks": {
 					RequiredStatusChecks:             []string{"test-check"},
@@ -918,6 +937,7 @@ func TestUpdateRuleset(t *testing.T) {
 						"required_approving_review_count":   2,
 						"required_review_thread_resolution": true,
 						"require_last_push_approval":        true,
+						"allowed_merge_methods":             []string{"MERGE", "SQUASH"},
 					},
 				},
 				{
