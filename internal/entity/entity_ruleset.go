@@ -301,8 +301,11 @@ func ValidateRulesetDefinition(r *RuleSetDefinition, filename string) error {
 			if rule.Parameters.CheckResponseTimeoutMinutes == 0 {
 				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: checkResponseTimeoutMinutes must not be empty ", rule.Ruletype, filename)
 			}
-			if rule.Parameters.GroupingStrategy != "ALLGREEN" && rule.Parameters.GroupingStrategy != "HEADGREEN" {
+			if rule.Parameters.GroupingStrategy != "" && rule.Parameters.GroupingStrategy != "ALLGREEN" && rule.Parameters.GroupingStrategy != "HEADGREEN" {
 				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: groupingStrategy must be 'ALLGREEN' or 'HEADGREEN' ", rule.Ruletype, filename)
+			}
+			if rule.Parameters.MergeMethod != "" && rule.Parameters.MergeMethod != "MERGE" && rule.Parameters.MergeMethod != "REBASE" && rule.Parameters.MergeMethod != "SQUASH" {
+				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: mergeMethod must be 'MERGE', 'REBASE' or 'SQUASH' ", rule.Ruletype, filename)
 			}
 		}
 	}
