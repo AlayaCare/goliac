@@ -717,6 +717,7 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
                       requiredApprovingReviewCount
                       requiredReviewThreadResolution
                       requireLastPushApproval
+                      allowedMergeMethods
                     }
                     ... on RequiredStatusChecksParameters {
                       requiredStatusChecks {
@@ -734,6 +735,15 @@ query listAllReposInOrg($orgLogin: String!, $endCursor: String) {
                       negate
                       operator
                       pattern
+                    }
+                    ... on MergeQueueParameters {
+                      checkResponseTimeoutMinutes
+                      groupingStrategy
+                      maxEntriesToBuild
+                      maxEntriesToMerge
+                      mergeMethod
+                      minEntriesToMerge
+                      minEntriesToMergeWaitMinutes
                     }
                   }
                   type
@@ -2233,6 +2243,7 @@ query listRulesets ($orgLogin: String!) {
 						requiredApprovingReviewCount
 						requiredReviewThreadResolution
 						requireLastPushApproval
+						allowedMergeMethods
 					}
 					... on RequiredStatusChecksParameters {
 						requiredStatusChecks {
@@ -2250,6 +2261,15 @@ query listRulesets ($orgLogin: String!) {
 						negate
 						operator
 						pattern
+					}
+					... on MergeQueueParameters {
+						checkResponseTimeoutMinutes
+						groupingStrategy
+						maxEntriesToBuild
+						maxEntriesToMerge
+						mergeMethod
+						minEntriesToMerge
+						minEntriesToMergeWaitMinutes
 					}
 				}
 				type
@@ -2288,6 +2308,7 @@ type GithubRuleSetRule struct {
 		RequiredApprovingReviewCount   int
 		RequiredReviewThreadResolution bool
 		RequireLastPushApproval        bool
+		AllowedMergeMethods            []string
 
 		// RequiredStatusChecksParameters
 		RequiredStatusChecks             []GithubRuleSetRuleStatusCheck
@@ -2298,9 +2319,18 @@ type GithubRuleSetRule struct {
 		Negate   bool
 		Operator string
 		Pattern  string
+
+		// MergeQueueParameters
+		CheckResponseTimeoutMinutes  int
+		GroupingStrategy             string // ALLGREEN, HEADGREEN
+		MaxEntriesToBuild            int
+		MaxEntriesToMerge            int
+		MergeMethod                  string // MERGE, REBASE, SQUASH
+		MinEntriesToMerge            int
+		MinEntriesToMergeWaitMinutes int
 	}
 	ID   int
-	Type string // CREATION, UPDATE, DELETION, REQUIRED_LINEAR_HISTORY, REQUIRED_DEPLOYMENTS, REQUIRED_SIGNATURES, PULL_REQUEST, REQUIRED_STATUS_CHECKS, NON_FAST_FORWARD, COMMIT_MESSAGE_PATTERN, COMMIT_AUTHOR_EMAIL_PATTERN, COMMITTER_EMAIL_PATTERN, BRANCH_NAME_PATTERN, TAG_NAME_PATTERN
+	Type string // CREATION, UPDATE, DELETION, REQUIRED_LINEAR_HISTORY, REQUIRED_DEPLOYMENTS, REQUIRED_SIGNATURES, PULL_REQUEST, REQUIRED_STATUS_CHECKS, NON_FAST_FORWARD, COMMIT_MESSAGE_PATTERN, COMMIT_AUTHOR_EMAIL_PATTERN, COMMITTER_EMAIL_PATTERN, BRANCH_NAME_PATTERN, TAG_NAME_PATTERN, MERGE_QUEUE
 }
 
 type GraphQLGithubRuleSet struct {
@@ -2414,11 +2444,19 @@ func (g *GoliacRemoteImpl) fromGraphQLToGithubRuleset(src *GraphQLGithubRuleSet)
 			RequiredApprovingReviewCount:     r.Parameters.RequiredApprovingReviewCount,
 			RequiredReviewThreadResolution:   r.Parameters.RequiredReviewThreadResolution,
 			RequireLastPushApproval:          r.Parameters.RequireLastPushApproval,
+			AllowedMergeMethods:              r.Parameters.AllowedMergeMethods,
 			StrictRequiredStatusChecksPolicy: r.Parameters.StrictRequiredStatusChecksPolicy,
 			Name:                             r.Parameters.Name,
 			Negate:                           r.Parameters.Negate,
 			Operator:                         r.Parameters.Operator,
 			Pattern:                          r.Parameters.Pattern,
+			CheckResponseTimeoutMinutes:      r.Parameters.CheckResponseTimeoutMinutes,
+			GroupingStrategy:                 r.Parameters.GroupingStrategy,
+			MaxEntriesToBuild:                r.Parameters.MaxEntriesToBuild,
+			MaxEntriesToMerge:                r.Parameters.MaxEntriesToMerge,
+			MergeMethod:                      r.Parameters.MergeMethod,
+			MinEntriesToMerge:                r.Parameters.MinEntriesToMerge,
+			MinEntriesToMergeWaitMinutes:     r.Parameters.MinEntriesToMergeWaitMinutes,
 		}
 		for _, s := range r.Parameters.RequiredStatusChecks {
 			rule.RequiredStatusChecks = append(rule.RequiredStatusChecks, s.Context)
@@ -2566,15 +2604,46 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 				"type": "deletion",
 			})
 		case "pull_request":
+			params := map[string]interface{}{
+				"dismiss_stale_reviews_on_push":     rule.DismissStaleReviewsOnPush,
+				"require_code_owner_review":         rule.RequireCodeOwnerReview,
+				"required_approving_review_count":   rule.RequiredApprovingReviewCount,
+				"required_review_thread_resolution": rule.RequiredReviewThreadResolution,
+				"require_last_push_approval":        rule.RequireLastPushApproval,
+			}
+			if len(rule.AllowedMergeMethods) > 0 {
+				params["allowed_merge_methods"] = rule.AllowedMergeMethods
+			}
 			rules = append(rules, map[string]interface{}{
-				"type": "pull_request",
-				"parameters": map[string]interface{}{
-					"dismiss_stale_reviews_on_push":     rule.DismissStaleReviewsOnPush,
-					"require_code_owner_review":         rule.RequireCodeOwnerReview,
-					"required_approving_review_count":   rule.RequiredApprovingReviewCount,
-					"required_review_thread_resolution": rule.RequiredReviewThreadResolution,
-					"require_last_push_approval":        rule.RequireLastPushApproval,
-				},
+				"type":       "pull_request",
+				"parameters": params,
+			})
+		case "merge_queue":
+			params := map[string]interface{}{}
+			if rule.CheckResponseTimeoutMinutes > 0 {
+				params["check_response_timeout_minutes"] = rule.CheckResponseTimeoutMinutes
+			}
+			if rule.GroupingStrategy != "" {
+				params["grouping_strategy"] = strings.ToUpper(rule.GroupingStrategy)
+			}
+			if rule.MaxEntriesToBuild > 0 {
+				params["max_entries_to_build"] = rule.MaxEntriesToBuild
+			}
+			if rule.MaxEntriesToMerge > 0 {
+				params["max_entries_to_merge"] = rule.MaxEntriesToMerge
+			}
+			if rule.MergeMethod != "" {
+				params["merge_method"] = strings.ToUpper(rule.MergeMethod)
+			}
+			if rule.MinEntriesToMerge > 0 {
+				params["min_entries_to_merge"] = rule.MinEntriesToMerge
+			}
+			if rule.MinEntriesToMergeWaitMinutes > 0 {
+				params["min_entries_to_merge_wait_minutes"] = rule.MinEntriesToMergeWaitMinutes
+			}
+			rules = append(rules, map[string]interface{}{
+				"type":       "merge_queue",
+				"parameters": params,
 			})
 		case "required_status_checks":
 			statusChecks := make([]map[string]interface{}, 0)

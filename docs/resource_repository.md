@@ -107,7 +107,7 @@ You can archive a repository, by a PR that move the yaml repository file into th
 ## Adding repository ruleset
 
 You can add different rules on a specific repository (like branch protection) using the new Github rulesets.
-Few rules are currently supported (but the software can be easily extended): `pull_request`, `required_signatures`, `required_status_checks`, `creation`, `update`, `deletion`, `non_fast_forward`, `required_linear_history`
+Few rules are currently supported (but the software can be easily extended): `pull_request`, `required_signatures`, `required_status_checks`, `creation`, `update`, `deletion`, `non_fast_forward`, `required_linear_history`, `merge_queue`
 
 Note: team or app bypass is not supported yet
 
@@ -145,9 +145,13 @@ spec:
           - develop
       rules:
         - ruletype: pull_request
-          parameters: # dismissStaleReviewsOnPush, requireCodeOwnerReview, requiredApprovingReviewCount, requiredReviewThreadResolution, requireLastPushApproval
+          parameters: # dismissStaleReviewsOnPush, requireCodeOwnerReview, requiredApprovingReviewCount, requiredReviewThreadResolution, requireLastPushApproval, allowedMergeMethods
             requiredApprovingReviewCount: 1
             requireLastPushApproval: true
+            allowedMergeMethods:
+              - MERGE
+              - SQUASH
+              - REBASE
             ...
 ```
 
@@ -171,6 +175,33 @@ spec:
           parameters: # requiredStatusChecks, strictRequiredStatusChecksPolicy
             requiredStatusChecks:
               - my_check
+```
+
+`merge_queue` example
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: awesome-repository
+spec:
+  visibility: public
+  ...
+  rulesets:
+    - name: myruleset
+      enforcement: active # disabled, active, evaluate
+      conditions:
+        include:
+          - "~DEFAULT_BRANCH"
+      rules:
+        - ruletype: merge_queue
+          parameters: # checkResponseTimeoutMinutes, groupingStrategy, maxEntriesToBuild, maxEntriesToMerge, mergeMethod, minEntriesToMerge, minEntriesToMergeWaitMinutes
+            checkResponseTimeoutMinutes: 5
+            groupingStrategy: ALLGREEN # ALLGREEN or HEADGREEN
+            maxEntriesToBuild: 10
+            maxEntriesToMerge: 5
+            mergeMethod: MERGE # MERGE, REBASE, or SQUASH
+            minEntriesToMerge: 2
+            minEntriesToMergeWaitMinutes: 5
 ```
 
 ## Adding repository branch protection

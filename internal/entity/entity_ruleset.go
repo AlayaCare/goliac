@@ -13,11 +13,12 @@ import (
 
 type RuleSetParameters struct {
 	// PullRequestParameters
-	DismissStaleReviewsOnPush      bool `yaml:"dismissStaleReviewsOnPush,omitempty"`
-	RequireCodeOwnerReview         bool `yaml:"requireCodeOwnerReview,omitempty"`
-	RequiredApprovingReviewCount   int  `yaml:"requiredApprovingReviewCount,omitempty"`
-	RequiredReviewThreadResolution bool `yaml:"requiredReviewThreadResolution,omitempty"`
-	RequireLastPushApproval        bool `yaml:"requireLastPushApproval,omitempty"`
+	DismissStaleReviewsOnPush      bool     `yaml:"dismissStaleReviewsOnPush,omitempty"`
+	RequireCodeOwnerReview         bool     `yaml:"requireCodeOwnerReview,omitempty"`
+	RequiredApprovingReviewCount   int      `yaml:"requiredApprovingReviewCount,omitempty"`
+	RequiredReviewThreadResolution bool     `yaml:"requiredReviewThreadResolution,omitempty"`
+	RequireLastPushApproval        bool     `yaml:"requireLastPushApproval,omitempty"`
+	AllowedMergeMethods            []string `yaml:"allowedMergeMethods,omitempty"`
 
 	// RequiredStatusChecksParameters
 	RequiredStatusChecks             []string `yaml:"requiredStatusChecks,omitempty"`
@@ -28,6 +29,15 @@ type RuleSetParameters struct {
 	Negate   bool   `yaml:"negate,omitempty"`
 	Operator string `yaml:"operator,omitempty"`
 	Pattern  string `yaml:"pattern,omitempty"`
+
+	// MergeQueueParameters
+	CheckResponseTimeoutMinutes  int    `yaml:"checkResponseTimeoutMinutes,omitempty"`
+	GroupingStrategy             string `yaml:"groupingStrategy,omitempty"` // ALLGREEN, HEADGREEN
+	MaxEntriesToBuild            int    `yaml:"maxEntriesToBuild,omitempty"`
+	MaxEntriesToMerge            int    `yaml:"maxEntriesToMerge,omitempty"`
+	MergeMethod                  string `yaml:"mergeMethod,omitempty"` // MERGE, REBASE, SQUASH
+	MinEntriesToMerge            int    `yaml:"minEntriesToMerge,omitempty"`
+	MinEntriesToMergeWaitMinutes int    `yaml:"minEntriesToMergeWaitMinutes,omitempty"`
 }
 
 func CompareRulesetParameters(ruletype string, left RuleSetParameters, right RuleSetParameters) bool {
@@ -58,6 +68,32 @@ func CompareRulesetParameters(ruletype string, left RuleSetParameters, right Rul
 			return false
 		}
 		if left.RequireLastPushApproval != right.RequireLastPushApproval {
+			return false
+		}
+		if res, _, _ := StringArrayEquivalent(left.AllowedMergeMethods, right.AllowedMergeMethods); !res {
+			return false
+		}
+		return true
+	case "merge_queue":
+		if left.CheckResponseTimeoutMinutes != right.CheckResponseTimeoutMinutes {
+			return false
+		}
+		if left.GroupingStrategy != right.GroupingStrategy {
+			return false
+		}
+		if left.MaxEntriesToBuild != right.MaxEntriesToBuild {
+			return false
+		}
+		if left.MaxEntriesToMerge != right.MaxEntriesToMerge {
+			return false
+		}
+		if left.MergeMethod != right.MergeMethod {
+			return false
+		}
+		if left.MinEntriesToMerge != right.MinEntriesToMerge {
+			return false
+		}
+		if left.MinEntriesToMergeWaitMinutes != right.MinEntriesToMergeWaitMinutes {
 			return false
 		}
 		return true
@@ -153,6 +189,24 @@ func NewRuleSet(fs billy.Filesystem, filename string) (*RuleSet, error) {
 		return nil, err
 	}
 
+	// set default values for ruleset rules
+	for i, rule := range ruleset.Spec.Ruleset.Rules {
+		if rule.Ruletype == "pull_request" {
+			if len(rule.Parameters.AllowedMergeMethods) == 0 {
+				// default to MERGE, SQUASH, REBASE
+				rule.Parameters.AllowedMergeMethods = []string{"MERGE", "SQUASH", "REBASE"}
+				ruleset.Spec.Ruleset.Rules[i] = rule
+			}
+		}
+		if rule.Ruletype == "merge_queue" {
+			if rule.Parameters.CheckResponseTimeoutMinutes == 0 {
+				// default to 10 minutes
+				rule.Parameters.CheckResponseTimeoutMinutes = 10
+				ruleset.Spec.Ruleset.Rules[i] = rule
+			}
+		}
+	}
+
 	return &ruleset, nil
 }
 
@@ -216,7 +270,8 @@ func ValidateRulesetDefinition(r *RuleSetDefinition, filename string) error {
 			rule.Ruletype != "non_fast_forward" &&
 			rule.Ruletype != "required_linear_history" &&
 			rule.Ruletype != "branch_name_pattern" &&
-			rule.Ruletype != "tag_name_pattern" {
+			rule.Ruletype != "tag_name_pattern" &&
+			rule.Ruletype != "merge_queue" {
 			return fmt.Errorf("invalid ruletype: %s for ruleset filename %s", rule.Ruletype, filename)
 		}
 
@@ -230,6 +285,24 @@ func ValidateRulesetDefinition(r *RuleSetDefinition, filename string) error {
 			}
 			if rule.Parameters.Pattern == "" {
 				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: pattern must not be empty ", rule.Ruletype, filename)
+			}
+		}
+		if rule.Ruletype == "pull_request" {
+			if len(rule.Parameters.AllowedMergeMethods) == 0 {
+				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: allowed_merge_methods must not be empty ", rule.Ruletype, filename)
+			}
+			for _, mergeMethod := range rule.Parameters.AllowedMergeMethods {
+				if mergeMethod != "MERGE" && mergeMethod != "SQUASH" && mergeMethod != "REBASE" {
+					return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: allowed_merge_methods must be 'MERGE', 'SQUASH' or 'REBASE' ", rule.Ruletype, filename)
+				}
+			}
+		}
+		if rule.Ruletype == "merge_queue" {
+			if rule.Parameters.CheckResponseTimeoutMinutes == 0 {
+				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: checkResponseTimeoutMinutes must not be empty ", rule.Ruletype, filename)
+			}
+			if rule.Parameters.GroupingStrategy != "ALLGREEN" && rule.Parameters.GroupingStrategy != "HEADGREEN" {
+				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: groupingStrategy must be 'ALLGREEN' or 'HEADGREEN' ", rule.Ruletype, filename)
 			}
 		}
 	}
