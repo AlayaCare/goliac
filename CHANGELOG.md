@@ -1,3 +1,9 @@
+## Goliac v1.6.4
+
+- bugfix: validate mergeMethod compatibility with repository merge settings
+- bugfix: validate groupingStrategy validity
+- security update: node-forge library update to 1.3.2
+
 ## Goliac v1.6.3
 
 - bugfix: set default values for ruleset rules

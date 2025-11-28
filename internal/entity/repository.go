@@ -340,6 +340,34 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		}
 
 		rulesetname[ruleset.Name] = true
+
+		// Validate mergeMethod compatibility with repository merge settings
+		// and groupingStrategy validity
+		for _, rule := range ruleset.RuleSetDefinition.Rules {
+			if rule.Ruletype == "merge_queue" {
+				// Validate groupingStrategy
+				if rule.Parameters.GroupingStrategy != "" && rule.Parameters.GroupingStrategy != "ALLGREEN" && rule.Parameters.GroupingStrategy != "HEADGREEN" {
+					return fmt.Errorf("invalid groupingStrategy: '%s' in merge_queue rule must be 'ALLGREEN' or 'HEADGREEN' for repository %s (ruleset: %s)", rule.Parameters.GroupingStrategy, r.Name, ruleset.Name)
+				}
+				// Validate mergeMethod compatibility
+				if rule.Parameters.MergeMethod != "" {
+					switch rule.Parameters.MergeMethod {
+					case "SQUASH":
+						if !r.Spec.AllowSquashMerge {
+							return fmt.Errorf("invalid mergeMethod: 'SQUASH' in merge_queue rule requires allow_squash_merge to be true for repository %s (ruleset: %s)", r.Name, ruleset.Name)
+						}
+					case "REBASE":
+						if !r.Spec.AllowRebaseMerge {
+							return fmt.Errorf("invalid mergeMethod: 'REBASE' in merge_queue rule requires allow_rebase_merge to be true for repository %s (ruleset: %s)", r.Name, ruleset.Name)
+						}
+					case "MERGE":
+						if !r.Spec.AllowMergeCommit {
+							return fmt.Errorf("invalid mergeMethod: 'MERGE' in merge_queue rule requires allow_merge_commit to be true for repository %s (ruleset: %s)", r.Name, ruleset.Name)
+						}
+					}
+				}
+			}
+		}
 	}
 
 	if utils.GithubAnsiString(r.Name) != r.Name {
