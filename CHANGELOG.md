@@ -1,3 +1,7 @@
+## Goliac v1.6.5
+
+- add only non-archived repositories to the organization ruleset
+
 ## Goliac v1.6.4
 
 - bugfix: validate mergeMethod compatibility with repository merge settings

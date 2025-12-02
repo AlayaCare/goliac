@@ -397,7 +397,17 @@ func (d *GoliacReconciliatorDatasourceLocal) RuleSets() (map[string]*GithubRuleS
 		if err != nil {
 			return nil, fmt.Errorf("not able to parse ruleset regular expression %s: %v", confrs, err)
 		}
-		grs.Repositories = includedRepositories
+		// Filter out archived repositories
+		nonArchivedRepositories := []string{}
+		for _, reponame := range includedRepositories {
+			if repo, ok := repositories[reponame]; ok {
+				if repo.Archived {
+					continue
+				}
+			}
+			nonArchivedRepositories = append(nonArchivedRepositories, reponame)
+		}
+		grs.Repositories = nonArchivedRepositories
 
 		lgrs[rs.Name] = &grs
 	}
