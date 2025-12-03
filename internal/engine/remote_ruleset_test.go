@@ -937,7 +937,7 @@ func TestUpdateRuleset(t *testing.T) {
 						"required_approving_review_count":   2,
 						"required_review_thread_resolution": true,
 						"require_last_push_approval":        true,
-						"allowed_merge_methods":             []string{"MERGE", "SQUASH"},
+						"allowed_merge_methods":             []string{"merge", "squash"},
 					},
 				},
 				{

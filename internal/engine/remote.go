@@ -2612,7 +2612,11 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 				"require_last_push_approval":        rule.RequireLastPushApproval,
 			}
 			if len(rule.AllowedMergeMethods) > 0 {
-				params["allowed_merge_methods"] = rule.AllowedMergeMethods
+				mergeMethodsLower := make([]string, len(rule.AllowedMergeMethods))
+				for i, m := range rule.AllowedMergeMethods {
+					mergeMethodsLower[i] = strings.ToLower(m)
+				}
+				params["allowed_merge_methods"] = mergeMethodsLower
 			}
 			rules = append(rules, map[string]interface{}{
 				"type":       "pull_request",

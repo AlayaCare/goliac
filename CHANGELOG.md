@@ -1,3 +1,7 @@
+## Goliac v1.6.6
+
+- bugfix: lowercase allowed_merge_methods for merge settings
+
 ## Goliac v1.6.5
 
 - add only non-archived repositories to the organization ruleset
