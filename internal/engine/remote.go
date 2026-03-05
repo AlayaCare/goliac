@@ -1105,7 +1105,9 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 		customPropsPerRepo, err := g.loadCustomPropertiesConcurrently(ctx, config.Config.GithubConcurrentThreads, repositories)
 		if err != nil {
 			logrus.Warnf("error loading custom properties: %v", err)
-			retErr = fmt.Errorf("error loading repository custom properties: %w", err)
+			if retErr == nil {
+				retErr = fmt.Errorf("error loading repository custom properties: %w", err)
+			}
 		} else {
 			for reponame, customProps := range customPropsPerRepo {
 				if repo, ok := repositories[reponame]; ok {
