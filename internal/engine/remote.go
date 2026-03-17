@@ -2830,6 +2830,9 @@ func (g *GoliacRemoteImpl) AddRepositoryRuleset(ctx context.Context, logsCollect
 	repo = g.repositories[reponame]
 
 	if repo != nil {
+		if repo.RuleSets == nil {
+			repo.RuleSets = make(map[string]*GithubRuleSet)
+		}
 		repo.RuleSets[ruleset.Name] = ruleset
 	}
 }
@@ -2879,6 +2882,9 @@ func (g *GoliacRemoteImpl) UpdateRepositoryRuleset(ctx context.Context, logsColl
 
 	repo = g.repositories[reponame]
 	if repo != nil {
+		if repo.RuleSets == nil {
+			repo.RuleSets = make(map[string]*GithubRuleSet)
+		}
 		repo.RuleSets[ruleset.Name] = ruleset
 	}
 }
@@ -3784,13 +3790,14 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, logsCollector *
 
 	// update the repositories list
 	newRepo := &GithubRepository{
-		Name:              reponame,
-		Id:                repoId,
-		RefId:             repoRefId,
-		Visibility:        visibility,
-		BoolProperties:    boolProperties,
-		DefaultBranchName: defaultBranch,
-		IsFork:            forkFrom != "",
+		Name:                reponame,
+		Id:                  repoId,
+		RefId:               repoRefId,
+		Visibility:          visibility,
+		BoolProperties:      boolProperties,
+		DefaultBranchName:   defaultBranch,
+		IsFork:              forkFrom != "",
+		RuleSets:            make(map[string]*GithubRuleSet),
 	}
 	g.repositories[reponame] = newRepo
 	g.repositoriesByRefId[repoRefId] = newRepo
