@@ -341,6 +341,163 @@ spec:
 	})
 }
 
+func TestGenerateCodeownersContent(t *testing.T) {
+	t.Run("empty codeowners", func(t *testing.T) {
+		repo := &Repository{}
+		content := repo.GenerateCodeownersContent("myorg")
+		assert.Equal(t, "", content)
+	})
+
+	t.Run("single team owner", func(t *testing.T) {
+		repo := &Repository{}
+		repo.Spec.Codeowners = []RepositoryCodeownersEntry{
+			{Pattern: "*", Owners: []string{"sre"}},
+		}
+		content := repo.GenerateCodeownersContent("myorg")
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n* @myorg/sre\n"
+		assert.Equal(t, expected, content)
+	})
+
+	t.Run("multiple entries with teams and users", func(t *testing.T) {
+		repo := &Repository{}
+		repo.Spec.Codeowners = []RepositoryCodeownersEntry{
+			{Pattern: "*", Owners: []string{"sre"}},
+			{Pattern: "/labs/anyscale/", Owners: []string{"labs-team", "@some-user"}},
+		}
+		content := repo.GenerateCodeownersContent("myorg")
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n* @myorg/sre\n/labs/anyscale/ @myorg/labs-team @some-user\n"
+		assert.Equal(t, expected, content)
+	})
+
+	t.Run("multiple owners per pattern", func(t *testing.T) {
+		repo := &Repository{}
+		repo.Spec.Codeowners = []RepositoryCodeownersEntry{
+			{Pattern: "*.go", Owners: []string{"backend", "devops"}},
+		}
+		content := repo.GenerateCodeownersContent("myorg")
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n*.go @myorg/backend @myorg/devops\n"
+		assert.Equal(t, expected, content)
+	})
+}
+
+func TestRepositoryCodeownersValidation(t *testing.T) {
+	t.Run("happy path: valid codeowners with team reference", func(t *testing.T) {
+		fs := memfs.New()
+		fixtureCreateUserTeam(t, fs)
+
+		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  codeowners:
+    - pattern: "*"
+      owners:
+        - team1
+`), 0644)
+		assert.Nil(t, err)
+
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, users, []*config.GithubCustomProperty{}, logsCollector)
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 1, len(repos))
+	})
+
+	t.Run("happy path: codeowners with direct user reference", func(t *testing.T) {
+		fs := memfs.New()
+		fixtureCreateUserTeam(t, fs)
+
+		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  codeowners:
+    - pattern: "*"
+      owners:
+        - "@some-github-user"
+`), 0644)
+		assert.Nil(t, err)
+
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, users, []*config.GithubCustomProperty{}, logsCollector)
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 1, len(repos))
+	})
+
+	t.Run("not happy path: codeowners with invalid team", func(t *testing.T) {
+		fs := memfs.New()
+		fixtureCreateUserTeam(t, fs)
+
+		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  codeowners:
+    - pattern: "*"
+      owners:
+        - nonexistent-team
+`), 0644)
+		assert.Nil(t, err)
+
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, users, []*config.GithubCustomProperty{}, logsCollector)
+		assert.True(t, logsCollector.HasErrors())
+	})
+
+	t.Run("not happy path: codeowners with empty pattern", func(t *testing.T) {
+		fs := memfs.New()
+		fixtureCreateUserTeam(t, fs)
+
+		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  codeowners:
+    - pattern: ""
+      owners:
+        - team1
+`), 0644)
+		assert.Nil(t, err)
+
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, users, []*config.GithubCustomProperty{}, logsCollector)
+		assert.True(t, logsCollector.HasErrors())
+	})
+
+	t.Run("not happy path: codeowners with empty owners", func(t *testing.T) {
+		fs := memfs.New()
+		fixtureCreateUserTeam(t, fs)
+
+		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  codeowners:
+    - pattern: "*"
+      owners: []
+`), 0644)
+		assert.Nil(t, err)
+
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, users, []*config.GithubCustomProperty{}, logsCollector)
+		assert.True(t, logsCollector.HasErrors())
+	})
+}
+
 func TestReadAndAdjustRepositories(t *testing.T) {
 	t.Run("happy path: no repositories, no problem", func(t *testing.T) {
 		fs := memfs.New()

@@ -351,6 +351,8 @@ type GithubRepoComparable struct {
 	DefaultSquashCommitMessage string
 	CustomProperties           map[string]interface{} // [propertyName]propertyValue (string or []string)
 	Topics                     []string               // repository topics
+	Codeowners                 string                 // generated CODEOWNERS file content
+	CodeownersSHA              string                 // SHA of existing CODEOWNERS file (for updates)
 	// not comparable
 	IsFork   bool
 	ForkFrom string
@@ -771,6 +773,11 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 		// reconcile topics
 		if res, _, _ := entity.StringArrayEquivalent(lRepo.Topics, rRepo.Topics); !res {
 			r.UpdateRepositoryTopics(ctx, logsCollector, dryrun, remote, reponame, lRepo.Topics)
+		}
+
+		// reconcile CODEOWNERS file
+		if lRepo.Codeowners != "" {
+			r.reconciliateCodeowners(ctx, logsCollector, dryrun, remote, reponame, lRepo.Codeowners)
 		}
 	}
 
@@ -1219,6 +1226,24 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryTopics(ctx context.Context, lo
 	remote.UpdateRepositoryTopics(reponame, topics)
 	if r.executor != nil {
 		r.executor.UpdateRepositoryTopics(ctx, logsCollector, dryrun, reponame, topics)
+	}
+}
+func (r *GoliacReconciliatorImpl) reconciliateCodeowners(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, desiredContent string) {
+	if r.executor == nil {
+		return
+	}
+
+	// Fetch current CODEOWNERS from the repository
+	currentContent, currentSHA, err := r.executor.GetRepositoryCodeowners(ctx, reponame)
+	if err != nil {
+		logsCollector.AddError(fmt.Errorf("failed to get CODEOWNERS for repository %s: %v", reponame, err))
+		return
+	}
+
+	// Compare and update if different
+	if currentContent != desiredContent {
+		logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_codeowners"}, "repositoryname: %s", reponame)
+		r.executor.UpdateRepositoryCodeowners(ctx, logsCollector, dryrun, reponame, desiredContent, currentSHA)
 	}
 }
 func (r *GoliacReconciliatorImpl) AddRuleset(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ruleset *GithubRuleSet) {

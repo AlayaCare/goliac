@@ -87,6 +87,8 @@ type GithubRepository struct {
 	DefaultSquashCommitMessage string
 	CustomProperties           map[string]interface{} // [propertyName]propertyValue (string or []string)
 	Topics                     []string               // repository topics
+	CodeownersContent          string                 // content of .github/CODEOWNERS file
+	CodeownersSHA              string                 // SHA of .github/CODEOWNERS file (needed for updates)
 }
 
 type GithubUser struct {
@@ -4099,6 +4101,77 @@ func (g *GoliacRemoteImpl) UpdateRepositoryTopics(ctx context.Context, logsColle
 	repo = g.repositories[reponame]
 	if repo != nil {
 		repo.Topics = topics
+	}
+}
+
+// GetRepositoryCodeowners fetches the CODEOWNERS file content and SHA from a repository.
+// Returns content, sha, error. If the file doesn't exist, returns empty strings with no error.
+func (g *GoliacRemoteImpl) GetRepositoryCodeowners(ctx context.Context, reponame string) (string, string, error) {
+	data, err := g.client.CallRestAPI(
+		ctx,
+		fmt.Sprintf("/repos/%s/%s/contents/.github/CODEOWNERS", g.configGithubOrg, reponame),
+		"",
+		"GET",
+		nil,
+		nil,
+	)
+	if err != nil {
+		// File doesn't exist - not an error, just means no CODEOWNERS
+		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "Not Found") {
+			return "", "", nil
+		}
+		return "", "", err
+	}
+
+	var fileResponse struct {
+		Content  string `json:"content"`
+		SHA      string `json:"sha"`
+		Encoding string `json:"encoding"`
+	}
+	if err := json.Unmarshal(data, &fileResponse); err != nil {
+		return "", "", fmt.Errorf("failed to parse CODEOWNERS response for %s: %v", reponame, err)
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(strings.ReplaceAll(fileResponse.Content, "\n", ""))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to decode CODEOWNERS content for %s: %v", reponame, err)
+	}
+
+	return string(decoded), fileResponse.SHA, nil
+}
+
+func (g *GoliacRemoteImpl) UpdateRepositoryCodeowners(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, content string, existingSHA string) {
+	// https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#create-or-update-file-contents
+	if !dryrun {
+		body := map[string]interface{}{
+			"message": "update CODEOWNERS (managed by Goliac)",
+			"content": base64.StdEncoding.EncodeToString([]byte(content)),
+		}
+		if existingSHA != "" {
+			body["sha"] = existingSHA
+		}
+
+		_, err := g.client.CallRestAPI(
+			ctx,
+			fmt.Sprintf("/repos/%s/%s/contents/.github/CODEOWNERS", g.configGithubOrg, reponame),
+			"",
+			"PUT",
+			body,
+			nil,
+		)
+		if err != nil {
+			logsCollector.AddError(fmt.Errorf("failed to update CODEOWNERS for repository %s: %v", reponame, err))
+			return
+		}
+	}
+
+	// Update local cache
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+
+	repo := g.repositories[reponame]
+	if repo != nil {
+		repo.CodeownersContent = content
 	}
 }
 

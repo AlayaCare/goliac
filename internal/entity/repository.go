@@ -13,6 +13,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type RepositoryCodeownersEntry struct {
+	Pattern string   `yaml:"pattern"`
+	Owners  []string `yaml:"owners"` // team names (resolved to @org/team-slug) or GitHub usernames (prefixed with @)
+}
+
 type RepositoryEnvironment struct {
 	Name      string            `yaml:"name"`
 	Variables map[string]string `yaml:"variables,omitempty"`
@@ -48,6 +53,7 @@ type Repository struct {
 		Autolinks                  *[]RepositoryAutolink        `yaml:"autolinks,omitempty"`
 		CustomProperties           map[string]interface{}       `yaml:"custom_properties,omitempty"`
 		Topics                     []string                     `yaml:"topics,omitempty"`
+		Codeowners                 []RepositoryCodeownersEntry  `yaml:"codeowners,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
@@ -403,6 +409,26 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		}
 	}
 
+	// Validate codeowners entries
+	for i, entry := range r.Spec.Codeowners {
+		if entry.Pattern == "" {
+			return fmt.Errorf("invalid codeowners entry %d: pattern is empty (check repository filename %s)", i, filename)
+		}
+		if len(entry.Owners) == 0 {
+			return fmt.Errorf("invalid codeowners entry %d: owners is empty (check repository filename %s)", i, filename)
+		}
+		for _, owner := range entry.Owners {
+			// owners starting with @ are direct GitHub usernames, skip team validation
+			if strings.HasPrefix(owner, "@") {
+				continue
+			}
+			// otherwise it must be a team name
+			if _, ok := teams[owner]; !ok {
+				return fmt.Errorf("invalid codeowners owner: team %s doesn't exist (check repository filename %s)", owner, filename)
+			}
+		}
+	}
+
 	if r.Spec.CustomProperties != nil {
 		for propName := range r.Spec.CustomProperties {
 			found := false
@@ -419,6 +445,36 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 	}
 
 	return nil
+}
+
+// GenerateCodeownersContent generates the CODEOWNERS file content from the repository's
+// codeowners spec entries. It resolves team names to GitHub team mentions (@org/team-slug).
+// Returns empty string if no codeowners entries are defined.
+func (r *Repository) GenerateCodeownersContent(githubOrganization string) string {
+	if len(r.Spec.Codeowners) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("# DO NOT MODIFY THIS FILE MANUALLY\n")
+	sb.WriteString("# This file is managed by Goliac\n")
+	sb.WriteString("\n")
+
+	for _, entry := range r.Spec.Codeowners {
+		owners := make([]string, 0, len(entry.Owners))
+		for _, owner := range entry.Owners {
+			if strings.HasPrefix(owner, "@") {
+				// Direct GitHub username
+				owners = append(owners, owner)
+			} else {
+				// Team name - resolve to @org/team-slug
+				owners = append(owners, fmt.Sprintf("@%s/%s", githubOrganization, owner))
+			}
+		}
+		sb.WriteString(fmt.Sprintf("%s %s\n", entry.Pattern, strings.Join(owners, " ")))
+	}
+
+	return sb.String()
 }
 
 /**
