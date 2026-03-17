@@ -1,3 +1,15 @@
+## Goliac v1.6.10
+
+- bugfix: dont panic on nil ruleset
+
+## Goliac v1.6.9
+
+- bugfix: treat custom properties load failure as loadRepositories failure
+
+## Goliac v1.6.8
+
+- bugfix: treat custom properties load failure as loadRepositories failure
+
 ## Goliac v1.6.7
 
 - couple of security updates
