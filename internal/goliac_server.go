@@ -936,16 +936,16 @@ func (g *GoliacServerImpl) Serve() {
 func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization, repository, prUrl, githubIdCaller, comment string, comment_id int) {
 	logrus.Debugf("Issue comment event received for organization %s, repository %s, githubIdCaller %s, prUrl %s, comment %s", organization, repository, githubIdCaller, prUrl, comment)
 
+	if strings.HasPrefix(comment, "/help") {
+		g.handleIssueCommandHelp(ctx, organization, repository, prUrl, githubIdCaller)
+		return
+	}
+
 	// check if the comment is a command to apply
 	commandRegex := regexp.MustCompile(`^/([a-zA-Z0-9_-]+):?(.*)`)
 	matches := commandRegex.FindStringSubmatch(comment)
 	if len(matches) == 3 {
 		command := matches[1]
-
-		if command == "help" {
-			g.handleIssueCommandHelp(ctx, organization, repository, prUrl, githubIdCaller)
-			return
-		}
 
 		// looking for something like "/forcemerge:default: an explanation"
 		commentRegex := regexp.MustCompile(`^/([a-zA-Z0-9_-]+):([a-zA-Z0-9_-]+):(.*)`)

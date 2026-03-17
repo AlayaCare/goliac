@@ -615,4 +615,23 @@ func TestHandleIssueComment(t *testing.T) {
 		assert.Contains(t, body, "/forcemerge:fmtest:")
 		assert.Contains(t, body, "Example:")
 	})
+
+	t.Run("happy path: handle /help prefix command", func(t *testing.T) {
+		localfixture, remotefixture := fixtureGoliacLocal()
+		githubClient := &GithubClientMock{}
+		fmtest := WorkflowMock{}
+		goliac := NewGoliacMock(localfixture, remotefixture, githubClient)
+		server := GoliacServerImpl{
+			goliac: goliac,
+			worflowInstances: map[string]workflow.Workflow{
+				"forcemerge": &fmtest,
+			},
+		}
+
+		server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", "/help forcemerge", 123)
+		body := githubClient.lastBody["body"].(string)
+		assert.Contains(t, body, "Available Goliac commands:")
+		assert.Contains(t, body, "/forcemerge:fmtest:")
+		assert.Contains(t, body, "Example:")
+	})
 }
