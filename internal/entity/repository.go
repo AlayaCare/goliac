@@ -54,6 +54,7 @@ type Repository struct {
 		CustomProperties           map[string]interface{}       `yaml:"custom_properties,omitempty"`
 		Topics                     []string                     `yaml:"topics,omitempty"`
 		Codeowners                 []RepositoryCodeownersEntry  `yaml:"codeowners,omitempty"`
+		CodeownersRaw              string                       `yaml:"codeowners_raw,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
@@ -448,10 +449,14 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 }
 
 // GenerateCodeownersContent generates the CODEOWNERS file content from the repository's
-// codeowners spec entries. It resolves team names to GitHub team mentions (@org/team-slug).
-// Returns empty string if no codeowners entries are defined.
+// codeowners spec entries and/or raw content. It resolves team names in structured entries
+// to GitHub team mentions (@org/team-slug). Raw content is included verbatim.
+// Returns empty string if neither codeowners nor codeowners_raw are defined.
 func (r *Repository) GenerateCodeownersContent(githubOrganization string) string {
-	if len(r.Spec.Codeowners) == 0 {
+	hasStructured := len(r.Spec.Codeowners) > 0
+	hasRaw := strings.TrimSpace(r.Spec.CodeownersRaw) != ""
+
+	if !hasStructured && !hasRaw {
 		return ""
 	}
 
@@ -460,18 +465,30 @@ func (r *Repository) GenerateCodeownersContent(githubOrganization string) string
 	sb.WriteString("# This file is managed by Goliac\n")
 	sb.WriteString("\n")
 
-	for _, entry := range r.Spec.Codeowners {
-		owners := make([]string, 0, len(entry.Owners))
-		for _, owner := range entry.Owners {
-			if strings.HasPrefix(owner, "@") {
-				// Direct GitHub username
-				owners = append(owners, owner)
-			} else {
-				// Team name - resolve to @org/team-slug
-				owners = append(owners, fmt.Sprintf("@%s/%s", githubOrganization, owner))
+	// Structured entries first (validated by goliac verify)
+	if hasStructured {
+		for _, entry := range r.Spec.Codeowners {
+			owners := make([]string, 0, len(entry.Owners))
+			for _, owner := range entry.Owners {
+				if strings.HasPrefix(owner, "@") {
+					// Direct GitHub username or @org/team reference
+					owners = append(owners, owner)
+				} else {
+					// Team name - resolve to @org/team-slug
+					owners = append(owners, fmt.Sprintf("@%s/%s", githubOrganization, owner))
+				}
 			}
+			sb.WriteString(fmt.Sprintf("%s %s\n", entry.Pattern, strings.Join(owners, " ")))
 		}
-		sb.WriteString(fmt.Sprintf("%s %s\n", entry.Pattern, strings.Join(owners, " ")))
+	}
+
+	// Raw content appended verbatim (no validation)
+	if hasRaw {
+		if hasStructured {
+			sb.WriteString("\n# Raw CODEOWNERS entries (not validated by Goliac)\n")
+		}
+		sb.WriteString(strings.TrimSpace(r.Spec.CodeownersRaw))
+		sb.WriteString("\n")
 	}
 
 	return sb.String()

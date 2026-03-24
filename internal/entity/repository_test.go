@@ -378,6 +378,41 @@ func TestGenerateCodeownersContent(t *testing.T) {
 		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n*.go @myorg/backend @myorg/devops\n"
 		assert.Equal(t, expected, content)
 	})
+
+	t.Run("raw only", func(t *testing.T) {
+		repo := &Repository{}
+		repo.Spec.CodeownersRaw = "/vendor/ @external-user\n/docs/ @myorg/docs-team"
+		content := repo.GenerateCodeownersContent("myorg")
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n/vendor/ @external-user\n/docs/ @myorg/docs-team\n"
+		assert.Equal(t, expected, content)
+	})
+
+	t.Run("hybrid structured and raw", func(t *testing.T) {
+		repo := &Repository{}
+		repo.Spec.Codeowners = []RepositoryCodeownersEntry{
+			{Pattern: "*", Owners: []string{"sre"}},
+			{Pattern: "ac-live-data/", Owners: []string{"data-team"}},
+		}
+		repo.Spec.CodeownersRaw = "/vendor/ @external-user"
+		content := repo.GenerateCodeownersContent("myorg")
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n* @myorg/sre\nac-live-data/ @myorg/data-team\n\n# Raw CODEOWNERS entries (not validated by Goliac)\n/vendor/ @external-user\n"
+		assert.Equal(t, expected, content)
+	})
+
+	t.Run("empty raw whitespace is ignored", func(t *testing.T) {
+		repo := &Repository{}
+		repo.Spec.CodeownersRaw = "   \n  \n  "
+		content := repo.GenerateCodeownersContent("myorg")
+		assert.Equal(t, "", content)
+	})
+
+	t.Run("both empty returns empty", func(t *testing.T) {
+		repo := &Repository{}
+		repo.Spec.Codeowners = []RepositoryCodeownersEntry{}
+		repo.Spec.CodeownersRaw = ""
+		content := repo.GenerateCodeownersContent("myorg")
+		assert.Equal(t, "", content)
+	})
 }
 
 func TestRepositoryCodeownersValidation(t *testing.T) {
@@ -473,6 +508,55 @@ spec:
 		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
 		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, users, []*config.GithubCustomProperty{}, logsCollector)
 		assert.True(t, logsCollector.HasErrors())
+	})
+
+	t.Run("happy path: codeowners_raw only", func(t *testing.T) {
+		fs := memfs.New()
+		fixtureCreateUserTeam(t, fs)
+
+		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  codeowners_raw: |
+    * @AlayaCare/team-badwolf
+    ac-live-data/ @AlayaCare/team-sphinx
+`), 0644)
+		assert.Nil(t, err)
+
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, users, []*config.GithubCustomProperty{}, logsCollector)
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 1, len(repos))
+	})
+
+	t.Run("happy path: hybrid codeowners and codeowners_raw", func(t *testing.T) {
+		fs := memfs.New()
+		fixtureCreateUserTeam(t, fs)
+
+		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  codeowners:
+    - pattern: "*"
+      owners:
+        - team1
+  codeowners_raw: |
+    /vendor/ @external-contributor
+`), 0644)
+		assert.Nil(t, err)
+
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, users, []*config.GithubCustomProperty{}, logsCollector)
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 1, len(repos))
 	})
 
 	t.Run("not happy path: codeowners with empty owners", func(t *testing.T) {
