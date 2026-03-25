@@ -308,6 +308,12 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositoryCustomProperties(ctx con
 func (r *ReconciliatorListenerRecorder) UpdateRepositoryTopics(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, topics []string) {
 	// Track topics updates if needed for testing
 }
+func (r *ReconciliatorListenerRecorder) GetRepositoryCodeowners(ctx context.Context, reponame string) (string, string, error) {
+	return "", "", nil
+}
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryCodeowners(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, content string, existingSHA string) {
+	// Track CODEOWNERS updates if needed for testing
+}
 func (r *ReconciliatorListenerRecorder) UpdateRepositorySetExternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string, permission string) {
 	r.RepositoriesSetExternalUser[githubid] = permission
 }

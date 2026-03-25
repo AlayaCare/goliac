@@ -324,6 +324,9 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			}
 		}
 
+		// Generate CODEOWNERS content if codeowners entries are defined
+		codeownersContent := lRepo.GenerateCodeownersContent(config.Config.GithubAppOrganization)
+
 		lRepos[utils.GithubAnsiString(reponame)] = d.reconciliatorFilter.RepositoryFilter(reponame, &GithubRepoComparable{
 			BoolProperties: map[string]bool{
 				"archived":               lRepo.Archived,
@@ -350,6 +353,7 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			DefaultSquashCommitMessage: lRepo.Spec.DefaultSquashCommitMessage,
 			CustomProperties:           customProps,
 			Topics:                     lRepo.Spec.Topics,
+			Codeowners:                 codeownersContent,
 			IsFork:                     lRepo.ForkFrom != "",
 			ForkFrom:                   lRepo.ForkFrom,
 		})
@@ -515,6 +519,8 @@ func (d *GoliacReconciliatorDatasourceRemote) Repositories() (map[string]*Github
 			DefaultSquashCommitMessage: v.DefaultSquashCommitMessage,
 			CustomProperties:           make(map[string]interface{}),
 			Topics:                     v.Topics,
+			Codeowners:                 v.CodeownersContent,
+			CodeownersSHA:              v.CodeownersSHA,
 			IsFork:                     v.IsFork,
 		}
 		for pk, pv := range v.BoolProperties {

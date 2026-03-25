@@ -373,6 +373,90 @@ spec:
 
 Topics are displayed on the repository page on GitHub and can be used for searching and filtering repositories.
 
+## CODEOWNERS
+
+Goliac can manage the `.github/CODEOWNERS` file of a repository. This enables per-directory PR approval requirements when combined with rulesets or branch protections that require code owner reviews.
+
+Two modes are available and can be combined:
+
+### Structured CODEOWNERS (validated)
+
+Use `codeowners` for entries where Goliac validates that referenced teams exist. Team names are automatically resolved to `@org/team-slug` format.
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: my-infrastructure
+spec:
+  codeowners:
+    - pattern: "*"
+      owners:
+        - sre-team
+    - pattern: "ac-live-data/"
+      owners:
+        - data-team
+    - pattern: "ac-live-labs/"
+      owners:
+        - labs-team
+        - ml-team
+```
+
+This generates a `.github/CODEOWNERS` file like:
+
+```
+# DO NOT MODIFY THIS FILE MANUALLY
+# This file is managed by Goliac
+
+* @myorg/sre-team
+ac-live-data/ @myorg/data-team
+ac-live-labs/ @myorg/labs-team @myorg/ml-team
+```
+
+Owners can be:
+- **Team names**: resolved to `@org/team-slug` (validated by `goliac verify`)
+- **GitHub usernames**: prefixed with `@` (e.g., `@some-user`), not validated
+
+### Raw CODEOWNERS (unvalidated)
+
+Use `codeowners_raw` when you need full control over the CODEOWNERS content. This content is injected verbatim with no validation of team names or patterns.
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: my-infrastructure
+spec:
+  codeowners_raw: |
+    * @AlayaCare/team-badwolf @AlayaCare/ops-deployment-readonly
+    ac-live-data/ @AlayaCare/team-sphinx
+    ac-live-labs/ @AlayaCare/team-labs
+```
+
+This is useful for:
+- Migrating an existing CODEOWNERS file into Goliac management
+- Referencing external users or teams not managed by Goliac
+- Complex patterns that don't map to Goliac team structures
+
+### Hybrid (both structured and raw)
+
+You can combine both modes. Structured entries appear first (validated), followed by raw entries (unvalidated). This gives you the best of both worlds: validation where possible, flexibility where needed.
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: my-infrastructure
+spec:
+  codeowners:
+    - pattern: "*"
+      owners:
+        - sre-team
+    - pattern: "ac-live-data/"
+      owners:
+        - data-team
+  codeowners_raw: |
+    /vendor/ @external-contributor
+    /legacy/ @AlayaCare/legacy-support
+```
+
 ## Custom properties
 
 You can set custom properties in the repository definition. Custom properties can be strings or arrays of strings.

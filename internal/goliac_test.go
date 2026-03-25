@@ -655,6 +655,13 @@ func (e *GoliacRemoteExecutorMock) UpdateRepositoryTopics(ctx context.Context, l
 	fmt.Println("*** UpdateRepositoryTopics", reponame, topics)
 	e.nbChanges++
 }
+func (e *GoliacRemoteExecutorMock) GetRepositoryCodeowners(ctx context.Context, reponame string) (string, string, error) {
+	return "", "", nil
+}
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryCodeowners(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, content string, existingSHA string) {
+	fmt.Println("*** UpdateRepositoryCodeowners", reponame)
+	e.nbChanges++
+}
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryAddTeamAccess(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, teamslug string, permission string) {
 	fmt.Println("*** UpdateRepositoryAddTeamAccess", reponame, teamslug, permission)
 	e.nbChanges++

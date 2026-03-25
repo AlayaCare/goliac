@@ -191,6 +191,21 @@ func (g *GithubBatchExecutor) UpdateRepositoryTopics(ctx context.Context, logsCo
 	})
 }
 
+func (g *GithubBatchExecutor) GetRepositoryCodeowners(ctx context.Context, reponame string) (string, string, error) {
+	// GetRepositoryCodeowners is not batched - it's a read operation that must be executed immediately
+	return g.client.GetRepositoryCodeowners(ctx, reponame)
+}
+
+func (g *GithubBatchExecutor) UpdateRepositoryCodeowners(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, content string, existingSHA string) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositoryCodeowners{
+		client:      g.client,
+		dryrun:      dryrun,
+		reponame:    reponame,
+		content:     content,
+		existingSHA: existingSHA,
+	})
+}
+
 func (g *GithubBatchExecutor) UpdateRepositorySetExternalUser(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, githubid string, permission string) {
 	g.commands = append(g.commands, &GithubCommandUpdateRepositorySetExternalUser{
 		client:     g.client,
@@ -635,6 +650,18 @@ type GithubCommandUpdateRepositoryTopics struct {
 
 func (g *GithubCommandUpdateRepositoryTopics) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
 	g.client.UpdateRepositoryTopics(ctx, logsCollector, g.dryrun, g.reponame, g.topics)
+}
+
+type GithubCommandUpdateRepositoryCodeowners struct {
+	client      engine.ReconciliatorExecutor
+	dryrun      bool
+	reponame    string
+	content     string
+	existingSHA string
+}
+
+func (g *GithubCommandUpdateRepositoryCodeowners) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
+	g.client.UpdateRepositoryCodeowners(ctx, logsCollector, g.dryrun, g.reponame, g.content, g.existingSHA)
 }
 
 type GithubCommandUpdateTeamAddMember struct {

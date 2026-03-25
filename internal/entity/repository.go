@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -12,6 +13,11 @@ import (
 	"github.com/goliac-project/goliac/internal/utils"
 	"gopkg.in/yaml.v3"
 )
+
+type RepositoryCodeownersEntry struct {
+	Pattern string   `yaml:"pattern"`
+	Owners  []string `yaml:"owners"` // team names (resolved to @org/team-slug) or GitHub usernames (prefixed with @)
+}
 
 type RepositoryEnvironment struct {
 	Name      string            `yaml:"name"`
@@ -48,6 +54,8 @@ type Repository struct {
 		Autolinks                  *[]RepositoryAutolink        `yaml:"autolinks,omitempty"`
 		CustomProperties           map[string]interface{}       `yaml:"custom_properties,omitempty"`
 		Topics                     []string                     `yaml:"topics,omitempty"`
+		Codeowners                 []RepositoryCodeownersEntry  `yaml:"codeowners,omitempty"`
+		CodeownersRaw              string                       `yaml:"codeowners_raw,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
@@ -403,6 +411,26 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		}
 	}
 
+	// Validate codeowners entries
+	for i, entry := range r.Spec.Codeowners {
+		if entry.Pattern == "" {
+			return fmt.Errorf("invalid codeowners entry %d: pattern is empty (check repository filename %s)", i, filename)
+		}
+		if len(entry.Owners) == 0 {
+			return fmt.Errorf("invalid codeowners entry %d: owners is empty (check repository filename %s)", i, filename)
+		}
+		for _, owner := range entry.Owners {
+			// owners starting with @ are direct GitHub usernames, skip team validation
+			if strings.HasPrefix(owner, "@") {
+				continue
+			}
+			// otherwise it must be a team name
+			if _, ok := teams[owner]; !ok {
+				return fmt.Errorf("invalid codeowners owner: team %s doesn't exist (check repository filename %s)", owner, filename)
+			}
+		}
+	}
+
 	if r.Spec.CustomProperties != nil {
 		for propName := range r.Spec.CustomProperties {
 			found := false
@@ -419,6 +447,92 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 	}
 
 	return nil
+}
+
+// codeownersPatternField returns the first field of a CODEOWNERS rule line (the path/pattern).
+// Comment and empty lines yield an empty string.
+func codeownersPatternField(line string) string {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") {
+		return ""
+	}
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return ""
+	}
+	return fields[0]
+}
+
+// GenerateCodeownersContent generates the CODEOWNERS file content from structured spec.codeowners
+// and/or codeowners_raw. Team names in structured entries resolve to @org/team-slug.
+// Structured and raw rule lines are merged; comment lines from raw (lines whose trimmed content
+// starts with #) are emitted after the Goliac header and before rule lines. Rule lines are sorted
+// by ascending length of the path/pattern (first field), stable for ties. codeowners_raw rule lines
+// are not validated.
+// Returns empty string if neither codeowners nor codeowners_raw are defined.
+func (r *Repository) GenerateCodeownersContent(githubOrganization string) string {
+	hasStructured := len(r.Spec.Codeowners) > 0
+	hasRaw := strings.TrimSpace(r.Spec.CodeownersRaw) != ""
+
+	if !hasStructured && !hasRaw {
+		return ""
+	}
+
+	var ruleLines []string
+	var commentLines []string
+
+	if hasStructured {
+		for _, entry := range r.Spec.Codeowners {
+			owners := make([]string, 0, len(entry.Owners))
+			for _, owner := range entry.Owners {
+				if strings.HasPrefix(owner, "@") {
+					owners = append(owners, owner)
+				} else {
+					owners = append(owners, fmt.Sprintf("@%s/%s", githubOrganization, owner))
+				}
+			}
+			ruleLines = append(ruleLines, fmt.Sprintf("%s %s", entry.Pattern, strings.Join(owners, " ")))
+		}
+	}
+
+	if hasRaw {
+		for _, line := range strings.Split(r.Spec.CodeownersRaw, "\n") {
+			line = strings.TrimRight(line, "\r")
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				continue
+			}
+			if strings.HasPrefix(trimmed, "#") {
+				commentLines = append(commentLines, trimmed)
+			} else {
+				ruleLines = append(ruleLines, trimmed)
+			}
+		}
+	}
+
+	sort.SliceStable(ruleLines, func(i, j int) bool {
+		pi := codeownersPatternField(ruleLines[i])
+		pj := codeownersPatternField(ruleLines[j])
+		return len(pi) < len(pj)
+	})
+
+	var sb strings.Builder
+	sb.WriteString("# DO NOT MODIFY THIS FILE MANUALLY\n")
+	sb.WriteString("# This file is managed by Goliac\n")
+	sb.WriteString("\n")
+	for _, c := range commentLines {
+		sb.WriteString(c)
+		sb.WriteString("\n")
+	}
+	if len(commentLines) > 0 && len(ruleLines) > 0 {
+		sb.WriteString("\n")
+	}
+	for _, line := range ruleLines {
+		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
 }
 
 /**
