@@ -1119,6 +1119,13 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 		}
 	}
 
+	if err := g.loadRepositoryCodeownersConcurrently(ctx, config.Config.GithubConcurrentThreads, repositories); err != nil {
+		logrus.Warnf("error loading CODEOWNERS: %v", err)
+		if retErr == nil {
+			retErr = fmt.Errorf("error loading repository CODEOWNERS: %w", err)
+		}
+	}
+
 	return repositories, repositoriesByRefId, retErr
 }
 
@@ -1546,6 +1553,62 @@ func (g *GoliacRemoteImpl) loadVariablesPerRepository(ctx context.Context, repos
 	}
 
 	return variables, nil
+}
+
+// loadRepositoryCodeownersConcurrently fetches .github/CODEOWNERS for each repository so remote
+// comparisons and reconciliation use the same content as GitHub (not only after an apply).
+func (g *GoliacRemoteImpl) loadRepositoryCodeownersConcurrently(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) error {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadRepositoryCodeowners")
+		defer childSpan.End()
+	}
+	logrus.Debug("loading repository CODEOWNERS files")
+
+	var wg sync.WaitGroup
+
+	reposChan := make(chan *GithubRepository, len(repositories))
+	errChan := make(chan error, 1)
+
+	if maxGoroutines < 1 {
+		maxGoroutines = 1
+	}
+
+	for i := int64(0); i < maxGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for repo := range reposChan {
+				content, sha, err := g.GetRepositoryCodeowners(ctx, repo.Name)
+				if err != nil {
+					select {
+					case errChan <- fmt.Errorf("CODEOWNERS for %s: %w", repo.Name, err):
+					default:
+					}
+					return
+				}
+				repo.CodeownersContent = content
+				repo.CodeownersSHA = sha
+				if g.feedback != nil {
+					g.feedback.LoadingAsset("repo_codeowners", 1)
+				}
+			}
+		}()
+	}
+
+	for _, repo := range repositories {
+		reposChan <- repo
+	}
+	close(reposChan)
+
+	wg.Wait()
+
+	select {
+	case err := <-errChan:
+		return err
+	default:
+		return nil
+	}
 }
 
 func (g *GoliacRemoteImpl) loadCustomPropertiesConcurrently(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]interface{}, error) {
