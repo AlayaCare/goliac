@@ -408,6 +408,9 @@ func (m *MockGithubClient) CallRestAPI(ctx context.Context, endpoint, parameters
 		if strings.HasSuffix(endpoint, "/environments") {
 			return []byte(`{"total_count": 2, "environments": [{"id": 1, "name": "production", "node_id": "123", "protection_rules": [{"id": 1, "type": "required_reviewers", "reviewer_teams": ["team1"]}]}, {"id": 2, "name": "staging", "node_id": "456", "protection_rules": []}]}`), nil
 		}
+		if strings.HasSuffix(endpoint, "/contents/.github/CODEOWNERS") {
+			return nil, fmt.Errorf("404 Not Found")
+		}
 		// we still pretend we have 133 teams, cf L263
 		repoSuffix := strings.TrimPrefix(endpoint, "/repos/myorg/repo_")
 		repoIdStr := strings.Split(repoSuffix, "/")[0]

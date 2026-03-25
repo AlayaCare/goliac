@@ -535,10 +535,59 @@ func (r *Repository) GenerateCodeownersContent(githubOrganization string) string
 	return sb.String()
 }
 
+// collectExistingTeamNames walks teamDirname like ReadAndAdjustTeamDirectory and records each
+// team.yaml `name` field. Used to prune spec.codeowners entries that reference deleted teams.
+func collectExistingTeamNames(fs billy.Filesystem, teamDirname string) (map[string]struct{}, error) {
+	out := make(map[string]struct{})
+	exist, err := utils.Exists(fs, teamDirname)
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return out, nil
+	}
+	entries, err := fs.ReadDir(teamDirname)
+	if err != nil {
+		return nil, err
+	}
+	for _, e := range entries {
+		if !e.IsDir() || e.Name()[0] == '.' {
+			continue
+		}
+		if err := recursiveCollectExistingTeamNames(fs, filepath.Join(teamDirname, e.Name()), out); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+func recursiveCollectExistingTeamNames(fs billy.Filesystem, dirname string, out map[string]struct{}) error {
+	team, err := NewTeam(fs, filepath.Join(dirname, "team.yaml"), nil)
+	if err != nil {
+		return err
+	}
+	out[team.Name] = struct{}{}
+
+	entries, err := fs.ReadDir(dirname)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if !e.IsDir() || e.Name()[0] == '.' {
+			continue
+		}
+		if err := recursiveCollectExistingTeamNames(fs, filepath.Join(dirname, e.Name()), out); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 /**
- * ReadAndAdjustRepositories adjusts repository definitions depending on user availability.
- * The goal is that if a user has been removed, we must update the repository definition
- * by removing them from branch_protections bypass_pullrequest_users.
+ * ReadAndAdjustRepositories adjusts repository definitions depending on user availability and
+ * which teams still exist under teamDirname. It removes users from branch_protections
+ * bypass_pullrequest_users when they no longer exist, and removes team references from
+ * spec.codeowners when those teams no longer exist.
  * Returns:
  * - a list of (repository's) file changes (to commit to Github)
  */
@@ -552,6 +601,11 @@ func ReadAndAdjustRepositories(fs billy.Filesystem, archivedDirname string, team
 	}
 	for k, v := range externalUsers {
 		allUsers[k] = v
+	}
+
+	existingTeams, err := collectExistingTeamNames(fs, teamDirname)
+	if err != nil {
+		return reposChanged, err
 	}
 
 	// archived dir
@@ -580,7 +634,7 @@ func ReadAndAdjustRepositories(fs billy.Filesystem, archivedDirname string, team
 			if err != nil {
 				continue
 			}
-			changed, err := repo.Update(fs, filepath.Join(archivedDirname, entry.Name()), allUsers)
+			changed, err := repo.Update(fs, filepath.Join(archivedDirname, entry.Name()), allUsers, existingTeams)
 			if err != nil {
 				return reposChanged, err
 			}
@@ -607,7 +661,7 @@ func ReadAndAdjustRepositories(fs billy.Filesystem, archivedDirname string, team
 
 	for _, team := range entries {
 		if team.IsDir() {
-			err := recursiveReadAndAdjustRepositories(fs, archivedDirname, filepath.Join(teamDirname, team.Name()), allUsers, &reposChanged)
+			err := recursiveReadAndAdjustRepositories(fs, archivedDirname, filepath.Join(teamDirname, team.Name()), allUsers, existingTeams, &reposChanged)
 			if err != nil {
 				return reposChanged, err
 			}
@@ -617,14 +671,14 @@ func ReadAndAdjustRepositories(fs billy.Filesystem, archivedDirname string, team
 	return reposChanged, nil
 }
 
-func recursiveReadAndAdjustRepositories(fs billy.Filesystem, archivedDirPath string, teamDirPath string, allUsers map[string]*User, reposChanged *[]string) error {
+func recursiveReadAndAdjustRepositories(fs billy.Filesystem, archivedDirPath string, teamDirPath string, allUsers map[string]*User, existingTeams map[string]struct{}, reposChanged *[]string) error {
 	subentries, err := fs.ReadDir(teamDirPath)
 	if err != nil {
 		return err
 	}
 	for _, sube := range subentries {
 		if sube.IsDir() && sube.Name()[0] != '.' {
-			err := recursiveReadAndAdjustRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), allUsers, reposChanged)
+			err := recursiveReadAndAdjustRepositories(fs, archivedDirPath, filepath.Join(teamDirPath, sube.Name()), allUsers, existingTeams, reposChanged)
 			if err != nil {
 				return err
 			}
@@ -637,7 +691,7 @@ func recursiveReadAndAdjustRepositories(fs billy.Filesystem, archivedDirPath str
 			if err != nil {
 				continue
 			}
-			changed, err := repo.Update(fs, filepath.Join(teamDirPath, sube.Name()), allUsers)
+			changed, err := repo.Update(fs, filepath.Join(teamDirPath, sube.Name()), allUsers, existingTeams)
 			if err != nil {
 				return err
 			}
@@ -650,9 +704,9 @@ func recursiveReadAndAdjustRepositories(fs billy.Filesystem, archivedDirPath str
 }
 
 // Update is telling if the repository needs to be adjusted (and the repository's definition was changed on disk),
-// based on the list of (still) existing users. It removes users from branch_protections bypass_pullrequest_users
-// if they don't exist in the users map.
-func (r *Repository) Update(fs billy.Filesystem, filename string, allUsers map[string]*User) (bool, error) {
+// based on the list of (still) existing users and teams. It removes users from branch_protections bypass_pullrequest_users
+// if they don't exist in the users map, and removes team owners from spec.codeowners if those teams no longer exist.
+func (r *Repository) Update(fs billy.Filesystem, filename string, allUsers map[string]*User, existingTeams map[string]struct{}) (bool, error) {
 	changed := false
 
 	// Update branch protections bypass_pullrequest_users
@@ -668,6 +722,38 @@ func (r *Repository) Update(fs billy.Filesystem, filename string, allUsers map[s
 		}
 		bp.BypassPullRequestUsers = validUsers
 	}
+
+	// Update spec.codeowners: drop unknown teams (owners without @ prefix)
+	var newCodeowners []RepositoryCodeownersEntry
+	for _, entry := range r.Spec.Codeowners {
+		validOwners := make([]string, 0, len(entry.Owners))
+		for _, owner := range entry.Owners {
+			if strings.HasPrefix(owner, "@") {
+				validOwners = append(validOwners, owner)
+			} else if _, ok := existingTeams[owner]; ok {
+				validOwners = append(validOwners, owner)
+			} else {
+				changed = true
+			}
+		}
+		if len(validOwners) == 0 {
+			if len(entry.Owners) > 0 {
+				changed = true
+			}
+			continue
+		}
+		if len(validOwners) != len(entry.Owners) {
+			changed = true
+		}
+		newCodeowners = append(newCodeowners, RepositoryCodeownersEntry{
+			Pattern: entry.Pattern,
+			Owners:  validOwners,
+		})
+	}
+	if len(newCodeowners) != len(r.Spec.Codeowners) {
+		changed = true
+	}
+	r.Spec.Codeowners = newCodeowners
 
 	if !changed {
 		return false, nil
