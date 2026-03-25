@@ -626,7 +626,18 @@ func TestReadAndAdjustRepositories(t *testing.T) {
 		users["user1"] = user1
 
 		fs.MkdirAll("teams/team1", 0755)
-		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: team1
+spec:
+  externallyManaged: true
+  owners:
+  - user1
+  - user1
+`), 0644)
+		assert.Nil(t, err)
+		err = utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
 apiVersion: v1
 kind: Repository
 name: repo1
@@ -653,7 +664,18 @@ spec:
 		users["user1"] = user1
 
 		fs.MkdirAll("teams/team1", 0755)
-		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: team1
+spec:
+  externallyManaged: true
+  owners:
+  - user1
+  - user1
+`), 0644)
+		assert.Nil(t, err)
+		err = utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
 apiVersion: v1
 kind: Repository
 name: repo1
@@ -688,7 +710,18 @@ spec:
 		externalUsers["externaluser1"] = externalUser1
 
 		fs.MkdirAll("teams/team1", 0755)
-		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: team1
+spec:
+  externallyManaged: true
+  owners:
+  - user1
+  - user1
+`), 0644)
+		assert.Nil(t, err)
+		err = utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
 apiVersion: v1
 kind: Repository
 name: repo1
@@ -743,5 +776,124 @@ spec:
 		assert.Nil(t, err)
 		assert.Contains(t, string(content), "user1")
 		assert.NotContains(t, string(content), "user2")
+	})
+
+	t.Run("happy path: remove deleted team from spec.codeowners", func(t *testing.T) {
+		fs := memfs.New()
+		users := make(map[string]*User)
+
+		fs.MkdirAll("teams/team1", 0755)
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: team1
+spec:
+  externallyManaged: true
+  owners:
+  - user1
+  - user1
+`), 0644)
+		assert.Nil(t, err)
+		err = utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  codeowners:
+    - pattern: /
+      owners:
+        - team1
+        - ghost-team
+`), 0644)
+		assert.Nil(t, err)
+
+		changed, err := ReadAndAdjustRepositories(fs, "archived", "teams", users, map[string]*User{})
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(changed))
+
+		content, err := utils.ReadFile(fs, "teams/team1/repo1.yaml")
+		assert.Nil(t, err)
+		assert.Contains(t, string(content), "team1")
+		assert.NotContains(t, string(content), "ghost-team")
+	})
+
+	t.Run("happy path: spec.codeowners keeps @ user and drops deleted team", func(t *testing.T) {
+		fs := memfs.New()
+		users := make(map[string]*User)
+
+		fs.MkdirAll("teams/team1", 0755)
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: team1
+spec:
+  externallyManaged: true
+  owners:
+  - user1
+  - user1
+`), 0644)
+		assert.Nil(t, err)
+		err = utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  codeowners:
+    - pattern: /src/
+      owners:
+        - "@githubuser"
+        - ghost-team
+`), 0644)
+		assert.Nil(t, err)
+
+		changed, err := ReadAndAdjustRepositories(fs, "archived", "teams", users, map[string]*User{})
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(changed))
+
+		content, err := utils.ReadFile(fs, "teams/team1/repo1.yaml")
+		assert.Nil(t, err)
+		assert.Contains(t, string(content), "@githubuser")
+		assert.NotContains(t, string(content), "ghost-team")
+	})
+
+	t.Run("happy path: archived repository strips missing team from spec.codeowners", func(t *testing.T) {
+		fs := memfs.New()
+		users := make(map[string]*User)
+
+		fs.MkdirAll("teams/team1", 0755)
+		err := utils.WriteFile(fs, "teams/team1/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: team1
+spec:
+  externallyManaged: true
+  owners:
+  - user1
+  - user1
+`), 0644)
+		assert.Nil(t, err)
+
+		fs.MkdirAll("archived", 0755)
+		err = utils.WriteFile(fs, "archived/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  codeowners:
+    - pattern: /
+      owners:
+        - team1
+        - other-team
+`), 0644)
+		assert.Nil(t, err)
+
+		changed, err := ReadAndAdjustRepositories(fs, "archived", "teams", users, map[string]*User{})
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(changed))
+
+		content, err := utils.ReadFile(fs, "archived/repo1.yaml")
+		assert.Nil(t, err)
+		assert.Contains(t, string(content), "team1")
+		assert.NotContains(t, string(content), "other-team")
 	})
 }
