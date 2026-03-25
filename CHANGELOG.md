@@ -4,11 +4,11 @@
 
 ## Goliac v1.6.10
 
-- fix panic: assignment to entry in nil map
+- bugfix: dont panic on nil ruleset
 
 ## Goliac v1.6.9
 
-- bugfix: improving custom properties load failure as loadRepositories failure
+- bugfix: treat custom properties load failure as loadRepositories failure
 
 ## Goliac v1.6.8
 
