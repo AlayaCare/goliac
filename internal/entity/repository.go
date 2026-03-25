@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -448,9 +449,26 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 	return nil
 }
 
-// GenerateCodeownersContent generates the CODEOWNERS file content from the repository's
-// codeowners spec entries and/or raw content. It resolves team names in structured entries
-// to GitHub team mentions (@org/team-slug). Raw content is included verbatim.
+// codeownersPatternField returns the first field of a CODEOWNERS rule line (the path/pattern).
+// Comment and empty lines yield an empty string.
+func codeownersPatternField(line string) string {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") {
+		return ""
+	}
+	fields := strings.Fields(line)
+	if len(fields) == 0 {
+		return ""
+	}
+	return fields[0]
+}
+
+// GenerateCodeownersContent generates the CODEOWNERS file content from structured spec.codeowners
+// and/or codeowners_raw. Team names in structured entries resolve to @org/team-slug.
+// Structured and raw rule lines are merged; comment lines from raw (lines whose trimmed content
+// starts with #) are emitted after the Goliac header and before rule lines. Rule lines are sorted
+// by ascending length of the path/pattern (first field), stable for ties. codeowners_raw rule lines
+// are not validated.
 // Returns empty string if neither codeowners nor codeowners_raw are defined.
 func (r *Repository) GenerateCodeownersContent(githubOrganization string) string {
 	hasStructured := len(r.Spec.Codeowners) > 0
@@ -460,34 +478,57 @@ func (r *Repository) GenerateCodeownersContent(githubOrganization string) string
 		return ""
 	}
 
-	var sb strings.Builder
-	sb.WriteString("# DO NOT MODIFY THIS FILE MANUALLY\n")
-	sb.WriteString("# This file is managed by Goliac\n")
-	sb.WriteString("\n")
+	var ruleLines []string
+	var commentLines []string
 
-	// Structured entries first (validated by goliac verify)
 	if hasStructured {
 		for _, entry := range r.Spec.Codeowners {
 			owners := make([]string, 0, len(entry.Owners))
 			for _, owner := range entry.Owners {
 				if strings.HasPrefix(owner, "@") {
-					// Direct GitHub username or @org/team reference
 					owners = append(owners, owner)
 				} else {
-					// Team name - resolve to @org/team-slug
 					owners = append(owners, fmt.Sprintf("@%s/%s", githubOrganization, owner))
 				}
 			}
-			sb.WriteString(fmt.Sprintf("%s %s\n", entry.Pattern, strings.Join(owners, " ")))
+			ruleLines = append(ruleLines, fmt.Sprintf("%s %s", entry.Pattern, strings.Join(owners, " ")))
 		}
 	}
 
-	// Raw content appended verbatim (no validation)
 	if hasRaw {
-		if hasStructured {
-			sb.WriteString("\n# Raw CODEOWNERS entries (not validated by Goliac)\n")
+		for _, line := range strings.Split(r.Spec.CodeownersRaw, "\n") {
+			line = strings.TrimRight(line, "\r")
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				continue
+			}
+			if strings.HasPrefix(trimmed, "#") {
+				commentLines = append(commentLines, trimmed)
+			} else {
+				ruleLines = append(ruleLines, trimmed)
+			}
 		}
-		sb.WriteString(strings.TrimSpace(r.Spec.CodeownersRaw))
+	}
+
+	sort.SliceStable(ruleLines, func(i, j int) bool {
+		pi := codeownersPatternField(ruleLines[i])
+		pj := codeownersPatternField(ruleLines[j])
+		return len(pi) < len(pj)
+	})
+
+	var sb strings.Builder
+	sb.WriteString("# DO NOT MODIFY THIS FILE MANUALLY\n")
+	sb.WriteString("# This file is managed by Goliac\n")
+	sb.WriteString("\n")
+	for _, c := range commentLines {
+		sb.WriteString(c)
+		sb.WriteString("\n")
+	}
+	if len(commentLines) > 0 && len(ruleLines) > 0 {
+		sb.WriteString("\n")
+	}
+	for _, line := range ruleLines {
+		sb.WriteString(line)
 		sb.WriteString("\n")
 	}
 

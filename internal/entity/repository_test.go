@@ -383,7 +383,8 @@ func TestGenerateCodeownersContent(t *testing.T) {
 		repo := &Repository{}
 		repo.Spec.CodeownersRaw = "/vendor/ @external-user\n/docs/ @myorg/docs-team"
 		content := repo.GenerateCodeownersContent("myorg")
-		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n/vendor/ @external-user\n/docs/ @myorg/docs-team\n"
+		// sorted by pattern length: /docs/ (7) < /vendor/ (9)
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n/docs/ @myorg/docs-team\n/vendor/ @external-user\n"
 		assert.Equal(t, expected, content)
 	})
 
@@ -395,7 +396,30 @@ func TestGenerateCodeownersContent(t *testing.T) {
 		}
 		repo.Spec.CodeownersRaw = "/vendor/ @external-user"
 		content := repo.GenerateCodeownersContent("myorg")
-		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n* @myorg/sre\nac-live-data/ @myorg/data-team\n\n# Raw CODEOWNERS entries (not validated by Goliac)\n/vendor/ @external-user\n"
+		// merged then sorted: * (1), /vendor/ (9), ac-live-data/ (13)
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n* @myorg/sre\n/vendor/ @external-user\nac-live-data/ @myorg/data-team\n"
+		assert.Equal(t, expected, content)
+	})
+
+	t.Run("sorts merged rules by pattern length", func(t *testing.T) {
+		repo := &Repository{}
+		repo.Spec.Codeowners = []RepositoryCodeownersEntry{
+			{Pattern: "/zz/long/", Owners: []string{"a"}},
+		}
+		repo.Spec.CodeownersRaw = "* @x\n/foo/ @y"
+		content := repo.GenerateCodeownersContent("myorg")
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n* @x\n/foo/ @y\n/zz/long/ @myorg/a\n"
+		assert.Equal(t, expected, content)
+	})
+
+	t.Run("raw comment lines stay above rules", func(t *testing.T) {
+		repo := &Repository{}
+		repo.Spec.CodeownersRaw = `# not a rule
+# second comment
+/long/path/ @a
+* @b`
+		content := repo.GenerateCodeownersContent("myorg")
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n# not a rule\n# second comment\n\n* @b\n/long/path/ @a\n"
 		assert.Equal(t, expected, content)
 	})
 
