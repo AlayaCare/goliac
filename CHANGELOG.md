@@ -1,3 +1,7 @@
+## Goliac v1.7.0
+
+- add codeowner support
+
 ## Goliac v1.6.10
 
 - bugfix: dont panic on nil ruleset
