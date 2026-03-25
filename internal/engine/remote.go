@@ -4141,6 +4141,7 @@ func (g *GoliacRemoteImpl) GetRepositoryCodeowners(ctx context.Context, reponame
 }
 
 func (g *GoliacRemoteImpl) UpdateRepositoryCodeowners(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, content string, existingSHA string) {
+	var newSHA string
 	// https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#create-or-update-file-contents
 	if !dryrun {
 		body := map[string]interface{}{
@@ -4151,7 +4152,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryCodeowners(ctx context.Context, logsC
 			body["sha"] = existingSHA
 		}
 
-		_, err := g.client.CallRestAPI(
+		respBody, err := g.client.CallRestAPI(
 			ctx,
 			fmt.Sprintf("/repos/%s/%s/contents/.github/CODEOWNERS", g.configGithubOrg, reponame),
 			"",
@@ -4163,6 +4164,23 @@ func (g *GoliacRemoteImpl) UpdateRepositoryCodeowners(ctx context.Context, logsC
 			logsCollector.AddError(fmt.Errorf("failed to update CODEOWNERS for repository %s: %v", reponame, err))
 			return
 		}
+		var putResp struct {
+			Content struct {
+				SHA string `json:"sha"`
+			} `json:"content"`
+		}
+		if err := json.Unmarshal(respBody, &putResp); err == nil && putResp.Content.SHA != "" {
+			newSHA = putResp.Content.SHA
+		} else {
+			_, sha, errFetch := g.GetRepositoryCodeowners(ctx, reponame)
+			if errFetch != nil {
+				logsCollector.AddError(fmt.Errorf("could not determine new CODEOWNERS SHA for repository %s after update (re-fetch: %v)", reponame, errFetch))
+			} else if sha != "" {
+				newSHA = sha
+			} else {
+				logsCollector.AddError(fmt.Errorf("CODEOWNERS SHA empty for repository %s after update; local cache may be stale", reponame))
+			}
+		}
 	}
 
 	// Update local cache
@@ -4172,6 +4190,9 @@ func (g *GoliacRemoteImpl) UpdateRepositoryCodeowners(ctx context.Context, logsC
 	repo := g.repositories[reponame]
 	if repo != nil {
 		repo.CodeownersContent = content
+		if newSHA != "" {
+			repo.CodeownersSHA = newSHA
+		}
 	}
 }
 
