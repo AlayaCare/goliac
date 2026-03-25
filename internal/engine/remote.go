@@ -1555,8 +1555,10 @@ func (g *GoliacRemoteImpl) loadVariablesPerRepository(ctx context.Context, repos
 	return variables, nil
 }
 
-// loadRepositoryCodeownersConcurrently fetches .github/CODEOWNERS for each repository so remote
-// comparisons and reconciliation use the same content as GitHub (not only after an apply).
+// loadRepositoryCodeownersConcurrently fetches .github/CODEOWNERS for each non-archived repository
+// so remote comparisons and reconciliation use the same content as GitHub (not only after an apply).
+// Archived repositories are skipped (CodeownersContent remains empty). Any error from
+// GetRepositoryCodeowners fails the whole operation.
 func (g *GoliacRemoteImpl) loadRepositoryCodeownersConcurrently(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) error {
 	var childSpan trace.Span
 	if config.Config.OpenTelemetryEnabled {
@@ -1597,6 +1599,9 @@ func (g *GoliacRemoteImpl) loadRepositoryCodeownersConcurrently(ctx context.Cont
 	}
 
 	for _, repo := range repositories {
+		if repo.BoolProperties["archived"] {
+			continue
+		}
 		reposChan <- repo
 	}
 	close(reposChan)

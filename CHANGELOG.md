@@ -1,3 +1,8 @@
+## Goliac v1.7.1
+
+- remove deleted teams from managed codeowner
+- fix loading of codeowners file
+
 ## Goliac v1.7.0
 
 - add codeowner support
