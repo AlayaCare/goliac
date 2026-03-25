@@ -565,6 +565,10 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 					CompareEntities(lRepo.Autolinks.GetEntity(), rRepo.Autolinks.GetEntity(), compareAutolinks, onAutolinkAdded, onAutolinkRemoved, onAutolinkChange)
 				}
 			}
+
+			if lRepo.Codeowners != rRepo.Codeowners {
+				return false
+			}
 		}
 
 		//
