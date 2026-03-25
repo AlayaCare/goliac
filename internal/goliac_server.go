@@ -936,6 +936,11 @@ func (g *GoliacServerImpl) Serve() {
 func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization, repository, prUrl, githubIdCaller, comment string, comment_id int) {
 	logrus.Debugf("Issue comment event received for organization %s, repository %s, githubIdCaller %s, prUrl %s, comment %s", organization, repository, githubIdCaller, prUrl, comment)
 
+	if strings.HasPrefix(comment, "/help") {
+		g.handleIssueCommandHelp(ctx, organization, repository, prUrl, githubIdCaller)
+		return
+	}
+
 	// check if the comment is a command to apply
 	commandRegex := regexp.MustCompile(`^/([a-zA-Z0-9_-]+):?(.*)`)
 	matches := commandRegex.FindStringSubmatch(comment)
@@ -1045,6 +1050,41 @@ func (g *GoliacServerImpl) handleIssueCommandExecuteWorkflow(ctx context.Context
 				}
 			}
 		}
+	}
+}
+
+// handleIssueCommandHelp handles the /help command and lists all available workflows with example usage
+func (g *GoliacServerImpl) handleIssueCommandHelp(ctx context.Context, organization, repository, prUrl, githubIdCaller string) {
+	enabledWorkflows := g.goliac.GetLocal().RepoConfig().Workflows
+	if len(enabledWorkflows) == 0 {
+		comment := "No workflow enabled. Check with your administrator."
+		err := g.CreateComment(ctx, organization, repository, prUrl, githubIdCaller, comment)
+		if err != nil {
+			logrus.Error("error when creating 'no workflows enabled' comment: " + err.Error())
+		}
+		return
+	}
+
+	comment := "Available Goliac commands:\n\n"
+	comment += "| Command | Description |\n"
+	comment += "|---------|-------------|\n"
+
+	for _, workflowName := range enabledWorkflows {
+		for name, workflow := range g.goliac.GetLocal().Workflows() {
+			if name == workflowName {
+				comment += fmt.Sprintf("| `/%s:%s: <explanation>` | %s |\n", workflow.Spec.WorkflowType, workflow.Name, workflow.Spec.Description)
+			}
+		}
+	}
+
+	comment += "\nExample:\n"
+	comment += "```\n"
+	comment += "/forcemerge:standard: hotfix for production outage\n"
+	comment += "```\n"
+
+	err := g.CreateComment(ctx, organization, repository, prUrl, githubIdCaller, comment)
+	if err != nil {
+		logrus.Error("error when creating 'help' comment: " + err.Error())
 	}
 }
 
