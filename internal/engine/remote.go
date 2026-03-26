@@ -3860,14 +3860,14 @@ func (g *GoliacRemoteImpl) CreateRepository(ctx context.Context, logsCollector *
 
 	// update the repositories list
 	newRepo := &GithubRepository{
-		Name:                reponame,
-		Id:                  repoId,
-		RefId:               repoRefId,
-		Visibility:          visibility,
-		BoolProperties:      boolProperties,
-		DefaultBranchName:   defaultBranch,
-		IsFork:              forkFrom != "",
-		RuleSets:            make(map[string]*GithubRuleSet),
+		Name:              reponame,
+		Id:                repoId,
+		RefId:             repoRefId,
+		Visibility:        visibility,
+		BoolProperties:    boolProperties,
+		DefaultBranchName: defaultBranch,
+		IsFork:            forkFrom != "",
+		RuleSets:          make(map[string]*GithubRuleSet),
 	}
 	g.repositories[reponame] = newRepo
 	g.repositoriesByRefId[repoRefId] = newRepo

@@ -52,8 +52,8 @@ type AuthorizedTransport struct {
 func (t *AuthorizedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	t.client.mu.Lock()
 
-	// Use the personal access token if available
-	if t.client.patToken != "" {
+	// Use the personal access token if available and private key is not set
+	if t.client.patToken != "" && t.client.privateKey == nil {
 		req.Header.Add("Authorization", "Bearer "+t.client.patToken)
 		t.client.mu.Unlock()
 		return http.DefaultTransport.RoundTrip(req)
@@ -180,7 +180,7 @@ func waitRateLimit(resetTimeStr string) error {
 		return fmt.Errorf("failed to parse X-RateLimit-Reset header: %w", err)
 	}
 
-	resetTime := time.Unix(resetTimeUnix, 0)
+	resetTime := time.Unix(resetTimeUnix+1, 0)
 
 	// Calculate how long we need to wait.
 	waitDuration := time.Until(resetTime)
