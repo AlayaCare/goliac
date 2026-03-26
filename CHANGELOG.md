@@ -1,3 +1,8 @@
+## Goliac v1.7.2
+
+- validate that teams in codeowners are writer of the repo
+- fix 409 Conflict on codeowners update
+
 ## Goliac v1.7.1
 
 - remove deleted teams from managed codeowner

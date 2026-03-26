@@ -449,6 +449,33 @@ apiVersion: v1
 kind: Repository
 name: repo1
 spec:
+  writers:
+    - team1
+  codeowners:
+    - pattern: "*"
+      owners:
+        - team1
+`), 0644)
+		assert.Nil(t, err)
+
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		repos := ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, users, []*config.GithubCustomProperty{}, logsCollector)
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 1, len(repos))
+	})
+
+	t.Run("happy path: codeowners with owning team and no writers", func(t *testing.T) {
+		fs := memfs.New()
+		fixtureCreateUserTeam(t, fs)
+
+		err := utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  writers: []
   codeowners:
     - pattern: "*"
       owners:
@@ -501,6 +528,39 @@ spec:
     - pattern: "*"
       owners:
         - nonexistent-team
+`), 0644)
+		assert.Nil(t, err)
+
+		logsCollector := observability.NewLogCollection()
+		users := ReadUserDirectory(fs, "users", logsCollector)
+		teams := ReadTeamDirectory(fs, "teams", users, logsCollector)
+		ReadRepositories(fs, "archived", "teams", teams, map[string]*User{}, users, []*config.GithubCustomProperty{}, logsCollector)
+		assert.True(t, logsCollector.HasErrors())
+	})
+
+	t.Run("not happy path: codeowners team must be repository writer", func(t *testing.T) {
+		fs := memfs.New()
+		fixtureCreateUserTeam(t, fs)
+		err := utils.WriteFile(fs, "teams/team2/team.yaml", []byte(`
+apiVersion: v1
+kind: Team
+name: team2
+spec:
+  owners:
+    - user1
+`), 0644)
+		assert.Nil(t, err)
+
+		err = utils.WriteFile(fs, "teams/team1/repo1.yaml", []byte(`
+apiVersion: v1
+kind: Repository
+name: repo1
+spec:
+  writers: []
+  codeowners:
+    - pattern: "*"
+      owners:
+        - team2
 `), 0644)
 		assert.Nil(t, err)
 
@@ -566,6 +626,8 @@ apiVersion: v1
 kind: Repository
 name: repo1
 spec:
+  writers:
+    - team1
   codeowners:
     - pattern: "*"
       owners:
