@@ -246,6 +246,8 @@ func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, team
 			if err != nil {
 				LogCollection.AddError(err)
 			} else {
+				teamname := teamName
+				repo.Owner = &teamname
 				if err := repo.Validate(filepath.Join(teamDirPath, sube.Name()), teams, externalUsers, users, customProperties); err != nil {
 					LogCollection.AddError(err)
 				} else {
@@ -257,8 +259,6 @@ func recursiveReadRepositories(fs billy.Filesystem, archivedDirPath string, team
 						}
 						LogCollection.AddError(fmt.Errorf("Repository %s defined in 2 places (check %s and %s)", repo.Name, filepath.Join(teamDirPath, sube.Name()), existing))
 					} else {
-						teamname := teamName
-						repo.Owner = &teamname
 						repo.Archived = false
 						repos[repo.Name] = repo
 					}
@@ -301,6 +301,13 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 		if _, ok := teams[reader]; !ok {
 			return fmt.Errorf("invalid reader: %s doesn't exist (check repository filename %s)", reader, filename)
 		}
+	}
+	writersSet := make(map[string]struct{}, len(r.Spec.Writers))
+	for _, writer := range r.Spec.Writers {
+		writersSet[writer] = struct{}{}
+	}
+	if r.Owner != nil && *r.Owner != "" {
+		writersSet[*r.Owner] = struct{}{}
 	}
 
 	for _, externalUserReader := range r.Spec.ExternalUserReaders {
@@ -427,6 +434,10 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 			// otherwise it must be a team name
 			if _, ok := teams[owner]; !ok {
 				return fmt.Errorf("invalid codeowners owner: team %s doesn't exist (check repository filename %s)", owner, filename)
+			}
+			// team owners must have write permission on the repository
+			if _, ok := writersSet[owner]; !ok {
+				return fmt.Errorf("invalid codeowners owner: team %s must be listed in writers (check repository filename %s)", owner, filename)
 			}
 		}
 	}
