@@ -64,6 +64,9 @@ func (m *ScaffoldGoliacRemoteMock) CountAssets(ctx context.Context, warmup bool)
 func (g *ScaffoldGoliacRemoteMock) SetRemoteObservability(feedback observability.RemoteObservability) {
 }
 
+func (s *ScaffoldGoliacRemoteMock) SetFeatureFlags(manageGithubVariables bool, manageGithubAutolinks bool, manageOrgCustomProperties bool) {
+}
+
 func (s *ScaffoldGoliacRemoteMock) EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*engine.GithubVariable, error) {
 	return nil, nil
 }

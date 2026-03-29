@@ -24,7 +24,7 @@ type UnmanagedResources struct {
  * GoliacReconciliator is here to sync the local state to the remote state
  */
 type GoliacReconciliator interface {
-	Reconciliate(ctx context.Context, logsCollector *observability.LogCollection, local GoliacReconciliatorDatasource, remote GoliacReconciliatorDatasource, isEnterprise bool, dryrun bool, manageGithubVariables bool, manageGithubAutolinks bool) (*UnmanagedResources, map[string]*GithubRepoComparable, map[string]string, error)
+	Reconciliate(ctx context.Context, logsCollector *observability.LogCollection, local GoliacReconciliatorDatasource, remote GoliacReconciliatorDatasource, isEnterprise bool, dryrun bool, manageGithubVariables bool, manageGithubAutolinks bool, manageOrgCustomProperties bool) (*UnmanagedResources, map[string]*GithubRepoComparable, map[string]string, error)
 }
 
 type GoliacReconciliatorImpl struct {
@@ -86,7 +86,7 @@ func normalizePropertyValue(value interface{}) interface{} {
 	}
 }
 
-func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, logsCollector *observability.LogCollection, local GoliacReconciliatorDatasource, remote GoliacReconciliatorDatasource, isEnterprise bool, dryrun bool, manageGithubVariables bool, manageGithubAutolinks bool) (*UnmanagedResources, map[string]*GithubRepoComparable, map[string]string, error) {
+func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, logsCollector *observability.LogCollection, local GoliacReconciliatorDatasource, remote GoliacReconciliatorDatasource, isEnterprise bool, dryrun bool, manageGithubVariables bool, manageGithubAutolinks bool, manageOrgCustomProperties bool) (*UnmanagedResources, map[string]*GithubRepoComparable, map[string]string, error) {
 	rremote, err := NewMutableGoliacRemoteImpl(ctx, remote)
 	if err != nil {
 		return nil, nil, nil, err
@@ -113,7 +113,7 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, logsCollecto
 		return nil, nil, nil, err
 	}
 
-	reposToArchive, reposToRename, err := r.reconciliateRepositories(ctx, logsCollector, local, rremote, dryrun, manageGithubVariables, manageGithubAutolinks)
+	reposToArchive, reposToRename, err := r.reconciliateRepositories(ctx, logsCollector, local, rremote, dryrun, manageGithubVariables, manageGithubAutolinks, manageOrgCustomProperties)
 	if err != nil {
 		r.Rollback(ctx, logsCollector, dryrun, err)
 		return nil, nil, nil, err
@@ -127,10 +127,12 @@ func (r *GoliacReconciliatorImpl) Reconciliate(ctx context.Context, logsCollecto
 		}
 	}
 
-	err = r.reconciliateOrgCustomProperties(ctx, logsCollector, rremote, r.repoconfig, dryrun)
-	if err != nil {
-		r.Rollback(ctx, logsCollector, dryrun, err)
-		return nil, nil, nil, err
+	if manageOrgCustomProperties {
+		err = r.reconciliateOrgCustomProperties(ctx, logsCollector, rremote, r.repoconfig, dryrun)
+		if err != nil {
+			r.Rollback(ctx, logsCollector, dryrun, err)
+			return nil, nil, nil, err
+		}
 	}
 
 	return r.unmanaged, reposToArchive, reposToRename, r.Commit(ctx, logsCollector, dryrun)
@@ -387,6 +389,7 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 	dryrun bool,
 	manageGithubVariables bool,
 	manageGithubAutolinks bool,
+	manageOrgCustomProperties bool,
 ) (map[string]*GithubRepoComparable, map[string]string, error) {
 
 	reposToArchive := make(map[string]*GithubRepoComparable)

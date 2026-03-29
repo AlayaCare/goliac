@@ -55,6 +55,7 @@ type GoliacRemote interface {
 
 	CountAssets(ctx context.Context, warmup bool) (int, error)         // return the number of (some) assets that will be loaded (to be used with the RemoteObservability/progress bar)
 	SetRemoteObservability(feedback observability.RemoteObservability) // if you want to get feedback on the loading process
+	SetFeatureFlags(manageGithubVariables bool, manageGithubAutolinks bool, manageOrgCustomProperties bool) // needed becasue we dont know at construction what are the values
 
 	RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*GithubVariable, error)
 	EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*GithubVariable, error)
@@ -357,6 +358,14 @@ func NewGoliacRemoteImpl(client github.GitHubClient,
 		manageGithubAutolinks:     manageGithubAutolinks,
 		manageOrgCustomProperties: manageOrgCustomProperties,
 	}
+}
+
+func (g *GoliacRemoteImpl) SetFeatureFlags(manageGithubVariables bool, manageGithubAutolinks bool, manageOrgCustomProperties bool) {
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
+	g.manageGithubVariables = manageGithubVariables
+	g.manageGithubAutolinks = manageGithubAutolinks
+	g.manageOrgCustomProperties = manageOrgCustomProperties
 }
 
 func (g *GoliacRemoteImpl) IsEnterprise() bool {

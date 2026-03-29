@@ -605,6 +605,9 @@ func (m *GoliacRemoteExecutorMock) CountAssets(ctx context.Context, warmup bool)
 func (g *GoliacRemoteExecutorMock) SetRemoteObservability(feedback observability.RemoteObservability) {
 }
 
+func (e *GoliacRemoteExecutorMock) SetFeatureFlags(manageGithubVariables bool, manageGithubAutolinks bool, manageOrgCustomProperties bool) {
+}
+
 func (e *GoliacRemoteExecutorMock) AddUserToOrg(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, ghuserid string) {
 	fmt.Println("*** AddUserToOrg", ghuserid)
 	e.nbChanges++
