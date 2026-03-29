@@ -117,6 +117,11 @@ In particular it will creates a `/goliac.yaml` file:
 ```yaml
 admin_team: goliac-admin
 
+features:
+  manage_github_env_and_variables: true
+  manage_github_autolinks: true
+  manage_org_custom_properties: true
+
 rulesets:
   - default
 
@@ -224,6 +229,16 @@ export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 ./goliac plan --repository https://github.com/goliac-project/goliac-teams --branch main
 ```
 
+if you have a Gitub ruleset integration issue, you must also provide a Github admin PAT (with 'admin:org' scope):
+
+```shell
+export GOLIAC_GITHUB_APP_ID=355525
+export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
+export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
+export GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN=ghp_...
+./goliac plan --repository https://github.com/goliac-project/goliac-teams --branch main
+```
+
 ### 5. Apply
 
 If you are happy with the new structure:
@@ -235,6 +250,17 @@ export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
 ./goliac apply --repository https://github.com/goliac-project/goliac-teams --branch main
 ```
 
+If you have a Gitub ruleset integration issue, you must also provide a Github admin PAT (with 'admin:org' scope):
+
+```shell
+export GOLIAC_GITHUB_APP_ID=355525
+export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
+export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
+export GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN=ghp_...
+./goliac apply --repository https://github.com/goliac-project/goliac-teams --branch main
+```
+
+
 ### 6. Run the server
 
 You can run it locally
@@ -243,6 +269,7 @@ You can run it locally
 export GOLIAC_GITHUB_APP_ID=355525
 export GOLIAC_GITHUB_APP_PRIVATE_KEY_FILE=goliac-project-app.2023-07-03.private-key.pem
 export GOLIAC_GITHUB_APP_ORGANIZATION=goliac-project
+export GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN=ghp_... # if ruleset integration issue
 export GOLIAC_SERVER_GIT_REPOSITORY=https://github.com/goliac-project/goliac-teams
 #export GOLIAC_SERVER_GIT_BRANCH=main # by default it is main
 

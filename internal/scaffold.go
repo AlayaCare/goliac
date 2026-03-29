@@ -42,7 +42,7 @@ func NewScaffold() (*Scaffold, error) {
 		return nil, err
 	}
 
-	remote := engine.NewGoliacRemoteImpl(githubClient, config.Config.GithubAppOrganization, config.Config.ManageGithubActionsVariables, config.Config.ManageGithubAutolinks, config.Config.ManageOrgCustomProperties)
+	remote := engine.NewGoliacRemoteImpl(githubClient, config.Config.GithubAppOrganization, true, true, true)
 
 	loadUsersFromGithubOrgSaml := func(feedback observability.RemoteObservability) (map[string]*entity.User, error) {
 		ctx := context.Background()
@@ -719,6 +719,11 @@ func (s *Scaffold) generateGoliacConf(fs billy.Filesystem, rootpath string, admi
 
 	conf := fmt.Sprintf(`
 admin_team: %s
+
+features:
+  manage_github_env_and_variables: true
+  manage_github_autolinks: true
+  manage_org_custom_properties: true
 
 rulesets:
   - default

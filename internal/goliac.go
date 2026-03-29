@@ -96,9 +96,9 @@ func NewGoliacImpl() (Goliac, error) {
 	remote := engine.NewGoliacRemoteImpl(
 		remoteGithubClient,
 		config.Config.GithubAppOrganization,
-		config.Config.ManageGithubActionsVariables,
-		config.Config.ManageGithubAutolinks,
-		config.Config.ManageOrgCustomProperties,
+		true,
+		true,
+		true,
 	)
 
 	usersync.InitPlugins(remoteGithubClient)
@@ -286,22 +286,6 @@ func (g *GoliacImpl) ExternalCreateRepository(ctx context.Context, logsCollector
 }
 
 func (g *GoliacImpl) Apply(ctx context.Context, logsCollector *observability.LogCollection, fs billy.Filesystem, dryrun bool, repositoryUrl, branch string) *engine.UnmanagedResources {
-	// warm up the cache
-
-	if len(g.local.Repositories()) == 0 || len(g.local.Teams()) == 0 || len(g.local.Users()) == 0 {
-
-		// we need to lock the actionMutex to avoid concurrent actions
-		g.actionMutex.Lock()
-		g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, logsCollector)
-		g.local.Close(fs)
-
-		// we can unlock the actionMutex for now
-		g.actionMutex.Unlock()
-		if logsCollector.HasErrors() {
-			return nil
-		}
-	}
-
 	if !strings.HasPrefix(repositoryUrl, "https://") &&
 		!strings.HasPrefix(repositoryUrl, "inmemory:///") { // <- only for testing purposes
 		logsCollector.AddError(fmt.Errorf("local mode is not supported for plan/apply, you must specify the https url of the remote team git repository. Check the documentation"))
@@ -328,6 +312,17 @@ func (g *GoliacImpl) Apply(ctx context.Context, logsCollector *observability.Log
 
 	g.cacheDirtyAfterAction = false
 
+	g.loadAndValidateGoliacOrganization(ctx, fs, repositoryUrl, branch, logsCollector)
+	if logsCollector.HasErrors() {
+		return nil
+	}
+
+	g.remote.SetFeatureFlags(
+		g.repoconfig.Features.ManageGithubEnvAndVariables,
+		g.repoconfig.Features.ManageGithubAutolinks,
+		g.repoconfig.Features.ManageOrgCustomProperties,
+	)
+
 	// loading github assets can be long
 	err = g.remote.Load(ctx, false)
 	if err != nil {
@@ -348,6 +343,11 @@ func (g *GoliacImpl) Apply(ctx context.Context, logsCollector *observability.Log
 		g.cacheDirtyAfterAction = false
 
 		g.actionMutex.Unlock()
+		g.remote.SetFeatureFlags(
+			g.repoconfig.Features.ManageGithubEnvAndVariables,
+			g.repoconfig.Features.ManageGithubAutolinks,
+			g.repoconfig.Features.ManageOrgCustomProperties,
+		)
 		err = g.remote.Load(ctx, false)
 		if err != nil {
 			logsCollector.AddError(fmt.Errorf("error when loading data from Github: %v", err))
@@ -421,6 +421,15 @@ func (g *GoliacImpl) loadAndValidateGoliacOrganization(ctx context.Context, fs b
 			return
 		}
 		g.local.LoadAndValidateLocal(subfs, logsCollector)
+		if logsCollector.HasErrors() {
+			return
+		}
+		repoconfig := g.local.RepoConfig()
+		if repoconfig == nil {
+			logsCollector.AddError(fmt.Errorf("unable to read goliac.yaml config file"))
+			return
+		}
+		g.repoconfig = repoconfig
 	}
 
 	if logsCollector.HasErrors() {
@@ -602,8 +611,9 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, logsCollector *ob
 		remoteDataSource,
 		isEnterprise,
 		dryrun,
-		config.Config.ManageGithubActionsVariables,
-		config.Config.ManageGithubAutolinks,
+		g.repoconfig.Features.ManageGithubEnvAndVariables,
+		g.repoconfig.Features.ManageGithubAutolinks,
+		g.repoconfig.Features.ManageOrgCustomProperties,
 	)
 	if err != nil {
 		return unmanaged, fmt.Errorf("error when reconciliating: %v", err)

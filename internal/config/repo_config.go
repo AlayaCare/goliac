@@ -14,6 +14,13 @@ type GithubCustomProperty struct {
 	ValuesEditableBy string   `yaml:"values_editable_by,omitempty" json:"values_editable_by,omitempty"` // "org_actors", "org_and_repo_actors"
 }
 
+// GoliacFeatures toggles optional GitHub integrations (see goliac.yaml `features`).
+type GoliacFeatures struct {
+	ManageGithubEnvAndVariables bool `yaml:"manage_github_env_and_variables"`
+	ManageGithubAutolinks       bool `yaml:"manage_github_autolinks"`
+	ManageOrgCustomProperties   bool `yaml:"manage_org_custom_properties"`
+}
+
 type RepositoryConfig struct {
 	AdminTeam           string `yaml:"admin_team"`
 	EveryoneTeamEnabled bool   `yaml:"everyone_team_enabled"`
@@ -40,6 +47,7 @@ type RepositoryConfig struct {
 
 	Workflows           []string                `yaml:"workflows"`
 	OrgCustomProperties []*GithubCustomProperty `yaml:"org_custom_properties"`
+	Features            GoliacFeatures          `yaml:"features"`
 }
 
 // set default values
@@ -51,6 +59,9 @@ func (rc *RepositoryConfig) UnmarshalYAML(value *yaml.Node) error {
 	x.GithubConcurrentThreads = 4
 	x.UserSync.Plugin = "noop"
 	x.ArchiveOnDelete = true
+	x.Features.ManageGithubEnvAndVariables = true
+	x.Features.ManageGithubAutolinks = true
+	x.Features.ManageOrgCustomProperties = true
 
 	if err := value.Decode(x); err != nil {
 		return err
