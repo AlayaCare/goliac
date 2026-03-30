@@ -130,9 +130,16 @@ And it will create the corresponding structure into the "goliac-teams" directory
 
 To make Goliac working you can configure the `/goliac.yaml` file
 
+Since **v1.8.0**, optional GitHub integration toggles live under `features` in this file (they are no longer environment variables). If you omit the whole `features` block, all three flags default to `true`, matching the old defaults.
+
 ```yaml
 admin_team: goliac-admin # the name of the team (in the `/teams` directory ) that can admin this repository
 everyone_team_enabled: false # if you want all members to have read access to all repositories
+
+features: # optional; when omitted, each flag defaults to true
+  manage_github_env_and_variables: true # sync GitHub Actions environments and repository variables with the IAC model (secrets are still only read for display)
+  manage_github_autolinks: true         # sync repository autolinks with the IAC model
+  manage_org_custom_properties: true    # manage organization custom property schema and load repository custom property values from GitHub
 
 rulesets: # if you want to have organization-wide enforced rules (see the /rulesets directory)
   - default
@@ -277,8 +284,8 @@ You can run the goliac server as a service or a docker container. It needs sever
 | GOLIAC_WORKFLOW_JIRA_ATLASSIAN_DOMAIN |      | PR Breaking glass workflow - Jira plugin: company domain  |
 | GOLIAC_WORKFLOW_JIRA_EMAIL   |               | PR Breaking glass workflow - Jira plugin: email |
 | GOLIAC_WORKFLOW_JIRA_API_TOKEN |             | PR Breaking glass workflow - Jira plugin: token |
-| GOLIAC_MANAGE_GITHUB_ACTIONS_VARIABLES | true | if Goliac manage repositories environments, variables. For secrets it only scans them for display purposes |
-| GOLIAC_MANAGE_ORG_CUSTOM_PROPERTIES | true | if Goliac manage custom properties |
+
+Feature toggles for GitHub Actions environments/variables, repository autolinks, and organization custom properties are configured in `goliac.yaml` under `features` (since v1.8.0), not via environment variables.
 
 then you just need to start it with
 

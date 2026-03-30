@@ -22,13 +22,6 @@ var Config = struct {
 	GithubConcurrentThreads int64 `env:"GOLIAC_GITHUB_CONCURRENT_THREADS" envDefault:"5"`
 	GithubCacheTTL          int64 `env:"GOLIAC_GITHUB_CACHE_TTL" envDefault:"86400"`
 
-	// ManageGithubActionsVariables - to manage Github Actions repository variables
-	ManageGithubActionsVariables bool `env:"GOLIAC_MANAGE_GITHUB_ACTIONS_VARIABLES" envDefault:"true"`
-	// ManageGithubAutolinks - to manage Github repositoryAutolinks
-	ManageGithubAutolinks bool `env:"GOLIAC_MANAGE_GITHUB_AUTOLINKS" envDefault:"true"`
-	// ManageOrgCustomProperties - to manage Github organization custom properties
-	ManageOrgCustomProperties bool `env:"GOLIAC_MANAGE_ORG_CUSTOM_PROPERTIES" envDefault:"true"`
-
 	ServerApplyInterval int64  `env:"GOLIAC_SERVER_APPLY_INTERVAL" envDefault:"600"`
 	ServerGitRepository string `env:"GOLIAC_SERVER_GIT_REPOSITORY" envDefault:""`
 	ServerGitBranch     string `env:"GOLIAC_SERVER_GIT_BRANCH" envDefault:"main"`

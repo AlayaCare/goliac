@@ -136,6 +136,10 @@ func (m *GoliacRemoteMock) CountAssets(ctx context.Context, warmup bool) (int, e
 }
 func (g *GoliacRemoteMock) SetRemoteObservability(feedback observability.RemoteObservability) {
 }
+
+func (m *GoliacRemoteMock) SetFeatureFlags(manageGithubVariables bool, manageGithubAutolinks bool, manageOrgCustomProperties bool) {
+}
+
 func (m *GoliacRemoteMock) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*GithubVariable, error) {
 	return nil, nil
 }
@@ -494,7 +498,7 @@ func TestReconciliationTeam(t *testing.T) {
 		assert.Equal(t, 0, len(rTeams))
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 2 members created
 		assert.False(t, logsCollector.HasErrors())
@@ -542,7 +546,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 2 members created
 		assert.False(t, logsCollector.HasErrors())
@@ -608,7 +612,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 members added
 		assert.False(t, logsCollector.HasErrors())
@@ -675,7 +679,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 members added
 		ctx := context.TODO()
@@ -727,7 +731,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 2 members created
 		assert.False(t, logsCollector.HasErrors())
@@ -769,7 +773,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team deleted
 		assert.False(t, logsCollector.HasErrors())
@@ -847,7 +851,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 0 parent updated
 		assert.False(t, logsCollector.HasErrors())
@@ -929,7 +933,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team parent updated
 		assert.False(t, logsCollector.HasErrors())
@@ -1043,7 +1047,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team parent updated
 		assert.False(t, logsCollector.HasErrors())
@@ -1080,7 +1084,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team deleted
 		assert.False(t, logsCollector.HasErrors())
@@ -1126,7 +1130,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 repo created
 		assert.False(t, logsCollector.HasErrors())
@@ -1185,7 +1189,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 repo created
 		assert.False(t, logsCollector.HasErrors())
@@ -1254,7 +1258,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team updated
 		assert.False(t, logsCollector.HasErrors())
@@ -1329,7 +1333,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team updated
 		assert.False(t, logsCollector.HasErrors())
@@ -1415,7 +1419,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team added
 		assert.False(t, logsCollector.HasErrors())
@@ -1505,7 +1509,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team removed
 		assert.False(t, logsCollector.HasErrors())
@@ -1584,7 +1588,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 member removed
 		assert.False(t, logsCollector.HasErrors())
@@ -1672,7 +1676,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
@@ -1763,7 +1767,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
@@ -1846,7 +1850,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 member removed
 		assert.False(t, logsCollector.HasErrors())
@@ -1926,7 +1930,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 repo updated
 		assert.False(t, logsCollector.HasErrors())
@@ -2003,7 +2007,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 repo updated
 		assert.False(t, logsCollector.HasErrors())
@@ -2083,7 +2087,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team updated
 		assert.False(t, logsCollector.HasErrors())
@@ -2162,7 +2166,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team updated
 		assert.False(t, logsCollector.HasErrors())
@@ -2247,7 +2251,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 team updated
 		assert.False(t, logsCollector.HasErrors())
@@ -2291,7 +2295,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 repo deleted
 		assert.False(t, logsCollector.HasErrors())
@@ -2331,7 +2335,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		_, toArchive, _, _ := r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		_, toArchive, _, _ := r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 repo deleted
 		assert.False(t, logsCollector.HasErrors())
@@ -2372,7 +2376,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		_, toArchive, _, _ := r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		_, toArchive, _, _ := r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 repo deleted
 		assert.False(t, logsCollector.HasErrors())
@@ -2514,7 +2518,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		_, _, toRename, _ := r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		_, _, toRename, _ := r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 repo renamed
 		assert.False(t, logsCollector.HasErrors())
@@ -2663,7 +2667,7 @@ func TestReconciliationRepo(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 repo renamed
 		assert.False(t, logsCollector.HasErrors())
@@ -2719,7 +2723,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 ruleset created
 		assert.False(t, logsCollector.HasErrors())
@@ -2768,7 +2772,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 ruleset created
 		assert.False(t, logsCollector.HasErrors())
@@ -2825,7 +2829,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 ruleset created
 		assert.False(t, logsCollector.HasErrors())
@@ -2872,7 +2876,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 1 ruleset created
 		assert.False(t, logsCollector.HasErrors())
@@ -2944,7 +2948,7 @@ func TestReconciliationRulesets(t *testing.T) {
 
 		repoconf.Rulesets = []string{"new"}
 
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// 0 ruleset changed
 		assert.False(t, logsCollector.HasErrors())
@@ -3047,7 +3051,7 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
@@ -3137,7 +3141,7 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
@@ -3229,7 +3233,7 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
@@ -3313,7 +3317,7 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		assert.False(t, logsCollector.HasErrors())
 		assert.Equal(t, 0, len(recorder.RepositoryCreated))
@@ -3371,7 +3375,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify environment was added
 		assert.False(t, logsCollector.HasErrors())
@@ -3426,7 +3430,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify environment was removed
 		assert.False(t, logsCollector.HasErrors())
@@ -3488,7 +3492,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify environment variables were updated
 		assert.False(t, logsCollector.HasErrors())
@@ -3545,7 +3549,7 @@ func TestReconciliationAutolinks(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify environment was added
 		assert.False(t, logsCollector.HasErrors())
@@ -3600,7 +3604,7 @@ func TestReconciliationAutolinks(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify environment was added
 		assert.False(t, logsCollector.HasErrors())
@@ -3656,7 +3660,7 @@ func TestReconciliationAutolinks(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify environment was added
 		assert.False(t, logsCollector.HasErrors())
@@ -3666,10 +3670,16 @@ func TestReconciliationAutolinks(t *testing.T) {
 }
 
 func TestReconciliationCustomProperties(t *testing.T) {
+	orgPropFeatures := config.GoliacFeatures{
+		ManageGithubEnvAndVariables: true,
+		ManageGithubAutolinks:       true,
+		ManageOrgCustomProperties:   true,
+	}
 	t.Run("happy path: create new org custom property", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
 		repoconf := config.RepositoryConfig{
+			Features: orgPropFeatures,
 			OrgCustomProperties: []*config.GithubCustomProperty{
 				{
 					PropertyName:  "environment",
@@ -3703,7 +3713,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify custom property was created
 		assert.False(t, logsCollector.HasErrors())
@@ -3718,6 +3728,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
 		repoconf := config.RepositoryConfig{
+			Features: orgPropFeatures,
 			OrgCustomProperties: []*config.GithubCustomProperty{
 				{
 					PropertyName:  "environment",
@@ -3768,7 +3779,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify custom property was updated
 		assert.False(t, logsCollector.HasErrors())
@@ -3781,6 +3792,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
 		repoconf := config.RepositoryConfig{
+			Features:            orgPropFeatures,
 			OrgCustomProperties: []*config.GithubCustomProperty{},
 		}
 
@@ -3813,7 +3825,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify custom property was deleted
 		assert.False(t, logsCollector.HasErrors())
@@ -3834,6 +3846,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 		}
 
 		repoconf := config.RepositoryConfig{
+			Features:            orgPropFeatures,
 			OrgCustomProperties: []*config.GithubCustomProperty{property},
 		}
 
@@ -3861,7 +3874,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify no changes were made
 		assert.False(t, logsCollector.HasErrors())
@@ -3874,6 +3887,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 
 		repoconf := config.RepositoryConfig{
+			Features: orgPropFeatures,
 			OrgCustomProperties: []*config.GithubCustomProperty{
 				{
 					PropertyName:  "environment",
@@ -3911,7 +3925,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
-		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true)
+		r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
 
 		// Verify both custom properties were created
 		assert.False(t, logsCollector.HasErrors())
