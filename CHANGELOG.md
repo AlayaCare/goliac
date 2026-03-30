@@ -1,3 +1,6 @@
+## Goliac v1.8.3
+- bugfix: validate correctly rulesets when the repository is not defined in the ruleset
+
 ## Goliac v1.8.2
 
 - bugfix: repository topics update no longer returns HTTP 422 when `topics` is omitted in the repository definition (send an empty JSON array instead of `null` for GitHub’s replace-topics API)

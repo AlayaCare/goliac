@@ -175,7 +175,7 @@ type RuleSet struct {
 
 /*
  * NewRuleSet reads a file and returns a RuleSet object
- * The next step is to validate the RuleSet object using the Validate method
+ * The next step is to validate the RuleSet object using Validate (with known repository names when applicable).
  */
 func NewRuleSet(fs billy.Filesystem, filename string) (*RuleSet, error) {
 	filecontent, err := utils.ReadFile(fs, filename)
@@ -215,8 +215,11 @@ func NewRuleSet(fs billy.Filesystem, filename string) (*RuleSet, error) {
  * - a map of RuleSet objects
  * - a slice of errors that must stop the validation process
  * - a slice of warning that must not stop the validation process
+ *
+ * knownRepositories names all repositories defined in the org (e.g. keys from ReadRepositories).
+ * If non-nil, each ruleset must match at least one of them via BuildRepositoriesList. Pass nil to skip that check.
  */
-func ReadRuleSetDirectory(fs billy.Filesystem, dirname string, LogCollection *observability.LogCollection) map[string]*RuleSet {
+func ReadRuleSetDirectory(fs billy.Filesystem, dirname string, knownRepositories []string, LogCollection *observability.LogCollection) map[string]*RuleSet {
 	rulesets := make(map[string]*RuleSet)
 
 	exist, err := utils.Exists(fs, dirname)
@@ -247,7 +250,7 @@ func ReadRuleSetDirectory(fs billy.Filesystem, dirname string, LogCollection *ob
 		if err != nil {
 			LogCollection.AddError(err)
 		} else {
-			err := ruleset.Validate(filepath.Join(dirname, e.Name()))
+			err := ruleset.Validate(filepath.Join(dirname, e.Name()), knownRepositories)
 			if err != nil {
 				LogCollection.AddError(err)
 			} else {
@@ -317,7 +320,7 @@ func ValidateRulesetDefinition(r *RuleSetDefinition, filename string) error {
 	return nil
 }
 
-func (r *RuleSet) Validate(filename string) error {
+func (r *RuleSet) Validate(filename string, knownRepositories []string) error {
 
 	if r.ApiVersion != "v1" {
 		return fmt.Errorf("invalid apiVersion: %s for ruleset filename %s", r.ApiVersion, filename)
@@ -383,6 +386,16 @@ func (r *RuleSet) Validate(filename string) error {
 		_, err := regexp.Compile(fmt.Sprintf("^%s$", repo))
 		if err != nil {
 			return fmt.Errorf("error compiling regex %s: %v", repo, err)
+		}
+	}
+
+	if knownRepositories != nil {
+		matched, err := r.BuildRepositoriesList(knownRepositories)
+		if err != nil {
+			return err
+		}
+		if len(matched) == 0 {
+			return fmt.Errorf("spec.repositories must match at least one known repository for ruleset filename %s", filename)
 		}
 	}
 
