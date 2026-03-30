@@ -489,66 +489,68 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 				CompareEntities(lRepo.Environments.GetEntity(), rRepo.Environments.GetEntity(), compareEnvironments, onEnvironmentAdded, onEnvironmentRemoved, onEnvironmentChange)
 			}
 
-			//
-			// Reconcile custom properties
-			//
-			if lRepo.CustomProperties != nil || rRepo.CustomProperties != nil {
-				// first let's remove the custom properties that are not defined in the organization custom properties
-				var localCustomProperties map[string]interface{}
-				if lRepo.CustomProperties != nil {
-					localCustomProperties = make(map[string]interface{})
-					for propName, localValue := range lRepo.CustomProperties {
-						// check if the property is defined in the organization custom properties
-						found := false
-						for _, orgProp := range r.repoconfig.OrgCustomProperties {
-							if orgProp.PropertyName == propName {
-								found = true
-								break
+			if manageOrgCustomProperties {
+				//
+				// Reconcile custom properties
+				//
+				if lRepo.CustomProperties != nil || rRepo.CustomProperties != nil {
+					// first let's remove the custom properties that are not defined in the organization custom properties
+					var localCustomProperties map[string]interface{}
+					if lRepo.CustomProperties != nil {
+						localCustomProperties = make(map[string]interface{})
+						for propName, localValue := range lRepo.CustomProperties {
+							// check if the property is defined in the organization custom properties
+							found := false
+							for _, orgProp := range r.repoconfig.OrgCustomProperties {
+								if orgProp.PropertyName == propName {
+									found = true
+									break
+								}
+							}
+							if found {
+								normalizedValue := normalizePropertyValue(localValue)
+								// bug (or feature?) an empty string is not saved in Github
+								if normalizedValue != "" {
+									localCustomProperties[propName] = normalizedValue
+								}
+							} else {
+								logsCollector.AddWarn(fmt.Errorf("custom property %s is defined in the repository %s but not in the organization custom properties", propName, reponame))
 							}
 						}
-						if found {
-							normalizedValue := normalizePropertyValue(localValue)
-							// bug (or feature?) an empty string is not saved in Github
-							if normalizedValue != "" {
-								localCustomProperties[propName] = normalizedValue
+						// we add the default values for the custom properties that are not defined in the repository custom properties
+						for _, orgProperty := range r.repoconfig.OrgCustomProperties {
+							if _, ok := localCustomProperties[orgProperty.PropertyName]; !ok {
+								if orgProperty.DefaultValue != "" {
+									localCustomProperties[orgProperty.PropertyName] = normalizePropertyValue(orgProperty.DefaultValue)
+								}
 							}
-						} else {
-							logsCollector.AddWarn(fmt.Errorf("custom property %s is defined in the repository %s but not in the organization custom properties", propName, reponame))
 						}
 					}
-					// we add the default values for the custom properties that are not defined in the repository custom properties
-					for _, orgProperty := range r.repoconfig.OrgCustomProperties {
-						if _, ok := localCustomProperties[orgProperty.PropertyName]; !ok {
-							if orgProperty.DefaultValue != "" {
-								localCustomProperties[orgProperty.PropertyName] = normalizePropertyValue(orgProperty.DefaultValue)
-							}
-						}
-					}
-				}
 
-				// if the custom properties are different, we need to update the remote repository
-				if !utils.DeepEqualUnordered(localCustomProperties, rRepo.CustomProperties) {
-					remoteProperties := make(map[string]interface{})
-					if rRepo.CustomProperties != nil {
-						for propName, remoteValue := range rRepo.CustomProperties {
-							remoteProperties[propName] = normalizePropertyValue(remoteValue)
+					// if the custom properties are different, we need to update the remote repository
+					if !utils.DeepEqualUnordered(localCustomProperties, rRepo.CustomProperties) {
+						remoteProperties := make(map[string]interface{})
+						if rRepo.CustomProperties != nil {
+							for propName, remoteValue := range rRepo.CustomProperties {
+								remoteProperties[propName] = normalizePropertyValue(remoteValue)
+							}
 						}
-					}
-					localProperties := make(map[string]interface{})
-					for propName, localValue := range localCustomProperties {
-						localProperties[propName] = normalizePropertyValue(localValue)
-					}
-					// check first for added or updated properties
-					for propName, localValue := range localProperties {
-						remoteValue, exists := remoteProperties[propName]
-						if !exists || !utils.DeepEqualUnordered(localValue, remoteValue) {
-							r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, localValue)
+						localProperties := make(map[string]interface{})
+						for propName, localValue := range localCustomProperties {
+							localProperties[propName] = normalizePropertyValue(localValue)
 						}
-						delete(remoteProperties, propName)
-					}
-					// check for removed properties
-					for propName := range remoteProperties {
-						r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, nil)
+						// check first for added or updated properties
+						for propName, localValue := range localProperties {
+							remoteValue, exists := remoteProperties[propName]
+							if !exists || !utils.DeepEqualUnordered(localValue, remoteValue) {
+								r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, localValue)
+							}
+							delete(remoteProperties, propName)
+						}
+						// check for removed properties
+						for propName := range remoteProperties {
+							r.UpdateRepositoryCustomProperties(ctx, logsCollector, dryrun, remote, reponame, propName, nil)
+						}
 					}
 				}
 			}
