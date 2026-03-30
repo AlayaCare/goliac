@@ -960,9 +960,6 @@ func (g *GoliacLocalImpl) loadUsers(fs billy.Filesystem, LogCollection *observab
 	// Parse all the users in the <orgDirectory>/external-users directory
 	externalUsers := entity.ReadUserDirectory(fs, filepath.Join("users", "external"), LogCollection)
 	g.externalUsers = externalUsers
-
-	rulesets := entity.ReadRuleSetDirectory(fs, filepath.Join("rulesets"), LogCollection)
-	g.rulesets = rulesets
 }
 
 /**
@@ -992,7 +989,11 @@ func (g *GoliacLocalImpl) LoadAndValidateLocal(fs billy.Filesystem, LogCollectio
 	repos := entity.ReadRepositories(fs, "archived", "teams", g.teams, g.externalUsers, g.users, g.repoconfig.OrgCustomProperties, LogCollection)
 	g.repositories = repos
 
-	rulesets := entity.ReadRuleSetDirectory(fs, "rulesets", LogCollection)
+	repoNames := make([]string, 0, len(g.repositories))
+	for name := range g.repositories {
+		repoNames = append(repoNames, name)
+	}
+	rulesets := entity.ReadRuleSetDirectory(fs, "rulesets", repoNames, LogCollection)
 	g.rulesets = rulesets
 
 	workflows := entity.ReadWorkflowDirectory(fs, "workflows", LogCollection)
