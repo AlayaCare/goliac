@@ -4161,6 +4161,10 @@ func (g *GoliacRemoteImpl) UpdateRepositoryTopics(ctx context.Context, logsColle
 	}
 	g.actionMutex.Unlock()
 
+	if topics == nil {
+		topics = []string{}
+	}
+
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
 			ctx,
