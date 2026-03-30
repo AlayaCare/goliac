@@ -66,12 +66,40 @@ func TestRuleset(t *testing.T) {
 		fixtureCreateRuleSet(t, fs)
 
 		logsCollector := observability.NewLogCollection()
-		rulesets := ReadRuleSetDirectory(fs, "rulesets", logsCollector)
+		rulesets := ReadRuleSetDirectory(fs, "rulesets", nil, logsCollector)
 		assert.Equal(t, false, logsCollector.HasErrors())
 		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, rulesets)
 		assert.Equal(t, 2, len(rulesets))
 
+	})
+
+	t.Run("spec.repositories must match at least one known repository", func(t *testing.T) {
+		fs := memfs.New()
+		fs.MkdirAll("rulesets", 0755)
+		err := utils.WriteFile(fs, "rulesets/nomatch.yaml", []byte(`
+apiVersion: v1
+kind: Ruleset
+name: nomatch
+spec:
+  repositories:
+    included:
+      - "^only-this-name$"
+  ruleset:
+    enforcement: evaluate
+    conditions:
+      include:
+        - "~DEFAULT_BRANCH"
+    rules:
+      - ruletype: pull_request
+        parameters:
+          requiredApprovingReviewCount: 1
+`), 0644)
+		assert.Nil(t, err)
+
+		logsCollector := observability.NewLogCollection()
+		ReadRuleSetDirectory(fs, "rulesets", []string{"other-repo"}, logsCollector)
+		assert.True(t, logsCollector.HasErrors())
 	})
 }
 
@@ -84,7 +112,7 @@ func TestRulesetParametersComparison(t *testing.T) {
 		fixtureCreateRuleSet(t, fs)
 
 		logsCollector := observability.NewLogCollection()
-		rulesets := ReadRuleSetDirectory(fs, "rulesets", logsCollector)
+		rulesets := ReadRuleSetDirectory(fs, "rulesets", nil, logsCollector)
 		assert.Equal(t, false, logsCollector.HasErrors())
 		assert.Equal(t, false, logsCollector.HasWarns())
 		assert.NotNil(t, rulesets)
