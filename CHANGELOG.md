@@ -1,9 +1,17 @@
+## Goliac v1.8.2
+
+- bugfix: repository topics update no longer returns HTTP 422 when `topics` is omitted in the repository definition (send an empty JSON array instead of `null` for GitHub’s replace-topics API)
+
+## Goliac v1.8.1
+
+- manage_org_custom_properties bugfix (it was not fully taken into account)
+
 ## Goliac v1.8.0
 
 - configure GitHub Actions environments/variables, repository autolinks, and organization custom properties via `goliac.yaml` under `features` instead of environment variables
 - **Breaking / migration:** remove `GOLIAC_MANAGE_GITHUB_ACTIONS_VARIABLES`, `GOLIAC_MANAGE_GITHUB_AUTOLINKS`, and `GOLIAC_MANAGE_ORG_CUSTOM_PROPERTIES` from your deployment; set `features.manage_github_env_and_variables`, `features.manage_github_autolinks`, and `features.manage_org_custom_properties` in `goliac.yaml`. If the `features` block is omitted, all three still default to `true` (same as the former env defaults)
 - plan/apply loads `goliac.yaml` before warming the GitHub remote cache so those flags apply to the first load
-0 update the documentation regarding Github ruleset integration issues
+- update the documentation regarding Github ruleset integration issues
 
 ## Goliac v1.7.2
 
