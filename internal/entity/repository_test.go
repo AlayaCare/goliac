@@ -383,8 +383,8 @@ func TestGenerateCodeownersContent(t *testing.T) {
 		repo := &Repository{}
 		repo.Spec.CodeownersRaw = "/vendor/ @external-user\n/docs/ @myorg/docs-team"
 		content := repo.GenerateCodeownersContent("myorg")
-		// sorted by pattern length: /docs/ (7) < /vendor/ (9)
-		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n/docs/ @myorg/docs-team\n/vendor/ @external-user\n"
+		// preserves codeowners_raw source order
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n/vendor/ @external-user\n/docs/ @myorg/docs-team\n"
 		assert.Equal(t, expected, content)
 	})
 
@@ -392,23 +392,23 @@ func TestGenerateCodeownersContent(t *testing.T) {
 		repo := &Repository{}
 		repo.Spec.Codeowners = []RepositoryCodeownersEntry{
 			{Pattern: "*", Owners: []string{"sre"}},
-			{Pattern: "ac-live-data/", Owners: []string{"data-team"}},
+			{Pattern: "services/api/", Owners: []string{"api-team"}},
 		}
 		repo.Spec.CodeownersRaw = "/vendor/ @external-user"
 		content := repo.GenerateCodeownersContent("myorg")
-		// merged then sorted: * (1), /vendor/ (9), ac-live-data/ (13)
-		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n* @myorg/sre\n/vendor/ @external-user\nac-live-data/ @myorg/data-team\n"
+		// structured entries first (YAML order), then raw rule lines in source order
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n* @myorg/sre\nservices/api/ @myorg/api-team\n/vendor/ @external-user\n"
 		assert.Equal(t, expected, content)
 	})
 
-	t.Run("sorts merged rules by pattern length", func(t *testing.T) {
+	t.Run("preserves structured then raw rule order", func(t *testing.T) {
 		repo := &Repository{}
 		repo.Spec.Codeowners = []RepositoryCodeownersEntry{
 			{Pattern: "/zz/long/", Owners: []string{"a"}},
 		}
 		repo.Spec.CodeownersRaw = "* @x\n/foo/ @y"
 		content := repo.GenerateCodeownersContent("myorg")
-		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n* @x\n/foo/ @y\n/zz/long/ @myorg/a\n"
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n/zz/long/ @myorg/a\n* @x\n/foo/ @y\n"
 		assert.Equal(t, expected, content)
 	})
 
@@ -419,7 +419,8 @@ func TestGenerateCodeownersContent(t *testing.T) {
 /long/path/ @a
 * @b`
 		content := repo.GenerateCodeownersContent("myorg")
-		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n# not a rule\n# second comment\n\n* @b\n/long/path/ @a\n"
+		// rule lines keep codeowners_raw order (GitHub: last match wins — authors order rules accordingly)
+		expected := "# DO NOT MODIFY THIS FILE MANUALLY\n# This file is managed by Goliac\n\n# not a rule\n# second comment\n\n/long/path/ @a\n* @b\n"
 		assert.Equal(t, expected, content)
 	})
 
@@ -604,8 +605,8 @@ kind: Repository
 name: repo1
 spec:
   codeowners_raw: |
-    * @AlayaCare/team-badwolf
-    ac-live-data/ @AlayaCare/team-sphinx
+    * @example-org/platform-team
+    infra/data/ @example-org/data-team
 `), 0644)
 		assert.Nil(t, err)
 
