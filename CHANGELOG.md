@@ -1,4 +1,10 @@
+## Goliac v1.8.4
+
+- validation improvement: validate ruleset repositories presence
+- bugfix: do not reorder CODEOWNERS
+
 ## Goliac v1.8.3
+
 - bugfix: validate correctly rulesets when the repository is not defined in the ruleset
 
 ## Goliac v1.8.2
