@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/go-git/go-billy/v5"
@@ -460,26 +459,13 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 	return nil
 }
 
-// codeownersPatternField returns the first field of a CODEOWNERS rule line (the path/pattern).
-// Comment and empty lines yield an empty string.
-func codeownersPatternField(line string) string {
-	line = strings.TrimSpace(line)
-	if line == "" || strings.HasPrefix(line, "#") {
-		return ""
-	}
-	fields := strings.Fields(line)
-	if len(fields) == 0 {
-		return ""
-	}
-	return fields[0]
-}
-
 // GenerateCodeownersContent generates the CODEOWNERS file content from structured spec.codeowners
 // and/or codeowners_raw. Team names in structured entries resolve to @org/team-slug.
 // Structured and raw rule lines are merged; comment lines from raw (lines whose trimmed content
-// starts with #) are emitted after the Goliac header and before rule lines. Rule lines are sorted
-// by ascending length of the path/pattern (first field), stable for ties. codeowners_raw rule lines
-// are not validated.
+// starts with #) are emitted after the Goliac header and before rule lines. Rule line order is
+// preserved: all structured entries in YAML order, then all codeowners_raw rule lines in source
+// order. This matches GitHub semantics where the last matching pattern wins — authors must order
+// rules accordingly. codeowners_raw rule lines are not validated.
 // Returns empty string if neither codeowners nor codeowners_raw are defined.
 func (r *Repository) GenerateCodeownersContent(githubOrganization string) string {
 	hasStructured := len(r.Spec.Codeowners) > 0
@@ -520,12 +506,6 @@ func (r *Repository) GenerateCodeownersContent(githubOrganization string) string
 			}
 		}
 	}
-
-	sort.SliceStable(ruleLines, func(i, j int) bool {
-		pi := codeownersPatternField(ruleLines[i])
-		pj := codeownersPatternField(ruleLines[j])
-		return len(pi) < len(pj)
-	})
 
 	var sb strings.Builder
 	sb.WriteString("# DO NOT MODIFY THIS FILE MANUALLY\n")
