@@ -908,6 +908,17 @@ func TestGoliacLocalImpl(t *testing.T) {
 	})
 }
 
+func TestGoliacLocalImplRepositoryInWorkflow(t *testing.T) {
+	w := &entity.Workflow{}
+	w.Spec.Repositories.Allowed = []string{"svc-.*"}
+
+	g := &GoliacLocalImpl{
+		workflows: map[string]*entity.Workflow{"fm": w},
+	}
+	assert.True(t, g.RepositoryInWorkflow("svc-api"))
+	assert.False(t, g.RepositoryInWorkflow("other"))
+}
+
 type UserSyncPluginMock struct {
 }
 

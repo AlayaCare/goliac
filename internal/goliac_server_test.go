@@ -46,6 +46,11 @@ func (g *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 func (g *GoliacLocalMock) Workflows() map[string]*entity.Workflow {
 	return g.workflows
 }
+
+func (g *GoliacLocalMock) RepositoryInWorkflow(repository string) bool {
+	return false
+}
+
 func (g *GoliacLocalMock) RepoConfig() *config.RepositoryConfig {
 	return g.repoconfig
 }
