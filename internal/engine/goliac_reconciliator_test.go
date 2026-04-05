@@ -65,6 +65,11 @@ func (m *GoliacLocalMock) RuleSets() map[string]*entity.RuleSet {
 func (m *GoliacLocalMock) Workflows() map[string]*entity.Workflow {
 	return m.workflows
 }
+
+func (m *GoliacLocalMock) RepositoryInWorkflow(repository string) bool {
+	return false
+}
+
 func (m *GoliacLocalMock) UpdateAndCommitCodeOwners(ctx context.Context, repoconfig *config.RepositoryConfig, dryrun bool, accesstoken string, branch string, tagname string, githubOrganization string) error {
 	return nil
 }
@@ -489,7 +494,7 @@ func TestReconciliationTeam(t *testing.T) {
 			appids:     make(map[string]*GithubApp),
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		lTeams, _, _ := localDatasource.Teams()
@@ -542,7 +547,7 @@ func TestReconciliationTeam(t *testing.T) {
 			appids:     make(map[string]*GithubApp),
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -608,7 +613,7 @@ func TestReconciliationTeam(t *testing.T) {
 		}
 		remote.teams["existing"+config.Config.GoliacTeamOwnerSuffix] = existingowners
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -675,7 +680,7 @@ func TestReconciliationTeam(t *testing.T) {
 		}
 		remote.teams["exist-ing"+config.Config.GoliacTeamOwnerSuffix] = existingowners
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -727,7 +732,7 @@ func TestReconciliationTeam(t *testing.T) {
 			appids:     make(map[string]*GithubApp),
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -769,7 +774,7 @@ func TestReconciliationTeam(t *testing.T) {
 		}
 		remote.teams["removing"] = removing
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -847,7 +852,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remote.teams["childteam"] = childTeam
 		remote.teams["childteam"+config.Config.GoliacTeamOwnerSuffix] = childTeamOwners
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -929,7 +934,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remote.teams["childteam"] = childTeam
 		remote.teams["childteam"+config.Config.GoliacTeamOwnerSuffix] = childTeamOwners
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1043,7 +1048,7 @@ func TestReconciliationTeam(t *testing.T) {
 		remote.teams["grandchildteam"] = grandChildTeam
 		remote.teams["grandchildteam"+config.Config.GoliacTeamOwnerSuffix] = grandChildTeamOwners
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1080,7 +1085,7 @@ func TestReconciliationTeam(t *testing.T) {
 		}
 		remote.teams["removing"] = removing
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1126,7 +1131,7 @@ func TestReconciliationRepo(t *testing.T) {
 			RepositoryVariables: NewMockMappedEntityLazyLoader[string](map[string]string{}),
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1185,7 +1190,7 @@ func TestReconciliationRepo(t *testing.T) {
 		}
 		remote.teams["existing"] = existing
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1254,7 +1259,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "READ",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1329,7 +1334,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1415,7 +1420,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "ADMIN",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1505,7 +1510,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1584,7 +1589,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1672,7 +1677,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1763,7 +1768,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1846,7 +1851,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -1926,7 +1931,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2003,7 +2008,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2083,7 +2088,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2162,7 +2167,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2247,7 +2252,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2291,7 +2296,7 @@ func TestReconciliationRepo(t *testing.T) {
 		}
 		remote.repos["removing"] = removing
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2331,7 +2336,7 @@ func TestReconciliationRepo(t *testing.T) {
 		}
 		remote.repos["removing"] = removing
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2372,7 +2377,7 @@ func TestReconciliationRepo(t *testing.T) {
 		}
 		remote.repos["removing"] = removing
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2514,7 +2519,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "goliac-teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "goliac-teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2663,7 +2668,7 @@ func TestReconciliationRepo(t *testing.T) {
 			Permission: "WRITE",
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "goliac-teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "goliac-teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2719,7 +2724,7 @@ func TestReconciliationRulesets(t *testing.T) {
 			appids:     make(map[string]*GithubApp),
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2768,7 +2773,7 @@ func TestReconciliationRulesets(t *testing.T) {
 			appids:     make(map[string]*GithubApp),
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2825,7 +2830,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		rRuleset.Rules["required_signatures"] = entity.RuleSetParameters{}
 		remote.rulesets["update"] = rRuleset
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2872,7 +2877,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		rRuleset.Rules["required_signatures"] = entity.RuleSetParameters{}
 		remote.rulesets["delete"] = rRuleset
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -2941,7 +2946,7 @@ func TestReconciliationRulesets(t *testing.T) {
 		rRuleset.BypassTeams["ateam"] = "pull_request"
 		remote.rulesets["new"] = rRuleset
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3047,7 +3052,7 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 
 		remote.repos["myrepo"] = myrepo
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3137,7 +3142,7 @@ func TestReconciliationRepoRulesets(t *testing.T) {
 
 		remote.repos["myrepo"] = myrepo
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3229,7 +3234,7 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 
 		remote.repos["myrepo"] = myrepo
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3313,7 +3318,7 @@ func TestReconciliationRepoBranchProtection(t *testing.T) {
 
 		remote.repos["myrepo"] = myrepo
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3371,7 +3376,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 		}
 		remote.repos["test-repo"] = remoteRepo
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3426,7 +3431,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 		}
 		remote.repos["test-repo"] = remoteRepo
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3488,7 +3493,7 @@ func TestReconciliationRepositoryEnvironments(t *testing.T) {
 		}
 		remote.repos["test-repo"] = remoteRepo
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3545,7 +3550,7 @@ func TestReconciliationAutolinks(t *testing.T) {
 		}
 		remote.repos["test-repo"] = remoteRepo
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3600,7 +3605,7 @@ func TestReconciliationAutolinks(t *testing.T) {
 		}
 		remote.repos["test-repo"] = remoteRepo
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3656,7 +3661,7 @@ func TestReconciliationAutolinks(t *testing.T) {
 		}
 		remote.repos["test-repo"] = remoteRepo
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3709,7 +3714,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 			appids:     make(map[string]*GithubApp),
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3775,7 +3780,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 			},
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3821,7 +3826,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 			},
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3870,7 +3875,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 			},
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()
@@ -3921,7 +3926,7 @@ func TestReconciliationCustomProperties(t *testing.T) {
 			appids:     make(map[string]*GithubApp),
 		}
 
-		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf)
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "teams", "main", true, &repoconf, "")
 		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
 
 		logsCollector := observability.NewLogCollection()

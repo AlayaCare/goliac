@@ -1,3 +1,7 @@
+## Goliac v1.8.5
+
+- improvement: add Goliac app on repositories branch protection bypass when the repository is part of a workflow
+
 ## Goliac v1.8.4
 
 - validation improvement: validate ruleset repositories presence

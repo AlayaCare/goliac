@@ -33,6 +33,8 @@ type WorkflowLocalResource interface {
 	Workflows() map[string]*entity.Workflow
 	Teams() map[string]*entity.Team
 	Users() map[string]*entity.User // github username, user definition
+	// RepositoryInWorkflow is true if the repository matches at least one loaded workflow's repository scope.
+	RepositoryInWorkflow(repository string) bool
 }
 
 // strip down version of Goliac Remote (if we have an externally managed team)
@@ -167,33 +169,10 @@ func (ws *WorkflowServiceImpl) GetWorkflow(ctx context.Context, repoconfigForceM
 }
 
 func (ws *WorkflowServiceImpl) passAcl(w *entity.Workflow, username string, usernameTeams []string, repository string) (bool, error) {
-	// checking the repository name
-	repoMatch := false
-	for _, repo := range w.Spec.Repositories.Allowed {
-		if repo == "~ALL" {
-			repoMatch = true
-			break
-		}
-		repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
-		if err != nil {
-			return false, err
-		}
-		if repoRegex {
-			repoMatch = true
-			break
-		}
+	repoMatch, err := w.AppliesToRepository(repository)
+	if err != nil {
+		return false, err
 	}
-
-	for _, repo := range w.Spec.Repositories.Except {
-		repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
-		if err != nil {
-			return false, err
-		}
-		if repoRegex {
-			return false, nil
-		}
-	}
-
 	if !repoMatch {
 		return false, nil
 	}

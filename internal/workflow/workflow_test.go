@@ -18,6 +18,11 @@ type LocalResourceMock struct {
 func (m *LocalResourceMock) Workflows() map[string]*entity.Workflow {
 	return m.MockWorkflows
 }
+
+func (m *LocalResourceMock) RepositoryInWorkflow(repository string) bool {
+	return false
+}
+
 func (m *LocalResourceMock) Teams() map[string]*entity.Team {
 	return m.LTeams
 }
