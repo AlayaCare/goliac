@@ -1,4 +1,9 @@
+## Goliac v1.8.7
+
+- bugfix: add Goliac app on repositories branch protection bypass when the repository is part of a workflow and if a CODEOWNER review is required
+
 ## Goliac v1.8.6
+
 - bugfix: retry branch protection mutation with PAT when the integration error is returned
 - validation improvement: validate when the required status checks are defined, at least one is required
 
