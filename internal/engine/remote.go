@@ -2738,6 +2738,10 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 					"context": s,
 				})
 			}
+			if len(statusChecks) == 0 {
+				logrus.Warnf("skipping required_status_checks rule in ruleset %q: GitHub requires at least one status check context", ruleset.Name)
+				break
+			}
 			rules = append(rules, map[string]interface{}{
 				"type": "required_status_checks",
 				"parameters": map[string]interface{}{

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goliac-project/goliac/internal/entity"
 	"github.com/goliac-project/goliac/internal/github"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/yaml.v3"
@@ -737,5 +738,22 @@ repositories:
 		assert.Equal(t, 1, len(payload["bypass_actors"].([]map[string]interface{})))
 		// Github API uses refs/heads/ as prefix
 		assert.Equal(t, "refs/heads/main", payload["conditions"].(map[string]interface{})["ref_name"].(map[string]interface{})["include"].([]string)[0])
+	})
+
+	t.Run("omits required_status_checks when no contexts (API hardening)", func(t *testing.T) {
+		ghClient := MockGithubClient{}
+		g := NewGoliacRemoteImpl(&ghClient, "myorg", true, true, true)
+		ruleset := GithubRuleSet{
+			Name:        "ruleset-empty-checks",
+			Enforcement: "evaluate",
+			Rules: map[string]entity.RuleSetParameters{
+				"required_status_checks": {
+					RequiredStatusChecks: []string{},
+				},
+			},
+		}
+		payload := g.prepareRuleset(&ruleset)
+		rules := payload["rules"].([]map[string]interface{})
+		assert.Empty(t, rules)
 	})
 }

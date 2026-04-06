@@ -129,3 +129,48 @@ func TestRulesetParametersComparison(t *testing.T) {
 		assert.Equal(t, "disabled", rulesets["ruleset2"].Spec.Ruleset.Enforcement)
 	})
 }
+
+func TestValidateRulesetDefinitionRequiredStatusChecks(t *testing.T) {
+	ruleType := []struct {
+		Ruletype   string
+		Parameters RuleSetParameters `yaml:"parameters,omitempty"`
+	}{
+		{Ruletype: "required_status_checks", Parameters: RuleSetParameters{RequiredStatusChecks: nil}},
+	}
+	def := RuleSetDefinition{Enforcement: "evaluate", Rules: ruleType}
+
+	t.Run("nil requiredStatusChecks fails", func(t *testing.T) {
+		err := ValidateRulesetDefinition(&def, "repo.yaml")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "requiredStatusChecks")
+	})
+
+	t.Run("empty slice requiredStatusChecks fails", func(t *testing.T) {
+		def2 := RuleSetDefinition{
+			Enforcement: "evaluate",
+			Rules: []struct {
+				Ruletype   string
+				Parameters RuleSetParameters `yaml:"parameters,omitempty"`
+			}{
+				{Ruletype: "required_status_checks", Parameters: RuleSetParameters{RequiredStatusChecks: []string{}}},
+			},
+		}
+		err := ValidateRulesetDefinition(&def2, "repo.yaml")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "requiredStatusChecks")
+	})
+
+	t.Run("at least one context passes", func(t *testing.T) {
+		def3 := RuleSetDefinition{
+			Enforcement: "evaluate",
+			Rules: []struct {
+				Ruletype   string
+				Parameters RuleSetParameters `yaml:"parameters,omitempty"`
+			}{
+				{Ruletype: "required_status_checks", Parameters: RuleSetParameters{RequiredStatusChecks: []string{"ci"}}},
+			},
+		}
+		err := ValidateRulesetDefinition(&def3, "repo.yaml")
+		assert.NoError(t, err)
+	})
+}

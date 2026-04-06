@@ -1,5 +1,6 @@
 ## Goliac v1.8.6
 - bugfix: retry branch protection mutation with PAT when the integration error is returned
+- validation improvement: validate when the required status checks are defined, at least one is required
 
 ## Goliac v1.8.5
 
