@@ -24,7 +24,7 @@ func TestGoliacReconciliatorDatasourceLocalWorkflowBypassInjection(t *testing.T)
 
 	repo := &entity.Repository{}
 	repo.Spec.BranchProtections = []entity.RepositoryBranchProtection{
-		{Pattern: "main", RequiresApprovingReviews: true},
+		{Pattern: "main", RequiresApprovingReviews: true, RequiresCodeOwnerReviews: true},
 	}
 	local.repositories["myrepo"] = repo
 
