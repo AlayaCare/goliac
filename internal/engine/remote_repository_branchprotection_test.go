@@ -2,9 +2,11 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
+	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,21 +16,29 @@ type AddBranchProtectionMockClient struct {
 	// Track calls to verify test behavior
 	lastGraphQLQuery string
 	lastVariables    map[string]interface{}
+	lastGithubToken  *string
 
 	// Configure mock responses
 	shouldError  bool
 	errorMessage string
 	responseBody string
+	callCount    int
+	responses    []string
 }
 
 func (m *AddBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.lastGraphQLQuery = query
 	m.lastVariables = variables
+	m.lastGithubToken = githubToken
+	i := m.callCount
+	m.callCount++
 
 	if m.shouldError {
 		return []byte(m.errorMessage), errors.New(m.errorMessage)
 	}
-
+	if len(m.responses) > 0 && i < len(m.responses) {
+		return []byte(m.responses[i]), nil
+	}
 	if m.responseBody != "" {
 		return []byte(m.responseBody), nil
 	}
@@ -280,21 +290,29 @@ type DeleteBranchProtectionMockClient struct {
 	// Track calls to verify test behavior
 	lastGraphQLQuery string
 	lastVariables    map[string]interface{}
+	lastGithubToken  *string
 
 	// Configure mock responses
 	shouldError  bool
 	errorMessage string
 	responseBody string
+	callCount    int
+	responses    []string
 }
 
 func (m *DeleteBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.lastGraphQLQuery = query
 	m.lastVariables = variables
+	m.lastGithubToken = githubToken
+	i := m.callCount
+	m.callCount++
 
 	if m.shouldError {
 		return []byte(m.errorMessage), errors.New(m.errorMessage)
 	}
-
+	if len(m.responses) > 0 && i < len(m.responses) {
+		return []byte(m.responses[i]), nil
+	}
 	if m.responseBody != "" {
 		return []byte(m.responseBody), nil
 	}
@@ -557,21 +575,29 @@ type UpdateBranchProtectionMockClient struct {
 	// Track calls to verify test behavior
 	lastGraphQLQuery string
 	lastVariables    map[string]interface{}
+	lastGithubToken  *string
 
 	// Configure mock responses
 	shouldError  bool
 	errorMessage string
 	responseBody string
+	callCount    int
+	responses    []string
 }
 
 func (m *UpdateBranchProtectionMockClient) QueryGraphQLAPI(ctx context.Context, query string, variables map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.lastGraphQLQuery = query
 	m.lastVariables = variables
+	m.lastGithubToken = githubToken
+	i := m.callCount
+	m.callCount++
 
 	if m.shouldError {
 		return []byte(m.errorMessage), errors.New(m.errorMessage)
 	}
-
+	if len(m.responses) > 0 && i < len(m.responses) {
+		return []byte(m.responses[i]), nil
+	}
 	if m.responseBody != "" {
 		return []byte(m.responseBody), nil
 	}
@@ -860,5 +886,207 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 
 		// Verify the branch protection remains unchanged in the cache
 		assert.Equal(t, originalBranchProtection, repo.BranchProtections["main"])
+	})
+}
+
+func TestQueryGraphQLBranchProtectionMutationPATRetry(t *testing.T) {
+	pat := "test-admin-pat"
+	savePAT := config.Config.GithubPersonalAccessToken
+	t.Cleanup(func() { config.Config.GithubPersonalAccessToken = savePAT })
+	config.Config.GithubPersonalAccessToken = pat
+
+	mockClient := &AddBranchProtectionMockClient{
+		responses: []string{
+			`{"errors":[{"message":"Resource not accessible by integration ([createBranchProtectionRule])","path":["createBranchProtectionRule"]}]}`,
+			`{"data":{"createBranchProtectionRule":{"branchProtectionRule":{"id":"BP_456"}}}}`,
+		},
+	}
+	remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+	ctx := context.TODO()
+	_, res, err := queryGraphQLBranchProtectionMutationWithPATRetry[GraphqlBranchProtectionRuleCreateMutationResponse](remoteImpl, ctx, createBranchProtectionRule, map[string]interface{}{
+		"repositoryId": "R_1",
+	})
+	assert.NoError(t, err)
+	assert.Empty(t, res.Errors)
+	assert.Equal(t, "BP_456", res.Data.CreateBranchProtectionRule.BranchProtectionRule.Id)
+	assert.Equal(t, 2, mockClient.callCount)
+	assert.NotNil(t, mockClient.lastGithubToken)
+	assert.Equal(t, pat, *mockClient.lastGithubToken)
+}
+
+func TestBranchProtectionGraphQLPATFallbackRetry(t *testing.T) {
+	pat := "test-admin-pat"
+	savePAT := config.Config.GithubPersonalAccessToken
+	t.Cleanup(func() { config.Config.GithubPersonalAccessToken = savePAT })
+
+	t.Run("Add retry with PAT after integration error", func(t *testing.T) {
+		config.Config.GithubPersonalAccessToken = pat
+		mockClient := &AddBranchProtectionMockClient{
+			responses: []string{
+				`{"errors":[{"message":"Resource not accessible by integration ([createBranchProtectionRule])","path":["createBranchProtectionRule"]}]}`,
+				`{"data":{"createBranchProtectionRule":{"branchProtectionRule":{"id":"BP_456"}}}}`,
+			},
+		}
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+		repo := &GithubRepository{
+			Name:              "test-repo",
+			Id:                123,
+			RefId:             "R_123",
+			BranchProtections: make(map[string]*GithubBranchProtection),
+		}
+		remoteImpl.repositories = map[string]*GithubRepository{"test-repo": repo}
+		bp := &GithubBranchProtection{Pattern: "main"}
+
+		ctx := context.TODO()
+		logsCollector := observability.NewLogCollection()
+		remoteImpl.AddRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", bp)
+
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 2, mockClient.callCount)
+		assert.NotNil(t, mockClient.lastGithubToken)
+		assert.Equal(t, pat, *mockClient.lastGithubToken)
+		assert.Equal(t, "BP_456", repo.BranchProtections["main"].Id)
+	})
+
+	t.Run("Update retry with PAT after integration error", func(t *testing.T) {
+		config.Config.GithubPersonalAccessToken = pat
+		mockClient := &UpdateBranchProtectionMockClient{
+			responses: []string{
+				`{"errors":[{"message":"Resource not accessible by integration ([updateBranchProtectionRule])","path":["updateBranchProtectionRule"]}]}`,
+				`{"data":{"updateBranchProtectionRule":{"branchProtectionRule":{"id":"BP_123"}}}}`,
+			},
+		}
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+		existing := &GithubBranchProtection{Id: "BP_123", Pattern: "main"}
+		repo := &GithubRepository{
+			Name:              "test-repo",
+			Id:                123,
+			RefId:             "R_123",
+			BranchProtections: map[string]*GithubBranchProtection{"main": existing},
+		}
+		remoteImpl.repositories = map[string]*GithubRepository{"test-repo": repo}
+		updated := &GithubBranchProtection{Id: "BP_123", Pattern: "main", RequiresApprovingReviews: true}
+
+		ctx := context.TODO()
+		logsCollector := observability.NewLogCollection()
+		remoteImpl.UpdateRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", updated)
+
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 2, mockClient.callCount)
+		assert.NotNil(t, mockClient.lastGithubToken)
+		assert.Equal(t, pat, *mockClient.lastGithubToken)
+	})
+
+	t.Run("Delete retry with PAT after integration error", func(t *testing.T) {
+		config.Config.GithubPersonalAccessToken = pat
+		mockClient := &DeleteBranchProtectionMockClient{
+			responses: []string{
+				`{"errors":[{"message":"Resource not accessible by integration ([deleteBranchProtectionRule])","path":["deleteBranchProtectionRule"]}]}`,
+				`{"data":{"deleteBranchProtectionRule":{"clientMutationId":"x"}}}`,
+			},
+		}
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+		bp := &GithubBranchProtection{Id: "BP_123", Pattern: "main"}
+		repo := &GithubRepository{
+			Name:              "test-repo",
+			Id:                123,
+			RefId:             "R_123",
+			BranchProtections: map[string]*GithubBranchProtection{"main": bp},
+		}
+		remoteImpl.repositories = map[string]*GithubRepository{"test-repo": repo}
+
+		ctx := context.TODO()
+		logsCollector := observability.NewLogCollection()
+		remoteImpl.DeleteRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", bp)
+
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 2, mockClient.callCount)
+		assert.NotNil(t, mockClient.lastGithubToken)
+		assert.Equal(t, pat, *mockClient.lastGithubToken)
+		assert.NotContains(t, repo.BranchProtections, "main")
+	})
+
+	t.Run("integration error without PAT does not retry", func(t *testing.T) {
+		config.Config.GithubPersonalAccessToken = ""
+		mockClient := &UpdateBranchProtectionMockClient{
+			responses: []string{
+				`{"errors":[{"message":"Resource not accessible by integration ([updateBranchProtectionRule])","path":["updateBranchProtectionRule"]}]}`,
+			},
+		}
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+		existing := &GithubBranchProtection{Id: "BP_123", Pattern: "main"}
+		repo := &GithubRepository{
+			Name:              "test-repo",
+			Id:                123,
+			RefId:             "R_123",
+			BranchProtections: map[string]*GithubBranchProtection{"main": existing},
+		}
+		remoteImpl.repositories = map[string]*GithubRepository{"test-repo": repo}
+		updated := &GithubBranchProtection{Id: "BP_123", Pattern: "main", RequiresApprovingReviews: true}
+
+		ctx := context.TODO()
+		logsCollector := observability.NewLogCollection()
+		remoteImpl.UpdateRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", updated)
+
+		assert.True(t, logsCollector.HasErrors())
+		assert.Equal(t, 1, mockClient.callCount)
+		assert.Nil(t, mockClient.lastGithubToken)
+		assert.Equal(t, existing, repo.BranchProtections["main"])
+	})
+
+	t.Run("non-integration GraphQL error does not retry with PAT", func(t *testing.T) {
+		config.Config.GithubPersonalAccessToken = pat
+		mockClient := &UpdateBranchProtectionMockClient{
+			responses: []string{
+				`{"errors":[{"message":"Invalid branch protection configuration","path":["updateBranchProtectionRule"]}]}`,
+			},
+		}
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+		existing := &GithubBranchProtection{Id: "BP_123", Pattern: "main"}
+		repo := &GithubRepository{
+			Name:              "test-repo",
+			Id:                123,
+			RefId:             "R_123",
+			BranchProtections: map[string]*GithubBranchProtection{"main": existing},
+		}
+		remoteImpl.repositories = map[string]*GithubRepository{"test-repo": repo}
+		updated := &GithubBranchProtection{Id: "BP_123", Pattern: "main", RequiresApprovingReviews: true}
+
+		ctx := context.TODO()
+		logsCollector := observability.NewLogCollection()
+		remoteImpl.UpdateRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", updated)
+
+		assert.True(t, logsCollector.HasErrors())
+		assert.Equal(t, 1, mockClient.callCount)
+		assert.Nil(t, mockClient.lastGithubToken)
+	})
+}
+
+func TestGraphqlBranchProtectionRuleMutationResponseUnmarshal(t *testing.T) {
+	t.Run("create success", func(t *testing.T) {
+		var res GraphqlBranchProtectionRuleCreateMutationResponse
+		err := json.Unmarshal([]byte(`{"data":{"createBranchProtectionRule":{"branchProtectionRule":{"id":"BP_1"}}}}`), &res)
+		assert.NoError(t, err)
+		assert.Equal(t, "BP_1", res.Data.CreateBranchProtectionRule.BranchProtectionRule.Id)
+	})
+	t.Run("update success", func(t *testing.T) {
+		var res GraphqlBranchProtectionRuleUpdateMutationResponse
+		err := json.Unmarshal([]byte(`{"data":{"updateBranchProtectionRule":{"branchProtectionRule":{"id":"BP_2"}}}}`), &res)
+		assert.NoError(t, err)
+		assert.Equal(t, "BP_2", res.Data.UpdateBranchProtectionRule.BranchProtectionRule.Id)
+	})
+	t.Run("delete success", func(t *testing.T) {
+		var res GraphqlBranchProtectionRuleDeleteMutationResponse
+		err := json.Unmarshal([]byte(`{"data":{"deleteBranchProtectionRule":{"clientMutationId":"x"}}}`), &res)
+		assert.NoError(t, err)
+		assert.NotNil(t, res.Data.DeleteBranchProtectionRule.ClientMutationId)
+		assert.Equal(t, "x", *res.Data.DeleteBranchProtectionRule.ClientMutationId)
+	})
+	t.Run("graphql error", func(t *testing.T) {
+		var res GraphqlBranchProtectionRuleUpdateMutationResponse
+		err := json.Unmarshal([]byte(`{"errors":[{"message":"oops","path":["updateBranchProtectionRule"]}]}`), &res)
+		assert.NoError(t, err)
+		assert.Len(t, res.Errors, 1)
+		assert.Equal(t, "oops", res.Errors[0].Message)
 	})
 }

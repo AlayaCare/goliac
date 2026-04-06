@@ -53,8 +53,8 @@ type GoliacRemote interface {
 
 	IsEnterprise() bool // check if we are on an Enterprise version, or if we are on GHES 3.11+
 
-	CountAssets(ctx context.Context, warmup bool) (int, error)         // return the number of (some) assets that will be loaded (to be used with the RemoteObservability/progress bar)
-	SetRemoteObservability(feedback observability.RemoteObservability) // if you want to get feedback on the loading process
+	CountAssets(ctx context.Context, warmup bool) (int, error)                                              // return the number of (some) assets that will be loaded (to be used with the RemoteObservability/progress bar)
+	SetRemoteObservability(feedback observability.RemoteObservability)                                      // if you want to get feedback on the loading process
 	SetFeatureFlags(manageGithubVariables bool, manageGithubAutolinks bool, manageOrgCustomProperties bool) // needed becasue we dont know at construction what are the values
 
 	RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*GithubVariable, error)
@@ -2738,6 +2738,10 @@ func (g *GoliacRemoteImpl) prepareRuleset(ruleset *GithubRuleSet) map[string]int
 					"context": s,
 				})
 			}
+			if len(statusChecks) == 0 {
+				logrus.Warnf("skipping required_status_checks rule in ruleset %q: GitHub requires at least one status check context", ruleset.Name)
+				break
+			}
 			rules = append(rules, map[string]interface{}{
 				"type": "required_status_checks",
 				"parameters": map[string]interface{}{
@@ -3065,22 +3069,103 @@ mutation createBranchProtectionRule(
   }
 }`
 
-type GraphqlBranchProtectionRuleCreationResponse struct {
+// GraphqlBranchProtectionMutationError is the shared GraphQL error object for branch protection mutations.
+type GraphqlBranchProtectionMutationError struct {
+	Path       []interface{} `json:"path"`
+	Extensions struct {
+		Code         string
+		ErrorMessage string
+	} `json:"extensions"`
+	Message string `json:"message"`
+}
+
+// GraphqlBranchProtectionRuleCreateMutationResponse is the response body for createBranchProtectionRule.
+type GraphqlBranchProtectionRuleCreateMutationResponse struct {
 	Data struct {
 		CreateBranchProtectionRule struct {
 			BranchProtectionRule struct {
-				Id string
-			}
+				Id string `json:"id"`
+			} `json:"branchProtectionRule"`
+		} `json:"createBranchProtectionRule"`
+	} `json:"data"`
+	Errors []GraphqlBranchProtectionMutationError `json:"errors"`
+}
+
+// GraphqlBranchProtectionRuleUpdateMutationResponse is the response body for updateBranchProtectionRule.
+type GraphqlBranchProtectionRuleUpdateMutationResponse struct {
+	Data struct {
+		UpdateBranchProtectionRule struct {
+			BranchProtectionRule struct {
+				Id string `json:"id"`
+			} `json:"branchProtectionRule"`
+		} `json:"updateBranchProtectionRule"`
+	} `json:"data"`
+	Errors []GraphqlBranchProtectionMutationError `json:"errors"`
+}
+
+// GraphqlBranchProtectionRuleDeleteMutationResponse is the response body for deleteBranchProtectionRule.
+type GraphqlBranchProtectionRuleDeleteMutationResponse struct {
+	Data struct {
+		DeleteBranchProtectionRule struct {
+			ClientMutationId *string `json:"clientMutationId"`
+		} `json:"deleteBranchProtectionRule"`
+	} `json:"data"`
+	Errors []GraphqlBranchProtectionMutationError `json:"errors"`
+}
+
+func graphqlErrorResourceNotAccessibleByIntegration(msg string) bool {
+	return strings.Contains(msg, "Resource not accessible by integration")
+}
+
+func branchProtectionMutationErrorsForPATRetry(v any) []GraphqlBranchProtectionMutationError {
+	switch x := v.(type) {
+	case *GraphqlBranchProtectionRuleCreateMutationResponse:
+		return x.Errors
+	case *GraphqlBranchProtectionRuleUpdateMutationResponse:
+		return x.Errors
+	case *GraphqlBranchProtectionRuleDeleteMutationResponse:
+		return x.Errors
+	default:
+		return nil
+	}
+}
+
+func shouldRetryBranchProtectionMutationWithPAT(res any) bool {
+	errs := branchProtectionMutationErrorsForPATRetry(res)
+	return len(errs) > 0 &&
+		graphqlErrorResourceNotAccessibleByIntegration(errs[0].Message) &&
+		config.Config.GithubPersonalAccessToken != ""
+}
+
+// queryGraphQLBranchProtectionMutationWithPATRetry runs a branch protection mutation with the installation token,
+// and retries once with GOLIAC_GITHUB_PERSONAL_ACCESS_TOKEN if GitHub returns Resource not accessible by integration.
+// It is a package-level generic function because Go does not allow type parameters on methods.
+func queryGraphQLBranchProtectionMutationWithPATRetry[T any](g *GoliacRemoteImpl, ctx context.Context, query string, variables map[string]interface{}) ([]byte, T, error) {
+	var zero T
+	body, err := g.client.QueryGraphQLAPI(ctx, query, variables, nil)
+	if err != nil {
+		return body, zero, err
+	}
+	var res T
+	if err = json.Unmarshal(body, &res); err != nil {
+		return body, res, err
+	}
+	if shouldRetryBranchProtectionMutationWithPAT(&res) {
+		logrus.Debugf("retrying branch protection GraphQL mutation with personal access token after integration error")
+		pat := config.Config.GithubPersonalAccessToken
+		body, err = g.client.QueryGraphQLAPI(ctx, query, variables, &pat)
+		if err != nil {
+			return body, zero, err
+		}
+		// Unmarshal into a fresh struct: json.Unmarshal does not clear fields missing from the second JSON,
+		// so a success body without "errors" would otherwise keep the first response's Errors slice.
+		res = zero
+		err = json.Unmarshal(body, &res)
+		if err != nil {
+			return body, res, err
 		}
 	}
-	Errors []struct {
-		Path       []interface{} `json:"path"`
-		Extensions struct {
-			Code         string
-			ErrorMessage string
-		} `json:"extensions"`
-		Message string
-	} `json:"errors"`
+	return body, res, nil
 }
 
 func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, branchprotection *GithubBranchProtection) {
@@ -3120,7 +3205,7 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, lo
 	}
 
 	if !dryrun {
-		body, err := g.client.QueryGraphQLAPI(
+		body, res, err := queryGraphQLBranchProtectionMutationWithPATRetry[GraphqlBranchProtectionRuleCreateMutationResponse](g,
 			ctx,
 			createBranchProtectionRule,
 			map[string]interface{}{
@@ -3141,17 +3226,9 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, lo
 				"allowsDeletions":                branchprotection.AllowsDeletions,
 				"bypassPullRequestActorIds":      bypassPullRequestActorIds,
 			},
-			nil,
 		)
 		if err != nil {
 			logsCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v. %s", reponame, err, string(body)))
-			return
-		}
-
-		var res GraphqlBranchProtectionRuleCreationResponse
-		err = json.Unmarshal(body, &res)
-		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to add branch protection to repository %s: %v", reponame, err))
 			return
 		}
 		if len(res.Errors) > 0 {
@@ -3265,7 +3342,7 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 		if statusCheckContexts == nil {
 			statusCheckContexts = []string{}
 		}
-		body, err := g.client.QueryGraphQLAPI(
+		body, res, err := queryGraphQLBranchProtectionMutationWithPATRetry[GraphqlBranchProtectionRuleUpdateMutationResponse](g,
 			ctx,
 			updateBranchProtectionRule,
 			map[string]interface{}{
@@ -3286,17 +3363,9 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 				"allowsDeletions":                branchprotection.AllowsDeletions,
 				"bypassPullRequestActorIds":      bypassPullRequestActorIds,
 			},
-			nil,
 		)
 		if err != nil {
 			logsCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v. %s", reponame, err, string(body)))
-			return
-		}
-
-		var res GraphqlBranchProtectionRuleCreationResponse
-		err = json.Unmarshal(body, &res)
-		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v", reponame, err))
 			return
 		}
 		if len(res.Errors) > 0 {
@@ -3345,23 +3414,15 @@ func (g *GoliacRemoteImpl) DeleteRepositoryBranchProtection(ctx context.Context,
 	}
 
 	if !dryrun {
-		body, err := g.client.QueryGraphQLAPI(
+		body, res, err := queryGraphQLBranchProtectionMutationWithPATRetry[GraphqlBranchProtectionRuleDeleteMutationResponse](g,
 			ctx,
 			deleteBranchProtectionRule,
 			map[string]interface{}{
 				"branchProtectionRuleId": branchprotection.Id,
 			},
-			nil,
 		)
 		if err != nil {
 			logsCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v. %s", reponame, err, string(body)))
-			return
-		}
-
-		var res GraphqlBranchProtectionRuleCreationResponse
-		err = json.Unmarshal(body, &res)
-		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to delete branch protection for repository %s: %v", reponame, err))
 			return
 		}
 		if len(res.Errors) > 0 {

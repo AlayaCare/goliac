@@ -311,6 +311,11 @@ func ValidateRulesetDefinition(r *RuleSetDefinition, filename string) error {
 				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: mergeMethod must be 'MERGE', 'REBASE' or 'SQUASH' ", rule.Ruletype, filename)
 			}
 		}
+		if rule.Ruletype == "required_status_checks" {
+			if len(rule.Parameters.RequiredStatusChecks) == 0 {
+				return fmt.Errorf("invalid ruletype: %s for ruleset filename %s: requiredStatusChecks must list at least one context (GitHub requires at least one status check)", rule.Ruletype, filename)
+			}
+		}
 	}
 
 	if r.Enforcement != "disabled" && r.Enforcement != "active" && r.Enforcement != "evaluate" {
