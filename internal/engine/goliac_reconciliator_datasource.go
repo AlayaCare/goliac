@@ -302,12 +302,21 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			branchprotections[bp.Pattern] = &branchprotection
 		}
 
+		// we need to add the Goliac app on the branch protection bypass
+		// if the repository is part of a workflow and if a CODEOWNER review is required
+		// the goal is to allow the Goliac app to bypass the CODEOWNER review when the repository is part of a workflow
 		if d.githubAppSlug != "" && (len(branchprotections) > 0 || len(rulesets) > 0) && d.local.RepositoryInWorkflow(reponame) {
 			for _, bp := range branchprotections {
-				ensureGoliacAppBypassOnBranchProtection(bp, d.githubAppSlug)
+				if bp.RequiresCodeOwnerReviews {
+					ensureGoliacAppBypassOnBranchProtection(bp, d.githubAppSlug)
+				}
 			}
 			for _, rs := range rulesets {
-				ensureGoliacAppBypassOnRuleset(rs, d.githubAppSlug)
+				if r, ok := rs.Rules["pull_request"]; ok {
+					if r.RequireCodeOwnerReview {
+						ensureGoliacAppBypassOnRuleset(rs, d.githubAppSlug)
+					}
+				}
 			}
 		}
 
