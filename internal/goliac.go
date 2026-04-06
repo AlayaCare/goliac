@@ -602,7 +602,7 @@ func (g *GoliacImpl) applyCommitsToGithub(ctx context.Context, logsCollector *ob
 	// the repo has already been cloned (to HEAD) and validated (see loadAndValidateGoliacOrganization)
 	// we can now apply the changes to the github team repository
 	isEnterprise := g.remote.IsEnterprise()
-	localDatasource := engine.NewGoliacReconciliatorDatasourceLocal(g.local, teamreponame, branch, isEnterprise, g.repoconfig)
+	localDatasource := engine.NewGoliacReconciliatorDatasourceLocal(g.local, teamreponame, branch, isEnterprise, g.repoconfig, g.localGithubClient.GetAppSlug())
 	remoteDataSource := engine.NewGoliacReconciliatorDatasourceRemote(g.remote)
 	unmanaged, reposToArchive, renameTo, err := reconciliator.Reconciliate(
 		ctx,

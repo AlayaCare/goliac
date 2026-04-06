@@ -73,6 +73,8 @@ type GoliacLocalResources interface {
 	ExternalUsers() map[string]*entity.User
 	RuleSets() map[string]*entity.RuleSet   //global rulesets
 	Workflows() map[string]*entity.Workflow // global workflows
+	// RepositoryInWorkflow is true if the repository matches at least one loaded workflow's repository scope.
+	RepositoryInWorkflow(repository string) bool
 	RepoConfig() *config.RepositoryConfig
 }
 
@@ -135,6 +137,20 @@ func (g *GoliacLocalImpl) RuleSets() map[string]*entity.RuleSet {
 func (g *GoliacLocalImpl) Workflows() map[string]*entity.Workflow {
 	return g.workflows
 }
+
+func (g *GoliacLocalImpl) RepositoryInWorkflow(repository string) bool {
+	for _, w := range g.workflows {
+		ok, err := w.AppliesToRepository(repository)
+		if err != nil {
+			continue
+		}
+		if ok {
+			return true
+		}
+	}
+	return false
+}
+
 func (g *GoliacLocalImpl) RepoConfig() *config.RepositoryConfig {
 	return g.repoconfig
 }

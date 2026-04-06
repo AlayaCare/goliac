@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/entity"
@@ -18,12 +19,17 @@ type GoliacReconciliatorDatasource interface {
 	OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty
 }
 
+// githubWorkflowAppBypassMode is the ruleset bypass mode for the Goliac app when
+// auto-injected for workflow-scoped repositories (GitHub API: pull_request).
+const githubWorkflowAppBypassMode = "pull_request"
+
 type GoliacReconciliatorDatasourceLocal struct {
 	local               GoliacLocal
 	conf                *config.RepositoryConfig
 	teamsreponame       string
 	teamsDefaultBranch  string
 	reconciliatorFilter *ReconciliatorFilterImpl
+	githubAppSlug       string
 }
 
 func NewGoliacReconciliatorDatasourceLocal(
@@ -31,13 +37,16 @@ func NewGoliacReconciliatorDatasourceLocal(
 	teamsreponame string,
 	teamsDefaultBranch string,
 	isEnterprise bool,
-	conf *config.RepositoryConfig) GoliacReconciliatorDatasource {
+	conf *config.RepositoryConfig,
+	githubAppSlug string,
+) GoliacReconciliatorDatasource {
 	return &GoliacReconciliatorDatasourceLocal{
 		local:               local,
 		conf:                conf,
 		teamsreponame:       teamsreponame,
 		teamsDefaultBranch:  teamsDefaultBranch,
 		reconciliatorFilter: NewReconciliatorFilter(isEnterprise, conf),
+		githubAppSlug:       githubAppSlug,
 	}
 }
 
@@ -293,6 +302,15 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			branchprotections[bp.Pattern] = &branchprotection
 		}
 
+		if d.githubAppSlug != "" && (len(branchprotections) > 0 || len(rulesets) > 0) && d.local.RepositoryInWorkflow(reponame) {
+			for _, bp := range branchprotections {
+				ensureGoliacAppBypassOnBranchProtection(bp, d.githubAppSlug)
+			}
+			for _, rs := range rulesets {
+				ensureGoliacAppBypassOnRuleset(rs, d.githubAppSlug)
+			}
+		}
+
 		environments := make(map[string]*GithubEnvironment)
 		for _, e := range lRepo.Spec.Environments {
 			environments[e.Name] = &GithubEnvironment{
@@ -413,9 +431,70 @@ func (d *GoliacReconciliatorDatasourceLocal) RuleSets() (map[string]*GithubRuleS
 		}
 		grs.Repositories = nonArchivedRepositories
 
+		if d.shouldInjectGoliacBypassOnOrgRuleset(&grs, nonArchivedRepositories) {
+			ensureGoliacAppBypassOnRuleset(&grs, d.githubAppSlug)
+		}
+
 		lgrs[rs.Name] = &grs
 	}
 	return lgrs, nil
+}
+
+func (d *GoliacReconciliatorDatasourceLocal) shouldInjectGoliacBypassOnOrgRuleset(grs *GithubRuleSet, nonArchivedRepositories []string) bool {
+	if d.githubAppSlug == "" || grs == nil {
+		return false
+	}
+	if len(grs.Rules) == 0 || strings.EqualFold(grs.Enforcement, "disabled") {
+		return false
+	}
+	for _, reponame := range nonArchivedRepositories {
+		if d.local.RepositoryInWorkflow(reponame) {
+			return true
+		}
+	}
+	return false
+}
+
+func branchProtectionHasAppBypass(bp *GithubBranchProtection, appSlug string) bool {
+	want := slug.Make(appSlug)
+	for _, n := range bp.BypassPullRequestAllowances.Nodes {
+		if n.Actor.AppSlug != "" && slug.Make(n.Actor.AppSlug) == want {
+			return true
+		}
+	}
+	return false
+}
+
+func ensureGoliacAppBypassOnBranchProtection(bp *GithubBranchProtection, appSlug string) {
+	if appSlug == "" || branchProtectionHasAppBypass(bp, appSlug) {
+		return
+	}
+	node := BypassPullRequestAllowanceNode{}
+	node.Actor.AppSlug = appSlug
+	bp.BypassPullRequestAllowances.Nodes = append(bp.BypassPullRequestAllowances.Nodes, node)
+}
+
+func rulesetHasAppBypass(rs *GithubRuleSet, appSlug string) bool {
+	if rs == nil || rs.BypassApps == nil {
+		return false
+	}
+	want := slug.Make(appSlug)
+	for k := range rs.BypassApps {
+		if slug.Make(k) == want {
+			return true
+		}
+	}
+	return false
+}
+
+func ensureGoliacAppBypassOnRuleset(rs *GithubRuleSet, appSlug string) {
+	if appSlug == "" || rulesetHasAppBypass(rs, appSlug) {
+		return
+	}
+	if rs.BypassApps == nil {
+		rs.BypassApps = map[string]string{}
+	}
+	rs.BypassApps[appSlug] = githubWorkflowAppBypassMode
 }
 
 func (d *GoliacReconciliatorDatasourceLocal) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {

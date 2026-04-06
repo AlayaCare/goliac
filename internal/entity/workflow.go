@@ -3,6 +3,7 @@ package entity
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/goliac-project/goliac/internal/config"
@@ -134,6 +135,41 @@ func (w *Workflow) Validate(filename string) error {
 	}
 
 	return nil
+}
+
+// AppliesToRepository returns whether the repository name matches this workflow's
+// spec.repositories allowed/except rules (same semantics as the repository check in workflow ACL).
+func (w *Workflow) AppliesToRepository(repository string) (bool, error) {
+	repoMatch := false
+	for _, repo := range w.Spec.Repositories.Allowed {
+		if repo == "~ALL" {
+			repoMatch = true
+			break
+		}
+		repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
+		if err != nil {
+			return false, err
+		}
+		if repoRegex {
+			repoMatch = true
+			break
+		}
+	}
+
+	for _, repo := range w.Spec.Repositories.Except {
+		repoRegex, err := regexp.Match(fmt.Sprintf("^%s$", repo), []byte(repository))
+		if err != nil {
+			return false, err
+		}
+		if repoRegex {
+			return false, nil
+		}
+	}
+
+	if !repoMatch {
+		return false, nil
+	}
+	return true, nil
 }
 
 func ReadWorkflowDirectory(fs billy.Filesystem, dirname string, LogCollection *observability.LogCollection) map[string]*Workflow {

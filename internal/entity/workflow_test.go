@@ -106,3 +106,35 @@ spec:
 	})
 
 }
+
+func TestWorkflowAppliesToRepository(t *testing.T) {
+	t.Run("tilde all", func(t *testing.T) {
+		w := &Workflow{}
+		w.Spec.Repositories.Allowed = []string{"~ALL"}
+		ok, err := w.AppliesToRepository("any-repo")
+		assert.NoError(t, err)
+		assert.True(t, ok)
+	})
+	t.Run("exact allow", func(t *testing.T) {
+		w := &Workflow{}
+		w.Spec.Repositories.Allowed = []string{"my-repo"}
+		ok, err := w.AppliesToRepository("my-repo")
+		assert.NoError(t, err)
+		assert.True(t, ok)
+	})
+	t.Run("except excludes", func(t *testing.T) {
+		w := &Workflow{}
+		w.Spec.Repositories.Allowed = []string{"~ALL"}
+		w.Spec.Repositories.Except = []string{"excluded"}
+		ok, err := w.AppliesToRepository("excluded")
+		assert.NoError(t, err)
+		assert.False(t, ok)
+	})
+	t.Run("no allow match", func(t *testing.T) {
+		w := &Workflow{}
+		w.Spec.Repositories.Allowed = []string{"other"}
+		ok, err := w.AppliesToRepository("mine")
+		assert.NoError(t, err)
+		assert.False(t, ok)
+	})
+}
