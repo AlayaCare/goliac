@@ -3244,6 +3244,9 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, lo
 
 	repo = g.repositories[reponame]
 	if repo != nil {
+		if repo.BranchProtections == nil {
+			repo.BranchProtections = make(map[string]*GithubBranchProtection)
+		}
 		repo.BranchProtections[branchprotection.Pattern] = branchprotection
 	}
 }
@@ -3379,6 +3382,9 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 
 	repo = g.repositories[reponame]
 	if repo != nil {
+		if repo.BranchProtections == nil {
+			repo.BranchProtections = make(map[string]*GithubBranchProtection)
+		}
 		repo.BranchProtections[branchprotection.Pattern] = branchprotection
 	}
 }
