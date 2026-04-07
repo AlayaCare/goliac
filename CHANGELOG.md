@@ -1,3 +1,7 @@
+## Goliac v1.8.8
+
+- bugfix: nil pointer fix
+
 ## Goliac v1.8.7
 
 - bugfix: add Goliac app on repositories branch protection bypass when the repository is part of a workflow and if a CODEOWNER review is required
