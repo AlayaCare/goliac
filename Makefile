@@ -21,8 +21,8 @@ test: deps verifiers
 gen: api_docs swagger
 
 deps:
-	@go install github.com/go-swagger/go-swagger/cmd/swagger@v0.30.5
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
+	@go install github.com/go-swagger/go-swagger/cmd/swagger@v0.33.2
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
 
 doc:
 	npm run docs:build
