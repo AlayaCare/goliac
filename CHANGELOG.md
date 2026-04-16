@@ -1,3 +1,7 @@
+## Goliac v1.8.10
+
+- bugfix: resolve GitHub app slug to GraphQL node ID when creating branch protection rules with app bypass actors (create path now matches the update path)
+
 ## Goliac v1.8.9
 
 - various library updates (security updates)

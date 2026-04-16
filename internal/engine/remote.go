@@ -3184,6 +3184,7 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, lo
 	bypassPullRequestActorIds := []string{}
 	users := g.users
 	teams := g.teams
+	apps := g.appIds
 	for _, actor := range branchprotection.BypassPullRequestAllowances.Nodes {
 		if actor.Actor.UserLogin != "" {
 			for login, u := range users {
@@ -3200,7 +3201,11 @@ func (g *GoliacRemoteImpl) AddRepositoryBranchProtection(ctx context.Context, lo
 			}
 		}
 		if actor.Actor.AppSlug != "" {
-			bypassPullRequestActorIds = append(bypassPullRequestActorIds, actor.Actor.AppSlug)
+			for slug, a := range apps {
+				if slug == actor.Actor.AppSlug {
+					bypassPullRequestActorIds = append(bypassPullRequestActorIds, a.GraphqlId)
+				}
+			}
 		}
 	}
 
