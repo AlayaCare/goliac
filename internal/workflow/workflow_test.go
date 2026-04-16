@@ -3,6 +3,7 @@ package workflow
 import (
 	"context"
 	"net/url"
+	"strings"
 
 	"github.com/goliac-project/goliac/internal/engine"
 	"github.com/goliac-project/goliac/internal/entity"
@@ -46,6 +47,10 @@ type GithubClientMock struct {
 func (m *GithubClientMock) CallRestAPI(ctx context.Context, endpoint, parameters, method string, body map[string]interface{}, githubToken *string) ([]byte, error) {
 	m.LastCallEndpoint = endpoint
 	m.LastCallBody = body
+	if method == "GET" && strings.Contains(endpoint, "/pulls/") &&
+		!strings.Contains(endpoint, "/merge") && !strings.Contains(endpoint, "/reviews") {
+		return []byte(`{"title":"Test PR title"}`), nil
+	}
 	return nil, nil
 }
 
