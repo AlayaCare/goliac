@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -81,7 +82,7 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 	}
 
 	// merge the PR
-	err = g.mergePR(ctx, username, repo, prNumber, explanation)
+	err = g.mergePR(ctx, username, repo, prNumber, prPathToMerge, explanation)
 	if err != nil {
 		return nil, fmt.Errorf("error when merging the PR: %v", err)
 	}
@@ -89,7 +90,28 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 	return responses, nil
 }
 
-func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo string, prNumber, explanation string) error {
+func (g *ForcemergeImpl) fetchPullRequestTitle(ctx context.Context, repo, prNumber string) (string, error) {
+	body, err := g.ws.CallRestAPI(
+		ctx,
+		fmt.Sprintf("/repos/%s/%s/pulls/%s", config.Config.GithubAppOrganization, repo, prNumber),
+		"",
+		"GET",
+		nil,
+		nil,
+	)
+	if err != nil {
+		return "", fmt.Errorf("error loading pull request %s/%s: %w", repo, prNumber, err)
+	}
+	var pr struct {
+		Title string `json:"title"`
+	}
+	if err := json.Unmarshal(body, &pr); err != nil {
+		return "", fmt.Errorf("error parsing pull request %s/%s: %w", repo, prNumber, err)
+	}
+	return pr.Title, nil
+}
+
+func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo string, prNumber, prURL, explanation string) error {
 	mergeMethod := "merge"
 	if strings.Contains(explanation, "/squash") {
 		mergeMethod = "squash"
@@ -97,13 +119,28 @@ func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo stri
 	// let's remove the /squash string from the explanation
 	explanation = strings.ReplaceAll(explanation, "/squash", "")
 
+	prTitle, err := g.fetchPullRequestTitle(ctx, repo, prNumber)
+	if err != nil {
+		return err
+	}
+
+	reviewBody := fmt.Sprintf(
+		"Force merge via Goliac on behalf of %s.\n\nPR #%s: %s\n%s\n\n%s",
+		username, prNumber, prTitle, prURL, explanation,
+	)
+	commitTitle := fmt.Sprintf("force merge PR #%s for %s - %s", prNumber, username, prTitle)
+	commitMessage := fmt.Sprintf(
+		"Force merge via Goliac on behalf of %s.\n\nPR: %s\nTitle: %s",
+		username, prURL, prTitle,
+	)
+
 	body, err := g.ws.CallRestAPI(
 		ctx,
 		fmt.Sprintf("/repos/%s/%s/pulls/%s/reviews", config.Config.GithubAppOrganization, repo, prNumber),
 		"",
 		"POST",
 		map[string]interface{}{
-			"body":  fmt.Sprintf("force merge PR %s via Goliac on behalf of %s.\n%s", prNumber, username, explanation),
+			"body":  reviewBody,
 			"event": "APPROVE",
 		},
 		nil)
@@ -118,8 +155,8 @@ func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo stri
 		"",
 		"PUT",
 		map[string]interface{}{
-			"commit_title":   fmt.Sprintf("force merge PR %s for %s", prNumber, username),
-			"commit_message": fmt.Sprintf("force merge PR %s via Goliac on behalf of %s", prNumber, username),
+			"commit_title":   commitTitle,
+			"commit_message": commitMessage,
 			"merge_method":   mergeMethod, // can be "merge", "squash", or "rebase"
 		},
 		nil)
@@ -132,8 +169,8 @@ func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo stri
 				"",
 				"PUT",
 				map[string]interface{}{
-					"commit_title":   fmt.Sprintf("force merge PR %s for %s", prNumber, username),
-					"commit_message": fmt.Sprintf("force merge PR %s via Goliac on behalf of %s", prNumber, username),
+					"commit_title":   commitTitle,
+					"commit_message": commitMessage,
 					"merge_method":   "squash", // can be "merge", "squash", or "rebase"
 				},
 				nil)

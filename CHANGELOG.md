@@ -1,3 +1,9 @@
+## Goliac v1.8.9
+
+- various library updates (security updates)
+- improvement: force-merge workflow loads the pull request title from the GitHub API and appends it to the merge commit title
+- improvement: force-merge approval comment and merge commit message include the original PR URL and title for traceability
+
 ## Goliac v1.8.8
 
 - bugfix: nil pointer fix
