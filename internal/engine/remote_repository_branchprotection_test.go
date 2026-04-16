@@ -141,6 +141,57 @@ func TestAddRepositoryBranchProtection(t *testing.T) {
 		assert.Equal(t, "BP_123", repo.BranchProtections["main"].Id)
 	})
 
+	t.Run("app bypass actor uses GraphQL node id from appIds", func(t *testing.T) {
+		mockClient := &AddBranchProtectionMockClient{}
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+
+		repo := &GithubRepository{
+			Name:              "test-repo",
+			Id:                123,
+			RefId:             "R_123",
+			BranchProtections: make(map[string]*GithubBranchProtection),
+		}
+		remoteImpl.repositories = map[string]*GithubRepository{
+			"test-repo": repo,
+		}
+		remoteImpl.appIds = map[string]*GithubApp{
+			"my-app": {
+				Slug:      "my-app",
+				GraphqlId: "A_app_node_id",
+			},
+		}
+
+		branchProtection := &GithubBranchProtection{
+			Pattern:                        "main",
+			RequiresApprovingReviews:       true,
+			RequiredApprovingReviewCount:   2,
+			DismissesStaleReviews:          true,
+			RequiresCodeOwnerReviews:       true,
+			RequireLastPushApproval:        true,
+			RequiresStatusChecks:           true,
+			RequiresStrictStatusChecks:     true,
+			RequiredStatusCheckContexts:    []string{"test-check"},
+			RequiresConversationResolution: true,
+			RequiresCommitSignatures:       true,
+			RequiresLinearHistory:          true,
+			AllowsForcePushes:              false,
+			AllowsDeletions:                false,
+		}
+		var bypassNode BypassPullRequestAllowanceNode
+		bypassNode.Actor.AppSlug = "my-app"
+		branchProtection.BypassPullRequestAllowances.Nodes = []BypassPullRequestAllowanceNode{bypassNode}
+
+		ctx := context.TODO()
+		logsCollector := observability.NewLogCollection()
+
+		remoteImpl.AddRepositoryBranchProtection(ctx, logsCollector, false, "test-repo", branchProtection)
+
+		assert.False(t, logsCollector.HasErrors())
+		ids, ok := mockClient.lastVariables["bypassPullRequestActorIds"].([]string)
+		assert.True(t, ok)
+		assert.Equal(t, []string{"A_app_node_id"}, ids)
+	})
+
 	t.Run("error path: repository not found", func(t *testing.T) {
 		// Setup mock client
 		mockClient := &AddBranchProtectionMockClient{}
