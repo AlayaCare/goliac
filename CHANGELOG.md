@@ -1,3 +1,7 @@
+## Goliac v1.8.11
+
+- change the way commit title is generated when doing a forcemerge
+
 ## Goliac v1.8.10
 
 - bugfix: resolve GitHub app slug to GraphQL node ID when creating branch protection rules with app bypass actors (create path now matches the update path)
