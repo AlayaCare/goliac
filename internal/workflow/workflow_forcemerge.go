@@ -128,7 +128,7 @@ func (g *ForcemergeImpl) mergePR(ctx context.Context, username string, repo stri
 		"Force merge via Goliac on behalf of %s.\n\nPR #%s: %s\n%s\n\n%s",
 		username, prNumber, prTitle, prURL, explanation,
 	)
-	commitTitle := fmt.Sprintf("PR %s: force merge for %s - %s", prNumber, username, prTitle)
+	commitTitle := fmt.Sprintf("%s (force merged PR %s by %s)", prTitle, prNumber, username)
 	commitMessage := fmt.Sprintf(
 		"Force merge via Goliac on behalf of %s.\n\nPR: %s\nTitle: %s",
 		username, prURL, prTitle,
