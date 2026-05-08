@@ -3471,7 +3471,7 @@ func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, logsCollector *obse
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to add user to org: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add user %s to org: %v. %s", ghuserid, err, string(body)))
 			return
 		}
 
