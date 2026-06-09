@@ -471,3 +471,33 @@ spec:
     Baz:
       - qux
       - quux
+```
+
+## GitHub Pages
+
+You can optionally declare GitHub Pages settings under `spec.github_pages`.
+
+```yaml
+apiVersion: v1
+kind: Repository
+name: docs-site
+spec:
+  github_pages:
+    visibility: private   # public or private — Pages visibility (not repository visibility)
+    source: branch        # branch or workflow
+    branch: main          # required when source is branch; branch must already exist on GitHub
+    path: /docs           # optional for branch source; defaults to / — only / or /docs are allowed
+    custom_domain: docs.example.com   # optional; GitHub REST field cname (hostname only, no scheme)
+    # enforce_https omitted → Goliac treats it as true when reconciling with GitHub (https_enforced).
+    # Set enforce_https: false to disable. Scaffold omits the key when the remote site already enforces HTTPS.
+```
+
+When `source` is `workflow`, do not set `branch` or `path` (workflow builds do not use branch/path in this block).
+
+**Constraints and permissions**
+
+- The branch used for `source: branch` must already exist when Pages is first enabled (create the repository first, then Pages is configured in a follow-up step if needed).
+- GitHub only allows `path` `/` (root) or `/docs` for branch-based publishing (`build_type: legacy` in the API).
+- **Custom domain and HTTPS**: `custom_domain` maps to GitHub’s `cname`. If you set `enforce_https: true` explicitly in YAML, you must also set `custom_domain`. If you omit `enforce_https`, Goliac still sends HTTPS enforcement as enabled to GitHub by default; use `enforce_https: false` to turn it off. DNS and certificate verification are handled in GitHub; configure DNS outside Goliac. Clearing `custom_domain` in YAML removes the custom domain on the next successful apply (reconcile sends `cname: null` on update).
+
+If the API does not yet return an `html_url` (e.g. immediately after enabling), the UI may show a generated project-site URL pattern when branch mode is used.
