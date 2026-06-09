@@ -5157,7 +5157,10 @@ func (g *GoliacRemoteImpl) UpdateRepositoryGithubPages(ctx context.Context, logs
 	if pages == nil {
 		return
 	}
-	if _, exists := g.repositories[repositoryName]; !exists {
+	g.actionMutex.Lock()
+	_, exists := g.repositories[repositoryName]
+	g.actionMutex.Unlock()
+	if !exists {
 		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
@@ -5187,7 +5190,10 @@ func (g *GoliacRemoteImpl) UpdateRepositoryGithubPages(ctx context.Context, logs
 
 // DeleteRepositoryGithubPages disables GitHub Pages (DELETE /repos/{owner}/{repo}/pages).
 func (g *GoliacRemoteImpl) DeleteRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string) {
-	if _, exists := g.repositories[repositoryName]; !exists {
+	g.actionMutex.Lock()
+	_, exists := g.repositories[repositoryName]
+	g.actionMutex.Unlock()
+	if !exists {
 		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
