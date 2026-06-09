@@ -158,6 +158,16 @@ func (m *GoliacRemoteMock) OrgCustomProperties(ctx context.Context) map[string]*
 	return m.orgCustomProperties
 }
 
+func (m *GoliacRemoteMock) GetRepositoryPages(ctx context.Context, repositoryName string) (*GithubPagesRemote, error) {
+	if m.repos == nil {
+		return nil, nil
+	}
+	if repo, ok := m.repos[repositoryName]; ok && repo != nil {
+		return repo.GithubPages, nil
+	}
+	return nil, nil
+}
+
 type MockMappedEntityLazyLoader[T any] struct {
 	entity map[string]T
 }
@@ -209,6 +219,9 @@ type ReconciliatorListenerRecorder struct {
 	RepositoryAutolinkCreated            map[string]map[string]*GithubAutolink
 	RepositoryAutolinkUpdated            map[string]map[string]*GithubAutolink
 	RepositoryAutolinkDeleted            map[string][]int
+	RepositoryGithubPagesCreated         map[string]*GithubPagesComparable
+	RepositoryGithubPagesUpdated         map[string]*GithubPagesComparable
+	RepositoryGithubPagesDeleted         map[string]bool
 
 	RuleSetCreated map[string]*GithubRuleSet
 	RuleSetUpdated map[string]*GithubRuleSet
@@ -263,6 +276,9 @@ func NewReconciliatorListenerRecorder() *ReconciliatorListenerRecorder {
 		RepositoryAutolinkCreated:            make(map[string]map[string]*GithubAutolink),
 		RepositoryAutolinkUpdated:            make(map[string]map[string]*GithubAutolink),
 		RepositoryAutolinkDeleted:            make(map[string][]int),
+		RepositoryGithubPagesCreated:         make(map[string]*GithubPagesComparable),
+		RepositoryGithubPagesUpdated:         make(map[string]*GithubPagesComparable),
+		RepositoryGithubPagesDeleted:         make(map[string]bool),
 	}
 	return &r
 }
@@ -437,6 +453,19 @@ func (r *ReconciliatorListenerRecorder) UpdateRepositoryAutolink(ctx context.Con
 	}
 	r.RepositoryAutolinkUpdated[repositoryName][autolink.KeyPrefix] = autolink
 }
+
+func (r *ReconciliatorListenerRecorder) CreateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, pages *GithubPagesComparable) {
+	r.RepositoryGithubPagesCreated[repositoryName] = cloneGithubPagesComparable(pages)
+}
+
+func (r *ReconciliatorListenerRecorder) UpdateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, pages *GithubPagesComparable) {
+	r.RepositoryGithubPagesUpdated[repositoryName] = cloneGithubPagesComparable(pages)
+}
+
+func (r *ReconciliatorListenerRecorder) DeleteRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string) {
+	r.RepositoryGithubPagesDeleted[repositoryName] = true
+}
+
 func (r *ReconciliatorListenerRecorder) CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, property *config.GithubCustomProperty) {
 	// Track in Created if not already there (first time we see this property)
 	if _, exists := r.OrgCustomPropertyCreated[property.PropertyName]; !exists {

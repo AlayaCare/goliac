@@ -64,6 +64,11 @@ type ReconciliatorExecutor interface {
 	GetRepositoryCodeowners(ctx context.Context, reponame string) (content string, sha string, err error)
 	UpdateRepositoryCodeowners(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, content string, existingSHA string)
 
+	// Repository GitHub Pages
+	CreateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, pages *GithubPagesComparable)
+	UpdateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, pages *GithubPagesComparable)
+	DeleteRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string)
+
 	// Organization custom properties management
 	CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, property *config.GithubCustomProperty)
 	DeleteOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, propertyName string)

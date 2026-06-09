@@ -43,6 +43,7 @@ As a Github org admin, in GitHub:
   - Give Read/Write access to `Administration`
   - Give Read/Write access to `Content`
   - Give Read/Write access to `Custom properties`
+  - Give Read/Write access to `Pages` (needed to get the HTML URL of the Pages site)
 - Where can this GitHub App be installed: `Only on this account`
 - And Create
 - then you must

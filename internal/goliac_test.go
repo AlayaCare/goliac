@@ -739,6 +739,9 @@ func (e *GoliacRemoteExecutorMock) EnvironmentSecretsPerRepository(ctx context.C
 func (e *GoliacRemoteExecutorMock) RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*engine.GithubVariable, error) {
 	return nil, nil
 }
+func (e *GoliacRemoteExecutorMock) GetRepositoryPages(ctx context.Context, repositoryName string) (*engine.GithubPagesRemote, error) {
+	return nil, nil
+}
 func (e *GoliacRemoteExecutorMock) OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty {
 	return make(map[string]*config.GithubCustomProperty)
 }
@@ -792,6 +795,16 @@ func (e *GoliacRemoteExecutorMock) DeleteRepositoryAutolink(ctx context.Context,
 }
 func (e *GoliacRemoteExecutorMock) UpdateRepositoryAutolink(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, previousAutolinkId int, autolink *engine.GithubAutolink) {
 	fmt.Println("*** UpdateRepositoryAutolink", repositoryName, autolink.KeyPrefix, autolink.UrlTemplate, autolink.IsAlphanumeric)
+	e.nbChanges++
+}
+
+func (e *GoliacRemoteExecutorMock) CreateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, pages *engine.GithubPagesComparable) {
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) UpdateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, pages *engine.GithubPagesComparable) {
+	e.nbChanges++
+}
+func (e *GoliacRemoteExecutorMock) DeleteRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string) {
 	e.nbChanges++
 }
 

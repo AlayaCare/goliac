@@ -117,6 +117,9 @@ func NewMutableGoliacRemoteImpl(ctx context.Context, remote GoliacReconciliatorD
 		ghr.ActionVariables = NewMutableRepositoryVariableLazyLoader(
 			v.ActionVariables,
 		)
+		if v.GithubPages != nil {
+			ghr.GithubPages = cloneGithubPagesComparable(v.GithubPages)
+		}
 		rRepositories[k] = &ghr
 		ghExternalUsersReaders := make([]string, len(v.ExternalUserReaders))
 		copy(ghExternalUsersReaders, v.ExternalUserReaders)
@@ -602,5 +605,17 @@ func (m *MutableGoliacRemoteImpl) DeleteRepositoryAutolink(repositoryName string
 func (m *MutableGoliacRemoteImpl) UpdateRepositoryAutolink(repositoryName string, previousAutolinkId int, autolink *GithubAutolink) {
 	if r, ok := m.repositories[repositoryName]; ok {
 		r.Autolinks.GetEntity()[autolink.KeyPrefix] = autolink
+	}
+}
+
+func (m *MutableGoliacRemoteImpl) SetRepositoryGithubPages(repositoryName string, pages *GithubPagesComparable) {
+	if r, ok := m.repositories[repositoryName]; ok {
+		r.GithubPages = cloneGithubPagesComparable(pages)
+	}
+}
+
+func (m *MutableGoliacRemoteImpl) ClearRepositoryGithubPages(repositoryName string) {
+	if r, ok := m.repositories[repositoryName]; ok {
+		r.GithubPages = nil
 	}
 }

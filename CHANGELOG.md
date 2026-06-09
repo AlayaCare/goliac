@@ -1,3 +1,7 @@
+## Goliac v1.9.0
+
+- add support for Github pages
+
 ## Goliac v1.8.11
 
 - change the way commit title is generated when doing a forcemerge
