@@ -1,3 +1,7 @@
+## Goliac v1.9.1
+
+- Github page code race condition fix
+
 ## Goliac v1.9.0
 
 - add support for Github pages
