@@ -351,14 +351,22 @@ func (g *GoliacServerImpl) GetRepository(params app.GetRepositoryParams) middlew
 			Branch:       gp.Branch,
 			Path:         gp.Path,
 			CustomDomain: gp.CustomDomain,
-			EnforceHTTPS: gp.EnforceHTTPSEffective(),
+		}
+		if strings.TrimSpace(gp.CustomDomain) != "" {
+			pages.EnforceHTTPS = gp.EnforceHTTPSEffective()
 		}
 		rp, err := remote.GetRepositoryPages(context.TODO(), repository.Name)
 		if err != nil {
 			logrus.Errorf("error when getting GitHub Pages for repository %s: %v", repository.Name, err)
-		} else if rp != nil && rp.HTMLURL != "" {
-			pages.HTMLURL = rp.HTMLURL
-		} else if gp.Source == "branch" && gp.Branch != "" {
+		} else {
+			if strings.TrimSpace(gp.CustomDomain) == "" && rp != nil {
+				pages.EnforceHTTPS = rp.HttpsEnforced
+			}
+			if rp != nil && rp.HTMLURL != "" {
+				pages.HTMLURL = rp.HTMLURL
+			}
+		}
+		if pages.HTMLURL == "" && gp.Source == "branch" && gp.Branch != "" {
 			pages.HTMLURL = fmt.Sprintf("https://%s.github.io/%s/", config.Config.GithubAppOrganization, repository.Name)
 		}
 		githubPages = pages

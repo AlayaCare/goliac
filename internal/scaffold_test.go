@@ -593,6 +593,7 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Equal(t, "branch", r1check.Spec.GithubPages.Source)
 		assert.Equal(t, "main", r1check.Spec.GithubPages.Branch)
 		assert.Equal(t, "/docs", r1check.Spec.GithubPages.Path)
+		assert.Nil(t, r1check.Spec.GithubPages.EnforceHTTPS)
 	})
 
 	t.Run("happy path: test teams and repos with SAML", func(t *testing.T) {
