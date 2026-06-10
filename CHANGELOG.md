@@ -1,3 +1,7 @@
+## Goliac v1.9.2
+
+- Github page code fix when not using custom_domain
+
 ## Goliac v1.9.1
 
 - Github page code race condition fix

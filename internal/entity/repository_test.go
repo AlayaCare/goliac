@@ -997,19 +997,27 @@ func TestRepositoryGithubPagesValidate(t *testing.T) {
 		assert.Contains(t, err.Error(), "enforce_https requires")
 	})
 
-	t.Run("omit enforce_https defaults effective true without custom_domain", func(t *testing.T) {
+	t.Run("enforce_https false without custom_domain", func(t *testing.T) {
+		r := base
+		enFalse := false
+		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "workflow", EnforceHTTPS: &enFalse}
+		err := r.Validate("repo.yaml", teams, map[string]*User{}, nil, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "enforce_https requires")
+	})
+
+	t.Run("omit enforce_https without custom_domain", func(t *testing.T) {
 		r := base
 		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "workflow"}
 		err := r.Validate("repo.yaml", teams, map[string]*User{}, nil, nil)
 		assert.NoError(t, err)
 		require.Nil(t, r.Spec.GithubPages.EnforceHTTPS)
-		assert.True(t, r.Spec.GithubPages.EnforceHTTPSEffective())
 	})
 
-	t.Run("explicit enforce_https false without custom_domain", func(t *testing.T) {
+	t.Run("explicit enforce_https false with custom_domain", func(t *testing.T) {
 		r := base
 		enFalse := false
-		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "workflow", EnforceHTTPS: &enFalse}
+		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "workflow", CustomDomain: "docs.example.com", EnforceHTTPS: &enFalse}
 		err := r.Validate("repo.yaml", teams, map[string]*User{}, nil, nil)
 		assert.NoError(t, err)
 	})

@@ -488,8 +488,7 @@ spec:
     branch: main          # required when source is branch; branch must already exist on GitHub
     path: /docs           # optional for branch source; defaults to / — only / or /docs are allowed
     custom_domain: docs.example.com   # optional; GitHub REST field cname (hostname only, no scheme)
-    # enforce_https omitted → Goliac treats it as true when reconciling with GitHub (https_enforced).
-    # Set enforce_https: false to disable. Scaffold omits the key when the remote site already enforces HTTPS.
+    enforce_https: true               # optional; only used with custom_domain (defaults to true when omitted)
 ```
 
 When `source` is `workflow`, do not set `branch` or `path` (workflow builds do not use branch/path in this block).
@@ -498,6 +497,6 @@ When `source` is `workflow`, do not set `branch` or `path` (workflow builds do n
 
 - The branch used for `source: branch` must already exist when Pages is first enabled (create the repository first, then Pages is configured in a follow-up step if needed).
 - GitHub only allows `path` `/` (root) or `/docs` for branch-based publishing (`build_type: legacy` in the API).
-- **Custom domain and HTTPS**: `custom_domain` maps to GitHub’s `cname`. If you set `enforce_https: true` explicitly in YAML, you must also set `custom_domain`. If you omit `enforce_https`, Goliac still sends HTTPS enforcement as enabled to GitHub by default; use `enforce_https: false` to turn it off. DNS and certificate verification are handled in GitHub; configure DNS outside Goliac. Clearing `custom_domain` in YAML removes the custom domain on the next successful apply (reconcile sends `cname: null` on update).
+- **Custom domain and HTTPS**: `custom_domain` maps to GitHub’s `cname`. `enforce_https` is only used together with `custom_domain`; omit it for default `*.github.io` sites (Goliac does not send `https_enforced` to GitHub without a custom domain). When `custom_domain` is set, omitted `enforce_https` defaults to enabled; set `enforce_https: false` to allow HTTP on the custom domain. DNS and certificate verification are handled in GitHub; configure DNS outside Goliac.
 
 If the API does not yet return an `html_url` (e.g. immediately after enabling), the UI may show a generated project-site URL pattern when branch mode is used.

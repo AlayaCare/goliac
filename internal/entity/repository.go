@@ -37,11 +37,12 @@ type RepositoryGithubPages struct {
 	Branch       string `yaml:"branch,omitempty"`
 	Path         string `yaml:"path,omitempty"`          // / or /docs when source is branch; defaults to / in NewRepository
 	CustomDomain string `yaml:"custom_domain,omitempty"` // GitHub REST cname (hostname only)
-	// EnforceHTTPS is tri-state: nil/omitted means default true for reconciliation; explicit false disables.
+	// EnforceHTTPS applies only with custom_domain; nil/omitted defaults to true when custom_domain is set.
 	EnforceHTTPS *bool `yaml:"enforce_https,omitempty"`
 }
 
-// EnforceHTTPSEffective is the HTTPS enforcement value sent to GitHub (nil/omitted defaults to true).
+// EnforceHTTPSEffective is the HTTPS enforcement value sent to GitHub when custom_domain is set
+// (nil/omitted defaults to true). Callers must only use this when custom_domain is non-empty.
 func (p *RepositoryGithubPages) EnforceHTTPSEffective() bool {
 	if p == nil || p.EnforceHTTPS == nil {
 		return true
@@ -503,7 +504,7 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 				return fmt.Errorf("%s: github_pages.branch and github_pages.path must not be set when source is workflow", r.Name)
 			}
 		}
-		if gp.EnforceHTTPS != nil && *gp.EnforceHTTPS && strings.TrimSpace(gp.CustomDomain) == "" {
+		if gp.EnforceHTTPS != nil && strings.TrimSpace(gp.CustomDomain) == "" {
 			return fmt.Errorf("%s: github_pages.enforce_https requires github_pages.custom_domain", r.Name)
 		}
 		domain := strings.TrimSpace(gp.CustomDomain)

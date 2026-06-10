@@ -39,7 +39,7 @@ func TestEntityGithubPagesToComparable(t *testing.T) {
 
 	gpOmit := &entity.RepositoryGithubPages{Visibility: "public", Source: "branch", Branch: "main", Path: "/"}
 	c3 := entityGithubPagesToComparable(gpOmit)
-	assert.True(t, c3.HttpsEnforced)
+	assert.False(t, c3.HttpsEnforced)
 }
 
 func TestGithubPagesRemoteToComparable(t *testing.T) {
@@ -103,6 +103,20 @@ func TestEntityGithubPagesFromRemote(t *testing.T) {
 	legacyNoHTTPS := &GithubPagesRemote{
 		BuildType:     "legacy",
 		Public:        true,
+		Cname:         "",
+		HttpsEnforced: false,
+		Source: &struct {
+			Branch string `json:"branch"`
+			Path   string `json:"path"`
+		}{Branch: "main", Path: "/"},
+	}
+	gpNoDomain := EntityGithubPagesFromRemote(legacyNoHTTPS)
+	require.NotNil(t, gpNoDomain)
+	assert.Nil(t, gpNoDomain.EnforceHTTPS)
+
+	legacyNoHTTPSCustom := &GithubPagesRemote{
+		BuildType:     "legacy",
+		Public:        true,
 		Cname:         "old.example.org",
 		HttpsEnforced: false,
 		Source: &struct {
@@ -110,7 +124,7 @@ func TestEntityGithubPagesFromRemote(t *testing.T) {
 			Path   string `json:"path"`
 		}{Branch: "main", Path: "/"},
 	}
-	gp3 := EntityGithubPagesFromRemote(legacyNoHTTPS)
+	gp3 := EntityGithubPagesFromRemote(legacyNoHTTPSCustom)
 	require.NotNil(t, gp3)
 	require.NotNil(t, gp3.EnforceHTTPS)
 	assert.False(t, *gp3.EnforceHTTPS)
@@ -142,17 +156,19 @@ func TestGithubPagesComparableToRESTPutBody(t *testing.T) {
 	assert.Equal(t, "docs.example.com", body["cname"])
 	assert.Equal(t, true, body["https_enforced"])
 
-	clear := &GithubPagesComparable{Visibility: "public", Source: "branch", Branch: "main", Path: "/", HttpsEnforced: false}
-	body2 := githubPagesComparableToRESTPutBody(clear)
-	assert.Nil(t, body2["cname"])
-	assert.Equal(t, false, body2["https_enforced"])
+	noDomain := &GithubPagesComparable{Visibility: "public", Source: "branch", Branch: "main", Path: "/"}
+	body2 := githubPagesComparableToRESTPutBody(noDomain)
+	_, hasCname := body2["cname"]
+	assert.False(t, hasCname)
+	_, hasHTTPS := body2["https_enforced"]
+	assert.False(t, hasHTTPS)
 }
 
 func TestGithubPagesNeedsFollowUpPutAfterCreate(t *testing.T) {
 	assert.False(t, githubPagesNeedsFollowUpPutAfterCreate(nil))
 	assert.False(t, githubPagesNeedsFollowUpPutAfterCreate(&GithubPagesComparable{Source: "branch", Branch: "main", Path: "/"}))
 	assert.True(t, githubPagesNeedsFollowUpPutAfterCreate(&GithubPagesComparable{Source: "branch", Branch: "main", Path: "/", Cname: "x.com"}))
-	assert.True(t, githubPagesNeedsFollowUpPutAfterCreate(&GithubPagesComparable{Source: "workflow", HttpsEnforced: true}))
+	assert.False(t, githubPagesNeedsFollowUpPutAfterCreate(&GithubPagesComparable{Source: "workflow", HttpsEnforced: true}))
 }
 
 func TestGithubPagesRemoteFromComparable(t *testing.T) {

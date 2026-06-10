@@ -36,8 +36,16 @@ func githubPagesComparableEqual(a, b *GithubPagesComparable) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	return a.Visibility == b.Visibility && a.Source == b.Source && a.Branch == b.Branch && a.Path == b.Path &&
-		strings.TrimSpace(a.Cname) == strings.TrimSpace(b.Cname) && a.HttpsEnforced == b.HttpsEnforced
+	if a.Visibility != b.Visibility || a.Source != b.Source || a.Branch != b.Branch || a.Path != b.Path {
+		return false
+	}
+	if strings.TrimSpace(a.Cname) != strings.TrimSpace(b.Cname) {
+		return false
+	}
+	if strings.TrimSpace(a.Cname) == "" {
+		return true
+	}
+	return a.HttpsEnforced == b.HttpsEnforced
 }
 
 func cloneGithubPagesComparable(p *GithubPagesComparable) *GithubPagesComparable {
@@ -52,14 +60,17 @@ func entityGithubPagesToComparable(p *entity.RepositoryGithubPages) *GithubPages
 	if p == nil {
 		return nil
 	}
-	return &GithubPagesComparable{
-		Visibility:    p.Visibility,
-		Source:        p.Source,
-		Branch:        p.Branch,
-		Path:          p.Path,
-		Cname:         strings.TrimSpace(p.CustomDomain),
-		HttpsEnforced: p.EnforceHTTPSEffective(),
+	c := &GithubPagesComparable{
+		Visibility: p.Visibility,
+		Source:     p.Source,
+		Branch:     p.Branch,
+		Path:       p.Path,
+		Cname:      strings.TrimSpace(p.CustomDomain),
 	}
+	if strings.TrimSpace(p.CustomDomain) != "" {
+		c.HttpsEnforced = p.EnforceHTTPSEffective()
+	}
+	return c
 }
 
 func githubPagesRemoteToComparable(r *GithubPagesRemote) *GithubPagesComparable {
@@ -108,11 +119,13 @@ func EntityGithubPagesFromRemote(r *GithubPagesRemote) *entity.RepositoryGithubP
 		Path:         c.Path,
 		CustomDomain: c.Cname,
 	}
-	if r.HttpsEnforced {
-		gp.EnforceHTTPS = nil
-	} else {
-		f := false
-		gp.EnforceHTTPS = &f
+	if strings.TrimSpace(c.Cname) != "" {
+		if r.HttpsEnforced {
+			gp.EnforceHTTPS = nil
+		} else {
+			f := false
+			gp.EnforceHTTPS = &f
+		}
 	}
 	return gp
 }
@@ -139,10 +152,8 @@ func githubPagesComparableToRESTPutBody(p *GithubPagesComparable) map[string]int
 	body := githubPagesComparableToRESTPostBody(p)
 	if strings.TrimSpace(p.Cname) != "" {
 		body["cname"] = strings.TrimSpace(p.Cname)
-	} else {
-		body["cname"] = nil
+		body["https_enforced"] = p.HttpsEnforced
 	}
-	body["https_enforced"] = p.HttpsEnforced
 	return body
 }
 
@@ -150,7 +161,7 @@ func githubPagesNeedsFollowUpPutAfterCreate(p *GithubPagesComparable) bool {
 	if p == nil {
 		return false
 	}
-	return strings.TrimSpace(p.Cname) != "" || p.HttpsEnforced
+	return strings.TrimSpace(p.Cname) != ""
 }
 
 // GithubPagesRemoteFromComparable builds an in-memory Pages snapshot for dry-run reconciliation.
