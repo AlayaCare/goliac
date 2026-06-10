@@ -68,6 +68,13 @@ func entityGithubPagesToComparable(p *entity.RepositoryGithubPages) *GithubPages
 		Path:       p.Path,
 		Cname:      strings.TrimSpace(p.CustomDomain),
 	}
+	// Workflow Pages have no branch/path in GitHub's GET response; YAML may still
+	// specify path: / (allowed by entity validation). Canonicalize so reconciliation
+	// does not treat "/" vs "" as a perpetual diff.
+	if p.Source == "workflow" {
+		c.Branch = ""
+		c.Path = ""
+	}
 	if strings.TrimSpace(p.CustomDomain) != "" {
 		c.HttpsEnforced = p.EnforceHTTPSEffective()
 	}
