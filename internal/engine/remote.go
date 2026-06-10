@@ -26,6 +26,8 @@ type GoliacRemoteResources interface {
 	Teams(ctx context.Context, current bool) map[string]*GithubTeam
 	RepositoriesSecretsPerRepository(ctx context.Context, repositoryName string) (map[string]*GithubVariable, error)
 	EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*GithubVariable, error)
+	// needed to get the HTML URL of the Pages site
+	GetRepositoryPages(ctx context.Context, repositoryName string) (*GithubPagesRemote, error)
 }
 
 /*
@@ -61,6 +63,9 @@ type GoliacRemote interface {
 	EnvironmentSecretsPerRepository(ctx context.Context, environments []string, repositoryName string) (map[string]map[string]*GithubVariable, error)
 
 	OrgCustomProperties(ctx context.Context) map[string]*config.GithubCustomProperty
+
+	// GetRepositoryPages returns cached Pages info from the last Load, or fetches GET /repos/{org}/{repo}/pages.
+	GetRepositoryPages(ctx context.Context, repositoryName string) (*GithubPagesRemote, error)
 }
 
 type GoliacRemoteExecutor interface {
@@ -90,6 +95,7 @@ type GithubRepository struct {
 	Topics                     []string               // repository topics
 	CodeownersContent          string                 // content of .github/CODEOWNERS file
 	CodeownersSHA              string                 // SHA of .github/CODEOWNERS file (needed for updates)
+	GithubPages                *GithubPagesRemote     // from GET /repos/{org}/{repo}/pages; nil if no site
 }
 
 type GithubUser struct {
@@ -1091,6 +1097,12 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 		// 		repositories[repo].EnvironmentSecrets = envSecrets
 		// 	}
 		// }
+	} else {
+		// MappedEntityLazyLoader is an interface; zero value is nil and GetEntity() would panic.
+		for _, repo := range repositories {
+			repo.RepositoryVariables = NewLocalLazyLoader[string](map[string]string{})
+			repo.Environments = NewLocalLazyLoader[*GithubEnvironment](map[string]*GithubEnvironment{})
+		}
 	}
 
 	if g.manageGithubAutolinks {
@@ -1132,6 +1144,13 @@ func (g *GoliacRemoteImpl) loadRepositories(ctx context.Context, githubToken *st
 		logrus.Warnf("error loading CODEOWNERS: %v", err)
 		if retErr == nil {
 			retErr = fmt.Errorf("error loading repository CODEOWNERS: %w", err)
+		}
+	}
+
+	if err := g.loadRepositoryPagesConcurrently(ctx, config.Config.GithubConcurrentThreads, repositories); err != nil {
+		logrus.Warnf("error loading GitHub Pages: %v", err)
+		if retErr == nil {
+			retErr = fmt.Errorf("error loading repository GitHub Pages: %w", err)
 		}
 	}
 
@@ -1576,6 +1595,17 @@ func (g *GoliacRemoteImpl) loadRepositoryCodeownersConcurrently(ctx context.Cont
 	}
 	logrus.Debug("loading repository CODEOWNERS files")
 
+	repositoriesToLoad := make([]*GithubRepository, 0, len(repositories))
+	for _, repo := range repositories {
+		if repo.BoolProperties["archived"] {
+			continue
+		}
+		repositoriesToLoad = append(repositoriesToLoad, repo)
+	}
+	if g.feedback != nil {
+		g.feedback.Extend(len(repositoriesToLoad))
+	}
+
 	var wg sync.WaitGroup
 
 	reposChan := make(chan *GithubRepository, len(repositories))
@@ -1607,10 +1637,7 @@ func (g *GoliacRemoteImpl) loadRepositoryCodeownersConcurrently(ctx context.Cont
 		}()
 	}
 
-	for _, repo := range repositories {
-		if repo.BoolProperties["archived"] {
-			continue
-		}
+	for _, repo := range repositoriesToLoad {
 		reposChan <- repo
 	}
 	close(reposChan)
@@ -1623,6 +1650,97 @@ func (g *GoliacRemoteImpl) loadRepositoryCodeownersConcurrently(ctx context.Cont
 	default:
 		return nil
 	}
+}
+
+// loadRepositoryPagesConcurrently fetches GitHub Pages metadata for each non-archived repository.
+func (g *GoliacRemoteImpl) loadRepositoryPagesConcurrently(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) error {
+	var childSpan trace.Span
+	if config.Config.OpenTelemetryEnabled {
+		ctx, childSpan = otel.Tracer("goliac").Start(ctx, "loadRepositoryPages")
+		defer childSpan.End()
+	}
+	logrus.Debug("loading repository GitHub Pages metadata")
+
+	repositoriesToLoad := make([]*GithubRepository, 0, len(repositories))
+	for _, repo := range repositories {
+		if repo.BoolProperties["archived"] {
+			continue
+		}
+		repositoriesToLoad = append(repositoriesToLoad, repo)
+	}
+	if g.feedback != nil {
+		g.feedback.Extend(len(repositoriesToLoad))
+	}
+
+	var wg sync.WaitGroup
+	reposChan := make(chan *GithubRepository, len(repositories))
+	errChan := make(chan error, 1)
+
+	if maxGoroutines < 1 {
+		maxGoroutines = 1
+	}
+
+	for i := int64(0); i < maxGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for repo := range reposChan {
+				pages, err := g.fetchRepositoryPages(ctx, repo.Name)
+				if err != nil {
+					select {
+					case errChan <- fmt.Errorf("GitHub Pages for %s: %w", repo.Name, err):
+					default:
+					}
+					return
+				}
+				repo.GithubPages = pages
+				if g.feedback != nil {
+					g.feedback.LoadingAsset("repo_pages", 1)
+				}
+			}
+		}()
+	}
+
+	for _, repo := range repositoriesToLoad {
+		reposChan <- repo
+	}
+	close(reposChan)
+
+	wg.Wait()
+
+	select {
+	case err := <-errChan:
+		return err
+	default:
+		return nil
+	}
+}
+
+func (g *GoliacRemoteImpl) fetchRepositoryPages(ctx context.Context, repositoryName string) (*GithubPagesRemote, error) {
+	endpoint := fmt.Sprintf("/repos/%s/%s/pages", g.configGithubOrg, repositoryName)
+	body, err := g.client.CallRestAPI(ctx, endpoint, "", "GET", nil, nil)
+	if err != nil {
+		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "Not Found") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var pages GithubPagesRemote
+	if err := json.Unmarshal(body, &pages); err != nil {
+		return nil, err
+	}
+	return &pages, nil
+}
+
+// GetRepositoryPages implements GoliacRemote.
+func (g *GoliacRemoteImpl) GetRepositoryPages(ctx context.Context, repositoryName string) (*GithubPagesRemote, error) {
+	g.actionMutex.Lock()
+	repo, ok := g.repositories[repositoryName]
+	g.actionMutex.Unlock()
+	if ok && repo != nil && repo.GithubPages != nil {
+		return repo.GithubPages, nil
+	}
+	return g.fetchRepositoryPages(ctx, repositoryName)
 }
 
 func (g *GoliacRemoteImpl) loadCustomPropertiesConcurrently(ctx context.Context, maxGoroutines int64, repositories map[string]*GithubRepository) (map[string]map[string]interface{}, error) {
@@ -1649,6 +1767,9 @@ func (g *GoliacRemoteImpl) loadCustomPropertiesConcurrently(ctx context.Context,
 		repoName string
 		props    map[string]interface{}
 	}, len(repositories))
+	if g.feedback != nil {
+		g.feedback.Extend(len(repositories))
+	}
 
 	if maxGoroutines < 1 {
 		maxGoroutines = 1
@@ -3471,7 +3592,7 @@ func (g *GoliacRemoteImpl) AddUserToOrg(ctx context.Context, logsCollector *obse
 			nil,
 		)
 		if err != nil {
-			logsCollector.AddError(fmt.Errorf("failed to add user to org: %v. %s", err, string(body)))
+			logsCollector.AddError(fmt.Errorf("failed to add user %s to org: %v. %s", ghuserid, err, string(body)))
 			return
 		}
 
@@ -4976,6 +5097,144 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAutolink(ctx context.Context, logsCol
 		g.DeleteRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, previousAutolinkId)
 	}
 	g.AddRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, autolink)
+}
+
+// callRepositoryGithubPagesAPI calls POST or PUT /repos/{owner}/{repo}/pages.
+// When GitHub rejects public: true because private Pages is unavailable, retries once without public.
+func (g *GoliacRemoteImpl) callRepositoryGithubPagesAPI(ctx context.Context, repositoryName, method string, pages *GithubPagesComparable, isPut bool) ([]byte, error) {
+	var body map[string]interface{}
+	if isPut {
+		body = githubPagesComparableToRESTPutBody(pages)
+	} else {
+		body = githubPagesComparableToRESTPostBody(pages)
+	}
+	endpoint := fmt.Sprintf("/repos/%s/%s/pages", g.configGithubOrg, repositoryName)
+	responseBody, err := g.client.CallRestAPI(ctx, endpoint, "", method, body, nil)
+	if err == nil {
+		return responseBody, nil
+	}
+	if pages.Visibility == "public" && githubPagesPrivatePagesUnavailable(responseBody) {
+		if isPut {
+			body = githubPagesComparableToRESTPutBodyWithPublic(pages, false)
+		} else {
+			body = githubPagesComparableToRESTPostBodyWithPublic(pages, false)
+		}
+		responseBody, retryErr := g.client.CallRestAPI(ctx, endpoint, "", method, body, nil)
+		if retryErr == nil {
+			return responseBody, nil
+		}
+		return responseBody, githubPagesAPIError(retryErr, responseBody)
+	}
+	return responseBody, githubPagesAPIError(err, responseBody)
+}
+
+// putRepositoryGithubPages updates GitHub Pages (PUT /repos/{owner}/{repo}/pages).
+func (g *GoliacRemoteImpl) putRepositoryGithubPages(ctx context.Context, repositoryName string, pages *GithubPagesComparable) error {
+	_, err := g.callRepositoryGithubPagesAPI(ctx, repositoryName, "PUT", pages, true)
+	return err
+}
+
+// CreateRepositoryGithubPages enables GitHub Pages (POST /repos/{owner}/{repo}/pages).
+func (g *GoliacRemoteImpl) CreateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, pages *GithubPagesComparable) {
+	if pages == nil {
+		return
+	}
+	g.actionMutex.Lock()
+	_, exists := g.repositories[repositoryName]
+	g.actionMutex.Unlock()
+	if !exists {
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+	if !dryrun {
+		_, err := g.callRepositoryGithubPagesAPI(ctx, repositoryName, "POST", pages, false)
+		if err != nil {
+			logsCollector.AddError(fmt.Errorf("failed to create GitHub Pages for repository %s: %v", repositoryName, err))
+			return
+		}
+		if githubPagesNeedsFollowUpPutAfterCreate(pages) {
+			if err := g.putRepositoryGithubPages(ctx, repositoryName, pages); err != nil {
+				logsCollector.AddError(fmt.Errorf("failed to set GitHub Pages custom domain / HTTPS for repository %s after create: %v", repositoryName, err))
+				return
+			}
+		}
+		loaded, err := g.fetchRepositoryPages(ctx, repositoryName)
+		if err != nil {
+			logsCollector.AddError(fmt.Errorf("failed to refresh GitHub Pages for repository %s after create: %v", repositoryName, err))
+			return
+		}
+		g.actionMutex.Lock()
+		if r, ok := g.repositories[repositoryName]; ok {
+			r.GithubPages = loaded
+		}
+		g.actionMutex.Unlock()
+		return
+	}
+	g.actionMutex.Lock()
+	if r, ok := g.repositories[repositoryName]; ok {
+		r.GithubPages = GithubPagesRemoteFromComparable(pages)
+	}
+	g.actionMutex.Unlock()
+}
+
+// UpdateRepositoryGithubPages updates GitHub Pages (PUT /repos/{owner}/{repo}/pages).
+func (g *GoliacRemoteImpl) UpdateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string, pages *GithubPagesComparable) {
+	if pages == nil {
+		return
+	}
+	g.actionMutex.Lock()
+	_, exists := g.repositories[repositoryName]
+	g.actionMutex.Unlock()
+	if !exists {
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+	if !dryrun {
+		if err := g.putRepositoryGithubPages(ctx, repositoryName, pages); err != nil {
+			logsCollector.AddError(fmt.Errorf("failed to update GitHub Pages for repository %s: %v", repositoryName, err))
+			return
+		}
+		loaded, err := g.fetchRepositoryPages(ctx, repositoryName)
+		if err != nil {
+			logsCollector.AddError(fmt.Errorf("failed to refresh GitHub Pages for repository %s after update: %v", repositoryName, err))
+			return
+		}
+		g.actionMutex.Lock()
+		if r, ok := g.repositories[repositoryName]; ok {
+			r.GithubPages = loaded
+		}
+		g.actionMutex.Unlock()
+		return
+	}
+	g.actionMutex.Lock()
+	if r, ok := g.repositories[repositoryName]; ok {
+		r.GithubPages = GithubPagesRemoteFromComparable(pages)
+	}
+	g.actionMutex.Unlock()
+}
+
+// DeleteRepositoryGithubPages disables GitHub Pages (DELETE /repos/{owner}/{repo}/pages).
+func (g *GoliacRemoteImpl) DeleteRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, repositoryName string) {
+	g.actionMutex.Lock()
+	_, exists := g.repositories[repositoryName]
+	g.actionMutex.Unlock()
+	if !exists {
+		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
+		return
+	}
+	if !dryrun {
+		endpoint := fmt.Sprintf("/repos/%s/%s/pages", g.configGithubOrg, repositoryName)
+		_, err := g.client.CallRestAPI(ctx, endpoint, "", "DELETE", nil, nil)
+		if err != nil {
+			logsCollector.AddError(fmt.Errorf("failed to delete GitHub Pages for repository %s: %v", repositoryName, err))
+			return
+		}
+	}
+	g.actionMutex.Lock()
+	if r, ok := g.repositories[repositoryName]; ok {
+		r.GithubPages = nil
+	}
+	g.actionMutex.Unlock()
 }
 
 func (g *GoliacRemoteImpl) Begin(logsCollector *observability.LogCollection, dryrun bool) {

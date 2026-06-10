@@ -8,6 +8,7 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/gosimple/slug"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/goliac-project/goliac/internal/config"
 	"github.com/goliac-project/goliac/internal/engine"
@@ -139,6 +140,13 @@ func fixtureGoliacLocal() (*GoliacLocalMock, *GoliacRemoteMock) {
 	repoB.Spec.ActionsVariables = map[string]string{
 		"var2": "value2",
 	}
+	repoB.Spec.GithubPages = &entity.RepositoryGithubPages{
+		Visibility:   "public",
+		Source:       "branch",
+		Branch:       "main",
+		Path:         "/docs",
+		CustomDomain: "docs.example.com",
+	}
 
 	l.repositories["repoA"] = &repoA
 	l.repositories["repoB"] = &repoB
@@ -180,6 +188,9 @@ func fixtureGoliacLocal() (*GoliacLocalMock, *GoliacRemoteMock) {
 	// remote mock
 	r := GoliacRemoteMock{
 		teams: make(map[string]*engine.GithubTeam),
+		repositoryPages: map[string]*engine.GithubPagesRemote{
+			"repoB": {HTMLURL: "https://pages.example.test/repoB/"},
+		},
 	}
 
 	r.teams[slug.Make("externallyManaged")] = &engine.GithubTeam{
@@ -192,7 +203,8 @@ func fixtureGoliacLocal() (*GoliacLocalMock, *GoliacRemoteMock) {
 }
 
 type GoliacRemoteMock struct {
-	teams map[string]*engine.GithubTeam
+	teams           map[string]*engine.GithubTeam
+	repositoryPages map[string]*engine.GithubPagesRemote
 }
 
 func (g *GoliacRemoteMock) Teams(ctx context.Context, current bool) map[string]*engine.GithubTeam {
@@ -220,6 +232,13 @@ func (g *GoliacRemoteMock) EnvironmentSecretsPerRepository(ctx context.Context, 
 		}, nil
 	}
 	return nil, nil
+}
+
+func (g *GoliacRemoteMock) GetRepositoryPages(ctx context.Context, repositoryName string) (*engine.GithubPagesRemote, error) {
+	if g.repositoryPages == nil {
+		return nil, nil
+	}
+	return g.repositoryPages[repositoryName], nil
 }
 
 type GoliacMock struct {
@@ -447,6 +466,15 @@ func TestAppGetRepositories(t *testing.T) {
 		payload := res.(*app.GetRepositoryOK)
 		assert.Equal(t, "repoB", payload.Payload.Name)
 		assert.Equal(t, 2, len(payload.Payload.Teams))
+		require.NotNil(t, payload.Payload.GithubPages)
+		assert.True(t, payload.Payload.GithubPages.Enabled)
+		assert.Equal(t, "public", payload.Payload.GithubPages.Visibility)
+		assert.Equal(t, "branch", payload.Payload.GithubPages.Source)
+		assert.Equal(t, "main", payload.Payload.GithubPages.Branch)
+		assert.Equal(t, "/docs", payload.Payload.GithubPages.Path)
+		assert.Equal(t, "https://pages.example.test/repoB/", payload.Payload.GithubPages.HTMLURL)
+		assert.Equal(t, "docs.example.com", payload.Payload.GithubPages.CustomDomain)
+		assert.True(t, payload.Payload.GithubPages.EnforceHTTPS)
 	})
 
 	t.Run("not happy path: repository not found", func(t *testing.T) {

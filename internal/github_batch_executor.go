@@ -434,6 +434,32 @@ func (g *GithubBatchExecutor) UpdateRepositoryAutolink(ctx context.Context, logs
 	})
 }
 
+func (g *GithubBatchExecutor) CreateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, pages *engine.GithubPagesComparable) {
+	g.commands = append(g.commands, &GithubCommandCreateRepositoryGithubPages{
+		client:   g.client,
+		dryrun:   dryrun,
+		reponame: reponame,
+		pages:    pages,
+	})
+}
+
+func (g *GithubBatchExecutor) UpdateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string, pages *engine.GithubPagesComparable) {
+	g.commands = append(g.commands, &GithubCommandUpdateRepositoryGithubPages{
+		client:   g.client,
+		dryrun:   dryrun,
+		reponame: reponame,
+		pages:    pages,
+	})
+}
+
+func (g *GithubBatchExecutor) DeleteRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, reponame string) {
+	g.commands = append(g.commands, &GithubCommandDeleteRepositoryGithubPages{
+		client:   g.client,
+		dryrun:   dryrun,
+		reponame: reponame,
+	})
+}
+
 func (g *GithubBatchExecutor) CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, property *config.GithubCustomProperty) {
 	g.commands = append(g.commands, &GithubCommandCreateOrUpdateOrgCustomProperty{
 		client:   g.client,
@@ -933,6 +959,38 @@ type GithubCommandUpdateRepositoryAutolink struct {
 
 func (g *GithubCommandUpdateRepositoryAutolink) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
 	g.client.UpdateRepositoryAutolink(ctx, logsCollector, g.dryrun, g.reponame, g.previousAutolinkId, g.autolink)
+}
+
+type GithubCommandCreateRepositoryGithubPages struct {
+	client   engine.ReconciliatorExecutor
+	dryrun   bool
+	reponame string
+	pages    *engine.GithubPagesComparable
+}
+
+func (g *GithubCommandCreateRepositoryGithubPages) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
+	g.client.CreateRepositoryGithubPages(ctx, logsCollector, g.dryrun, g.reponame, g.pages)
+}
+
+type GithubCommandUpdateRepositoryGithubPages struct {
+	client   engine.ReconciliatorExecutor
+	dryrun   bool
+	reponame string
+	pages    *engine.GithubPagesComparable
+}
+
+func (g *GithubCommandUpdateRepositoryGithubPages) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
+	g.client.UpdateRepositoryGithubPages(ctx, logsCollector, g.dryrun, g.reponame, g.pages)
+}
+
+type GithubCommandDeleteRepositoryGithubPages struct {
+	client   engine.ReconciliatorExecutor
+	dryrun   bool
+	reponame string
+}
+
+func (g *GithubCommandDeleteRepositoryGithubPages) Apply(ctx context.Context, logsCollector *observability.LogCollection) {
+	g.client.DeleteRepositoryGithubPages(ctx, logsCollector, g.dryrun, g.reponame)
 }
 
 type GithubCommandCreateOrUpdateOrgCustomProperty struct {

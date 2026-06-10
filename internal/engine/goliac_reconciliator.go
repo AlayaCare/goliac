@@ -355,6 +355,7 @@ type GithubRepoComparable struct {
 	Topics                     []string               // repository topics
 	Codeowners                 string                 // generated CODEOWNERS file content
 	CodeownersSHA              string                 // SHA of existing CODEOWNERS file (for updates)
+	GithubPages                *GithubPagesComparable // desired / current GitHub Pages configuration
 	// not comparable
 	IsFork   bool
 	ForkFrom string
@@ -574,6 +575,10 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 			if lRepo.Codeowners != rRepo.Codeowners {
 				return false
 			}
+
+			if !githubPagesComparableEqual(lRepo.GithubPages, rRepo.GithubPages) {
+				return false
+			}
 		}
 
 		//
@@ -788,6 +793,10 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 		if lRepo.Codeowners != "" {
 			r.reconciliateCodeowners(ctx, logsCollector, dryrun, remote, reponame, lRepo.Codeowners)
 		}
+
+		if !lRepo.BoolProperties["archived"] {
+			r.reconciliateRepositoryGithubPages(ctx, logsCollector, dryrun, remote, reponame, lRepo.GithubPages, rRepo.GithubPages)
+		}
 	}
 
 	onAdded := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) {
@@ -809,6 +818,9 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 				}
 			} else {
 				r.CreateRepository(ctx, logsCollector, dryrun, remote, reponame, reponame, lRepo.Visibility, lRepo.Writers, lRepo.Readers, lRepo.BoolProperties, lRepo.DefaultBranchName, "")
+			}
+			if !lRepo.BoolProperties["archived"] {
+				r.reconciliateRepositoryGithubPages(ctx, logsCollector, dryrun, remote, reponame, lRepo.GithubPages, nil)
 			}
 		}
 	}
@@ -1411,6 +1423,48 @@ func (r *GoliacReconciliatorImpl) UpdateRepositoryAutolink(ctx context.Context, 
 		r.executor.UpdateRepositoryAutolink(ctx, logsCollector, dryrun, reponame, previousAutolinkId, autolink)
 	}
 }
+
+func (r *GoliacReconciliatorImpl) reconciliateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, reponame string, desired, current *GithubPagesComparable) {
+	if githubPagesComparableEqual(desired, current) {
+		return
+	}
+	if desired == nil && current != nil {
+		r.DeleteRepositoryGithubPages(ctx, logsCollector, dryrun, remote, reponame)
+		return
+	}
+	if desired != nil && current == nil {
+		r.CreateRepositoryGithubPages(ctx, logsCollector, dryrun, remote, reponame, desired)
+		return
+	}
+	if desired != nil && current != nil {
+		r.UpdateRepositoryGithubPages(ctx, logsCollector, dryrun, remote, reponame, desired)
+	}
+}
+
+func (r *GoliacReconciliatorImpl) CreateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, repositoryName string, pages *GithubPagesComparable) {
+	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "create_repository_github_pages"}, "repository: %s", repositoryName)
+	remote.SetRepositoryGithubPages(repositoryName, pages)
+	if r.executor != nil {
+		r.executor.CreateRepositoryGithubPages(ctx, logsCollector, dryrun, repositoryName, pages)
+	}
+}
+
+func (r *GoliacReconciliatorImpl) UpdateRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, repositoryName string, pages *GithubPagesComparable) {
+	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "update_repository_github_pages"}, "repository: %s", repositoryName)
+	remote.SetRepositoryGithubPages(repositoryName, pages)
+	if r.executor != nil {
+		r.executor.UpdateRepositoryGithubPages(ctx, logsCollector, dryrun, repositoryName, pages)
+	}
+}
+
+func (r *GoliacReconciliatorImpl) DeleteRepositoryGithubPages(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, repositoryName string) {
+	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "delete_repository_github_pages"}, "repository: %s", repositoryName)
+	remote.ClearRepositoryGithubPages(repositoryName)
+	if r.executor != nil {
+		r.executor.DeleteRepositoryGithubPages(ctx, logsCollector, dryrun, repositoryName)
+	}
+}
+
 func (r *GoliacReconciliatorImpl) CreateOrUpdateOrgCustomProperty(ctx context.Context, logsCollector *observability.LogCollection, dryrun bool, remote *MutableGoliacRemoteImpl, property *config.GithubCustomProperty) {
 	logsCollector.AddInfo(map[string]interface{}{"dryrun": dryrun, "command": "create_or_update_org_custom_property"}, "property: %s, value_type: %s", property.PropertyName, property.ValueType)
 	remote.CreateOrUpdateOrgCustomProperty(property)

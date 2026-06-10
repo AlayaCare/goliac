@@ -381,6 +381,7 @@ func (d *GoliacReconciliatorDatasourceLocal) Repositories() (map[string]*GithubR
 			CustomProperties:           customProps,
 			Topics:                     lRepo.Spec.Topics,
 			Codeowners:                 codeownersContent,
+			GithubPages:                entityGithubPagesToComparable(lRepo.Spec.GithubPages),
 			IsFork:                     lRepo.ForkFrom != "",
 			ForkFrom:                   lRepo.ForkFrom,
 		})
@@ -609,6 +610,7 @@ func (d *GoliacReconciliatorDatasourceRemote) Repositories() (map[string]*Github
 			Topics:                     v.Topics,
 			Codeowners:                 v.CodeownersContent,
 			CodeownersSHA:              v.CodeownersSHA,
+			GithubPages:                githubPagesRemoteToComparable(v.GithubPages),
 			IsFork:                     v.IsFork,
 		}
 		for pk, pv := range v.BoolProperties {

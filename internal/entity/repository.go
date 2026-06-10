@@ -29,6 +29,27 @@ type RepositoryAutolink struct {
 	IsAlphanumeric bool   `yaml:"is_alphanumeric"`
 }
 
+// RepositoryGithubPages configures GitHub Pages for a repository (REST: /repos/{owner}/{repo}/pages).
+// Source "branch" maps to GitHub build_type "legacy" with branch + path; "workflow" maps to build_type "workflow".
+type RepositoryGithubPages struct {
+	Visibility   string `yaml:"visibility"` // public | private (Pages site visibility / public accessibility)
+	Source       string `yaml:"source"`     // branch | workflow
+	Branch       string `yaml:"branch,omitempty"`
+	Path         string `yaml:"path,omitempty"`          // / or /docs when source is branch; defaults to / in NewRepository
+	CustomDomain string `yaml:"custom_domain,omitempty"` // GitHub REST cname (hostname only)
+	// EnforceHTTPS applies only with custom_domain; nil/omitted defaults to true when custom_domain is set.
+	EnforceHTTPS *bool `yaml:"enforce_https,omitempty"`
+}
+
+// EnforceHTTPSEffective is the HTTPS enforcement value sent to GitHub when custom_domain is set
+// (nil/omitted defaults to true). Callers must only use this when custom_domain is non-empty.
+func (p *RepositoryGithubPages) EnforceHTTPSEffective() bool {
+	if p == nil || p.EnforceHTTPS == nil {
+		return true
+	}
+	return *p.EnforceHTTPS
+}
+
 type Repository struct {
 	Entity `yaml:",inline"`
 	Spec   struct {
@@ -55,6 +76,7 @@ type Repository struct {
 		Topics                     []string                     `yaml:"topics,omitempty"`
 		Codeowners                 []RepositoryCodeownersEntry  `yaml:"codeowners,omitempty"`
 		CodeownersRaw              string                       `yaml:"codeowners_raw,omitempty"`
+		GithubPages                *RepositoryGithubPages       `yaml:"github_pages,omitempty"`
 	} `yaml:"spec,omitempty"`
 	Archived      bool    `yaml:"archived,omitempty"` // implicit: will be set by Goliac
 	Owner         *string `yaml:"-"`                  // implicit. team name owning the repo (if any)
@@ -147,6 +169,12 @@ func NewRepository(fs billy.Filesystem, filename string) (*Repository, error) {
 			}
 		}
 		repository.Spec.Rulesets[i] = ruleset
+	}
+
+	if repository.Spec.GithubPages != nil && repository.Spec.GithubPages.Source == "branch" {
+		if repository.Spec.GithubPages.Path == "" {
+			repository.Spec.GithubPages.Path = "/"
+		}
 	}
 	return repository, nil
 }
@@ -453,6 +481,35 @@ func (r *Repository) Validate(filename string, teams map[string]*Team, externalU
 			if !found {
 				return fmt.Errorf("invalid custom property: %s is not defined in the organization custom properties", propName)
 			}
+		}
+	}
+
+	if gp := r.Spec.GithubPages; gp != nil {
+		if gp.Visibility != "public" && gp.Visibility != "private" {
+			return fmt.Errorf("%s: invalid github_pages.visibility: %s (must be public or private)", r.Name, gp.Visibility)
+		}
+		if gp.Source != "branch" && gp.Source != "workflow" {
+			return fmt.Errorf("%s: invalid github_pages.source: %s (must be branch or workflow)", r.Name, gp.Source)
+		}
+		if gp.Source == "branch" {
+			if strings.TrimSpace(gp.Branch) == "" {
+				return fmt.Errorf("%s: github_pages.branch is required when source is branch", r.Name)
+			}
+			if gp.Path != "/" && gp.Path != "/docs" {
+				return fmt.Errorf("%s: invalid github_pages.path: %s (must be / or /docs)", r.Name, gp.Path)
+			}
+		}
+		if gp.Source == "workflow" {
+			if gp.Branch != "" || (gp.Path != "" && gp.Path != "/") {
+				return fmt.Errorf("%s: github_pages.branch and github_pages.path must not be set when source is workflow", r.Name)
+			}
+		}
+		if gp.EnforceHTTPS != nil && strings.TrimSpace(gp.CustomDomain) == "" {
+			return fmt.Errorf("%s: github_pages.enforce_https requires github_pages.custom_domain", r.Name)
+		}
+		domain := strings.TrimSpace(gp.CustomDomain)
+		if domain != "" && strings.ContainsAny(domain, " \t\r\n") {
+			return fmt.Errorf("%s: invalid github_pages.custom_domain: must not contain whitespace", r.Name)
 		}
 	}
 

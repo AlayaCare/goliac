@@ -9,6 +9,7 @@ import (
 	"github.com/goliac-project/goliac/internal/observability"
 	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func fixtureCreateUserTeam(t *testing.T, fs billy.Filesystem) {
@@ -958,5 +959,73 @@ spec:
 		assert.Nil(t, err)
 		assert.Contains(t, string(content), "team1")
 		assert.NotContains(t, string(content), "other-team")
+	})
+}
+
+func TestRepositoryGithubPagesValidate(t *testing.T) {
+	teams := map[string]*Team{
+		"wteam": {
+			Entity: Entity{Name: "wteam"},
+		},
+	}
+	base := Repository{
+		Entity: Entity{ApiVersion: "v1", Kind: "Repository", Name: "repo"},
+	}
+	base.Spec.Visibility = "private"
+	base.Spec.Writers = []string{"wteam"}
+
+	t.Run("valid workflow", func(t *testing.T) {
+		r := base
+		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "workflow"}
+		err := r.Validate("repo.yaml", teams, map[string]*User{}, nil, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid path", func(t *testing.T) {
+		r := base
+		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "branch", Branch: "main", Path: "/invalid"}
+		err := r.Validate("repo.yaml", teams, map[string]*User{}, nil, nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("enforce_https without custom_domain", func(t *testing.T) {
+		r := base
+		enTrue := true
+		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "workflow", EnforceHTTPS: &enTrue}
+		err := r.Validate("repo.yaml", teams, map[string]*User{}, nil, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "enforce_https requires")
+	})
+
+	t.Run("enforce_https false without custom_domain", func(t *testing.T) {
+		r := base
+		enFalse := false
+		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "workflow", EnforceHTTPS: &enFalse}
+		err := r.Validate("repo.yaml", teams, map[string]*User{}, nil, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "enforce_https requires")
+	})
+
+	t.Run("omit enforce_https without custom_domain", func(t *testing.T) {
+		r := base
+		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "workflow"}
+		err := r.Validate("repo.yaml", teams, map[string]*User{}, nil, nil)
+		assert.NoError(t, err)
+		require.Nil(t, r.Spec.GithubPages.EnforceHTTPS)
+	})
+
+	t.Run("explicit enforce_https false with custom_domain", func(t *testing.T) {
+		r := base
+		enFalse := false
+		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "workflow", CustomDomain: "docs.example.com", EnforceHTTPS: &enFalse}
+		err := r.Validate("repo.yaml", teams, map[string]*User{}, nil, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("workflow must not set branch", func(t *testing.T) {
+		r := base
+		r.Spec.GithubPages = &RepositoryGithubPages{Visibility: "public", Source: "workflow", Branch: "main"}
+		err := r.Validate("repo.yaml", teams, map[string]*User{}, nil, nil)
+		assert.Error(t, err)
 	})
 }

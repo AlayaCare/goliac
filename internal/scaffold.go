@@ -497,6 +497,10 @@ func (s *Scaffold) generateTeams(ctx context.Context, fs billy.Filesystem, teams
 							*lRepo.Spec.Autolinks = append(*lRepo.Spec.Autolinks, ra)
 						}
 					}
+
+					if gp := engine.EntityGithubPagesFromRemote(rRepo.GithubPages); gp != nil {
+						lRepo.Spec.GithubPages = gp
+					}
 				}
 
 				// removing team name from writer

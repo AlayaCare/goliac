@@ -671,6 +671,35 @@ definitions:
                 properties:
                   name:
                     type: string
+      githubPages:
+        $ref: '#/definitions/repositoryDetailsGithubPages'
+  repositoryDetailsGithubPages:
+    type: object
+    properties:
+      enabled:
+        type: boolean
+        x-isnullable: false
+        x-omitempty: false
+      visibility:
+        type: string
+      source:
+        type: string
+      branch:
+        type: string
+      path:
+        type: string
+      htmlUrl:
+        type: string
+      customDomain:
+        type: string
+        description: >-
+          GitHub Pages custom domain (cname); mirrors
+          spec.github_pages.custom_domain when declared locally.
+      enforceHttps:
+        type: boolean
+        description: >-
+          Whether HTTPS is enforced for the Pages site (GitHub https_enforced);
+          set with a custom domain in spec.
   teams:
     type: array
     items:

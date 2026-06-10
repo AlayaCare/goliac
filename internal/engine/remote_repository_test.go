@@ -863,3 +863,19 @@ func TestRenameRepository(t *testing.T) {
 
 	})
 }
+
+func TestCreateRepositoryGithubPagesDryRunUpdatesCache(t *testing.T) {
+	mockClient := &CreateRepositoryMockClient{}
+	remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+	ctx := context.TODO()
+	remoteImpl.Load(ctx, false)
+	remoteImpl.repositories["r1"] = &GithubRepository{Name: "r1"}
+	logs := observability.NewLogCollection()
+	pages := &GithubPagesComparable{Visibility: "public", Source: "branch", Branch: "main", Path: "/"}
+	remoteImpl.CreateRepositoryGithubPages(ctx, logs, true, "r1", pages)
+	repo := remoteImpl.Repositories(ctx)["r1"]
+	assert.NotNil(t, repo.GithubPages)
+	assert.Equal(t, "legacy", repo.GithubPages.BuildType)
+	assert.True(t, repo.GithubPages.Public)
+	assert.Equal(t, "main", repo.GithubPages.Source.Branch)
+}

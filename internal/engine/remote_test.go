@@ -412,6 +412,9 @@ func (m *MockGithubClient) CallRestAPI(ctx context.Context, endpoint, parameters
 		if strings.HasSuffix(endpoint, "/contents/.github/CODEOWNERS") {
 			return nil, fmt.Errorf("404 Not Found")
 		}
+		if strings.HasSuffix(endpoint, "/pages") && method == "GET" {
+			return nil, fmt.Errorf("404 Not Found")
+		}
 		// we still pretend we have 133 teams, cf L263
 		repoSuffix := strings.TrimPrefix(endpoint, "/repos/myorg/repo_")
 		repoIdStr := strings.Split(repoSuffix, "/")[0]
@@ -449,6 +452,56 @@ func (m *MockGithubClient) GetAccessToken(ctx context.Context) (string, error) {
 }
 func (m *MockGithubClient) CreateJWT() (string, error) {
 	return "", nil
+}
+
+type progressCounter struct {
+	extended int
+	loaded   map[string]int
+}
+
+func (p *progressCounter) Init(nbTotalAssets int) {}
+
+func (p *progressCounter) Extend(nbAssets int) {
+	p.extended += nbAssets
+}
+
+func (p *progressCounter) LoadingAsset(entity string, nb int) {
+	if p.loaded == nil {
+		p.loaded = make(map[string]int)
+	}
+	p.loaded[entity] += nb
+}
+
+func TestRepositoryMetadataProgressExtendsTotal(t *testing.T) {
+	client := MockGithubClient{}
+	remoteImpl := NewGoliacRemoteImpl(&client, "myorg", true, true, true)
+	progress := &progressCounter{}
+	remoteImpl.SetRemoteObservability(progress)
+	repositories := map[string]*GithubRepository{
+		"repo_1": {
+			Name:           "repo_1",
+			BoolProperties: map[string]bool{"archived": false},
+		},
+		"repo_2": {
+			Name:           "repo_2",
+			BoolProperties: map[string]bool{"archived": false},
+		},
+		"repo_3": {
+			Name:           "repo_3",
+			BoolProperties: map[string]bool{"archived": true},
+		},
+	}
+
+	ctx := context.TODO()
+	err := remoteImpl.loadRepositoryCodeownersConcurrently(ctx, 1, repositories)
+	assert.Nil(t, err)
+	assert.Equal(t, 2, progress.extended)
+	assert.Equal(t, 2, progress.loaded["repo_codeowners"])
+
+	err = remoteImpl.loadRepositoryPagesConcurrently(ctx, 1, repositories)
+	assert.Nil(t, err)
+	assert.Equal(t, 4, progress.extended)
+	assert.Equal(t, 2, progress.loaded["repo_pages"])
 }
 
 func TestRemoteRepository(t *testing.T) {

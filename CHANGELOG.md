@@ -1,3 +1,23 @@
+## Goliac v1.9.4
+
+- Github page code fix for workflow
+
+## Goliac v1.9.3
+
+- Github page code fix when using visibility
+
+## Goliac v1.9.2
+
+- Github page code fix when not using custom_domain
+
+## Goliac v1.9.1
+
+- Github page code race condition fix
+
+## Goliac v1.9.0
+
+- add support for Github pages
+
 ## Goliac v1.8.11
 
 - change the way commit title is generated when doing a forcemerge

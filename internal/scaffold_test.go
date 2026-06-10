@@ -13,6 +13,7 @@ import (
 	"github.com/goliac-project/goliac/internal/utils"
 	"github.com/gosimple/slug"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
@@ -79,6 +80,10 @@ func (s *ScaffoldGoliacRemoteMock) OrgCustomProperties(ctx context.Context) map[
 	return make(map[string]*config.GithubCustomProperty)
 }
 
+func (s *ScaffoldGoliacRemoteMock) GetRepositoryPages(ctx context.Context, repositoryName string) (*engine.GithubPagesRemote, error) {
+	return nil, nil
+}
+
 func NewScaffoldGoliacRemoteMock() engine.GoliacRemote {
 	users := make(map[string]*engine.GithubUser)
 	teams := make(map[string]*engine.GithubTeam)
@@ -122,6 +127,15 @@ func NewScaffoldGoliacRemoteMock() engine.GoliacRemote {
 		Name:                "repo1",
 		Environments:        NewMockMappedEntityLazyLoader(map[string]*engine.GithubEnvironment{}),
 		RepositoryVariables: NewMockMappedEntityLazyLoader[string](map[string]string{}),
+		GithubPages: &engine.GithubPagesRemote{
+			BuildType:     "legacy",
+			Public:        true,
+			HttpsEnforced: true,
+			Source: &struct {
+				Branch string `json:"branch"`
+				Path   string `json:"path"`
+			}{Branch: "main", Path: "/docs"},
+		},
 	}
 	repos["repo1"] = &repo1
 
@@ -215,6 +229,15 @@ func NewScaffoldGoliacRemoteMockWithMaintainers() engine.GoliacRemote {
 		Name:                "repo1",
 		Environments:        NewMockMappedEntityLazyLoader(map[string]*engine.GithubEnvironment{}),
 		RepositoryVariables: NewMockMappedEntityLazyLoader[string](map[string]string{}),
+		GithubPages: &engine.GithubPagesRemote{
+			BuildType:     "legacy",
+			Public:        true,
+			HttpsEnforced: true,
+			Source: &struct {
+				Branch string `json:"branch"`
+				Path   string `json:"path"`
+			}{Branch: "main", Path: "/docs"},
+		},
 	}
 	repos["repo1"] = &repo1
 
@@ -560,6 +583,17 @@ func TestScaffoldFull(t *testing.T) {
 		found, err = utils.Exists(fs, "/teams/regular/repo1.yaml")
 		assert.Nil(t, err)
 		assert.Equal(t, true, found)
+
+		repo1Bytes, err := utils.ReadFile(fs, "/teams/regular/repo1.yaml")
+		assert.Nil(t, err)
+		var r1check entity.Repository
+		assert.Nil(t, yaml.Unmarshal(repo1Bytes, &r1check))
+		require.NotNil(t, r1check.Spec.GithubPages)
+		assert.Equal(t, "public", r1check.Spec.GithubPages.Visibility)
+		assert.Equal(t, "branch", r1check.Spec.GithubPages.Source)
+		assert.Equal(t, "main", r1check.Spec.GithubPages.Branch)
+		assert.Equal(t, "/docs", r1check.Spec.GithubPages.Path)
+		assert.Nil(t, r1check.Spec.GithubPages.EnforceHTTPS)
 	})
 
 	t.Run("happy path: test teams and repos with SAML", func(t *testing.T) {
@@ -606,6 +640,11 @@ func TestScaffoldFull(t *testing.T) {
 		assert.Equal(t, "repo1", r1.Name)
 		assert.Equal(t, 0, len(r1.Spec.Writers)) // regular -> not counted
 		assert.Equal(t, 0, len(r1.Spec.Readers))
+		require.NotNil(t, r1.Spec.GithubPages)
+		assert.Equal(t, "public", r1.Spec.GithubPages.Visibility)
+		assert.Equal(t, "branch", r1.Spec.GithubPages.Source)
+		assert.Equal(t, "main", r1.Spec.GithubPages.Branch)
+		assert.Equal(t, "/docs", r1.Spec.GithubPages.Path)
 
 		repo2, err := utils.ReadFile(fs, "/teams/admin/repo2.yaml")
 		assert.Nil(t, err)

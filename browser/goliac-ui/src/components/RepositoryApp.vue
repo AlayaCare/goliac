@@ -38,6 +38,38 @@
         </el-col>
     </el-row>  
 
+    <el-row v-if="repository.githubPages && repository.githubPages.enabled">
+        &nbsp;
+    </el-row>
+
+    <el-row v-if="repository.githubPages && repository.githubPages.enabled">
+        <el-col :span="20" :offset="2">
+            <el-card>
+                <template #header>
+                    <div class="card-header">
+                        <el-text>GitHub Pages</el-text>
+                    </div>
+                </template>
+                <div class="flex-container">
+                    <el-text>Visibility : </el-text>
+                    <el-text>{{ repository.githubPages.visibility }}</el-text>
+                </div>
+                <div class="flex-container">
+                    <el-text>Source : </el-text>
+                    <el-text>{{ repository.githubPages.source }}</el-text>
+                </div>
+                <div v-if="repository.githubPages.source === 'branch'" class="flex-container">
+                    <el-text>Branch / path : </el-text>
+                    <el-text>{{ repository.githubPages.branch }} @ {{ repository.githubPages.path }}</el-text>
+                </div>
+                <div v-if="repository.githubPages.htmlUrl" class="flex-container">
+                    <el-text>Site : </el-text>
+                    <el-link :href="repository.githubPages.htmlUrl" target="_blank" type="primary">{{ repository.githubPages.htmlUrl }}</el-link>
+                </div>
+            </el-card>
+        </el-col>
+    </el-row>
+
     <el-row>
         &nbsp;
     </el-row>
