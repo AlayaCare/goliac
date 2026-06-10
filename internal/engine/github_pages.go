@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/goliac-project/goliac/internal/entity"
@@ -132,8 +133,15 @@ func EntityGithubPagesFromRemote(r *GithubPagesRemote) *entity.RepositoryGithubP
 
 // githubPagesComparableToRESTPostBody is the JSON body for POST /repos/{owner}/{repo}/pages (enable site).
 func githubPagesComparableToRESTPostBody(p *GithubPagesComparable) map[string]interface{} {
-	body := map[string]interface{}{
-		"public": p.Visibility == "public",
+	return githubPagesComparableToRESTPostBodyWithPublic(p, true)
+}
+
+// githubPagesComparableToRESTPostBodyWithPublic builds the POST body, optionally omitting the public field.
+// GitHub rejects public: true on repositories where private Pages access control is unavailable.
+func githubPagesComparableToRESTPostBodyWithPublic(p *GithubPagesComparable, includePublic bool) map[string]interface{} {
+	body := map[string]interface{}{}
+	if includePublic {
+		body["public"] = p.Visibility == "public"
 	}
 	if p.Source == "workflow" {
 		body["build_type"] = "workflow"
@@ -149,12 +157,34 @@ func githubPagesComparableToRESTPostBody(p *GithubPagesComparable) map[string]in
 
 // githubPagesComparableToRESTPutBody is the JSON body for PUT /repos/{owner}/{repo}/pages (update site).
 func githubPagesComparableToRESTPutBody(p *GithubPagesComparable) map[string]interface{} {
-	body := githubPagesComparableToRESTPostBody(p)
+	return githubPagesComparableToRESTPutBodyWithPublic(p, true)
+}
+
+// githubPagesComparableToRESTPutBodyWithPublic builds the PUT body, optionally omitting the public field.
+func githubPagesComparableToRESTPutBodyWithPublic(p *GithubPagesComparable, includePublic bool) map[string]interface{} {
+	body := githubPagesComparableToRESTPostBodyWithPublic(p, includePublic)
 	if strings.TrimSpace(p.Cname) != "" {
 		body["cname"] = strings.TrimSpace(p.Cname)
 		body["https_enforced"] = p.HttpsEnforced
 	}
 	return body
+}
+
+// githubPagesPrivatePagesUnavailable reports whether GitHub rejected a Pages request because
+// private Pages access control is not enabled for the repository.
+func githubPagesPrivatePagesUnavailable(responseBody []byte) bool {
+	return strings.Contains(string(responseBody), "Private pages is not enabled")
+}
+
+// githubPagesAPIError formats a Pages API failure, including GitHub's response body when present.
+func githubPagesAPIError(err error, responseBody []byte) error {
+	if err == nil {
+		return nil
+	}
+	if len(responseBody) == 0 {
+		return err
+	}
+	return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(responseBody)))
 }
 
 func githubPagesNeedsFollowUpPutAfterCreate(p *GithubPagesComparable) bool {

@@ -5099,11 +5099,38 @@ func (g *GoliacRemoteImpl) UpdateRepositoryAutolink(ctx context.Context, logsCol
 	g.AddRepositoryAutolink(ctx, logsCollector, dryrun, repositoryName, autolink)
 }
 
+// callRepositoryGithubPagesAPI calls POST or PUT /repos/{owner}/{repo}/pages.
+// When GitHub rejects public: true because private Pages is unavailable, retries once without public.
+func (g *GoliacRemoteImpl) callRepositoryGithubPagesAPI(ctx context.Context, repositoryName, method string, pages *GithubPagesComparable, isPut bool) ([]byte, error) {
+	var body map[string]interface{}
+	if isPut {
+		body = githubPagesComparableToRESTPutBody(pages)
+	} else {
+		body = githubPagesComparableToRESTPostBody(pages)
+	}
+	endpoint := fmt.Sprintf("/repos/%s/%s/pages", g.configGithubOrg, repositoryName)
+	responseBody, err := g.client.CallRestAPI(ctx, endpoint, "", method, body, nil)
+	if err == nil {
+		return responseBody, nil
+	}
+	if pages.Visibility == "public" && githubPagesPrivatePagesUnavailable(responseBody) {
+		if isPut {
+			body = githubPagesComparableToRESTPutBodyWithPublic(pages, false)
+		} else {
+			body = githubPagesComparableToRESTPostBodyWithPublic(pages, false)
+		}
+		responseBody, retryErr := g.client.CallRestAPI(ctx, endpoint, "", method, body, nil)
+		if retryErr == nil {
+			return responseBody, nil
+		}
+		return responseBody, githubPagesAPIError(retryErr, responseBody)
+	}
+	return responseBody, githubPagesAPIError(err, responseBody)
+}
+
 // putRepositoryGithubPages updates GitHub Pages (PUT /repos/{owner}/{repo}/pages).
 func (g *GoliacRemoteImpl) putRepositoryGithubPages(ctx context.Context, repositoryName string, pages *GithubPagesComparable) error {
-	body := githubPagesComparableToRESTPutBody(pages)
-	endpoint := fmt.Sprintf("/repos/%s/%s/pages", g.configGithubOrg, repositoryName)
-	_, err := g.client.CallRestAPI(ctx, endpoint, "", "PUT", body, nil)
+	_, err := g.callRepositoryGithubPagesAPI(ctx, repositoryName, "PUT", pages, true)
 	return err
 }
 
@@ -5119,10 +5146,8 @@ func (g *GoliacRemoteImpl) CreateRepositoryGithubPages(ctx context.Context, logs
 		logsCollector.AddError(fmt.Errorf("repository %s not found", repositoryName))
 		return
 	}
-	body := githubPagesComparableToRESTPostBody(pages)
 	if !dryrun {
-		endpoint := fmt.Sprintf("/repos/%s/%s/pages", g.configGithubOrg, repositoryName)
-		_, err := g.client.CallRestAPI(ctx, endpoint, "", "POST", body, nil)
+		_, err := g.callRepositoryGithubPagesAPI(ctx, repositoryName, "POST", pages, false)
 		if err != nil {
 			logsCollector.AddError(fmt.Errorf("failed to create GitHub Pages for repository %s: %v", repositoryName, err))
 			return
