@@ -1,3 +1,7 @@
+## Goliac v1.9.3
+
+- Github page code fix when using visibility
+
 ## Goliac v1.9.2
 
 - Github page code fix when not using custom_domain

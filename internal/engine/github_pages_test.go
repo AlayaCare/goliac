@@ -150,6 +150,37 @@ func TestGithubPagesComparableToRESTPostBody(t *testing.T) {
 	assert.Equal(t, "/", src["path"])
 }
 
+func TestGithubPagesComparableToRESTPostBodyWithoutPublic(t *testing.T) {
+	wf := &GithubPagesComparable{Visibility: "public", Source: "workflow"}
+	body := githubPagesComparableToRESTPostBodyWithPublic(wf, false)
+	assert.Equal(t, "workflow", body["build_type"])
+	_, hasPublic := body["public"]
+	assert.False(t, hasPublic)
+
+	br := &GithubPagesComparable{Visibility: "public", Source: "branch", Branch: "main", Path: "/docs"}
+	body2 := githubPagesComparableToRESTPutBodyWithPublic(br, false)
+	assert.Equal(t, "legacy", body2["build_type"])
+	_, hasPublic2 := body2["public"]
+	assert.False(t, hasPublic2)
+	src := body2["source"].(map[string]interface{})
+	assert.Equal(t, "main", src["branch"])
+	assert.Equal(t, "/docs", src["path"])
+}
+
+func TestGithubPagesPrivatePagesUnavailable(t *testing.T) {
+	responseBody := []byte(`{"message":"Private pages is not enabled for this repository. All Pages will be public.","status":"400"}`)
+	assert.True(t, githubPagesPrivatePagesUnavailable(responseBody))
+	assert.False(t, githubPagesPrivatePagesUnavailable([]byte(`{"message":"some other error"}`)))
+}
+
+func TestGithubPagesAPIError(t *testing.T) {
+	baseErr := assert.AnError
+	assert.Nil(t, githubPagesAPIError(nil, nil))
+	assert.Equal(t, baseErr, githubPagesAPIError(baseErr, nil))
+	wrapped := githubPagesAPIError(baseErr, []byte(`{"message":"Private pages is not enabled"}`))
+	assert.ErrorContains(t, wrapped, "Private pages is not enabled")
+}
+
 func TestGithubPagesComparableToRESTPutBody(t *testing.T) {
 	br := &GithubPagesComparable{Visibility: "public", Source: "branch", Branch: "main", Path: "/", Cname: "docs.example.com", HttpsEnforced: true}
 	body := githubPagesComparableToRESTPutBody(br)
