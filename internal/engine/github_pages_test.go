@@ -40,6 +40,25 @@ func TestEntityGithubPagesToComparable(t *testing.T) {
 	gpOmit := &entity.RepositoryGithubPages{Visibility: "public", Source: "branch", Branch: "main", Path: "/"}
 	c3 := entityGithubPagesToComparable(gpOmit)
 	assert.False(t, c3.HttpsEnforced)
+
+	// Workflow + path: / is valid YAML but must not differ from GET /pages (no path).
+	gpWorkflowPathRoot := &entity.RepositoryGithubPages{Visibility: "public", Source: "workflow", Path: "/"}
+	c4 := entityGithubPagesToComparable(gpWorkflowPathRoot)
+	assert.Equal(t, "workflow", c4.Source)
+	assert.Equal(t, "", c4.Branch)
+	assert.Equal(t, "", c4.Path)
+}
+
+func TestGithubPagesComparableEqual_WorkflowPathRootVsRemote(t *testing.T) {
+	desired := entityGithubPagesToComparable(&entity.RepositoryGithubPages{
+		Visibility: "public",
+		Source:     "workflow",
+		Path:       "/",
+	})
+	require.NotNil(t, desired)
+	remote := githubPagesRemoteToComparable(&GithubPagesRemote{BuildType: "workflow", Public: true})
+	require.NotNil(t, remote)
+	assert.True(t, githubPagesComparableEqual(desired, remote))
 }
 
 func TestGithubPagesRemoteToComparable(t *testing.T) {

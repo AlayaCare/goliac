@@ -1,3 +1,7 @@
+## Goliac v1.9.4
+
+- Github page code fix for workflow
+
 ## Goliac v1.9.3
 
 - Github page code fix when using visibility
