@@ -1,3 +1,8 @@
+## Goliac v1.9.5
+
+- bugfix: when a GitHub repository name matches the teams definition only case-insensitively, reconcile by renaming the repository on GitHub to the exact name from the teams repo (avoids treating it as delete + create)
+- bugfix: during `goliac plan` (dry-run), `RenameRepository` now rekeys the in-memory GitHub cache so subsequent steps resolve repositories by the new name (fixes false `repository … not found` after case alignment or YAML `renameTo`)
+
 ## Goliac v1.9.4
 
 - Github page code fix for workflow

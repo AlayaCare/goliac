@@ -4642,7 +4642,7 @@ func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, logsCollector *
 		return
 	}
 
-	// update repository
+	// update repository on GitHub (skipped in dry-run / plan)
 	// https://docs.github.com/fr/rest/repos/repos?apiVersion=2022-11-28#update-a-repository
 	if !dryrun {
 		body, err := g.client.CallRestAPI(
@@ -4657,25 +4657,25 @@ func (g *GoliacRemoteImpl) RenameRepository(ctx context.Context, logsCollector *
 			logsCollector.AddError(fmt.Errorf("failed to rename the repository %s (to %s): %v. %s", reponame, newname, err, string(body)))
 			return
 		}
+	}
 
-		g.actionMutex.Lock()
-		defer g.actionMutex.Unlock()
+	g.actionMutex.Lock()
+	defer g.actionMutex.Unlock()
 
-		// update the repositories list
-		if r, ok := g.repositories[reponame]; ok {
-			delete(g.repositoriesByRefId, r.RefId)
-			delete(g.repositories, reponame)
-			r.Name = newname
-			g.repositories[newname] = r
-			g.repositoriesByRefId[r.RefId] = r
+	// Always rekey the in-memory cache (including dry-run / plan) so later steps resolve repositories by the new name.
+	if r, ok := g.repositories[reponame]; ok {
+		delete(g.repositoriesByRefId, r.RefId)
+		delete(g.repositories, reponame)
+		r.Name = newname
+		g.repositories[newname] = r
+		g.repositoriesByRefId[r.RefId] = r
 
-			for _, tr := range g.teamRepos {
-				for rname, r := range tr {
-					if rname == reponame {
-						delete(tr, rname)
-						r.Name = newname
-						tr[newname] = r
-					}
+		for _, tr := range g.teamRepos {
+			for rname, teamRepo := range tr {
+				if rname == reponame {
+					delete(tr, rname)
+					teamRepo.Name = newname
+					tr[newname] = teamRepo
 				}
 			}
 		}

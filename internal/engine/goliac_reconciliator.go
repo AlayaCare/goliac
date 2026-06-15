@@ -415,6 +415,20 @@ func (r *GoliacReconciliatorImpl) reconciliateRepositories(
 	// let's get the remote now
 	rRepos := remote.Repositories()
 
+	// Rename GitHub repos whose name matches a local repo name case-insensitively
+	// but not exactly, so the subsequent CompareEntities diff works correctly.
+	lowerToRemote := make(map[string]string, len(rRepos))
+	for rname := range rRepos {
+		lowerToRemote[strings.ToLower(rname)] = rname
+	}
+	for lname := range lRepos {
+		if _, exactMatch := rRepos[lname]; !exactMatch {
+			if rname, ok := lowerToRemote[strings.ToLower(lname)]; ok && rname != lname {
+				r.RenameRepository(ctx, logsCollector, dryrun, remote, rname, lname)
+			}
+		}
+	}
+
 	// now we compare local (slugTeams) and remote (rTeams)
 
 	compareRepos := func(reponame string, lRepo *GithubRepoComparable, rRepo *GithubRepoComparable) bool {
