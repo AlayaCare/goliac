@@ -2568,6 +2568,149 @@ func TestReconciliationRepo(t *testing.T) {
 		assert.Equal(t, 0, len(recorder.RepositoriesUpdateProperty))
 	})
 
+	t.Run("happy path: auto-rename repo when GitHub name differs only by case", func(t *testing.T) {
+		recorder := NewReconciliatorListenerRecorder()
+		repoconf := config.RepositoryConfig{
+			AdminTeam:       "admin-team",
+			ArchiveOnDelete: false,
+		}
+		repoconf.DestructiveOperations.AllowDestructiveRepositories = true
+		r := NewGoliacReconciliatorImpl(false, recorder, &repoconf)
+
+		local := GoliacLocalMock{
+			users: make(map[string]*entity.User),
+			teams: make(map[string]*entity.Team),
+			repos: make(map[string]*entity.Repository),
+		}
+
+		lRepo := &entity.Repository{}
+		lRepo.Name = "MyRepo"
+		lRepo.Spec.Readers = []string{}
+		lRepo.Spec.Writers = []string{}
+		lRepo.Spec.ExternalUserWriters = []string{}
+		lRepo.Spec.AllowMergeCommit = true
+		lRepo.Spec.AllowRebaseMerge = true
+		lRepo.Spec.AllowSquashMerge = true
+		lowner := "existing"
+		lRepo.Owner = &lowner
+		local.repos["MyRepo"] = lRepo
+
+		adminTeam := &entity.Team{}
+		adminTeam.Name = "admin-team"
+		adminTeam.Spec.Owners = []string{"existing_owner"}
+		local.teams["admin-team"] = adminTeam
+
+		existingTeam := &entity.Team{}
+		existingTeam.Name = "existing"
+		existingTeam.Spec.Owners = []string{"existing_owner"}
+		existingTeam.Spec.Members = []string{}
+		local.teams["existing"] = existingTeam
+
+		remote := GoliacRemoteMock{
+			users:      make(map[string]*GithubUser),
+			teams:      make(map[string]*GithubTeam),
+			repos:      make(map[string]*GithubRepository),
+			teamsrepos: make(map[string]map[string]*GithubTeamRepo),
+			rulesets:   make(map[string]*GithubRuleSet),
+			appids:     make(map[string]*GithubApp),
+		}
+		rAdminTeam := &GithubTeam{
+			Name:    "admin-team",
+			Slug:    "admin-team",
+			Members: []string{"admin-team"},
+		}
+		remote.teams["admin-team"] = rAdminTeam
+
+		rAdminTeamOwners := &GithubTeam{
+			Name:    "admin-team-goliac-owners",
+			Slug:    "admin-team-goliac-owners",
+			Members: []string{"admin-team"},
+		}
+		remote.teams["admin-team-goliac-owners"] = rAdminTeamOwners
+
+		rExisting := &GithubTeam{
+			Name:    "existing",
+			Slug:    "existing",
+			Members: []string{"existing_owner"},
+		}
+		remote.teams["existing"] = rExisting
+
+		remote.repos["goliac-teams"] = &GithubRepository{
+			Name:              "goliac-teams",
+			Visibility:        "internal",
+			DefaultBranchName: "main",
+			ExternalUsers:     map[string]string{},
+			BoolProperties: map[string]bool{
+				"allow_auto_merge":       false,
+				"allow_squash_merge":     true,
+				"allow_merge_commit":     false,
+				"allow_rebase_merge":     false,
+				"archived":               false,
+				"delete_branch_on_merge": true,
+				"allow_update_branch":    false,
+			},
+			DefaultMergeCommitMessage:  "Default message",
+			DefaultSquashCommitMessage: "Default message",
+		}
+
+		existingOwner := &GithubTeam{
+			Name:    "existing-goliac-owners",
+			Slug:    "existing-goliac-owners",
+			Members: []string{"existing_owner"},
+		}
+		remote.teamsrepos["existing-goliac-owners"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["existing-goliac-owners"]["goliac-teams"] = &GithubTeamRepo{
+			Name:       "goliac-teams",
+			Permission: "WRITE",
+		}
+
+		remote.teams["existing-goliac-owners"] = existingOwner
+		rRepo := GithubRepository{
+			Name:          "myrepo",
+			ExternalUsers: make(map[string]string),
+			BoolProperties: map[string]bool{
+				"allow_auto_merge":       false,
+				"delete_branch_on_merge": false,
+				"allow_update_branch":    false,
+				"allow_squash_merge":     true,
+				"allow_merge_commit":     true,
+				"allow_rebase_merge":     true,
+				"archived":               false,
+			},
+		}
+		remote.repos["myrepo"] = &rRepo
+
+		remote.teamsrepos["admin-team"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["admin-team"]["goliac-teams"] = &GithubTeamRepo{
+			Name:       "goliac-teams",
+			Permission: "WRITE",
+		}
+		remote.teamsrepos["admin-team-goliac-owners"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["admin-team-goliac-owners"]["goliac-teams"] = &GithubTeamRepo{
+			Name:       "goliac-teams",
+			Permission: "WRITE",
+		}
+
+		remote.teamsrepos["existing"] = make(map[string]*GithubTeamRepo)
+		remote.teamsrepos["existing"]["myrepo"] = &GithubTeamRepo{
+			Name:       "myrepo",
+			Permission: "WRITE",
+		}
+
+		localDatasource := NewGoliacReconciliatorDatasourceLocal(&local, "goliac-teams", "main", true, &repoconf, "")
+		remoteDatasource := NewGoliacReconciliatorDatasourceRemote(&remote)
+
+		logsCollector := observability.NewLogCollection()
+		_, _, toRename, _ := r.Reconciliate(context.TODO(), logsCollector, localDatasource, remoteDatasource, true, false, true, true, true)
+
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, 0, len(toRename))
+		assert.Equal(t, 0, len(recorder.RepositoryCreated))
+		assert.Equal(t, 0, len(recorder.RepositoriesDeleted))
+		assert.Equal(t, 1, len(recorder.RepositoriesRenamed))
+		assert.True(t, recorder.RepositoriesRenamed["myrepo"])
+	})
+
 	t.Run("happy path: change default branch of the repo", func(t *testing.T) {
 		recorder := NewReconciliatorListenerRecorder()
 		repoconf := config.RepositoryConfig{
