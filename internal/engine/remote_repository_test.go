@@ -802,13 +802,69 @@ func TestRenameRepository(t *testing.T) {
 		assert.Empty(t, mockClient.lastEndpoint)
 		assert.Empty(t, mockClient.lastMethod)
 
-		// Verify the repository name remains unchanged in the cache
-		assert.Contains(t, remoteImpl.Repositories(ctx), "old-name")
-		assert.NotContains(t, remoteImpl.Repositories(ctx), "new-name")
+		// Verify the repository was renamed in the cache (dry-run still updates cache for plan consistency)
+		assert.NotContains(t, remoteImpl.Repositories(ctx), "old-name")
+		assert.Contains(t, remoteImpl.Repositories(ctx), "new-name")
 
-		// Verify team references remain unchanged
-		assert.Contains(t, remoteImpl.teamRepos["team1"], "old-name")
-		assert.NotContains(t, remoteImpl.teamRepos["team1"], "new-name")
+		// Verify RefId mapping is updated
+		assert.Equal(t, "new-name", remoteImpl.repositoriesByRefId["R_123"].Name)
+
+		// Verify team references are updated
+		assert.NotContains(t, remoteImpl.teamRepos["team1"], "old-name")
+		assert.Contains(t, remoteImpl.teamRepos["team1"], "new-name")
+		assert.Equal(t, "WRITE", remoteImpl.teamRepos["team1"]["new-name"].Permission)
+	})
+
+	t.Run("happy path: dry run case-only rename updates cache", func(t *testing.T) {
+		mockClient := &RenameRepositoryMockClient{}
+
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+		ctx := context.TODO()
+		remoteImpl.Load(ctx, false)
+		mockClient.lastEndpoint = ""
+		mockClient.lastMethod = ""
+		logsCollector := observability.NewLogCollection()
+
+		repo := &GithubRepository{
+			Name:   "old-name",
+			Id:     123,
+			RefId:  "R_123",
+			IsFork: false,
+			BoolProperties: map[string]bool{
+				"archived": false,
+			},
+		}
+		remoteImpl.repositories = map[string]*GithubRepository{
+			"old-name": repo,
+		}
+		remoteImpl.repositoriesByRefId = map[string]*GithubRepository{
+			"R_123": repo,
+		}
+		remoteImpl.teamRepos = map[string]map[string]*GithubTeamRepo{
+			"team1": {
+				"old-name": {
+					Name:       "old-name",
+					Permission: "WRITE",
+				},
+			},
+		}
+
+		remoteImpl.RenameRepository(
+			ctx,
+			logsCollector,
+			true, // dryrun
+			"old-name",
+			"Old-Name",
+		)
+
+		assert.False(t, logsCollector.HasErrors())
+		assert.Empty(t, mockClient.lastEndpoint)
+		assert.Empty(t, mockClient.lastMethod)
+		assert.NotContains(t, remoteImpl.Repositories(ctx), "old-name")
+		assert.Contains(t, remoteImpl.Repositories(ctx), "Old-Name")
+		assert.Equal(t, "Old-Name", remoteImpl.repositoriesByRefId["R_123"].Name)
+		assert.Contains(t, remoteImpl.teamRepos["team1"], "Old-Name")
+		assert.Equal(t, "WRITE", remoteImpl.teamRepos["team1"]["Old-Name"].Permission)
 	})
 
 	t.Run("error path: rename to existing repository name", func(t *testing.T) {
