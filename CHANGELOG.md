@@ -1,3 +1,18 @@
+## Goliac v1.9.8
+
+- bugfix: add Goliac app to branch protection and ruleset bypass when a repository defines `codeowners` or `codeowners_raw` and branch protection requires approving reviews (`required_approving_review_count` or `requires_code_owner_reviews`), so `UpdateRepositoryCodeowners` can commit without a 409 from repository rules
+- improvement: when `UpdateRepositoryCodeowners` fails, include the GitHub API `message` field (e.g. repository rule violations) in the error output
+
+## Goliac v1.9.7
+
+- build: `make build_ui` now uses Yarn via Corepack to avoid npm optional-dependency issues with Rolldown
+
+## Goliac v1.9.6
+
+- update UI dependencies and build tooling (security updates mainly)
+- bugfix: GitHub Pages `visibility: public` can now be reconciled even when GitHub rejects `public: true` (retries Pages API call without `public`)
+- UI: migrate `browser/goliac-ui` from Vue CLI to Vite 8 (includes `VUE_APP_API_URL` -> `VITE_API_URL`)
+
 ## Goliac v1.9.5
 
 - bugfix: when a GitHub repository name matches the teams definition only case-insensitively, reconcile by renaming the repository on GitHub to the exact name from the teams repo (avoids treating it as delete + create)
