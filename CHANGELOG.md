@@ -1,3 +1,7 @@
+## Goliac v1.9.12
+
+- build: increase Yarn network timeout to 10 minutes for `make build_ui` (`browser/goliac-ui/.yarnrc`)
+
 ## Goliac v1.9.11
 
 - build: update Node.js from 20 to 24 in the Docker UI build stage and VitePress docs workflow
