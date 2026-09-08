@@ -1,3 +1,7 @@
+## Goliac v1.9.10
+
+- build: switch Docker builder and runtime base images from Debian Bookworm to Trixie (`golang:1.26-trixie`, `debian:trixie-slim`)
+
 ## Goliac v1.9.9
 
 - security: update `browser/goliac-ui` npm/yarn dependencies (vite, @vitejs/plugin-vue, vue, element-plus, axios, @fortawesome/vue-fontawesome) and pin transitive `ajv`, `js-yaml`, `brace-expansion`, `postcss`, `nanoid` via `resolutions` to clear all `yarn audit` advisories (ReDoS/DoS issues in eslint's and vite's dependency trees)
