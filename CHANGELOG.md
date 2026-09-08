@@ -1,3 +1,12 @@
+## Goliac v1.9.10
+
+- build: switch Docker builder and runtime base images from Debian Bookworm to Trixie (`golang:1.26-trixie`, `debian:trixie-slim`)
+
+## Goliac v1.9.9
+
+- security: update `browser/goliac-ui` npm/yarn dependencies (vite, @vitejs/plugin-vue, vue, element-plus, axios, @fortawesome/vue-fontawesome) and pin transitive `ajv`, `js-yaml`, `brace-expansion`, `postcss`, `nanoid` via `resolutions` to clear all `yarn audit` advisories (ReDoS/DoS issues in eslint's and vite's dependency trees)
+- security: bump Go modules `github.com/go-git/go-git/v5` (path traversal/symlink-follow fixes), `golang.org/x/net`, `golang.org/x/crypto`, and `google.golang.org/grpc` to versions without known vulnerabilities (per `govulncheck`)
+
 ## Goliac v1.9.8
 
 - bugfix: add Goliac app to branch protection and ruleset bypass when a repository defines `codeowners` or `codeowners_raw` and branch protection requires approving reviews (`required_approving_review_count` or `requires_code_owner_reviews`), so `UpdateRepositoryCodeowners` can commit without a 409 from repository rules
