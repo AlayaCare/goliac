@@ -1,3 +1,7 @@
+## Goliac v1.9.11
+
+- build: update Node.js from 20 to 24 in the Docker UI build stage and VitePress docs workflow
+
 ## Goliac v1.9.10
 
 - build: switch Docker builder and runtime base images from Debian Bookworm to Trixie (`golang:1.26-trixie`, `debian:trixie-slim`)
