@@ -762,13 +762,104 @@ func TestUpdateRepositoryBranchProtection(t *testing.T) {
 			"requiresLinearHistory":          true,
 			"allowsForcePushes":              false,
 			"allowsDeletions":                false,
-			"bypassPullRequestActorIds":      []string{},
 		}
 		assert.Equal(t, expectedVariables, mockClient.lastVariables)
 		assert.Contains(t, mockClient.lastGraphQLQuery, "updateBranchProtectionRule")
 
 		// Verify the branch protection was updated in the cache
 		assert.Equal(t, updatedBranchProtection, repo.BranchProtections["main"])
+	})
+
+	t.Run("happy path: unchanged bypass actors and status checks are not sent", func(t *testing.T) {
+		mockClient := &UpdateBranchProtectionMockClient{}
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+		remoteImpl.appIds = map[string]*GithubApp{
+			"alayabot":         {Id: 1, GraphqlId: "APP_1", Slug: "alayabot"},
+			"alayacare-goliac": {Id: 2, GraphqlId: "APP_2", Slug: "alayacare-goliac"},
+		}
+
+		existing := &GithubBranchProtection{
+			Id:                          "BP_123",
+			Pattern:                     "rc-*",
+			RequiresApprovingReviews:    true,
+			DismissesStaleReviews:       true,
+			RequiresStatusChecks:        true,
+			RequiredStatusCheckContexts: []string{"ci-workflow", "SonarCloud Code Analysis"},
+		}
+		existing.BypassPullRequestAllowances.Nodes = []BypassPullRequestAllowanceNode{{}, {}}
+		existing.BypassPullRequestAllowances.Nodes[0].Actor.AppSlug = "alayabot"
+		existing.BypassPullRequestAllowances.Nodes[1].Actor.AppSlug = "alayacare-goliac"
+		repo := &GithubRepository{
+			Name:              "test-repo",
+			Id:                123,
+			RefId:             "R_123",
+			BranchProtections: map[string]*GithubBranchProtection{"rc-*": existing},
+		}
+		remoteImpl.repositories = map[string]*GithubRepository{"test-repo": repo}
+
+		// only dismissesStaleReviews changes, bypass actors and status checks are the same but in a different order
+		updated := &GithubBranchProtection{
+			Id:                          "BP_123",
+			Pattern:                     "rc-*",
+			RequiresApprovingReviews:    true,
+			DismissesStaleReviews:       false,
+			RequiresStatusChecks:        true,
+			RequiredStatusCheckContexts: []string{"SonarCloud Code Analysis", "ci-workflow"},
+		}
+		updated.BypassPullRequestAllowances.Nodes = []BypassPullRequestAllowanceNode{{}, {}}
+		updated.BypassPullRequestAllowances.Nodes[0].Actor.AppSlug = "alayacare-goliac"
+		updated.BypassPullRequestAllowances.Nodes[1].Actor.AppSlug = "alayabot"
+
+		logsCollector := observability.NewLogCollection()
+		remoteImpl.UpdateRepositoryBranchProtection(context.TODO(), logsCollector, false, "test-repo", updated)
+
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, false, mockClient.lastVariables["dismissesStaleReviews"])
+		assert.NotContains(t, mockClient.lastVariables, "bypassPullRequestActorIds")
+		assert.NotContains(t, mockClient.lastVariables, "requiredStatusCheckContexts")
+		assert.Equal(t, updated, repo.BranchProtections["rc-*"])
+	})
+
+	t.Run("happy path: changed bypass actors and status checks are sent", func(t *testing.T) {
+		mockClient := &UpdateBranchProtectionMockClient{}
+		remoteImpl := NewGoliacRemoteImpl(mockClient, "myorg", true, true, true)
+		remoteImpl.appIds = map[string]*GithubApp{
+			"alayabot":         {Id: 1, GraphqlId: "APP_1", Slug: "alayabot"},
+			"alayacare-goliac": {Id: 2, GraphqlId: "APP_2", Slug: "alayacare-goliac"},
+		}
+
+		existing := &GithubBranchProtection{
+			Id:                          "BP_123",
+			Pattern:                     "rc-*",
+			RequiresStatusChecks:        true,
+			RequiredStatusCheckContexts: []string{"ci-workflow"},
+		}
+		existing.BypassPullRequestAllowances.Nodes = []BypassPullRequestAllowanceNode{{}}
+		existing.BypassPullRequestAllowances.Nodes[0].Actor.AppSlug = "alayabot"
+		repo := &GithubRepository{
+			Name:              "test-repo",
+			Id:                123,
+			RefId:             "R_123",
+			BranchProtections: map[string]*GithubBranchProtection{"rc-*": existing},
+		}
+		remoteImpl.repositories = map[string]*GithubRepository{"test-repo": repo}
+
+		updated := &GithubBranchProtection{
+			Id:                          "BP_123",
+			Pattern:                     "rc-*",
+			RequiresStatusChecks:        true,
+			RequiredStatusCheckContexts: []string{"ci-workflow", "SonarCloud Code Analysis"},
+		}
+		updated.BypassPullRequestAllowances.Nodes = []BypassPullRequestAllowanceNode{{}, {}}
+		updated.BypassPullRequestAllowances.Nodes[0].Actor.AppSlug = "alayabot"
+		updated.BypassPullRequestAllowances.Nodes[1].Actor.AppSlug = "alayacare-goliac"
+
+		logsCollector := observability.NewLogCollection()
+		remoteImpl.UpdateRepositoryBranchProtection(context.TODO(), logsCollector, false, "test-repo", updated)
+
+		assert.False(t, logsCollector.HasErrors())
+		assert.Equal(t, []string{"APP_1", "APP_2"}, mockClient.lastVariables["bypassPullRequestActorIds"])
+		assert.Equal(t, []string{"ci-workflow", "SonarCloud Code Analysis"}, mockClient.lastVariables["requiredStatusCheckContexts"])
 	})
 
 	t.Run("error path: repository not found", func(t *testing.T) {

@@ -913,6 +913,12 @@ func compareBranchProtections(bpname string, lbp *GithubBranchProtection, rbp *G
 	if lbp.AllowsDeletions != rbp.AllowsDeletions {
 		return false
 	}
+	return branchProtectionBypassActorsEqual(lbp, rbp)
+}
+
+// branchProtectionBypassActorsEqual returns true if both branch protections have the same
+// bypass pull request actors (users, teams and apps)
+func branchProtectionBypassActorsEqual(lbp *GithubBranchProtection, rbp *GithubBranchProtection) bool {
 	leftActorUsers := []string{}
 	leftActorTeams := []string{}
 	leftActorApps := []string{}
