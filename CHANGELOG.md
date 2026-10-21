@@ -1,3 +1,7 @@
+## Goliac v1.9.13
+
+- bugfix: branch protection update only sends `bypassPullRequestActorIds` and `requiredStatusCheckContexts` when they changed. Re-sending an unchanged bypass list with several apps made GitHub fail with `Something went wrong while executing your query` on every sync, and re-sending status check contexts unpinned each required check from its app
+
 ## Goliac v1.9.12
 
 - build: increase Yarn network timeout to 10 minutes for `make build_ui` (`browser/goliac-ui/.yarnrc`)

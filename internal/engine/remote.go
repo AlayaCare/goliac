@@ -3394,7 +3394,7 @@ mutation updateBranchProtectionRule(
 	$requiresLinearHistory: Boolean!,
 	$allowsForcePushes: Boolean!,
 	$allowsDeletions: Boolean!,
-	$bypassPullRequestActorIds: [ID!]!) {
+	$bypassPullRequestActorIds: [ID!]) {
   updateBranchProtectionRule(input: {
 		branchProtectionRuleId: $branchProtectionRuleId,
     	pattern: $pattern,
@@ -3471,27 +3471,38 @@ func (g *GoliacRemoteImpl) UpdateRepositoryBranchProtection(ctx context.Context,
 		if statusCheckContexts == nil {
 			statusCheckContexts = []string{}
 		}
+		variables := map[string]interface{}{
+			"branchProtectionRuleId":         branchprotection.Id,
+			"pattern":                        branchprotection.Pattern,
+			"requiresApprovingReviews":       branchprotection.RequiresApprovingReviews,
+			"requiredApprovingReviewCount":   branchprotection.RequiredApprovingReviewCount,
+			"dismissesStaleReviews":          branchprotection.DismissesStaleReviews,
+			"requiresCodeOwnerReviews":       branchprotection.RequiresCodeOwnerReviews,
+			"requireLastPushApproval":        branchprotection.RequireLastPushApproval,
+			"requiresStatusChecks":           branchprotection.RequiresStatusChecks,
+			"requiresStrictStatusChecks":     branchprotection.RequiresStrictStatusChecks,
+			"requiredStatusCheckContexts":    statusCheckContexts,
+			"requiresConversationResolution": branchprotection.RequiresConversationResolution,
+			"requiresCommitSignatures":       branchprotection.RequiresCommitSignatures,
+			"requiresLinearHistory":          branchprotection.RequiresLinearHistory,
+			"allowsForcePushes":              branchprotection.AllowsForcePushes,
+			"allowsDeletions":                branchprotection.AllowsDeletions,
+			"bypassPullRequestActorIds":      bypassPullRequestActorIds,
+		}
+		// only send the list fields that actually changed: an omitted input field is left untouched by GitHub.
+		// - re-sending an unchanged bypass actors list (in particular with several apps) makes GitHub fail
+		//   with a generic "Something went wrong while executing your query" error
+		// - re-sending the status check contexts resets the app each required check is pinned to
+		if branchProtectionBypassActorsEqual(branchprotection, bp) {
+			delete(variables, "bypassPullRequestActorIds")
+		}
+		if res, _, _ := entity.StringArrayEquivalent(branchprotection.RequiredStatusCheckContexts, bp.RequiredStatusCheckContexts); res {
+			delete(variables, "requiredStatusCheckContexts")
+		}
 		body, res, err := queryGraphQLBranchProtectionMutationWithPATRetry[GraphqlBranchProtectionRuleUpdateMutationResponse](g,
 			ctx,
 			updateBranchProtectionRule,
-			map[string]interface{}{
-				"branchProtectionRuleId":         branchprotection.Id,
-				"pattern":                        branchprotection.Pattern,
-				"requiresApprovingReviews":       branchprotection.RequiresApprovingReviews,
-				"requiredApprovingReviewCount":   branchprotection.RequiredApprovingReviewCount,
-				"dismissesStaleReviews":          branchprotection.DismissesStaleReviews,
-				"requiresCodeOwnerReviews":       branchprotection.RequiresCodeOwnerReviews,
-				"requireLastPushApproval":        branchprotection.RequireLastPushApproval,
-				"requiresStatusChecks":           branchprotection.RequiresStatusChecks,
-				"requiresStrictStatusChecks":     branchprotection.RequiresStrictStatusChecks,
-				"requiredStatusCheckContexts":    statusCheckContexts,
-				"requiresConversationResolution": branchprotection.RequiresConversationResolution,
-				"requiresCommitSignatures":       branchprotection.RequiresCommitSignatures,
-				"requiresLinearHistory":          branchprotection.RequiresLinearHistory,
-				"allowsForcePushes":              branchprotection.AllowsForcePushes,
-				"allowsDeletions":                branchprotection.AllowsDeletions,
-				"bypassPullRequestActorIds":      bypassPullRequestActorIds,
-			},
+			variables,
 		)
 		if err != nil {
 			logsCollector.AddError(fmt.Errorf("failed to update branch protection for repository %s: %v. %s", reponame, err, string(body)))
