@@ -1053,6 +1053,12 @@ func (g *ForcemergeImpl) restack(ctx context.Context, repo string, pr *pullReque
 					break
 				}
 				lastErr = fmt.Errorf("%v (%s)", err, string(body))
+				if st := httpStatus(err); st >= 400 && st < 500 && st != 408 && st != 429 {
+					// a refusal (e.g. 422: GitHub may refuse to change the base of a PR that is still in a stack)
+					// does not go away by retrying
+					lastErr = fmt.Errorf("%v (GitHub refused the change, not retried; if the PR is still in a stack, unstack it or change its base by hand)", lastErr)
+					break
+				}
 			} else {
 				lastErr = err
 			}

@@ -718,6 +718,23 @@ func TestForcemergeRestack(t *testing.T) {
 		assert.Contains(t, err.Error(), "PR #2")
 		assert.Contains(t, err.Error(), "Fix manually: change the base branch")
 		assert.Equal(t, "b3", gh.pr(2).BaseRef)
+		// a 4xx refusal is not retried
+		assert.Contains(t, err.Error(), "not retried")
+		assert.Empty(t, clock.slept())
+		assert.Equal(t, 1, len(gh.find("PATCH", "/pulls/2")))
+	})
+
+	t.Run("a persistent 5xx is retried with backoff then reported", func(t *testing.T) {
+		gh, fc, clock := setup(t)
+		gh.onCall = func(f *fakeGitHub, call restCall) ([]byte, error) {
+			if call.Method == "PATCH" {
+				return httpError("503 Service Unavailable", `{}`)
+			}
+			return nil, nil
+		}
+		_, err := mergePR(fc, 3, "because", "")
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Fix manually")
 		assert.Equal(t, []time.Duration{time.Second, 2 * time.Second, 4 * time.Second}, clock.slept())
 		assert.Equal(t, 4, len(gh.find("PATCH", "/pulls/2")))
 	})
