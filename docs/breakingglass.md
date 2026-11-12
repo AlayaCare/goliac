@@ -56,7 +56,7 @@ GitHub only merges [stacked pull requests](https://docs.github.com/en/rest/pulls
 /forcemerge:<workflow_name>:stack: <explanation>
 ```
 
-Only the exact words `direct` and `stack` (case-insensitive) are merge modes. Anything else stays part of the explanation, so `/forcemerge:standard: fix: prod is down` still has the explanation `fix: prod is down`.
+The merge mode is the token right after the workflow name colon (case-insensitive): `/forcemerge:standard:stack: why`, or a bare `/forcemerge:standard:stack`. After a space it is explanation text, so `/forcemerge:standard: stack: why` and `/forcemerge:standard: fix: prod is down` have no mode. A word immediately followed by a colon that is not `stack` or `direct` (`/forcemerge:standard:fix: x`) is refused as an unknown merge mode. The approval review always states the resolved mode. A redelivered GitHub comment (same comment id) is ignored, and a second force merge of a PR that is already being force merged is refused.
 
 Take the stack `1 > 2 > 3 > 4 > main`: PR 1 is the top (based on PR 2's branch) and PR 4 is the bottom (based on `main`).
 
@@ -67,6 +67,11 @@ Take the stack `1 > 2 > 3 > 4 > main`: PR 1 is the top (based on PR 2's branch) 
   - `/squash` is not available when merging into a parent branch: a merge commit is used, and the approval comment says so.
   - GitHub usually marks the PR as merged once its commits are in its base branch. If it does not, Goliac closes the PR with a comment saying where it was merged.
   - The PR's head branch is not deleted.
+- Before anything is approved, Goliac checks the PR (and, for `stack`, every PR of the stack): open, not merged, not a draft, head in the repository (no fork), consistent stack metadata, and for a direct merge into a parent branch that the PR below exists in the same stack. Otherwise nothing is approved, merged or notified. The workflow steps (audit, Slack...) run once per merged PR after this check and before the first change.
+- The merge method is chosen from the repository settings (`allow_merge_commit`, `allow_squash_merge`, `allow_rebase_merge`): the default merge commit becomes a squash (then a rebase) when the repository forbids merge commits (e.g. squash-only repositories). `/squash` is never replaced: it is refused when squash is not allowed. Merging a mid-stack PR into its parent branch always makes a merge commit (it is a branch merge, not a PR merge, so it does not depend on those settings); on a squash-only repository that commit lands on the parent PR's branch and the bottom PR is squashed into the default branch afterwards.
+- A PR is retargeted only after GitHub confirms it merged (`merged: true`). `enqueued` (merge queue) is reported as "queued, not merged": nothing is retargeted. A foreign pending merge request (409) is reported, not adopted. Retargeting is retried with a backoff, and a persistent failure names the PRs and the manual fix.
+- If the merge definitively fails after the approvals, the approvals Goliac created are dismissed (or listed in the error when they can't be). When the outcome is unknown (timeout, queue), they are left in place and listed.
+- Just before the asynchronous merge the heads are re-read: a push after the approval aborts the merge.
 - **`stack`**: merge the whole stack into the stack base branch.
   - `/forcemerge:standard:stack: <explanation>` on any PR of the stack approves every PR from 1 to 4. It then merges the top PR (PR 1) through the asynchronous merge API, which merges PR 1 to PR 4 into `main`.
   - If a PR of the stack is missing or not open, nothing is approved or merged.

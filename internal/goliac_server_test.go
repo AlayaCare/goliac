@@ -560,6 +560,14 @@ func (w *WorkflowMock) ExecuteWorkflow(ctx context.Context, repoconfigForceMerge
 	w.properties = properties
 	return nil, nil
 }
+
+type countingWorkflow struct{ calls int }
+
+func (w *countingWorkflow) ExecuteWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, explanation string, properties map[string]string, dryrun bool) ([]string, error) {
+	w.calls++
+	return nil, nil
+}
+
 func TestHandleIssueComment(t *testing.T) {
 	t.Run("happy path: handle issue comment without explanation", func(t *testing.T) {
 		localfixture, remotefixture := fixtureGoliacLocal()
@@ -615,10 +623,14 @@ func TestHandleIssueComment(t *testing.T) {
 			{"/forcemerge:fmtest:direct: foobar", "direct", "foobar"},
 			{"/forcemerge:fmtest:STACK: foobar", "stack", "foobar"},
 			{"/forcemerge:fmtest:Direct:foobar /squash", "direct", "foobar /squash"},
-			{"/forcemerge:fmtest: stack: foobar", "stack", "foobar"},
+			// the mode is the token right after the workflow colon: after a space it is explanation text
+			{"/forcemerge:fmtest: stack: foobar", "", "stack: foobar"},
+			{"/forcemerge:fmtest: direct: foobar", "", "direct: foobar"},
+			{"/forcemerge:fmtest:stack:foobar", "stack", "foobar"},
 			// only "stack" and "direct" are modes: other colons belong to the explanation
 			{"/forcemerge:fmtest: fix: prod is down", "", "fix: prod is down"},
-			{"/forcemerge:fmtest:stacked: foobar", "", "stacked: foobar"},
+			{"/forcemerge:fmtest:stacked foobar", "", "stacked foobar"},
+			{"/forcemerge:fmtest:stacked", "", "stacked"},
 			{"/forcemerge:fmtest:direct: fix: prod is down", "direct", "fix: prod is down"},
 			{"/forcemerge:fmtest: we need the stack: now", "", "we need the stack: now"},
 		}
@@ -642,6 +654,49 @@ func TestHandleIssueComment(t *testing.T) {
 			assert.Equal(t, c.mode, mode, c.comment)
 			assert.Equal(t, c.mode != "", found, c.comment)
 		}
+	})
+
+	t.Run("bare trailing merge mode (no colon) is a mode without explanation", func(t *testing.T) {
+		for _, c := range []string{"/forcemerge:fmtest:stack", "/forcemerge:fmtest:DIRECT"} {
+			localfixture, remotefixture := fixtureGoliacLocal()
+			githubClient := &GithubClientMock{}
+			fmtest := WorkflowMock{}
+			goliac := NewGoliacMock(localfixture, remotefixture, githubClient)
+			server := GoliacServerImpl{goliac: goliac, worflowInstances: map[string]workflow.Workflow{"forcemerge": &fmtest}}
+			server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", c, 123)
+			assert.Equal(t, "", fmtest.workflowName, c)
+			assert.Equal(t, "No explanation provided", githubClient.lastBody["body"], c)
+		}
+	})
+
+	t.Run("unknown mode-shaped token is rejected, nothing executed", func(t *testing.T) {
+		for _, c := range []string{"/forcemerge:fmtest:stacked: foobar", "/forcemerge:fmtest:fix:prod down", "/forcemerge:fmtest:sideways:x"} {
+			localfixture, remotefixture := fixtureGoliacLocal()
+			githubClient := &GithubClientMock{}
+			fmtest := WorkflowMock{}
+			goliac := NewGoliacMock(localfixture, remotefixture, githubClient)
+			server := GoliacServerImpl{goliac: goliac, worflowInstances: map[string]workflow.Workflow{"forcemerge": &fmtest}}
+			server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", c, 123)
+			assert.Equal(t, "", fmtest.workflowName, c)
+			assert.Contains(t, githubClient.lastBody["body"], "unknown merge mode", c)
+		}
+	})
+
+	t.Run("a redelivered comment (same id) executes the workflow once", func(t *testing.T) {
+		localfixture, remotefixture := fixtureGoliacLocal()
+		githubClient := &GithubClientMock{}
+		counting := &countingWorkflow{}
+		goliac := NewGoliacMock(localfixture, remotefixture, githubClient)
+		server := GoliacServerImpl{goliac: goliac, worflowInstances: map[string]workflow.Workflow{"forcemerge": counting}}
+		for i := 0; i < 3; i++ {
+			server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", "/forcemerge:fmtest: foobar", 777)
+		}
+		assert.Equal(t, 1, counting.calls)
+		// another comment id runs again; id 0 is never deduplicated
+		server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", "/forcemerge:fmtest: foobar", 778)
+		server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", "/forcemerge:fmtest: foobar", 0)
+		server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", "/forcemerge:fmtest: foobar", 0)
+		assert.Equal(t, 4, counting.calls)
 	})
 
 	t.Run("handle issue comment with a merge mode but no explanation", func(t *testing.T) {
