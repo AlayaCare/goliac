@@ -246,6 +246,25 @@ func TestForcemergeInFlightGuard(t *testing.T) {
 		assert.Equal(t, 1, len(gh.find("PUT", "/merge-async")))
 	})
 
+	t.Run("a direct merge also guards the parent and the PRs above (adjacent PRs)", func(t *testing.T) {
+		for _, adjacent := range []int{2, 4} { // 2 is retargeted by a direct merge of 3, 4 is its parent
+			gh := newFake(t, fixtureStack())
+			gh.branchMerge = okJSON(`{"sha":"mergecommit"}`)
+			gh.markMergedOnBranchMerge = true
+			fc := executeFixture(t, gh, &recordingPlugin{})
+			unlock, err := fc.lock("goliac", adjacent)
+			assert.Nil(t, err)
+			_, err = exec(fc, 3, "", false)
+			assert.NotNil(t, err, adjacent)
+			assert.Contains(t, err.Error(), fmt.Sprintf("a force merge of PR #%d is already running", adjacent))
+			assert.Equal(t, 0, len(gh.sideEffects()), adjacent)
+			unlock()
+			// released: it goes through
+			_, err = exec(fc, 3, "", false)
+			assert.Nil(t, err, adjacent)
+		}
+	})
+
 	t.Run("a stack merge refused when another PR of the stack is already being merged", func(t *testing.T) {
 		gh := newFake(t, fixtureStack()).allMethods()
 		fc := executeFixture(t, gh, &recordingPlugin{})

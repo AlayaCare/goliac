@@ -173,9 +173,9 @@ func (g *ForcemergeImpl) ExecuteWorkflow(ctx context.Context, repoconfigForceMer
 	if err != nil {
 		return nil, fmt.Errorf("error when merging the PR: %v", err)
 	}
-	// a stack merge on a PR of the stack also owns the other PRs of the stack
+	// a force merge also owns the other PRs it touches (the stack, or the parent and the PRs to retarget)
 	others := []int{}
-	for _, p := range plan.mergedPRs() {
+	for _, p := range plan.lockedPRs() {
 		if p.Number != number {
 			others = append(others, p.Number)
 		}
@@ -579,6 +579,16 @@ func (p *mergePlan) mergedPRs() []*pullRequestInfo {
 		return p.stack
 	}
 	return []*pullRequestInfo{p.pr}
+}
+
+// lockedPRs are the PRs a force merge changes or relies on: the merged PRs, plus the parent
+// PR and the PRs to retarget of a direct merge (two concurrent merges of adjacent PRs must not restack at once)
+func (p *mergePlan) lockedPRs() []*pullRequestInfo {
+	prs := append([]*pullRequestInfo{}, p.mergedPRs()...)
+	if p.parent != nil {
+		prs = append(prs, p.parent)
+	}
+	return append(prs, p.children...)
 }
 
 /*
