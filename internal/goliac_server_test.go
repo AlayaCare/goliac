@@ -551,11 +551,13 @@ func TestGetCollaborator(t *testing.T) {
 type WorkflowMock struct {
 	workflowName string
 	explanation  string
+	properties   map[string]string
 }
 
 func (w *WorkflowMock) ExecuteWorkflow(ctx context.Context, repoconfigForceMergeworkflows []string, username, workflowName, explanation string, properties map[string]string, dryrun bool) ([]string, error) {
 	w.workflowName = workflowName
 	w.explanation = explanation
+	w.properties = properties
 	return nil, nil
 }
 func TestHandleIssueComment(t *testing.T) {
@@ -600,6 +602,63 @@ func TestHandleIssueComment(t *testing.T) {
 		assert.Equal(t, "fmtest", fmtest.workflowName)
 
 		assert.Equal(t, "Workflow executed successfully", githubClient.lastBody["body"])
+	})
+
+	t.Run("happy path: handle issue comment with a merge mode", func(t *testing.T) {
+		cases := []struct {
+			comment     string
+			mode        string
+			explanation string
+		}{
+			{"/forcemerge:fmtest: foobar", "", "foobar"},
+			{"/forcemerge:fmtest:stack: foobar", "stack", "foobar"},
+			{"/forcemerge:fmtest:direct: foobar", "direct", "foobar"},
+			{"/forcemerge:fmtest:STACK: foobar", "stack", "foobar"},
+			{"/forcemerge:fmtest:Direct:foobar /squash", "direct", "foobar /squash"},
+			{"/forcemerge:fmtest: stack: foobar", "stack", "foobar"},
+			// only "stack" and "direct" are modes: other colons belong to the explanation
+			{"/forcemerge:fmtest: fix: prod is down", "", "fix: prod is down"},
+			{"/forcemerge:fmtest:stacked: foobar", "", "stacked: foobar"},
+			{"/forcemerge:fmtest:direct: fix: prod is down", "direct", "fix: prod is down"},
+			{"/forcemerge:fmtest: we need the stack: now", "", "we need the stack: now"},
+		}
+		for _, c := range cases {
+			localfixture, remotefixture := fixtureGoliacLocal()
+			githubClient := &GithubClientMock{}
+			fmtest := WorkflowMock{}
+			goliac := NewGoliacMock(localfixture, remotefixture, githubClient)
+			server := GoliacServerImpl{
+				goliac: goliac,
+				worflowInstances: map[string]workflow.Workflow{
+					"forcemerge": &fmtest,
+				},
+			}
+
+			server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", c.comment, 123)
+			assert.Equal(t, "fmtest", fmtest.workflowName, c.comment)
+			assert.Equal(t, c.explanation, fmtest.explanation, c.comment)
+			assert.Equal(t, "https://github.com/org/repoB/pull/123", fmtest.properties["pr_url"], c.comment)
+			mode, found := fmtest.properties[workflow.PropertyMergeMode]
+			assert.Equal(t, c.mode, mode, c.comment)
+			assert.Equal(t, c.mode != "", found, c.comment)
+		}
+	})
+
+	t.Run("handle issue comment with a merge mode but no explanation", func(t *testing.T) {
+		localfixture, remotefixture := fixtureGoliacLocal()
+		githubClient := &GithubClientMock{}
+		fmtest := WorkflowMock{}
+		goliac := NewGoliacMock(localfixture, remotefixture, githubClient)
+		server := GoliacServerImpl{
+			goliac: goliac,
+			worflowInstances: map[string]workflow.Workflow{
+				"forcemerge": &fmtest,
+			},
+		}
+
+		server.handleIssueComment(context.Background(), "org", "repoB", "https://github.com/org/repoB/pull/123", "userE1", "/forcemerge:fmtest:stack: ", 123)
+		assert.Equal(t, "", fmtest.workflowName)
+		assert.Equal(t, "No explanation provided", githubClient.lastBody["body"])
 	})
 
 	t.Run("happy path: handle issue comment with unknown workflow", func(t *testing.T) {

@@ -985,10 +985,11 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization,
 		if len(matches) == 4 {
 			workflowInstance := matches[1]
 			workflowName := matches[2]
-			explanation := matches[3]
+			// optional merge mode: "/forcemerge:default:stack: an explanation"
+			mergeMode, explanation := parseWorkflowMergeMode(matches[3])
 
 			// trying to execute the workflow
-			g.handleIssueCommandExecuteWorkflow(ctx, organization, repository, prUrl, githubIdCaller, workflowInstance, workflowName, explanation)
+			g.handleIssueCommandExecuteWorkflow(ctx, organization, repository, prUrl, githubIdCaller, workflowInstance, workflowName, mergeMode, explanation)
 		} else {
 			// the command is missing the workflow name
 			// let's send a comment to the user
@@ -997,7 +998,22 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization,
 	}
 }
 
-func (g *GoliacServerImpl) handleIssueCommandExecuteWorkflow(ctx context.Context, organization, repository, prUrl, githubIdCaller, workflowInstance, workflowName, explanation string) {
+// mergeModeRegex matches an optional merge mode segment at the start of a workflow
+// explanation ("stack: ..." or "direct: ..."). Any other word followed by a colon
+// stays part of the explanation.
+var mergeModeRegex = regexp.MustCompile(`(?is)^\s*(stack|direct):(.*)$`)
+
+// parseWorkflowMergeMode extracts the optional merge mode ("stack" or "direct", lowercased)
+// from "/<workflow_type>:<workflow_name>:<stack|direct>:<explanation>"
+func parseWorkflowMergeMode(explanation string) (string, string) {
+	matches := mergeModeRegex.FindStringSubmatch(explanation)
+	if len(matches) == 3 {
+		return strings.ToLower(matches[1]), matches[2]
+	}
+	return "", explanation
+}
+
+func (g *GoliacServerImpl) handleIssueCommandExecuteWorkflow(ctx context.Context, organization, repository, prUrl, githubIdCaller, workflowInstance, workflowName, mergeMode, explanation string) {
 	found := false
 	// list enabled workflows
 	for _, workflowName := range g.goliac.GetLocal().RepoConfig().Workflows {
@@ -1033,6 +1049,13 @@ func (g *GoliacServerImpl) handleIssueCommandExecuteWorkflow(ctx context.Context
 		return
 	}
 
+	properties := map[string]string{
+		"pr_url": prUrl,
+	}
+	if mergeMode != "" {
+		properties[workflow.PropertyMergeMode] = mergeMode
+	}
+
 	// check if the comment is a command to apply
 	for instanceName, workflow := range g.worflowInstances {
 		if workflowInstance == instanceName {
@@ -1042,9 +1065,7 @@ func (g *GoliacServerImpl) handleIssueCommandExecuteWorkflow(ctx context.Context
 				githubIdCaller,
 				workflowName,
 				explanation,
-				map[string]string{
-					"pr_url": prUrl,
-				},
+				properties,
 				false,
 			)
 
