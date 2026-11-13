@@ -98,6 +98,10 @@ type GoliacServerImpl struct {
 	maxTimeToApply      time.Duration
 	lastUnmanaged       *engine.UnmanagedResources
 
+	// workflow comments already handled (GitHub redelivers webhooks): comment id -> handling time
+	handledCommentsMutex sync.Mutex
+	handledComments      map[int]time.Time
+
 	// auth related
 	client       github.GitHubClient
 	oauthConfig  OAuth2Config
@@ -985,10 +989,23 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization,
 		if len(matches) == 4 {
 			workflowInstance := matches[1]
 			workflowName := matches[2]
-			explanation := matches[3]
+			// optional merge mode: "/forcemerge:default:stack: an explanation"
+			mergeMode, explanation, err := parseWorkflowMergeMode(matches[3])
+			if err != nil {
+				if cerr := g.CreateComment(ctx, organization, repository, prUrl, githubIdCaller, "Error when executing workflow: "+err.Error()); cerr != nil {
+					logrus.Error("error when creating 'unknown merge mode' comment: " + cerr.Error())
+				}
+				return
+			}
+
+			// a redelivered webhook must not run the workflow twice
+			if g.alreadyHandled(comment_id) {
+				logrus.Warnf("comment %d already handled, ignoring the redelivery", comment_id)
+				return
+			}
 
 			// trying to execute the workflow
-			g.handleIssueCommandExecuteWorkflow(ctx, organization, repository, prUrl, githubIdCaller, workflowInstance, workflowName, explanation)
+			g.handleIssueCommandExecuteWorkflow(ctx, organization, repository, prUrl, githubIdCaller, workflowInstance, workflowName, mergeMode, explanation)
 		} else {
 			// the command is missing the workflow name
 			// let's send a comment to the user
@@ -997,7 +1014,53 @@ func (g *GoliacServerImpl) handleIssueComment(ctx context.Context, organization,
 	}
 }
 
-func (g *GoliacServerImpl) handleIssueCommandExecuteWorkflow(ctx context.Context, organization, repository, prUrl, githubIdCaller, workflowInstance, workflowName, explanation string) {
+// mergeModeTokenRegex matches a word immediately followed by a colon at the start of what follows the workflow name colon.
+var mergeModeTokenRegex = regexp.MustCompile(`(?is)^([a-zA-Z0-9_-]+):(.*)$`)
+
+// parseWorkflowMergeMode extracts the optional merge mode ("stack" or "direct", lowercased)
+// from "/<workflow_type>:<workflow_name>:<stack|direct>:<explanation>" (rest is what follows
+// the workflow name colon). The mode is the token immediately after that colon, so
+// "/forcemerge:team: stack: x" has no mode. A bare "/forcemerge:team:stack" is the mode.
+// Another word immediately followed by a colon (":fix:x") is a mode-shaped unknown token: an error.
+func parseWorkflowMergeMode(rest string) (string, string, error) {
+	if m := mergeModeTokenRegex.FindStringSubmatch(rest); len(m) == 3 {
+		switch strings.ToLower(m[1]) {
+		case workflow.MergeModeStack, workflow.MergeModeDirect:
+			return strings.ToLower(m[1]), m[2], nil
+		}
+		return "", "", fmt.Errorf("unknown merge mode %q (expected %q or %q); to start the explanation with a colon, put a space after the workflow name", m[1], workflow.MergeModeStack, workflow.MergeModeDirect)
+	}
+	switch strings.ToLower(strings.TrimSpace(rest)) {
+	case workflow.MergeModeStack, workflow.MergeModeDirect:
+		return strings.ToLower(strings.TrimSpace(rest)), "", nil
+	}
+	return "", rest, nil
+}
+
+// alreadyHandled records the comment id and tells if it was already recorded (comment id 0 is never a duplicate)
+func (g *GoliacServerImpl) alreadyHandled(commentID int) bool {
+	if commentID == 0 {
+		return false
+	}
+	g.handledCommentsMutex.Lock()
+	defer g.handledCommentsMutex.Unlock()
+	if g.handledComments == nil {
+		g.handledComments = map[int]time.Time{}
+	}
+	now := time.Now()
+	for id, at := range g.handledComments {
+		if now.Sub(at) > 24*time.Hour {
+			delete(g.handledComments, id)
+		}
+	}
+	if _, found := g.handledComments[commentID]; found {
+		return true
+	}
+	g.handledComments[commentID] = now
+	return false
+}
+
+func (g *GoliacServerImpl) handleIssueCommandExecuteWorkflow(ctx context.Context, organization, repository, prUrl, githubIdCaller, workflowInstance, workflowName, mergeMode, explanation string) {
 	found := false
 	// list enabled workflows
 	for _, workflowName := range g.goliac.GetLocal().RepoConfig().Workflows {
@@ -1033,6 +1096,13 @@ func (g *GoliacServerImpl) handleIssueCommandExecuteWorkflow(ctx context.Context
 		return
 	}
 
+	properties := map[string]string{
+		"pr_url": prUrl,
+	}
+	if mergeMode != "" {
+		properties[workflow.PropertyMergeMode] = mergeMode
+	}
+
 	// check if the comment is a command to apply
 	for instanceName, workflow := range g.worflowInstances {
 		if workflowInstance == instanceName {
@@ -1042,9 +1112,7 @@ func (g *GoliacServerImpl) handleIssueCommandExecuteWorkflow(ctx context.Context
 				githubIdCaller,
 				workflowName,
 				explanation,
-				map[string]string{
-					"pr_url": prUrl,
-				},
+				properties,
 				false,
 			)
 

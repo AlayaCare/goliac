@@ -1,3 +1,12 @@
+## Goliac v1.9.14
+
+- feature: force merge supports GitHub stacked PRs, which GitHub refuses on the synchronous merge endpoint (`403 Merging stacked PRs via this endpoint is not supported`). New optional merge mode: `/forcemerge:<workflow>:<direct|stack>:<explanation>`. With the stack `1 > 2 > 3 > 4 > main`:
+  - default or `direct` on PR 3: merges PR 3 into PR 4's branch (merge commit), then retargets PR 2 onto PR 4's branch (`1 > 2 > 4 > main`). The bottom PR is merged alone through `PUT /pulls/{n}/merge-async`. A PR that GitHub does not mark as merged is closed with a comment.
+  - `stack` on any PR: approves PRs 1 to 4, then merges the whole stack into `main` through `merge-async` on the top PR.
+  - The asynchronous merge is polled until merged, failed or timed out (2 min).
+  - Non-stacked PRs keep the synchronous merge and the squash fallback, and ignore the mode.
+  - Safety: PR/stack validated before any approval (open, not draft, no fork, consistent stack), merge method taken from the repository settings (squash-only repositories), `enqueued` is not a merge, approvals dismissed on a definitive failure, heads re-checked before the asynchronous merge, retargeting retried and only after `merged: true`, redelivered webhooks and concurrent force merges of the same PR refused. The merge mode must directly follow the workflow name (`:stack:` or a bare `:stack`).
+
 ## Goliac v1.9.13
 
 - bugfix: branch protection update only sends `bypassPullRequestActorIds` and `requiredStatusCheckContexts` when they changed. Re-sending an unchanged bypass list with several apps made GitHub fail with `Something went wrong while executing your query` on every sync, and re-sending status check contexts unpinned each required check from its app
